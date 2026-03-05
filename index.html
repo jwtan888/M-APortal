@@ -18,13 +18,13 @@
 </head>
 <body class="bg-slate-50 p-4 font-sans text-slate-900">
     <div class="max-w-6xl mx-auto">
-        <header class="mb-6 flex justify-between items-center bg-white p-6 rounded-xl border shadow-sm h-32">
+        <header class="mb-6 flex justify-between items-center bg-white p-6 rounded-xl border shadow-sm h-32 overflow-hidden">
             <div class="flex-1">
                 <h1 class="text-2xl md:text-3xl font-bold text-slate-800 leading-tight">Auto Template<br>Machine Setting Log</h1>
                 <p class="text-blue-600 text-xl font-black tracking-widest mt-1">M&A</p>
             </div>
-            <div class="flex-none h-full flex items-center">
-                <img src="logo.png" alt="M&A Logo" class="h-24 w-auto object-contain max-h-full">
+            <div class="flex-none h-full flex items-center justify-end">
+                <img src="image_8454b6.png" alt="M&A Logo" class="h-18 w-auto object-contain">
             </div>
         </header>
 
@@ -58,7 +58,7 @@
                 </select>
                 <input type="text" id="fName" placeholder="File Name / Style" class="p-2 border rounded text-sm">
                 <input type="number" id="sTime" placeholder="Setting Time (min)" class="p-2 border rounded text-sm">
-                <button onclick="addEntry()" id="submitBtn" class="bg-blue-600 text-white font-bold py-2 rounded hover:bg-blue-700 shadow-md transition-all active:scale-95">Add Record</button>
+                <button onclick="addEntry()" id="submitBtn" class="bg-blue-600 text-white font-bold py-2 rounded hover:bg-blue-700 shadow-md">Add Record</button>
             </div>
         </div>
 
@@ -76,7 +76,10 @@
 
                 <div class="flex justify-between items-end mb-2">
                     <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Search Records:</h3>
-                    <span id="syncStatus" class="text-[10px] text-slate-400 italic font-medium">Connecting...</span>
+                    <div class="flex items-center gap-2">
+                        <span id="syncStatus" class="text-[10px] text-slate-400 font-bold">Syncing...</span>
+                        <button onclick="refreshLiveLogs()" class="text-[10px] bg-slate-100 px-2 py-0.5 rounded border hover:bg-slate-200">Force Sync</button>
+                    </div>
                 </div>
                 <input type="text" id="fileSearch" oninput="applyFilters()" placeholder="Search by File Name or PIC..." 
                     class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
@@ -93,11 +96,10 @@
                         <th class="p-3 font-semibold text-slate-600">Type</th>
                         <th class="p-3 font-semibold text-slate-600">File Name</th>
                         <th class="p-3 font-semibold text-slate-600">Time</th>
-                        <th class="p-3 font-semibold text-slate-600 text-center">Admin</th>
                     </tr>
                 </thead>
                 <tbody id="logTable">
-                    <tr><td colspan="7" class="p-10 text-center text-slate-400 italic">Syncing with Excel...</td></tr>
+                    <tr><td colspan="6" class="p-10 text-center text-slate-400 italic font-medium">Checking M&A Central Database...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -135,28 +137,27 @@
         async function refreshLiveLogs() {
             const status = document.getElementById('syncStatus');
             try {
-                const response = await fetch(fetchURL);
+                // Changed from GET to POST because some flows reject GET with 400 errors
+                const response = await fetch(fetchURL, { method: 'POST', body: JSON.stringify({}) });
                 if (!response.ok) throw new Error("HTTP " + response.status);
-                const data = await response.json();
                 
-                // Flexible Mapping for Excel Columns
+                const data = await response.json();
                 allRecords = data.map(item => ({
-                    id: item.id || Math.random(),
-                    timestamp: item.timestamp || item.Timestamp || item['Timestamp'] || "N/A",
-                    machine: item.machine || item.Machine || item['Machine'] || "N/A",
-                    pic: item.pic || item.PIC || item['PIC'] || "N/A",
-                    type: item.type || item.LogType || item['Log Type'] || item['Type'] || "SETTING",
-                    file: item.file || item.FileName || item['File Name'] || item['File'] || "N/A",
-                    time: item.time || item.Time || item['Time'] || "0"
+                    timestamp: item.timestamp || item.Timestamp || "N/A",
+                    machine: item.machine || item.Machine || "N/A",
+                    pic: item.pic || item.PIC || "N/A",
+                    type: item.type || item.LogType || item['Log Type'] || "SETTING",
+                    file: item.file || item.FileName || "N/A",
+                    time: item.time || item.Time || "0"
                 }));
 
-                status.innerText = "Live: " + new Date().toLocaleTimeString();
+                status.innerText = "LIVE: " + new Date().toLocaleTimeString();
                 status.className = "text-[10px] text-emerald-500 font-bold";
                 applyFilters();
             } catch (error) {
-                status.innerText = "Sync Error - Excel Offline";
+                status.innerText = "DATABASE ERROR (400)";
                 status.className = "text-[10px] text-red-500 font-bold";
-                console.error("Sync error:", error);
+                console.error("Fetch Error:", error);
             }
         }
 
@@ -167,13 +168,10 @@
             const t = document.getElementById('sTime').value;
             const isNewRequest = document.getElementById('requestToggle').checked;
 
-            if(!pic || !f || !t) {
-                alert("Please fill all fields");
-                return;
-            }
+            if(!pic || !f || !t) return alert("Fill all fields");
 
             const btn = document.getElementById('submitBtn');
-            btn.innerText = "Logging...";
+            btn.innerText = "Saving...";
             btn.disabled = true;
 
             const entry = {
@@ -186,20 +184,20 @@
             };
 
             try {
-                const response = await fetch(postURL, {
+                const res = await fetch(postURL, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(entry)
                 });
                 
-                if(response.ok) {
+                if(res.ok) {
                     document.getElementById('fName').value = '';
                     document.getElementById('sTime').value = '';
-                    // Wait 3 seconds for Excel to update, then pull fresh data
-                    setTimeout(refreshLiveLogs, 3000);
+                    // Wait for Excel to refresh
+                    setTimeout(refreshLiveLogs, 4000);
                 }
             } catch (error) {
-                alert("Network Error. Check internet connection.");
+                alert("Upload failed. Check internet.");
             } finally {
                 btn.innerText = "Add Record";
                 btn.disabled = false;
@@ -212,15 +210,12 @@
             document.getElementById(`btn-${machineId}`).classList.add('active-filter');
             
             const specDisplay = document.getElementById('specDisplay');
-            const brandRow = document.getElementById('brandRow');
-            const modelRow = document.getElementById('modelRow');
-
             if(machineId === 'ALL') {
                 specDisplay.classList.add('hidden');
             } else {
                 specDisplay.classList.remove('hidden');
-                brandRow.innerText = "Brand: " + machineSpecs[machineId].brand;
-                modelRow.innerText = "Model: " + machineSpecs[machineId].model;
+                document.getElementById('brandRow').innerText = "Brand: " + machineSpecs[machineId].brand;
+                document.getElementById('modelRow').innerText = "Model: " + machineSpecs[machineId].model;
             }
             applyFilters();
         }
@@ -238,7 +233,7 @@
         function updateTable(data) {
             const tbody = document.getElementById('logTable');
             if(data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="7" class="p-10 text-center text-slate-400 italic">No records found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="p-10 text-center text-slate-400 italic">No history found.</td></tr>';
                 return;
             }
             tbody.innerHTML = data.map(r => `
@@ -253,12 +248,10 @@
                     </td>
                     <td class="p-3 text-slate-700 font-mono">${r.file}</td>
                     <td class="p-3 font-bold text-slate-800">${r.time} min</td>
-                    <td class="p-3 text-center text-slate-300">---</td>
                 </tr>
             `).join('');
         }
 
-        // Initialize & Auto-Sync every 60 seconds
         refreshLiveLogs();
         setInterval(refreshLiveLogs, 60000);
     </script>
