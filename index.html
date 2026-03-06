@@ -26,7 +26,7 @@
                 <p class="text-slate-400 text-lg font-light tracking-[0.2em] mt-1 uppercase">M&A</p>
             </div>
             <div class="flex items-center justify-end ml-4">
-                <img src="https://i.ibb.co/mFmPqS5/image-8454b6.png" alt="M&A Logo" class="h-12 md:h-16 w-auto object-contain">
+                <img src="logo.png" alt="M&A Logo" class="h-12 md:h-20 w-auto object-contain">
             </div>
         </header>
 
@@ -79,10 +79,10 @@
                 <div class="flex justify-between items-end mb-2">
                     <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Search History:</h3>
                     <div class="flex items-center gap-2">
-                        <span id="syncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Monitoring Live...</span>
+                        <span id="syncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">Syncing...</span>
                     </div>
                 </div>
-                <input type="text" id="fileSearch" oninput="applyFilters()" placeholder="Search PIC or File Name..." 
+                <input type="text" id="fileSearch" oninput="applyFilters()" placeholder="Search PIC or File..." 
                     class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
             </div>
         </div>
@@ -100,7 +100,7 @@
                     </tr>
                 </thead>
                 <tbody id="logTable">
-                    <tr><td colspan="6" class="p-10 text-center text-slate-400 italic">Syncing M&A Database...</td></tr>
+                    <tr><td colspan="6" class="p-10 text-center text-slate-400 italic">Connecting to M&A...</td></tr>
                 </tbody>
             </table>
         </div>
@@ -124,7 +124,6 @@
         let allRecords = [];
         let currentMachineFilter = 'ALL';
 
-        // Filter generation
         const filterContainer = document.getElementById('filterContainer');
         Object.keys(machineSpecs).forEach(m => {
             const btn = document.createElement('button');
@@ -168,23 +167,25 @@
                 const response = await fetch(fetchURL, { method: 'POST', body: JSON.stringify({}) });
                 const data = await response.json();
                 
-                // MAPPING AND SORTING (Newest first)
-                allRecords = data.map(item => ({
-                    timestamp: cleanDate(getVal(item, ['Timestamp', 'Date', 'DateTime', 'Time'])),
-                    rawDate: new Date(getVal(item, ['Timestamp', 'Date', 'DateTime', 'Time'])), // for sorting
-                    machine: getVal(item, ['Machine', 'MachineID', 'mID']),
-                    pic: getVal(item, ['PIC', 'Operator', 'Name']),
-                    type: getVal(item, ['Type', 'LogType']),
-                    file: getVal(item, ['FileName', 'file name', 'Style']),
-                    time: getVal(item, ['Time', 'SettingTime', 'Minutes'])
-                })).sort((a, b) => b.rawDate - a.rawDate); // NEWEST ON TOP
+                allRecords = data.map(item => {
+                    const rawDateStr = getVal(item, ['Timestamp', 'Date', 'DateTime', 'Time']);
+                    return {
+                        timestamp: cleanDate(rawDateStr),
+                        sortDate: new Date(rawDateStr), 
+                        machine: getVal(item, ['Machine', 'MachineID', 'mID']),
+                        pic: getVal(item, ['PIC', 'Operator', 'Name']),
+                        type: getVal(item, ['Type', 'LogType']),
+                        file: getVal(item, ['FileName', 'file name', 'Style']),
+                        time: getVal(item, ['Time', 'SettingTime', 'Minutes'])
+                    };
+                }).sort((a, b) => b.sortDate - a.sortDate); // NEWEST AT TOP
 
                 status.innerText = "LIVE: " + new Date().toLocaleTimeString();
                 status.className = "text-[10px] font-bold text-emerald-500 uppercase";
                 status.classList.remove('sync-active');
                 applyFilters();
             } catch (error) {
-                status.innerText = "Connection Weak...";
+                status.innerText = "Network Busy...";
                 status.className = "text-[10px] font-bold text-orange-400";
             }
         }
@@ -199,7 +200,7 @@
             if(!pic || !f || !t) return alert("Please fill all fields");
 
             const btn = document.getElementById('submitBtn');
-            btn.innerText = "Adding...";
+            btn.innerText = "Syncing...";
             btn.disabled = true;
 
             const entry = {
@@ -220,7 +221,7 @@
                 if(res.ok) {
                     document.getElementById('fName').value = '';
                     document.getElementById('sTime').value = '';
-                    setTimeout(() => refreshLiveLogs(), 3000); // Quick refresh after add
+                    setTimeout(() => refreshLiveLogs(), 2000);
                 }
             } catch (error) {
                 alert("Upload failed.");
@@ -257,7 +258,7 @@
         function updateTable(data) {
             const tbody = document.getElementById('logTable');
             if(data.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="p-10 text-center text-slate-400 italic">Looking for records...</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="6" class="p-10 text-center text-slate-400 italic">No records found.</td></tr>';
                 return;
             }
             tbody.innerHTML = data.map(r => `
@@ -276,10 +277,7 @@
             `).join('');
         }
 
-        // INITIAL LOAD
         refreshLiveLogs();
-
-        // AUTO POLLING: Automatically refresh every 10 seconds
         setInterval(() => refreshLiveLogs(true), 10000);
     </script>
 </body>
