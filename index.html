@@ -135,10 +135,11 @@
 
         async function completeTask(id, pic) {
             if (currentUser !== pic) return alert("Unauthorized");
-            if (!confirm("Confirm Complete?")) return;
+            if (!confirm(`Mark ID ${id} as COMPLETE?`)) return;
             const btn = event.target; btn.innerText = "..."; btn.disabled = true;
             try {
-                const res = await fetch(updateURL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ recordID: id, pic: currentUser, completionDate: new Date().toISOString() }) });
+                // FIXED: We send the ID as a string to match Excel
+                const res = await fetch(updateURL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ recordID: String(id), pic: currentUser, completionDate: new Date().toISOString() }) });
                 if(res.ok) { alert("Done!"); refreshTemplateLogs(); } else { alert("Sync Error - Check Flow"); btn.innerText = "DONE"; btn.disabled = false; }
             } catch (e) { alert("Fail"); btn.innerText = "DONE"; btn.disabled = false; }
         }
@@ -148,7 +149,21 @@
             try {
                 const r = await fetch(templateFetchURL, { method: 'POST', body: JSON.stringify({}) });
                 const d = await r.json();
-                allTemplates = d.map(i => ({ id: getVal(i, ['Id']), startTime: convertExcelDate(getVal(i, ['Start time'])), requestor: getVal(i, ['Requestor']), style: getVal(i, ['Style Number']), jobNo: getVal(i, ['Job Number']), machine: getVal(i, ['Machine Type']), requiredDate: convertExcelDate(getVal(i, ['Required Date']), false), completeDate: getVal(i, ['Complete Date']), pic: getVal(i, ['M&A PIC']), raw: getVal(i, ['Start time']) })).sort((a,b)=>b.raw - a.raw);
+                allTemplates = d.map(i => {
+                    const realID = i['Id'] || getVal(i, ['Id']); // STRICT ID CHECK
+                    return { 
+                        id: realID,
+                        startTime: convertExcelDate(getVal(i, ['Start time'])), 
+                        requestor: getVal(i, ['Requestor']), 
+                        style: getVal(i, ['Style Number']), 
+                        jobNo: getVal(i, ['Job Number']), 
+                        machine: getVal(i, ['Machine Type']), 
+                        requiredDate: convertExcelDate(getVal(i, ['Required Date']), false), 
+                        completeDate: getVal(i, ['Complete Date']), 
+                        pic: getVal(i, ['M&A PIC']), 
+                        raw: getVal(i, ['Start time']) 
+                    }
+                }).sort((a,b)=>b.raw - a.raw);
                 st.innerText = "LIVE: " + new Date().toLocaleTimeString(); st.classList.remove('sync-active'); applyTempFilters();
             } catch (e) { st.innerText = "Error"; }
         }
