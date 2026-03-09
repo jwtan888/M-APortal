@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>M&A | Auto Template Log</title>
+    <title>M&A | Garment Automation Portal</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -22,7 +22,6 @@
         .manual-input { font-size: 10px; padding: 2px 4px; border: 1px solid #cbd5e1; border-radius: 4px; width: 95px; outline: none; margin-bottom: 2px; font-family: monospace; }
         .qty-input { width: 60px; font-weight: bold; color: #2563eb; border: 1px solid #94a3b8; }
         .manual-input:focus { border-color: #2563eb; box-shadow: 0 0 0 1px #2563eb; }
-        .drill-card:hover { transform: translateY(-2px); transition: all 0.2s; }
     </style>
 </head>
 <body class="bg-slate-50 p-4 font-sans text-slate-900">
@@ -62,35 +61,57 @@
         </nav>
 
         <div id="content-dashboard" class="tab-content hidden">
-            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6 text-center md:text-left">
+            <div class="mb-6 flex justify-end">
+                <div class="flex items-center gap-2 bg-white p-2 px-4 rounded-lg border shadow-sm">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Select Month:</span>
+                    <select id="monthFilter" onchange="updateDashboard()" class="text-xs font-bold border-none outline-none bg-transparent text-blue-600 cursor-pointer">
+                        <option value="ALL">All History</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total History</p>
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">New Styles (Month)</p>
                     <h2 id="stat-total" class="text-3xl font-bold text-slate-800">0</h2>
                 </div>
                 <div onclick="drillDown('PENDING')" class="bg-white p-6 rounded-xl border shadow-sm cursor-pointer hover:border-amber-400 transition-all">
-                    <p class="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1">Pending Tasks</p>
+                    <p class="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1">Total Pending</p>
                     <h2 id="stat-pending" class="text-3xl font-bold text-amber-600">0</h2>
                 </div>
                 <div onclick="drillDown('DELAYED')" class="bg-white p-6 rounded-xl border shadow-sm cursor-pointer hover:border-red-400 transition-all">
-                    <p class="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-1">Delayed Tasks</p>
+                    <p class="text-[10px] font-bold text-red-500 uppercase tracking-widest mb-1">Total Delayed</p>
                     <h2 id="stat-delayed" class="text-3xl font-bold text-red-600">0</h2>
                 </div>
                 <div onclick="drillDown('COMPLETED')" class="bg-white p-6 rounded-xl border shadow-sm cursor-pointer hover:border-emerald-400 transition-all">
-                    <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Completed Items</p>
+                    <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Done (Month)</p>
                     <h2 id="stat-completed" class="text-3xl font-bold text-emerald-600">0</h2>
                 </div>
             </div>
 
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Pending Workload by PIC</h3>
-                    <div id="pic-workload" class="space-y-3 max-h-[400px] overflow-y-auto pr-2"></div>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Requests by Section (Selected Month)</h3>
+                    <div class="h-[300px]"><canvas id="sectionChart"></canvas></div>
                 </div>
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Requests by Section</h3>
-                    <div class="h-[350px]">
-                        <canvas id="sectionChart"></canvas>
-                    </div>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Volume by Required Date</h3>
+                    <div class="h-[300px]"><canvas id="volumeChart"></canvas></div>
+                </div>
+            </div>
+
+            <div class="bg-white p-6 rounded-xl border shadow-sm">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">PIC Unfinished Work (Persistent Backlog)</h3>
+                    <span class="text-[9px] bg-red-50 text-red-500 px-2 py-0.5 rounded font-bold uppercase border border-red-100">Action Required</span>
+                </div>
+                <div class="overflow-x-auto rounded-lg border">
+                    <table class="w-full text-left text-[11px]">
+                        <thead class="bg-slate-50 border-b font-bold text-slate-500">
+                            <tr><th class="p-3 w-32">M&A PIC</th><th class="p-3">Unfinished Styles (Style - Job No - Age)</th></tr>
+                        </thead>
+                        <tbody id="pic-workload-table"></tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -106,7 +127,7 @@
                 </div>
             </div>
             <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
-                <table class="w-full text-left">
+                <table class="w-full text-left min-w-[1200px]">
                     <thead class="bg-slate-100 border-b text-[11px] uppercase tracking-wider text-slate-500 font-bold">
                         <tr>
                             <th class="p-3">ID</th><th class="p-3">Start Time</th><th class="p-3">Section</th><th class="p-3">Requestor</th><th class="p-3">Style</th>
@@ -121,7 +142,7 @@
         <div id="content-setting" class="tab-content hidden">
             <div class="bg-white p-6 rounded-xl shadow-sm border mb-6">
                 <div class="flex flex-wrap items-center justify-between mb-4 border-b pb-4 gap-2">
-                    <h2 class="text-sm font-bold text-slate-400 uppercase tracking-widest">New Entry</h2>
+                    <h2 class="text-sm font-bold text-slate-400 uppercase tracking-widest">Add Log Entry</h2>
                     <div class="flex items-center gap-3 bg-slate-50 px-3 py-2 rounded-lg border">
                         <span class="text-sm font-semibold text-slate-700 uppercase text-[10px]">New Request Mode</span>
                         <label class="switch"><input type="checkbox" id="requestToggle"><span class="slider"></span></label>
@@ -136,35 +157,34 @@
                     </select>
                     <select id="picName" class="p-2 border rounded bg-white text-sm">
                         <option value="">Select PIC</option>
-                        <option>Keat</option><option>Viki</option><option>Ram</option>
-                        <option>James</option><option>Phone</option><option>Mark</option><option>Joe</option>
+                        <option>Keat</option><option>Viki</option><option>Ram</option><option>James</option>
+                        <option>Phone</option><option>Mark</option><option>Joe</option>
                     </select>
                     <input type="text" id="fName" placeholder="File Name / Style" class="p-2 border rounded text-sm">
                     <input type="number" id="sTime" placeholder="Time (min)" class="p-2 border rounded text-sm">
                     <button onclick="addEntry()" id="submitBtn" class="bg-blue-600 text-white font-bold py-2 rounded hover:bg-blue-700 shadow-md active:scale-95 transition-all">SAVE LOG</button>
                 </div>
             </div>
-
-            <div class="mb-4 bg-white p-6 rounded-xl border shadow-sm">
+            <div class="bg-white p-6 rounded-xl border shadow-sm">
                 <div class="flex items-center justify-between mb-3 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                    <h3>Filter by Machine ID:</h3>
+                    <h3>History Filter:</h3>
                     <div id="machineDetailBox" class="text-blue-600 bg-blue-50 px-3 py-1 rounded hidden border border-blue-100"></div>
                 </div>
                 <div class="flex flex-wrap gap-2 mb-6" id="filterContainer">
                     <button onclick="setMachineFilter('ALL')" id="btn-ALL" class="machine-btn px-5 py-1.5 border rounded-full text-sm bg-white active-filter shadow-sm">ALL</button>
                 </div>
                 <div class="flex justify-between items-end mb-2 text-xs font-bold text-slate-400 uppercase tracking-widest">
-                    <h3>History:</h3><span id="syncStatus">Syncing...</span>
+                    <h3>Setting Logs:</h3><span id="syncStatus">Syncing...</span>
                 </div>
-                <input type="text" id="fileSearch" oninput="applyFilters()" placeholder="Search Log History..." class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm outline-none focus:ring-2 focus:ring-blue-500">
-            </div>
-            <div class="bg-white rounded-xl shadow-sm border overflow-hidden">
-                <table class="w-full text-left">
-                    <thead class="bg-slate-100 border-b text-[11px] uppercase tracking-wider text-slate-500 font-bold">
-                        <tr><th class="p-3">Timestamp</th><th class="p-3">Machine</th><th class="p-3">PIC</th><th class="p-3">Type</th><th class="p-3">File Name</th><th class="p-3">Time</th></tr>
-                    </thead>
-                    <tbody id="logTable" class="text-slate-700"></tbody>
-                </table>
+                <input type="text" id="fileSearch" oninput="applyFilters()" placeholder="Search logs..." class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                <div class="mt-4 overflow-x-auto border rounded-lg">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-100 border-b text-[11px] uppercase tracking-wider text-slate-500 font-bold">
+                            <tr><th class="p-3">Timestamp</th><th class="p-3">Machine</th><th class="p-3">PIC</th><th class="p-3">Type</th><th class="p-3">File Name</th><th class="p-3">Time</th></tr>
+                        </thead>
+                        <tbody id="logTable" class="text-slate-700"></tbody>
+                    </table>
+                </div>
             </div>
         </div>
     </div>
@@ -183,7 +203,7 @@
         };
 
         let allRecords = [], allTemplates = [], currentUser = localStorage.getItem('ma_session_user') || null;
-        let sectionChart = null;
+        let sectionChart = null, volumeChart = null;
 
         function getVal(item, keys) { 
             for (let k of Object.keys(item)) { 
@@ -212,11 +232,9 @@
                 const d = await r.json();
                 allTemplates = d.map(i => {
                     const doneRaw = getVal(i, ['Complete Date']);
-                    // FIX: Ensure status only shows COMPLETED if there is actual data
                     const isDone = (doneRaw && String(doneRaw).trim() !== "" && doneRaw !== '---');
                     const reqDate = convertExcelDate(getVal(i, ['Required Date']), false);
                     let status = isDone ? 'COMPLETED' : (new Date(reqDate) < new Date().setHours(0,0,0,0) ? 'DELAYED' : 'PENDING');
-                    
                     return {
                         id: getVal(i, ['Id', 'ID']),
                         startTime: convertExcelDate(getVal(i, ['Start time'])), 
@@ -234,120 +252,78 @@
                         raw: getVal(i, ['Start time']) 
                     };
                 }).sort((a,b)=>b.raw - a.raw);
+
+                generateMonthOptions();
+                updateDashboard();
+                applyTempFilters();
                 st.innerText = "LIVE: " + new Date().toLocaleTimeString(); 
                 st.classList.remove('sync-active'); 
-                applyTempFilters();
-                updateDashboard();
             } catch (e) { st.innerText = "Error"; }
         }
 
+        function generateMonthOptions() {
+            const select = document.getElementById('monthFilter');
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const uniqueMonths = new Set();
+            allTemplates.forEach(t => {
+                const d = new Date(t.startTime);
+                if (!isNaN(d.getTime())) uniqueMonths.add(`${months[d.getMonth()]}-${d.getFullYear()}`);
+            });
+            const currentVal = select.value;
+            select.innerHTML = '<option value="ALL">All History</option>';
+            Array.from(uniqueMonths).sort().forEach(m => { select.innerHTML += `<option value="${m}">${m}</option>`; });
+            select.value = currentVal || "ALL";
+        }
+
         function updateDashboard() {
-            const pendingList = allTemplates.filter(t => t.status !== 'COMPLETED');
-            document.getElementById('stat-total').innerText = allTemplates.length;
+            const selectedMonthStr = document.getElementById('monthFilter').value;
+            const now = new Date();
+            const filteredByMonth = allTemplates.filter(t => {
+                if (selectedMonthStr === "ALL") return true;
+                const d = new Date(t.startTime);
+                const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+                return `${months[d.getMonth()]}-${d.getFullYear()}` === selectedMonthStr;
+            });
+
+            document.getElementById('stat-total').innerText = filteredByMonth.length;
             document.getElementById('stat-pending').innerText = allTemplates.filter(t => t.status === 'PENDING').length;
             document.getElementById('stat-delayed').innerText = allTemplates.filter(t => t.status === 'DELAYED').length;
-            document.getElementById('stat-completed').innerText = allTemplates.filter(t => t.status === 'COMPLETED').length;
+            document.getElementById('stat-completed').innerText = filteredByMonth.filter(t => t.status === 'COMPLETED').length;
 
             const picStats = {};
-            pendingList.forEach(t => { picStats[t.pic] = (picStats[t.pic] || 0) + 1; });
-            document.getElementById('pic-workload').innerHTML = Object.entries(picStats).map(([name, count]) => `
-                <div onclick="drillDown('${name}')" class="drill-card flex items-center justify-between bg-white p-3 rounded-lg border border-slate-200 cursor-pointer hover:border-blue-500 hover:shadow-md group">
-                    <span class="text-sm font-bold text-slate-700 group-hover:text-blue-600">${name}</span>
-                    <span class="bg-blue-600 text-white px-3 py-1 rounded-full text-[10px] font-bold">${count} PENDING</span>
-                </div>
-            `).join('');
+            allTemplates.forEach(t => {
+                if (t.status === 'COMPLETED') return; 
+                if (!picStats[t.pic]) picStats[t.pic] = [];
+                const diffDays = Math.floor(Math.abs(now - new Date(t.startTime)) / (1000 * 60 * 60 * 24));
+                picStats[t.pic].push({ style: t.style, job: t.jobNo, status: t.status, age: diffDays >= 1 ? `${diffDays}d ago` : `Today` });
+            });
+            document.getElementById('pic-workload-table').innerHTML = Object.entries(picStats).map(([name, tasks]) => `
+                <tr class="border-b hover:bg-blue-50 cursor-pointer" onclick="drillDown('${name}')">
+                    <td class="p-4 font-bold text-slate-700 align-top border-r bg-slate-50/50">${name}</td>
+                    <td class="p-3 flex flex-wrap gap-2">
+                        ${tasks.map(task => `<div class="flex items-center gap-1.5 border rounded-lg px-2.5 py-1.5 bg-white shadow-sm"><span class="w-2 h-2 rounded-full ${task.status === 'DELAYED' ? 'bg-red-500 animate-pulse' : 'bg-amber-400'}"></span><span class="font-bold text-slate-800">${task.style}</span><span class="text-slate-500 text-[10px]">${task.job}</span><span class="ml-1 text-[9px] font-bold px-1.5 py-0.5 bg-slate-100 rounded-md">${task.age}</span></div>`).join('')}
+                    </td>
+                </tr>`).join('') || '<tr><td colspan="2" class="p-10 text-center italic">All tasks completed!</td></tr>';
 
             const secStats = {};
-            allTemplates.forEach(t => { secStats[t.section] = (secStats[t.section] || 0) + 1; });
-            const ctx = document.getElementById('sectionChart').getContext('2d');
+            filteredByMonth.forEach(t => { secStats[t.section] = (secStats[t.section] || 0) + 1; });
             if(sectionChart) sectionChart.destroy();
-            sectionChart = new Chart(ctx, {
+            sectionChart = new Chart(document.getElementById('sectionChart'), {
                 type: 'bar',
-                data: {
-                    labels: Object.keys(secStats),
-                    datasets: [{ label: 'Styles', data: Object.values(secStats), backgroundColor: '#3b82f6', borderRadius: 6 }]
-                },
-                options: { 
-                    responsive: true, maintainAspectRatio: false,
-                    onClick: (e, elements) => { if (elements.length > 0) drillDown(sectionChart.data.labels[elements[0].index]); },
-                    plugins: { legend: { display: false } },
-                    scales: { y: { beginAtZero: true } }
-                }
+                data: { labels: Object.keys(secStats), datasets: [{ label: 'Styles', data: Object.values(secStats), backgroundColor: '#3b82f6' }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            const volStats = {};
+            filteredByMonth.forEach(t => { volStats[t.requiredDate] = (volStats[t.requiredDate] || 0) + 1; });
+            const sortedDates = Object.keys(volStats).sort((a,b) => new Date(a) - new Date(b));
+            if(volumeChart) volumeChart.destroy();
+            volumeChart = new Chart(document.getElementById('volumeChart'), {
+                type: 'line',
+                data: { labels: sortedDates, datasets: [{ label: 'Total Volume', data: sortedDates.map(d => volStats[d]), borderColor: '#10b981', fill: true, backgroundColor: 'rgba(16, 185, 129, 0.1)', tension: 0.3 }] },
+                options: { responsive: true, maintainAspectRatio: false }
             });
         }
-
-        function drillDown(query) {
-            switchTab('template');
-            const input = document.getElementById('tempSearch');
-            input.value = query;
-            applyTempFilters();
-            input.classList.add('ring-4', 'ring-blue-100');
-            setTimeout(() => input.classList.remove('ring-4', 'ring-blue-100'), 1500);
-        }
-
-        function clearTempSearch() { document.getElementById('tempSearch').value = ''; applyTempFilters(); }
-
-        function switchTab(t) { 
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden')); 
-            const target = document.getElementById(`content-${t}`);
-            if(target) target.classList.remove('hidden'); 
-
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active')); 
-            document.getElementById(`tab-${t}`).classList.add('tab-active'); 
-            
-            const titles = { template: 'Template Requests', dashboard: 'Management Dashboard', setting: 'Machine Setting Log' };
-            document.getElementById('mainTitle').innerText = titles[t]; 
-        }
-
-        function login() { const u = document.getElementById('userSelect').value; if (!u) return alert("Select Name"); localStorage.setItem('ma_session_user', u); currentUser = u; updateSessionUI(); applyTempFilters(); }
-        function logout() { localStorage.removeItem('ma_session_user'); currentUser = null; updateSessionUI(); applyTempFilters(); }
-        function updateSessionUI() { const lv = document.getElementById('loginView'), av = document.getElementById('activeUserView'); if (currentUser) { lv.classList.add('hidden'); av.classList.remove('hidden'); document.getElementById('displayUserName').innerText = currentUser; } else { lv.classList.remove('hidden'); av.classList.add('hidden'); } }
-
-        function applyTempFilters() {
-            const sv = document.getElementById('tempSearch').value.toLowerCase();
-            const filtered = allTemplates.filter(t => 
-                t.style.toLowerCase().includes(sv) || t.pic.toLowerCase().includes(sv) || 
-                t.section.toLowerCase().includes(sv) || t.status.toLowerCase().includes(sv) ||
-                t.jobNo.toLowerCase().includes(sv)
-            );
-            document.getElementById('tempTable').innerHTML = filtered.map(t => {
-                const done = t.status === 'COMPLETED', mine = currentUser === t.pic;
-                return `<tr class="border-b hover:bg-slate-50">
-                    <td class="p-3 text-slate-400 font-mono">${t.id}</td>
-                    <td class="p-3 text-slate-500">${t.startTime}</td>
-                    <td class="p-3 text-slate-500">${t.section}</td>
-                    <td class="p-3 text-slate-500">${t.requestor}</td>
-                    <td class="p-3 text-slate-500 font-bold">${t.style}</td>
-                    <td class="p-3 text-slate-500">${t.jobNo}</td>
-                    <td class="p-3 text-slate-400">${t.machine}</td>
-                    <td class="p-3 text-slate-400">${t.requiredDate}</td>
-                    <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${done ? 'bg-emerald-100 text-emerald-600' : (t.status === 'DELAYED' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600')}">${t.status}</span></td>
-                    <td class="p-3 font-medium ${mine ? 'text-blue-700 underline' : 'text-slate-500'}">${t.pic}</td>
-                    <td class="p-3">${done ? `<span class="font-bold">${t.qty}</span>` : (mine ? `<input type="number" id="qty-${t.id}" class="manual-input qty-input" placeholder="Qty">` : `---`)}</td>
-                    <td class="p-3">${done ? `<span class="text-[10px] text-emerald-600 font-bold">${convertExcelDate(t.completeDate)}</span>` : (mine ? `<div class="flex flex-col"><input type="text" id="date-${t.id}" class="manual-input" value="${new Date().toLocaleDateString()}"><button onclick="saveManualComplete('${t.id}')" class="bg-blue-600 text-white text-[9px] font-bold px-2 py-1 rounded">SAVE</button></div>` : `---`)}</td>
-                    <td class="p-3">${mine && !done ? `<input type="text" id="remark-${t.id}" class="manual-input" value="${t.remark === '---' ? '' : t.remark}">` : `<span class="text-[10px]">${t.remark}</span>`}</td>
-                </tr>`;
-            }).join('');
-        }
-
-        async function saveManualComplete(id) {
-            const dateInput = document.getElementById(`date-${id}`).value, qtyInput = document.getElementById(`qty-${id}`).value, remarkInput = document.getElementById(`remark-${id}`)?.value || "";
-            if(!qtyInput) return alert("Qty Required");
-            const btn = event.target; btn.innerText = "...";
-            try {
-                const res = await fetch(updateURL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ recordID: String(id), pic: currentUser, completionDate: dateInput, completeQty: qtyInput, remark: remarkInput }) });
-                if(res.ok) refreshTemplateLogs();
-            } finally { btn.innerText = "SAVE"; }
-        }
-
-        // Setting Logs Logic
-        const mList = Object.keys(machineSpecs);
-        mList.forEach(m => { 
-            const b = document.createElement('button'); b.innerText = m; b.id = `btn-${m}`; 
-            b.className = "machine-btn px-4 py-1.5 border rounded-full text-sm bg-white shadow-sm hover:border-blue-300 transition-all"; 
-            b.onclick = () => setMachineFilter(m); 
-            document.getElementById('filterContainer').appendChild(b); 
-        });
 
         async function refreshLiveLogs(isSilent = false) { 
             const st = document.getElementById('syncStatus'); if(!isSilent) st.classList.add('sync-active'); 
@@ -387,9 +363,54 @@
             const f = allRecords.filter(r => (curF==='ALL' || r.machine===curF) && (String(r.file).toLowerCase().includes(s) || String(r.pic).toLowerCase().includes(s))); 
             document.getElementById('logTable').innerHTML = f.map(r => `<tr class="border-b"><td class="p-3 text-slate-400 font-mono">${r.timestamp}</td><td class="p-3 font-bold text-blue-700">${r.machine}</td><td class="p-3 font-medium">${r.pic}</td><td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${r.type === 'NEW REQUEST' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}">${r.type}</span></td><td class="p-3 font-mono">${r.file}</td><td class="p-3 font-bold">${r.time} min</td></tr>`).join(''); 
         }
-        
-        updateSessionUI(); refreshTemplateLogs(); refreshLiveLogs();
-        setInterval(() => { refreshTemplateLogs(true); refreshLiveLogs(true); }, 15000);
+
+        function drillDown(query) { switchTab('template'); document.getElementById('tempSearch').value = query; applyTempFilters(); }
+        function switchTab(t) { 
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden')); 
+            document.getElementById(`content-${t}`).classList.remove('hidden'); 
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active')); 
+            document.getElementById(`tab-${t}`).classList.add('tab-active'); 
+            const titles = { template: 'Template Requests', dashboard: 'Management Dashboard', setting: 'Machine Setting Log' };
+            document.getElementById('mainTitle').innerText = titles[t]; 
+        }
+        function login() { const u = document.getElementById('userSelect').value; if (!u) return alert("Select Name"); localStorage.setItem('ma_session_user', u); currentUser = u; updateSessionUI(); applyTempFilters(); }
+        function logout() { localStorage.removeItem('ma_session_user'); currentUser = null; updateSessionUI(); applyTempFilters(); }
+        function updateSessionUI() { const lv = document.getElementById('loginView'), av = document.getElementById('activeUserView'); if (currentUser) { lv.classList.add('hidden'); av.classList.remove('hidden'); document.getElementById('displayUserName').innerText = currentUser; } else { lv.classList.remove('hidden'); av.classList.add('hidden'); } }
+
+        function applyTempFilters() {
+            const sv = document.getElementById('tempSearch').value.toLowerCase();
+            const filtered = allTemplates.filter(t => t.style.toLowerCase().includes(sv) || t.pic.toLowerCase().includes(sv) || t.section.toLowerCase().includes(sv) || t.status.toLowerCase().includes(sv) || t.jobNo.toLowerCase().includes(sv));
+            document.getElementById('tempTable').innerHTML = filtered.map(t => {
+                const done = t.status === 'COMPLETED', mine = currentUser === t.pic;
+                return `<tr class="border-b hover:bg-slate-50">
+                    <td class="p-3 text-slate-400 font-mono">${t.id}</td><td class="p-3 text-slate-500">${t.startTime}</td><td class="p-3 text-slate-500">${t.section}</td><td class="p-3 text-slate-500">${t.requestor}</td><td class="p-3 text-slate-500 font-bold">${t.style}</td><td class="p-3 text-slate-500">${t.jobNo}</td><td class="p-3 text-slate-400">${t.machine}</td><td class="p-3 text-slate-400">${t.requiredDate}</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${done ? 'bg-emerald-100 text-emerald-600' : (t.status === 'DELAYED' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600')}">${t.status}</span></td>
+                    <td class="p-3 font-medium ${mine ? 'text-blue-700 underline' : 'text-slate-500'}">${t.pic}</td>
+                    <td class="p-3">${done ? `<span class="font-bold">${t.qty}</span>` : (mine ? `<input type="number" id="qty-${t.id}" class="manual-input qty-input" placeholder="Qty">` : `---`)}</td>
+                    <td class="p-3">${done ? `<span class="text-[10px] text-emerald-600 font-bold">${convertExcelDate(t.completeDate)}</span>` : (mine ? `<div class="flex flex-col"><input type="text" id="date-${t.id}" class="manual-input" value="${new Date().toLocaleDateString()}"><button onclick="saveManualComplete('${t.id}')" class="bg-blue-600 text-white text-[9px] font-bold px-2 py-1 rounded">SAVE</button></div>` : `---`)}</td>
+                    <td class="p-3">${mine && !done ? `<input type="text" id="remark-${t.id}" class="manual-input" value="${t.remark === '---' ? '' : t.remark}">` : `<span class="text-[10px]">${t.remark}</span>`}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        async function saveManualComplete(id) {
+            const qtyInput = document.getElementById(`qty-${id}`).value;
+            if(!qtyInput) return alert("Qty Required");
+            try {
+                const res = await fetch(updateURL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ recordID: String(id), pic: currentUser, completionDate: document.getElementById(`date-${id}`).value, completeQty: qtyInput, remark: document.getElementById(`remark-${id}`).value }) });
+                if(res.ok) refreshTemplateLogs();
+            } catch(e) {}
+        }
+
+        const mList = Object.keys(machineSpecs);
+        mList.forEach(m => { 
+            const b = document.createElement('button'); b.innerText = m; b.id = `btn-${m}`; 
+            b.className = "machine-btn px-4 py-1.5 border rounded-full text-sm bg-white shadow-sm hover:border-blue-300 transition-all"; 
+            b.onclick = () => setMachineFilter(m); 
+            document.getElementById('filterContainer').appendChild(b); 
+        });
+
+        window.onload = () => { updateSessionUI(); refreshTemplateLogs(); refreshLiveLogs(); setInterval(() => { refreshTemplateLogs(true); refreshLiveLogs(true); }, 60000); };
     </script>
 </body>
 </html>
