@@ -18,8 +18,9 @@
         input:checked + .slider:before { transform: translateX(22px); }
         @keyframes pulse-green { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
         .sync-active { animation: pulse-green 2s infinite; }
-        td { font-size: 0.75rem; line-height: 1rem; } 
-        .manual-input { font-size: 10px; padding: 2px 4px; border: 1px solid #cbd5e1; border-radius: 4px; width: 95px; outline: none; margin-bottom: 2px; font-family: monospace; }
+        td { font-size: 0.75rem; line-height: 1rem; }
+        .manual-input { font-size: 10px; padding: 2px 4px; border: 1px solid #cbd5e1; border-radius: 4px; width: 110px; outline: none; margin-bottom: 2px; font-family: monospace; }
+        .admin-input { border: 1px solid #3b82f6; background-color: #f0f7ff; width: 110px; font-weight: bold; }
         .qty-input { width: 60px; font-weight: bold; color: #2563eb; border: 1px solid #94a3b8; }
         .manual-input:focus { border-color: #2563eb; box-shadow: 0 0 0 1px #2563eb; }
     </style>
@@ -28,6 +29,7 @@
     <div class="max-w-[1600px] mx-auto">
         <header class="mb-4 flex flex-row justify-between items-center bg-white p-6 rounded-t-xl border-x border-t shadow-sm">
             <div class="flex-shrink-0 flex items-center gap-4">
+                <img src="logo.png" alt="Logo" class="h-10 w-auto" onerror="this.src='https://via.placeholder.com/40?text=MA'">
                 <div class="bg-blue-600 p-2.5 rounded-xl shadow-lg shadow-blue-100">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
@@ -35,15 +37,15 @@
                 </div>
                 <div>
                     <h1 class="text-xl md:text-3xl font-bold text-slate-800 leading-tight" id="mainTitle">Template Requests</h1>
-                    <p class="text-slate-400 text-xs font-bold tracking-[0.3em] uppercase mt-0.5">M&A Garment Automation</p>
+                    <p class="text-slate-400 text-xs font-bold tracking-[0.3em] uppercase mt-0.5">Modernization & Automation</p>
                 </div>
             </div>
             <div id="userSessionArea" class="flex items-center gap-3 bg-slate-50 border p-2 rounded-xl shadow-inner">
                 <div id="loginView" class="flex items-center gap-2">
                     <select id="userSelect" class="text-xs font-bold p-2 border rounded bg-white outline-none focus:ring-2 focus:ring-blue-500">
                         <option value="">Select User...</option>
-                        <option>Keat</option><option>Viki</option><option>Ram</option><option>James</option>
-                        <option>Phone</option><option>Mark</option><option>Joe</option>
+                        <option>Gavin</option><option>Keat</option><option>Viki</option><option>Ram</option>
+                        <option>James</option><option>Phone</option><option>Mark</option><option>Joe</option>
                     </select>
                     <button onclick="login()" class="bg-slate-800 text-white text-[10px] font-bold px-4 py-2 rounded uppercase hover:bg-blue-600 transition-all">Login</button>
                 </div>
@@ -69,7 +71,6 @@
                     </select>
                 </div>
             </div>
-
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">New Styles (Month)</p>
@@ -88,27 +89,22 @@
                     <h2 id="stat-completed" class="text-3xl font-bold text-emerald-600">0</h2>
                 </div>
             </div>
-
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Requests by Section (Selected Month)</h3>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Requests by Section</h3>
                     <div class="h-[300px]"><canvas id="sectionChart"></canvas></div>
                 </div>
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Volume by Required Date</h3>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Volume Trends</h3>
                     <div class="h-[300px]"><canvas id="volumeChart"></canvas></div>
                 </div>
             </div>
-
             <div class="bg-white p-6 rounded-xl border shadow-sm">
-                <div class="flex justify-between items-center mb-4">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest">PIC Unfinished Work (Persistent Backlog)</h3>
-                    <span class="text-[9px] bg-red-50 text-red-500 px-2 py-0.5 rounded font-bold uppercase border border-red-100">Action Required</span>
-                </div>
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">PIC Unfinished Work</h3>
                 <div class="overflow-x-auto rounded-lg border">
                     <table class="w-full text-left text-[11px]">
                         <thead class="bg-slate-50 border-b font-bold text-slate-500">
-                            <tr><th class="p-3 w-32">M&A PIC</th><th class="p-3">Unfinished Styles (Style - Job No - Age)</th></tr>
+                            <tr><th class="p-3 w-32">M&A PIC</th><th class="p-3">Unfinished Styles</th></tr>
                         </thead>
                         <tbody id="pic-workload-table"></tbody>
                     </table>
@@ -118,20 +114,25 @@
 
         <div id="content-template" class="tab-content">
             <div class="bg-white p-6 rounded-xl border shadow-sm mb-4">
-                <div class="flex justify-between items-center mb-4 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
-                    <h3>Search Filters:</h3><span id="tempSyncStatus">Checking...</span>
-                </div>
-                <div class="flex gap-2">
-                    <input type="text" id="tempSearch" oninput="applyTempFilters()" placeholder="Search Style, PIC, Section, or Status..." class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                    <button onclick="clearTempSearch()" class="bg-slate-200 text-slate-600 px-4 rounded-lg text-xs font-bold hover:bg-slate-300">CLEAR</button>
+                <div class="flex justify-between items-center gap-4">
+                    <div class="flex-1 flex gap-2">
+                        <input type="text" id="tempSearch" oninput="applyTempFilters(false)" placeholder="Search Style, PIC, Section..." class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                        <button onclick="clearTempSearch()" class="bg-slate-200 text-slate-600 px-4 rounded-lg text-xs font-bold hover:bg-slate-300">CLEAR</button>
+                    </div>
+                    <div id="tempSyncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Syncing...</div>
                 </div>
             </div>
             <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
-                <table class="w-full text-left min-w-[1200px]">
+                <table class="w-full text-left min-w-[1400px]">
                     <thead class="bg-slate-100 border-b text-[11px] uppercase tracking-wider text-slate-500 font-bold">
                         <tr>
                             <th class="p-3">ID</th><th class="p-3">Start Time</th><th class="p-3">Section</th><th class="p-3">Requestor</th><th class="p-3">Style</th>
-                            <th class="p-3">Job No</th><th class="p-3">Machine</th><th class="p-3">Required</th><th class="p-3">Status</th><th class="p-3">M&A PIC</th><th class="p-3 text-blue-600">Qty</th><th class="p-3">Complete Time</th><th class="p-3">Remark</th>
+                            <th class="p-3">Job No</th> 
+                            <th class="p-3 text-purple-600">Proto Stage</th>
+                            <th class="p-3 text-blue-600">Template No.</th>
+                            <th class="p-3 text-orange-600">Template Type</th>
+                            <th class="p-3 text-orange-400">Description</th> <th class="p-3">Machine</th><th class="p-3">Required</th><th class="p-3">Status</th>
+                            <th class="p-3">M&A PIC</th><th class="p-3 text-blue-600">Qty</th><th class="p-3">Complete Time</th><th class="p-3">Remark</th>
                         </tr>
                     </thead>
                     <tbody id="tempTable" class="text-slate-700"></tbody>
@@ -144,31 +145,46 @@
                 <div class="flex flex-wrap items-center justify-between mb-4 border-b pb-4 gap-2">
                     <h2 class="text-sm font-bold text-slate-400 uppercase tracking-widest">Add Log Entry</h2>
                     <div class="flex items-center gap-3 bg-slate-50 px-3 py-2 rounded-lg border">
-                        <span class="text-sm font-semibold text-slate-700 uppercase text-[10px]">New Request Mode</span>
+                        <span class="text-sm font-semibold text-slate-700 uppercase text-[10px]">Setting For New Template Request</span>
                         <label class="switch"><input type="checkbox" id="requestToggle"><span class="slider"></span></label>
                     </div>
                 </div>
-                <div class="grid grid-cols-1 md:grid-cols-5 gap-3">
-                    <select id="mID" class="p-2 border rounded bg-white text-sm font-bold text-blue-800">
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3">
+                    <select id="mID" class="p-2 border rounded bg-white text-sm font-bold text-blue-800" onchange="updateMachineImage()">
                         <option value="AQM0001">AQM0001 (ZOJE)</option><option value="AQM0002">AQM0002 (ZOJE)</option>
                         <option value="AQM0003">AQM0003 (ZOJE)</option><option value="AQM0004">AQM0004 (ZOJE)</option>
                         <option value="AQM0005">AQM0005 (JUITA)</option><option value="AQM0006">AQM0006 (JACK)</option>
                         <option value="AQM0007">AQM0007 (JUITA)</option><option value="AQM0008">AQM0008 (JUITA)</option>
-                    </select>
-                    <select id="picName" class="p-2 border rounded bg-white text-sm">
-                        <option value="">Select PIC</option>
-                        <option>Keat</option><option>Viki</option><option>Ram</option><option>James</option>
-                        <option>Phone</option><option>Mark</option><option>Joe</option>
+                        <option value="AQM0009">AQM0009 (JUITA)</option>
                     </select>
                     <input type="text" id="fName" placeholder="File Name / Style" class="p-2 border rounded text-sm">
                     <input type="number" id="sTime" placeholder="Time (min)" class="p-2 border rounded text-sm">
                     <button onclick="addEntry()" id="submitBtn" class="bg-blue-600 text-white font-bold py-2 rounded hover:bg-blue-700 shadow-md active:scale-95 transition-all">SAVE LOG</button>
                 </div>
+                <div class="mt-4 flex flex-col justify-center items-center bg-slate-50 border rounded-lg p-4 h-48 relative">
+                    <img id="machineImg" src="" alt="Machine Image" class="max-h-full object-contain transition-opacity duration-300" onerror="this.style.display='none'; document.getElementById('imgFallback').style.display='block';" onload="this.style.display='block'; document.getElementById('imgFallback').style.display='none';">
+                    <div id="imgFallback" class="hidden text-slate-400 text-sm flex flex-col items-center">
+                        <svg class="w-12 h-12 text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
+                        <span class="font-bold tracking-wider uppercase text-[10px]">Image Unavailable</span>
+                        <span class="text-[9px]" id="imgFallbackText"></span>
+                    </div>
+                </div>
             </div>
+            
+            <!-- History Filter Section with Thumbnail Preview -->
             <div class="bg-white p-6 rounded-xl border shadow-sm">
                 <div class="flex items-center justify-between mb-3 text-xs font-bold text-slate-400 uppercase tracking-widest">
                     <h3>History Filter:</h3>
-                    <div id="machineDetailBox" class="text-blue-600 bg-blue-50 px-3 py-1 rounded hidden border border-blue-100"></div>
+                    <div id="machineDetailBox" class="flex items-center gap-3 text-blue-600 bg-blue-50 px-3 py-2 rounded hidden border border-blue-100 shadow-sm">
+                        <!-- Tiny Machine Thumbnail -->
+                        <div class="w-10 h-10 bg-white border rounded overflow-hidden flex items-center justify-center shrink-0">
+                             <img id="filterThumb" src="" alt="Thumb" class="max-w-full max-h-full object-contain" onerror="this.src='https://via.placeholder.com/40?text=NA'">
+                        </div>
+                        <div class="flex flex-col">
+                            <span id="filterMachineName" class="font-black text-blue-800"></span>
+                            <span id="filterMachineSpecs" class="text-[10px] text-blue-500 leading-tight uppercase tracking-tighter"></span>
+                        </div>
+                    </div>
                 </div>
                 <div class="flex flex-wrap gap-2 mb-6" id="filterContainer">
                     <button onclick="setMachineFilter('ALL')" id="btn-ALL" class="machine-btn px-5 py-1.5 border rounded-full text-sm bg-white active-filter shadow-sm">ALL</button>
@@ -194,71 +210,280 @@
         const fetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/47006a48f8764a49ab01dbb665617acf/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=2eqeoBWF-80BETYDfV2HdHZeqJW7-fDYjd3GXri1wNo";
         const templateFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/81581050d13a4df09275905e9e05e2df/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=yWugYHV-OyqB2yVi3eSd94XXEA2CgOngdaCVf83xBtA";
         const updateURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/a37c891f30994fef90aac14c55e2388e/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=6ostk6jCT6jb4Nx4lBi6fO_56axOeQPPm9Oo1_hcw7c";
-
+        
         const machineSpecs = { 
-            "AQM0001": { brand: "ZOJE", model: "ZJ-AM5770AH-750" }, "AQM0002": { brand: "ZOJE", model: "ZJ-AMS-AH-RK900" }, 
-            "AQM0003": { brand: "ZOJE", model: "ZJ-M5-S900H-SF" }, "AQM0004": { brand: "ZOJE", model: "ZJ-M5-S900H-SF" }, 
-            "AQM0005": { brand: "JUITA", model: "JTK8T-8037AJS" }, "AQM0006": { brand: "JACK", model: "M9-SS-F13-X" }, 
-            "AQM0007": { brand: "JUITA", model: "JTK8T-8037AJS" }, "AQM0008": { brand: "JUITA", model: "JTK8T-8037AJS" } 
+            "AQM0001": { brand: "ZOJE", model: "ZJ-AM5770AH-750" }, 
+            "AQM0002": { brand: "ZOJE", model: "ZJ-AMS-AH-RK900" }, 
+            "AQM0003": { brand: "ZOJE", model: "ZJ-M5-S900H-SF" }, 
+            "AQM0004": { brand: "ZOJE", model: "ZJ-M5-S900H-SF" }, 
+            "AQM0005": { brand: "JUITA", model: "JTK8T-8037AJS" }, 
+            "AQM0006": { brand: "JACK", model: "M9-SS-F13-X" }, 
+            "AQM0007": { brand: "JUITA", model: "JTK8T-8037AJS" }, 
+            "AQM0008": { brand: "JUITA", model: "JTK8T-8037AJS" },
+            "AQM0009": { brand: "Juita", model: "JT G20-T140M-J" }
         };
 
+        const machineImages = {
+            "AQM0001": "Zoje1.png",
+            "AQM0002": "Zoje2.png",
+            "AQM0003": "Zoje2.png",
+            "AQM0004": "Zoje2.png",
+            "AQM0005": "Juita2.png",
+            "AQM0006": "Jack.png",
+            "AQM0007": "Juita2.png",
+            "AQM0008": "Juita2.png",
+            "AQM0009": "Juita1.png"
+        };
+
+        const picList = ["Gavin", "Keat", "Viki", "Ram", "James", "Phone", "Mark", "Joe"];
         let allRecords = [], allTemplates = [], currentUser = localStorage.getItem('ma_session_user') || null;
         let sectionChart = null, volumeChart = null;
 
-        function getVal(item, keys) { 
-            for (let k of Object.keys(item)) { 
-                for (let target of keys) { 
-                    if (k.toLowerCase().replace(/[^a-z0-9]/g, '').includes(target.toLowerCase().replace(/[^a-z0-9]/g, ''))) return item[k]; 
-                } 
-            } return "---"; 
+        function formatWebDisplay(dateObj) {
+            if (!dateObj || isNaN(dateObj.getTime())) return "---";
+            const d = dateObj.getDate();
+            const m = dateObj.getMonth() + 1;
+            const y = dateObj.getFullYear();
+            const hh = String(dateObj.getHours()).padStart(2, '0');
+            const mm = String(dateObj.getMinutes()).padStart(2, '0');
+            return `${d}/${m}/${y} ${hh}:${mm}`;
+        }
+
+        function formatExcelPayload(dateStr) {
+            if (!dateStr || !dateStr.includes('/')) return dateStr;
+            const [datePart, timePart] = dateStr.split(' ');
+            const [d, m, y] = datePart.split('/');
+            return `${m}/${d}/${y} ${timePart}`;
+        }
+
+        function getVal(item, keys) {
+            if (!item) return "---";
+            for (let k of Object.keys(item)) {
+                let cleanK = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+                for (let target of keys) {
+                    if (cleanK.includes(target.toLowerCase().replace(/[^a-z0-9]/g, ''))) return item[k];
+                }
+            } return "---";
         }
 
         function convertExcelDate(v, isTimestamp = true) {
-            if (!v || v === "---") return "---";
-            if (!isNaN(v) && parseFloat(v) > 40000) {
-                let date = new Date(Math.round((v - 25569) * 86400 * 1000));
-                let m = date.getUTCMonth() + 1, d = date.getUTCDate(), y = date.getUTCFullYear();
-                let hh = String(date.getUTCHours()).padStart(2, '0'), mm = String(date.getUTCMinutes()).padStart(2, '0');
-                return isTimestamp ? `${m}/${d}/${y} ${hh}:${mm}` : `${m}/${d}/${y}`;
+            if (!v || v === "---" || String(v).trim() === "") return "---";
+            let date;
+            if (typeof v === 'number' || (!isNaN(v) && !isNaN(parseFloat(v)))) {
+                date = new Date((parseFloat(v) - 25569) * 86400 * 1000);
+            } else {
+                date = new Date(String(v).replace('Z', '').trim());
             }
-            return String(v).replace('Z', '').trim();
+            if (isNaN(date.getTime())) return String(v);
+            const d = date.getUTCDate(), m = date.getUTCMonth() + 1, y = date.getUTCFullYear();
+            if (!isTimestamp) return `${d}/${m}/${y}`;
+            const hh = String(date.getUTCHours()).padStart(2, '0'), mm = String(date.getUTCMinutes()).padStart(2, '0');
+            return `${d}/${m}/${y} ${hh}:${mm}`;
+        }
+
+        function updateMachineImage() {
+            const mID = document.getElementById('mID').value;
+            const imgEl = document.getElementById('machineImg');
+            const targetSrc = machineImages[mID];
+            document.getElementById('imgFallbackText').innerText = "Missing file: " + targetSrc;
+            if(imgEl && targetSrc) { imgEl.src = targetSrc; }
         }
 
         async function refreshTemplateLogs(isSilent = false) {
-            const st = document.getElementById('tempSyncStatus'); 
-            if(!isSilent) st.classList.add('sync-active');
+            const st = document.getElementById('tempSyncStatus');
+            if(!isSilent && st) st.classList.add('sync-active');
             try {
                 const r = await fetch(templateFetchURL + "&cb=" + Date.now(), { method: 'POST', body: JSON.stringify({}) });
                 const d = await r.json();
                 allTemplates = d.map(i => {
-                    const doneRaw = getVal(i, ['Complete Date']);
-                    const isDone = (doneRaw && String(doneRaw).trim() !== "" && doneRaw !== '---');
-                    const reqDate = convertExcelDate(getVal(i, ['Required Date']), false);
-                    let status = isDone ? 'COMPLETED' : (new Date(reqDate) < new Date().setHours(0,0,0,0) ? 'DELAYED' : 'PENDING');
+                    const doneRaw = getVal(i, ['Complete Date', 'Finish']);
+                    const reqDateFormatted = convertExcelDate(getVal(i, ['Required Date']), false);
+                    const isDone = (doneRaw && doneRaw !== '---' && String(doneRaw).trim() !== "");
+                    let currentStatus = 'PENDING';
+                    if (isDone) {
+                        currentStatus = 'COMPLETED';
+                    } else {
+                        const now = new Date();
+                        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                        const parts = reqDateFormatted.split('/');
+                        const required = parts.length === 3 ? new Date(parts[2], parts[1] - 1, parts[0]) : new Date(reqDateFormatted);
+                        required.setHours(0, 0, 0, 0);
+                        if (!isNaN(required.getTime()) && required < today) currentStatus = 'DELAYED';
+                    }
                     return {
+                        guid: i['__PowerAppsId__'] || i['Id'] || i['ID'],
                         id: getVal(i, ['Id', 'ID']),
-                        startTime: convertExcelDate(getVal(i, ['Start time'])), 
+                        startTime: convertExcelDate(getVal(i, ['Start time'])),
                         section: getVal(i, ['Section']),
-                        requestor: getVal(i, ['Requestor']), 
-                        style: getVal(i, ['Style Number']), 
-                        jobNo: getVal(i, ['Job Number']), 
-                        machine: getVal(i, ['Machine Type']), 
-                        requiredDate: reqDate, 
-                        completeDate: doneRaw, 
+                        requestor: getVal(i, ['Requestor']),
+                        style: getVal(i, ['Style Number', 'Style']),
+                        templateNo: getVal(i, ['Template No', 'TempNo']),
+                        templateType: getVal(i, ['Template Type', 'Type']),
+                        protoStage: getVal(i, ['Proto Stage', 'Stage']),
+                        description: getVal(i, ['Description', 'Desc']),
+                        jobNo: getVal(i, ['Job Number', 'JobNo']),
+                        machine: getVal(i, ['Machine Type']),
+                        requiredDate: reqDateFormatted,
+                        completeDateDisplay: convertExcelDate(doneRaw),
                         qty: getVal(i, ['Quantity', 'Complete Qty']),
-                        pic: getVal(i, ['M&A PIC']), 
+                        pic: getVal(i, ['M&A PIC', 'PIC']),
                         remark: getVal(i, ['Remark']),
-                        status: status,
-                        raw: getVal(i, ['Start time']) 
+                        status: currentStatus,
+                        raw: getVal(i, ['Start time'])
                     };
                 }).sort((a,b)=>b.raw - a.raw);
-
                 generateMonthOptions();
                 updateDashboard();
-                applyTempFilters();
-                st.innerText = "LIVE: " + new Date().toLocaleTimeString(); 
-                st.classList.remove('sync-active'); 
-            } catch (e) { st.innerText = "Error"; }
+                applyTempFilters(false);
+                if(st) { st.innerText = "LIVE: " + new Date().toLocaleTimeString(); st.classList.remove('sync-active'); }
+            } catch (e) { if(st) st.innerText = "Error"; }
+        }
+
+        function updateDashboard() {
+            const selectedMonthStr = document.getElementById('monthFilter').value;
+            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const filteredByMonth = allTemplates.filter(t => {
+                if (selectedMonthStr === "ALL") return true;
+                const dateParts = t.startTime.split(' ')[0].split('/');
+                if (dateParts.length !== 3) return false;
+                const monthName = months[parseInt(dateParts[1]) - 1];
+                return `${monthName}-${dateParts[2]}` === selectedMonthStr;
+            });
+            document.getElementById('stat-total').innerText = filteredByMonth.length;
+            document.getElementById('stat-pending').innerText = filteredByMonth.filter(t => t.status === 'PENDING').length;
+            document.getElementById('stat-delayed').innerText = filteredByMonth.filter(t => t.status === 'DELAYED').length;
+            document.getElementById('stat-completed').innerText = filteredByMonth.filter(t => t.status === 'COMPLETED').length;
+            
+            const picStats = {};
+            allTemplates.forEach(t => {
+                if (t.status === 'COMPLETED') return;
+                if (!picStats[t.pic]) picStats[t.pic] = [];
+                picStats[t.pic].push({ style: t.style, job: t.jobNo, status: t.status });
+            });
+            document.getElementById('pic-workload-table').innerHTML = Object.entries(picStats).map(([name, tasks]) => `
+                <tr class="border-b hover:bg-blue-50 cursor-pointer transition-colors" onclick="drillDown('${name}')">
+                    <td class="p-4 font-bold border-r bg-slate-50/50">${name}</td>
+                    <td class="p-3 flex flex-wrap gap-2">
+                        ${tasks.map(task => `<div class="flex items-center gap-1.5 border rounded-lg px-2.5 py-1.5 bg-white shadow-sm"><span class="w-2 h-2 rounded-full ${task.status === 'DELAYED' ? 'bg-red-500 animate-pulse' : 'bg-amber-400'}"></span><span class="font-bold text-slate-800">${task.style}</span><span class="text-slate-500 text-[10px]">${task.job}</span></div>`).join('')}
+                    </td>
+                </tr>`).join('') || '<tr><td colspan="2" class="p-10 text-center italic">All clear!</td></tr>';
+            
+            const secStats = {};
+            filteredByMonth.forEach(t => { secStats[t.section] = (secStats[t.section] || 0) + 1; });
+            if(sectionChart) sectionChart.destroy();
+            sectionChart = new Chart(document.getElementById('sectionChart'), {
+                type: 'bar',
+                data: { labels: Object.keys(secStats), datasets: [{ label: 'Requests', data: Object.values(secStats), backgroundColor: '#3b82f6' }] },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+            const volStats = {};
+            filteredByMonth.forEach(t => { volStats[t.requiredDate] = (volStats[t.requiredDate] || 0) + 1; });
+            const sortedDates = Object.keys(volStats).sort((a,b) => {
+                const partsA = a.split('/'), partsB = b.split('/');
+                return new Date(partsA[2], partsA[1]-1, partsA[0]) - new Date(partsB[2], partsB[1]-1, partsB[0]);
+            });
+            if(volumeChart) volumeChart.destroy();
+            volumeChart = new Chart(document.getElementById('volumeChart'), {
+                type: 'line',
+                data: { labels: sortedDates, datasets: [{ label: 'Volume', data: sortedDates.map(d => volStats[d]), borderColor: '#10b981', tension: 0.3 }] },
+                options: { responsive: true, maintainAspectRatio: false }
+            });
+        }
+
+        async function refreshLiveLogs(isSilent = false) {
+            const st = document.getElementById('syncStatus');
+            if(!isSilent && st) st.classList.add('sync-active');
+            try { 
+                const r = await fetch(fetchURL + "&cb=" + Date.now(), { method: 'POST', body: JSON.stringify({}) });
+                const d = await r.json();
+                allRecords = d.map(i => ({ timestamp: convertExcelDate(getVal(i, ['Timestamp'])), machine: getVal(i, ['Machine']), pic: getVal(i, ['PIC']), type: getVal(i, ['Type']), file: getVal(i, ['FileName']), time: getVal(i, ['Time']), raw: getVal(i, ['Timestamp']) })).sort((a,b)=>b.raw - a.raw);
+                if(st) { st.innerText = "LIVE: " + new Date().toLocaleTimeString(); st.classList.remove('sync-active'); }
+                applyFilters();
+            } catch (e) {}
+        }
+
+        async function addEntry() {
+            if(!currentUser) return alert("Authentication Required:\nPlease login first.");
+            const m = document.getElementById('mID').value;
+            const p = currentUser;
+            const f = document.getElementById('fName').value;
+            const t = document.getElementById('sTime').value;
+            const isN = document.getElementById('requestToggle').checked;
+            if(!f || !t) return alert("Missing Info: Please enter File Name and Time.");
+            const b = document.getElementById('submitBtn'); b.innerText = "Saving..."; b.disabled = true;
+            try { 
+                const now = new Date();
+                const localStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
+                const res = await fetch(postURL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({timestamp: localStr, machine: m, pic: p, type: isN ? "NEW REQUEST" : "SETTING", file: f, time: t}) });
+                if(res.ok) { document.getElementById('fName').value = ''; document.getElementById('sTime').value = ''; refreshLiveLogs(); }
+            } finally { b.innerText = "SAVE LOG"; b.disabled = false; }
+        }
+
+        let curF = 'ALL';
+        function setMachineFilter(m) {
+            curF = m;
+            document.querySelectorAll('.machine-btn').forEach(btn => btn.classList.remove('active-filter'));
+            document.getElementById(`btn-${m}`).classList.add('active-filter');
+            const box = document.getElementById('machineDetailBox');
+            if(m === 'ALL') { 
+                box.classList.add('hidden'); 
+            } else { 
+                document.getElementById('filterThumb').src = machineImages[m];
+                document.getElementById('filterMachineName').innerText = m;
+                document.getElementById('filterMachineSpecs').innerText = `${machineSpecs[m].brand} - ${machineSpecs[m].model}`;
+                box.classList.remove('hidden'); 
+            }
+            applyFilters();
+        }
+
+        function applyFilters() {
+            const s = document.getElementById('fileSearch').value.toLowerCase();
+            const filtered = allRecords.filter(r => (curF==='ALL' || r.machine===curF) && (String(r.file).toLowerCase().includes(s) || String(r.pic).toLowerCase().includes(s)));
+            document.getElementById('logTable').innerHTML = filtered.map(r => `<tr class="border-b"><td class="p-3 text-slate-400 font-mono">${r.timestamp}</td><td class="p-3 font-bold text-blue-700">${r.machine}</td><td class="p-3">${r.pic}</td><td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${r.type === 'NEW REQUEST' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}">${r.type}</span></td><td class="p-3">${r.file}</td><td class="p-3 font-bold">${r.time} min</td></tr>`).join('');
+        }
+
+        function drillDown(query) { switchTab('template'); document.getElementById('tempSearch').value = query; applyTempFilters(true); }
+
+        function applyTempFilters(prioritySort = false) {
+            const sv = document.getElementById('tempSearch').value.toLowerCase();
+            const isAdmin = (currentUser === "Gavin");
+            let filtered = allTemplates.filter(t => t.style.toLowerCase().includes(sv) || t.pic.toLowerCase().includes(sv) || t.status.toLowerCase().includes(sv));
+            if (prioritySort) {
+                const weights = { 'DELAYED': 0, 'PENDING': 1, 'COMPLETED': 2 };
+                filtered.sort((a, b) => weights[a.status] - weights[b.status]);
+            }
+            document.getElementById('tempTable').innerHTML = filtered.map(t => {
+                const done = t.status === 'COMPLETED';
+                const isMine = (currentUser === t.pic);
+                const canEdit = (isAdmin || isMine) && !done;
+                const templateNoCell = (isAdmin && !done) ? `<input type="text" id="edit-tno-${t.id}" class="manual-input admin-input" value="${t.templateNo === '---' ? '' : t.templateNo}" placeholder="Assign No.">` : `<span class="font-bold">${t.templateNo}</span>`;
+                const picCell = (isAdmin && !done) ? `<select id="edit-pic-${t.id}" class="manual-input admin-input"><option value="">Select PIC</option>${picList.map(p => `<option value="${p}" ${p === t.pic ? 'selected' : ''}>${p}</option>`).join('')}</select>` : `<span>${t.pic}</span>`;
+                const webTime = formatWebDisplay(new Date());
+                const dateInput = (isMine && !done) ? `<input type="text" id="date-${t.id}" class="manual-input" value="${webTime}">` : `<span>${done ? t.completeDateDisplay : '---'}</span>`;
+                const qtyInput = (isMine && !done) ? `<input type="number" id="qty-${t.id}" class="manual-input qty-input" placeholder="Qty">` : `<span>${done ? t.qty : '---'}</span>`;
+                return `<tr class="border-b hover:bg-slate-50">
+                    <td class="p-3 text-slate-400 font-mono">${t.id}</td><td class="p-3 text-slate-500">${t.startTime}</td><td class="p-3">${t.section}</td><td class="p-3">${t.requestor}</td><td class="p-3 font-bold">${t.style}</td><td class="p-3">${t.jobNo}</td><td class="p-3 font-semibold text-purple-700">${t.protoStage}</td><td class="p-3 text-blue-700">${templateNoCell}</td><td class="p-3 text-orange-700 font-bold">${t.templateType}</td><td class="p-3 text-slate-500 italic text-[10px]">${t.description}</td><td class="p-3">${t.machine}</td><td class="p-3">${t.requiredDate}</td><td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${done ? 'bg-emerald-100 text-emerald-600' : (t.status === 'DELAYED' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600')}">${t.status}</span></td><td class="p-3 font-medium">${picCell}</td><td class="p-3">${qtyInput}</td><td class="p-3">${dateInput}</td><td class="p-3"><div class="flex flex-col gap-1">${canEdit ? `<input type="text" id="remark-${t.id}" class="manual-input" value="${t.remark === '---' ? '' : t.remark}" placeholder="Add remark..."><button onclick="adminUpdate('${t.id}', event)" class="bg-blue-600 text-white text-[9px] font-bold py-1 rounded">SAVE</button>` : `<span class="text-[10px]">${t.remark}</span>`}</div></td>
+                </tr>`;
+            }).join('');
+        }
+
+        async function adminUpdate(simpleId, event) {
+            const record = allTemplates.find(t => String(t.id) === String(simpleId));
+            if (!record) return;
+            const tNo = document.getElementById(`edit-tno-${simpleId}`)?.value || "";
+            const picDropdown = document.getElementById(`edit-pic-${simpleId}`);
+            const tQty = document.getElementById(`qty-${simpleId}`)?.value || "";
+            const tDateRaw = document.getElementById(`date-${simpleId}`)?.value || "";
+            const tRem = document.getElementById(`remark-${simpleId}`)?.value || "";
+            const tDateExcel = formatExcelPayload(tDateRaw);
+            let tPic = picDropdown ? picDropdown.value : (record.pic || (currentUser || ""));
+            if (!currentUser) return alert("Please login first.");
+            const btn = event.target; btn.innerText = "SAVING..."; btn.disabled = true;
+            try {
+                const res = await fetch(updateURL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ recordID: String(record.guid), templateNo: String(tNo), pic: String(tPic), completionDate: String(tDateExcel), completeQty: String(tQty), remark: String(tRem) }) });
+                if(res.ok) { btn.innerText = "UPDATED!"; setTimeout(() => { btn.innerText = "SAVE"; btn.disabled = false; refreshTemplateLogs(); }, 3000); }
+                else { btn.innerText = "SAVE"; btn.disabled = false; }
+            } catch(e) { btn.innerText = "SAVE"; btn.disabled = false; }
         }
 
         function generateMonthOptions() {
@@ -266,8 +491,8 @@
             const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
             const uniqueMonths = new Set();
             allTemplates.forEach(t => {
-                const d = new Date(t.startTime);
-                if (!isNaN(d.getTime())) uniqueMonths.add(`${months[d.getMonth()]}-${d.getFullYear()}`);
+                const dateParts = t.startTime.split(' ')[0].split('/');
+                if (dateParts.length === 3) uniqueMonths.add(`${months[parseInt(dateParts[1]) - 1]}-${dateParts[2]}`);
             });
             const currentVal = select.value;
             select.innerHTML = '<option value="ALL">All History</option>';
@@ -275,142 +500,29 @@
             select.value = currentVal || "ALL";
         }
 
-        function updateDashboard() {
-            const selectedMonthStr = document.getElementById('monthFilter').value;
-            const now = new Date();
-            const filteredByMonth = allTemplates.filter(t => {
-                if (selectedMonthStr === "ALL") return true;
-                const d = new Date(t.startTime);
-                const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-                return `${months[d.getMonth()]}-${d.getFullYear()}` === selectedMonthStr;
-            });
-
-            document.getElementById('stat-total').innerText = filteredByMonth.length;
-            document.getElementById('stat-pending').innerText = allTemplates.filter(t => t.status === 'PENDING').length;
-            document.getElementById('stat-delayed').innerText = allTemplates.filter(t => t.status === 'DELAYED').length;
-            document.getElementById('stat-completed').innerText = filteredByMonth.filter(t => t.status === 'COMPLETED').length;
-
-            const picStats = {};
-            allTemplates.forEach(t => {
-                if (t.status === 'COMPLETED') return; 
-                if (!picStats[t.pic]) picStats[t.pic] = [];
-                const diffDays = Math.floor(Math.abs(now - new Date(t.startTime)) / (1000 * 60 * 60 * 24));
-                picStats[t.pic].push({ style: t.style, job: t.jobNo, status: t.status, age: diffDays >= 1 ? `${diffDays}d ago` : `Today` });
-            });
-            document.getElementById('pic-workload-table').innerHTML = Object.entries(picStats).map(([name, tasks]) => `
-                <tr class="border-b hover:bg-blue-50 cursor-pointer" onclick="drillDown('${name}')">
-                    <td class="p-4 font-bold text-slate-700 align-top border-r bg-slate-50/50">${name}</td>
-                    <td class="p-3 flex flex-wrap gap-2">
-                        ${tasks.map(task => `<div class="flex items-center gap-1.5 border rounded-lg px-2.5 py-1.5 bg-white shadow-sm"><span class="w-2 h-2 rounded-full ${task.status === 'DELAYED' ? 'bg-red-500 animate-pulse' : 'bg-amber-400'}"></span><span class="font-bold text-slate-800">${task.style}</span><span class="text-slate-500 text-[10px]">${task.job}</span><span class="ml-1 text-[9px] font-bold px-1.5 py-0.5 bg-slate-100 rounded-md">${task.age}</span></div>`).join('')}
-                    </td>
-                </tr>`).join('') || '<tr><td colspan="2" class="p-10 text-center italic">All tasks completed!</td></tr>';
-
-            const secStats = {};
-            filteredByMonth.forEach(t => { secStats[t.section] = (secStats[t.section] || 0) + 1; });
-            if(sectionChart) sectionChart.destroy();
-            sectionChart = new Chart(document.getElementById('sectionChart'), {
-                type: 'bar',
-                data: { labels: Object.keys(secStats), datasets: [{ label: 'Styles', data: Object.values(secStats), backgroundColor: '#3b82f6' }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
-            });
-
-            const volStats = {};
-            filteredByMonth.forEach(t => { volStats[t.requiredDate] = (volStats[t.requiredDate] || 0) + 1; });
-            const sortedDates = Object.keys(volStats).sort((a,b) => new Date(a) - new Date(b));
-            if(volumeChart) volumeChart.destroy();
-            volumeChart = new Chart(document.getElementById('volumeChart'), {
-                type: 'line',
-                data: { labels: sortedDates, datasets: [{ label: 'Total Volume', data: sortedDates.map(d => volStats[d]), borderColor: '#10b981', fill: true, backgroundColor: 'rgba(16, 185, 129, 0.1)', tension: 0.3 }] },
-                options: { responsive: true, maintainAspectRatio: false }
-            });
-        }
-
-        async function refreshLiveLogs(isSilent = false) { 
-            const st = document.getElementById('syncStatus'); if(!isSilent) st.classList.add('sync-active'); 
-            try { 
-                const r = await fetch(fetchURL + "&cb=" + Date.now(), { method: 'POST', body: JSON.stringify({}) }); 
-                const d = await r.json(); 
-                allRecords = d.map(i => ({ timestamp: convertExcelDate(getVal(i, ['Timestamp'])), machine: getVal(i, ['Machine']), pic: getVal(i, ['PIC']), type: getVal(i, ['Type']), file: getVal(i, ['FileName']), time: getVal(i, ['Time']), raw: getVal(i, ['Timestamp']) })).sort((a,b)=>b.raw - a.raw); 
-                st.innerText = "LIVE: " + new Date().toLocaleTimeString(); 
-                st.classList.remove('sync-active'); 
-                applyFilters(); 
-            } catch (e) {} 
-        }
-
-        async function addEntry() { 
-            const m = document.getElementById('mID').value, p = document.getElementById('picName').value, f = document.getElementById('fName').value, t = document.getElementById('sTime').value, isN = document.getElementById('requestToggle').checked; 
-            if(!p || !f || !t) return alert("Missing Info"); 
-            const b = document.getElementById('submitBtn'); b.innerText = "Saving..."; b.disabled = true; 
-            try { 
-                const now = new Date(); 
-                const localStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`; 
-                const res = await fetch(postURL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({timestamp: localStr, machine: m, pic: p, type: isN ? "NEW REQUEST" : "SETTING", file: f, time: t}) }); 
-                if(res.ok) { document.getElementById('fName').value = ''; document.getElementById('sTime').value = ''; refreshLiveLogs(); } 
-            } finally { b.innerText = "SAVE LOG"; b.disabled = false; } 
-        }
-
-        let curF = 'ALL';
-        function setMachineFilter(m) { 
-            curF = m; document.querySelectorAll('.machine-btn').forEach(b => b.classList.remove('active-filter')); 
-            document.getElementById(`btn-${m}`).classList.add('active-filter'); 
-            const box = document.getElementById('machineDetailBox'); 
-            if(m === 'ALL') { box.classList.add('hidden'); } else { box.innerText = `${machineSpecs[m].brand} - ${machineSpecs[m].model}`; box.classList.remove('hidden'); } 
-            applyFilters(); 
-        }
-
-        function applyFilters() { 
-            const s = document.getElementById('fileSearch').value.toLowerCase(); 
-            const f = allRecords.filter(r => (curF==='ALL' || r.machine===curF) && (String(r.file).toLowerCase().includes(s) || String(r.pic).toLowerCase().includes(s))); 
-            document.getElementById('logTable').innerHTML = f.map(r => `<tr class="border-b"><td class="p-3 text-slate-400 font-mono">${r.timestamp}</td><td class="p-3 font-bold text-blue-700">${r.machine}</td><td class="p-3 font-medium">${r.pic}</td><td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${r.type === 'NEW REQUEST' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}">${r.type}</span></td><td class="p-3 font-mono">${r.file}</td><td class="p-3 font-bold">${r.time} min</td></tr>`).join(''); 
-        }
-
-        function drillDown(query) { switchTab('template'); document.getElementById('tempSearch').value = query; applyTempFilters(); }
+        function clearTempSearch() { document.getElementById('tempSearch').value = ""; applyTempFilters(false); }
         function switchTab(t) { 
-            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden')); 
-            document.getElementById(`content-${t}`).classList.remove('hidden'); 
-            document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active')); 
-            document.getElementById(`tab-${t}`).classList.add('tab-active'); 
-            const titles = { template: 'Template Requests', dashboard: 'Management Dashboard', setting: 'Machine Setting Log' };
-            document.getElementById('mainTitle').innerText = titles[t]; 
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`content-${t}`).classList.remove('hidden');
+            document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active'));
+            document.getElementById(`tab-${t}`).classList.add('tab-active');
         }
-        function login() { const u = document.getElementById('userSelect').value; if (!u) return alert("Select Name"); localStorage.setItem('ma_session_user', u); currentUser = u; updateSessionUI(); applyTempFilters(); }
-        function logout() { localStorage.removeItem('ma_session_user'); currentUser = null; updateSessionUI(); applyTempFilters(); }
-        function updateSessionUI() { const lv = document.getElementById('loginView'), av = document.getElementById('activeUserView'); if (currentUser) { lv.classList.add('hidden'); av.classList.remove('hidden'); document.getElementById('displayUserName').innerText = currentUser; } else { lv.classList.remove('hidden'); av.classList.add('hidden'); } }
-
-        function applyTempFilters() {
-            const sv = document.getElementById('tempSearch').value.toLowerCase();
-            const filtered = allTemplates.filter(t => t.style.toLowerCase().includes(sv) || t.pic.toLowerCase().includes(sv) || t.section.toLowerCase().includes(sv) || t.status.toLowerCase().includes(sv) || t.jobNo.toLowerCase().includes(sv));
-            document.getElementById('tempTable').innerHTML = filtered.map(t => {
-                const done = t.status === 'COMPLETED', mine = currentUser === t.pic;
-                return `<tr class="border-b hover:bg-slate-50">
-                    <td class="p-3 text-slate-400 font-mono">${t.id}</td><td class="p-3 text-slate-500">${t.startTime}</td><td class="p-3 text-slate-500">${t.section}</td><td class="p-3 text-slate-500">${t.requestor}</td><td class="p-3 text-slate-500 font-bold">${t.style}</td><td class="p-3 text-slate-500">${t.jobNo}</td><td class="p-3 text-slate-400">${t.machine}</td><td class="p-3 text-slate-400">${t.requiredDate}</td>
-                    <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${done ? 'bg-emerald-100 text-emerald-600' : (t.status === 'DELAYED' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600')}">${t.status}</span></td>
-                    <td class="p-3 font-medium ${mine ? 'text-blue-700 underline' : 'text-slate-500'}">${t.pic}</td>
-                    <td class="p-3">${done ? `<span class="font-bold">${t.qty}</span>` : (mine ? `<input type="number" id="qty-${t.id}" class="manual-input qty-input" placeholder="Qty">` : `---`)}</td>
-                    <td class="p-3">${done ? `<span class="text-[10px] text-emerald-600 font-bold">${convertExcelDate(t.completeDate)}</span>` : (mine ? `<div class="flex flex-col"><input type="text" id="date-${t.id}" class="manual-input" value="${new Date().toLocaleDateString()}"><button onclick="saveManualComplete('${t.id}')" class="bg-blue-600 text-white text-[9px] font-bold px-2 py-1 rounded">SAVE</button></div>` : `---`)}</td>
-                    <td class="p-3">${mine && !done ? `<input type="text" id="remark-${t.id}" class="manual-input" value="${t.remark === '---' ? '' : t.remark}">` : `<span class="text-[10px]">${t.remark}</span>`}</td>
-                </tr>`;
-            }).join('');
+        function login() { currentUser = document.getElementById('userSelect').value; localStorage.setItem('ma_session_user', currentUser); updateSessionUI(); applyTempFilters(false); }
+        function logout() { currentUser = null; localStorage.removeItem('ma_session_user'); updateSessionUI(); applyTempFilters(false); }
+        function updateSessionUI() { 
+            const lv = document.getElementById('loginView'), av = document.getElementById('activeUserView');
+            if (currentUser) { lv.classList.add('hidden'); av.classList.remove('hidden'); document.getElementById('displayUserName').innerText = currentUser; } 
+            else { lv.classList.remove('hidden'); av.classList.add('hidden'); }
         }
 
-        async function saveManualComplete(id) {
-            const qtyInput = document.getElementById(`qty-${id}`).value;
-            if(!qtyInput) return alert("Qty Required");
-            try {
-                const res = await fetch(updateURL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ recordID: String(id), pic: currentUser, completionDate: document.getElementById(`date-${id}`).value, completeQty: qtyInput, remark: document.getElementById(`remark-${id}`).value }) });
-                if(res.ok) refreshTemplateLogs();
-            } catch(e) {}
-        }
-
-        const mList = Object.keys(machineSpecs);
-        mList.forEach(m => { 
+        Object.keys(machineSpecs).forEach(m => { 
             const b = document.createElement('button'); b.innerText = m; b.id = `btn-${m}`; 
             b.className = "machine-btn px-4 py-1.5 border rounded-full text-sm bg-white shadow-sm hover:border-blue-300 transition-all"; 
             b.onclick = () => setMachineFilter(m); 
-            document.getElementById('filterContainer').appendChild(b); 
+            document.getElementById('filterContainer').appendChild(b);
         });
 
-        window.onload = () => { updateSessionUI(); refreshTemplateLogs(); refreshLiveLogs(); setInterval(() => { refreshTemplateLogs(true); refreshLiveLogs(true); }, 60000); };
+        window.onload = () => { updateSessionUI(); updateMachineImage(); refreshTemplateLogs(); refreshLiveLogs(); setInterval(() => { refreshTemplateLogs(true); refreshLiveLogs(true); }, 60000); };
     </script>
 </body>
 </html>
