@@ -23,6 +23,9 @@
         .admin-input { border: 1px solid #3b82f6; background-color: #f0f7ff; width: 110px; font-weight: bold; }
         .qty-input { width: 60px; font-weight: bold; color: #2563eb; border: 1px solid #94a3b8; }
         .manual-input:focus { border-color: #2563eb; box-shadow: 0 0 0 1px #2563eb; }
+        
+        /* Performance Enhancement: Smooth transition for machine images */
+        #machineImg { transition: opacity 0.3s ease-in-out; opacity: 0; }
     </style>
 </head>
 <body class="bg-slate-50 p-4 font-sans text-slate-900">
@@ -30,13 +33,8 @@
         <header class="mb-4 flex flex-row justify-between items-center bg-white p-6 rounded-t-xl border-x border-t shadow-sm">
             <div class="flex-shrink-0 flex items-center gap-4">
                 <img src="logo.png" alt="Logo" class="h-10 w-auto" onerror="this.src='https://via.placeholder.com/40?text=MA'">
-                <div class="bg-blue-600 p-2.5 rounded-xl shadow-lg shadow-blue-100">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-7 w-7 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10" />
-                    </svg>
-                </div>
                 <div>
-                    <h1 class="text-xl md:text-3xl font-bold text-slate-800 leading-tight" id="mainTitle">Template Requests</h1>
+                    <h1 class="text-xl md:text-3xl font-bold text-slate-800 leading-tight" id="mainTitle">M&A Portal</h1>
                     <p class="text-slate-400 text-xs font-bold tracking-[0.3em] uppercase mt-0.5">Modernization & Automation</p>
                 </div>
             </div>
@@ -58,9 +56,62 @@
 
         <nav class="flex bg-white border-x border-b rounded-b-xl mb-6 shadow-sm overflow-hidden">
             <button onclick="switchTab('template')" id="tab-template" class="flex-1 py-4 text-sm uppercase tracking-widest font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50 tab-active">Template Requests</button>
+            <button onclick="switchTab('laser')" id="tab-laser" class="flex-1 py-4 text-sm uppercase tracking-widest font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50">Laser Tracking</button>
             <button onclick="switchTab('dashboard')" id="tab-dashboard" class="flex-1 py-4 text-sm uppercase tracking-widest font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50">Dashboard</button>
             <button onclick="switchTab('setting')" id="tab-setting" class="flex-1 py-4 text-sm uppercase tracking-widest font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50">Machine Setting</button>
         </nav>
+
+        <div id="content-laser" class="tab-content hidden">
+            <div class="bg-white p-6 rounded-xl border shadow-sm mb-4">
+                <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">Laser Production Log</h2>
+            </div>
+            <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
+                <table class="w-full text-left min-w-[2000px]">
+                    <thead class="bg-slate-100 border-b text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+                        <tr>
+                            <th class="p-3">ID</th>
+                            <th class="p-3">Received Time</th>
+                            <th class="p-3">Season</th>
+                            <th class="p-3">Style Number</th>
+                            <th class="p-3">Section</th>
+                            <th class="p-3">Category</th>
+                            <th class="p-3">Proto Stage</th>
+                            <th class="p-3">Garment Quantity</th>
+                            <th class="p-3">Laser Part Count</th>
+                            <th class="p-3">Ironing Part Count</th>
+                            <th class="p-3">Laser Trim Part Count</th>
+                            <th class="p-3">Complete Date</th>
+                            <th class="p-3">M&A PIC</th>
+                            <th class="p-3">Consumption Start Date</th>
+                            <th class="p-3">Consumption Complete Date</th>
+                            <th class="p-3">Consumption PIC</th>
+                            <th class="p-3">Remark</th>
+                        </tr>
+                    </thead>
+                    <tbody class="text-slate-700">
+                        <tr class="border-b hover:bg-slate-50">
+                            <td class="p-3 font-mono text-slate-400">1</td>
+                            <td class="p-3">12/19/2025 16:42</td>
+                            <td class="p-3 font-bold">SP27</td>
+                            <td class="p-3 text-blue-700 font-bold">IU3284</td>
+                            <td class="p-3">Sample Development</td>
+                            <td class="p-3">NK/JORDAN</td>
+                            <td class="p-3 font-semibold text-purple-700">P2</td>
+                            <td class="p-3 font-bold">44</td>
+                            <td class="p-3 font-bold">44</td>
+                            <td class="p-3 text-slate-400">---</td>
+                            <td class="p-3 text-slate-400">---</td>
+                            <td class="p-3 text-emerald-600 font-bold">12/20/2025 10:00</td>
+                            <td class="p-3">Phone</td>
+                            <td class="p-3 text-slate-500">12/20/2025 11:00</td>
+                            <td class="p-3 text-slate-500">12/20/2025 13:00</td>
+                            <td class="p-3">Phone</td>
+                            <td class="p-3 italic text-slate-400">---</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
 
         <div id="content-dashboard" class="tab-content hidden">
             <div class="mb-6 flex justify-end">
@@ -161,8 +212,8 @@
                     <input type="number" id="sTime" placeholder="Time (min)" class="p-2 border rounded text-sm">
                     <button onclick="addEntry()" id="submitBtn" class="bg-blue-600 text-white font-bold py-2 rounded hover:bg-blue-700 shadow-md active:scale-95 transition-all">SAVE LOG</button>
                 </div>
-                <div class="mt-4 flex flex-col justify-center items-center bg-slate-50 border rounded-lg p-4 h-48 relative">
-                    <img id="machineImg" src="" alt="Machine Image" class="max-h-full object-contain transition-opacity duration-300" onerror="this.style.display='none'; document.getElementById('imgFallback').style.display='block';" onload="this.style.display='block'; document.getElementById('imgFallback').style.display='none';">
+                <div class="mt-4 flex flex-col justify-center items-center bg-slate-50 border rounded-lg p-4 h-48 relative overflow-hidden">
+                    <img id="machineImg" src="" alt="Machine Image" loading="lazy" class="max-h-full object-contain" onerror="this.style.display='none'; document.getElementById('imgFallback').style.display='block';" onload="this.style.opacity='1'; this.style.display='block'; document.getElementById('imgFallback').style.display='none';">
                     <div id="imgFallback" class="hidden text-slate-400 text-sm flex flex-col items-center">
                         <svg class="w-12 h-12 text-slate-300 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z"></path></svg>
                         <span class="font-bold tracking-wider uppercase text-[10px]">Image Unavailable</span>
@@ -170,15 +221,13 @@
                     </div>
                 </div>
             </div>
-            
-            <!-- History Filter Section with Thumbnail Preview -->
+
             <div class="bg-white p-6 rounded-xl border shadow-sm">
                 <div class="flex items-center justify-between mb-3 text-xs font-bold text-slate-400 uppercase tracking-widest">
                     <h3>History Filter:</h3>
                     <div id="machineDetailBox" class="flex items-center gap-3 text-blue-600 bg-blue-50 px-3 py-2 rounded hidden border border-blue-100 shadow-sm">
-                        <!-- Tiny Machine Thumbnail -->
                         <div class="w-10 h-10 bg-white border rounded overflow-hidden flex items-center justify-center shrink-0">
-                             <img id="filterThumb" src="" alt="Thumb" class="max-w-full max-h-full object-contain" onerror="this.src='https://via.placeholder.com/40?text=NA'">
+                            <img id="filterThumb" src="" alt="Thumb" loading="lazy" class="max-w-full max-h-full object-contain" onerror="this.src='https://via.placeholder.com/40?text=NA'">
                         </div>
                         <div class="flex flex-col">
                             <span id="filterMachineName" class="font-black text-blue-800"></span>
@@ -206,11 +255,12 @@
     </div>
 
     <script>
+        // --- API URL Constants ---
         const postURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/8467b362b45c4408a5c3b36138d34d8d/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=kYDfwYnTE9IU71pqIibsp0QU2WYzQ0zORaGj2bjaDAs";
         const fetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/47006a48f8764a49ab01dbb665617acf/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=2eqeoBWF-80BETYDfV2HdHZeqJW7-fDYjd3GXri1wNo";
         const templateFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/81581050d13a4df09275905e9e05e2df/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=yWugYHV-OyqB2yVi3eSd94XXEA2CgOngdaCVf83xBtA";
         const updateURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/a37c891f30994fef90aac14c55e2388e/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=6ostk6jCT6jb4Nx4lBi6fO_56axOeQPPm9Oo1_hcw7c";
-        
+
         const machineSpecs = { 
             "AQM0001": { brand: "ZOJE", model: "ZJ-AM5770AH-750" }, 
             "AQM0002": { brand: "ZOJE", model: "ZJ-AMS-AH-RK900" }, 
@@ -224,14 +274,8 @@
         };
 
         const machineImages = {
-            "AQM0001": "Zoje1.png",
-            "AQM0002": "Zoje2.png",
-            "AQM0003": "Zoje2.png",
-            "AQM0004": "Zoje2.png",
-            "AQM0005": "Juita2.png",
-            "AQM0006": "Jack.png",
-            "AQM0007": "Juita2.png",
-            "AQM0008": "Juita2.png",
+            "AQM0001": "Zoje1.png", "AQM0002": "Zoje2.png", "AQM0003": "Zoje2.png", "AQM0004": "Zoje2.png",
+            "AQM0005": "Juita2.png", "AQM0006": "Jack.png", "AQM0007": "Juita2.png", "AQM0008": "Juita2.png",
             "AQM0009": "Juita1.png"
         };
 
@@ -239,13 +283,14 @@
         let allRecords = [], allTemplates = [], currentUser = localStorage.getItem('ma_session_user') || null;
         let sectionChart = null, volumeChart = null;
 
+        function prefetchMachineImages() {
+            Object.values(machineImages).forEach(src => { const img = new Image(); img.src = src; });
+        }
+
         function formatWebDisplay(dateObj) {
             if (!dateObj || isNaN(dateObj.getTime())) return "---";
-            const d = dateObj.getDate();
-            const m = dateObj.getMonth() + 1;
-            const y = dateObj.getFullYear();
-            const hh = String(dateObj.getHours()).padStart(2, '0');
-            const mm = String(dateObj.getMinutes()).padStart(2, '0');
+            const d = dateObj.getDate(), m = dateObj.getMonth() + 1, y = dateObj.getFullYear();
+            const hh = String(dateObj.getHours()).padStart(2, '0'), mm = String(dateObj.getMinutes()).padStart(2, '0');
             return `${d}/${m}/${y} ${hh}:${mm}`;
         }
 
@@ -285,8 +330,9 @@
             const mID = document.getElementById('mID').value;
             const imgEl = document.getElementById('machineImg');
             const targetSrc = machineImages[mID];
+            imgEl.style.opacity = '0';
             document.getElementById('imgFallbackText').innerText = "Missing file: " + targetSrc;
-            if(imgEl && targetSrc) { imgEl.src = targetSrc; }
+            if(imgEl && targetSrc) { setTimeout(() => { imgEl.src = targetSrc; }, 50); }
         }
 
         async function refreshTemplateLogs(isSilent = false) {
@@ -300,41 +346,27 @@
                     const reqDateFormatted = convertExcelDate(getVal(i, ['Required Date']), false);
                     const isDone = (doneRaw && doneRaw !== '---' && String(doneRaw).trim() !== "");
                     let currentStatus = 'PENDING';
-                    if (isDone) {
-                        currentStatus = 'COMPLETED';
-                    } else {
-                        const now = new Date();
-                        const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+                    if (isDone) currentStatus = 'COMPLETED';
+                    else {
+                        const now = new Date(); const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
                         const parts = reqDateFormatted.split('/');
                         const required = parts.length === 3 ? new Date(parts[2], parts[1] - 1, parts[0]) : new Date(reqDateFormatted);
                         required.setHours(0, 0, 0, 0);
                         if (!isNaN(required.getTime()) && required < today) currentStatus = 'DELAYED';
                     }
                     return {
-                        guid: i['__PowerAppsId__'] || i['Id'] || i['ID'],
-                        id: getVal(i, ['Id', 'ID']),
-                        startTime: convertExcelDate(getVal(i, ['Start time'])),
-                        section: getVal(i, ['Section']),
-                        requestor: getVal(i, ['Requestor']),
-                        style: getVal(i, ['Style Number', 'Style']),
-                        templateNo: getVal(i, ['Template No', 'TempNo']),
-                        templateType: getVal(i, ['Template Type', 'Type']),
-                        protoStage: getVal(i, ['Proto Stage', 'Stage']),
-                        description: getVal(i, ['Description', 'Desc']),
-                        jobNo: getVal(i, ['Job Number', 'JobNo']),
-                        machine: getVal(i, ['Machine Type']),
-                        requiredDate: reqDateFormatted,
-                        completeDateDisplay: convertExcelDate(doneRaw),
-                        qty: getVal(i, ['Quantity', 'Complete Qty']),
-                        pic: getVal(i, ['M&A PIC', 'PIC']),
-                        remark: getVal(i, ['Remark']),
-                        status: currentStatus,
-                        raw: getVal(i, ['Start time'])
+                        guid: i['__PowerAppsId__'] || i['Id'] || i['ID'], id: getVal(i, ['Id', 'ID']),
+                        startTime: convertExcelDate(getVal(i, ['Start time'])), section: getVal(i, ['Section']),
+                        requestor: getVal(i, ['Requestor']), style: getVal(i, ['Style Number', 'Style']),
+                        templateNo: getVal(i, ['Template No', 'TempNo']), templateType: getVal(i, ['Template Type', 'Type']),
+                        protoStage: getVal(i, ['Proto Stage', 'Stage']), description: getVal(i, ['Description', 'Desc']),
+                        jobNo: getVal(i, ['Job Number', 'JobNo']), machine: getVal(i, ['Machine Type']),
+                        requiredDate: reqDateFormatted, completeDateDisplay: convertExcelDate(doneRaw),
+                        qty: getVal(i, ['Quantity', 'Complete Qty']), pic: getVal(i, ['M&A PIC', 'PIC']),
+                        remark: getVal(i, ['Remark']), status: currentStatus, raw: getVal(i, ['Start time'])
                     };
                 }).sort((a,b)=>b.raw - a.raw);
-                generateMonthOptions();
-                updateDashboard();
-                applyTempFilters(false);
+                generateMonthOptions(); updateDashboard(); applyTempFilters(false);
                 if(st) { st.innerText = "LIVE: " + new Date().toLocaleTimeString(); st.classList.remove('sync-active'); }
             } catch (e) { if(st) st.innerText = "Error"; }
         }
@@ -404,11 +436,7 @@
 
         async function addEntry() {
             if(!currentUser) return alert("Authentication Required:\nPlease login first.");
-            const m = document.getElementById('mID').value;
-            const p = currentUser;
-            const f = document.getElementById('fName').value;
-            const t = document.getElementById('sTime').value;
-            const isN = document.getElementById('requestToggle').checked;
+            const m = document.getElementById('mID').value, p = currentUser, f = document.getElementById('fName').value, t = document.getElementById('sTime').value, isN = document.getElementById('requestToggle').checked;
             if(!f || !t) return alert("Missing Info: Please enter File Name and Time.");
             const b = document.getElementById('submitBtn'); b.innerText = "Saving..."; b.disabled = true;
             try { 
@@ -426,7 +454,7 @@
             document.getElementById(`btn-${m}`).classList.add('active-filter');
             const box = document.getElementById('machineDetailBox');
             if(m === 'ALL') { 
-                box.classList.add('hidden'); 
+                box.classList.add('hidden');
             } else { 
                 document.getElementById('filterThumb').src = machineImages[m];
                 document.getElementById('filterMachineName').innerText = m;
@@ -445,24 +473,20 @@
         function drillDown(query) { switchTab('template'); document.getElementById('tempSearch').value = query; applyTempFilters(true); }
 
         function applyTempFilters(prioritySort = false) {
-            const sv = document.getElementById('tempSearch').value.toLowerCase();
-            const isAdmin = (currentUser === "Gavin");
+            const sv = document.getElementById('tempSearch').value.toLowerCase(), isAdmin = (currentUser === "Gavin");
             let filtered = allTemplates.filter(t => t.style.toLowerCase().includes(sv) || t.pic.toLowerCase().includes(sv) || t.status.toLowerCase().includes(sv));
             if (prioritySort) {
                 const weights = { 'DELAYED': 0, 'PENDING': 1, 'COMPLETED': 2 };
                 filtered.sort((a, b) => weights[a.status] - weights[b.status]);
             }
             document.getElementById('tempTable').innerHTML = filtered.map(t => {
-                const done = t.status === 'COMPLETED';
-                const isMine = (currentUser === t.pic);
-                const canEdit = (isAdmin || isMine) && !done;
+                const done = t.status === 'COMPLETED', isMine = (currentUser === t.pic), canEdit = (isAdmin || isMine) && !done;
                 const templateNoCell = (isAdmin && !done) ? `<input type="text" id="edit-tno-${t.id}" class="manual-input admin-input" value="${t.templateNo === '---' ? '' : t.templateNo}" placeholder="Assign No.">` : `<span class="font-bold">${t.templateNo}</span>`;
                 const picCell = (isAdmin && !done) ? `<select id="edit-pic-${t.id}" class="manual-input admin-input"><option value="">Select PIC</option>${picList.map(p => `<option value="${p}" ${p === t.pic ? 'selected' : ''}>${p}</option>`).join('')}</select>` : `<span>${t.pic}</span>`;
-                const webTime = formatWebDisplay(new Date());
-                const dateInput = (isMine && !done) ? `<input type="text" id="date-${t.id}" class="manual-input" value="${webTime}">` : `<span>${done ? t.completeDateDisplay : '---'}</span>`;
-                const qtyInput = (isMine && !done) ? `<input type="number" id="qty-${t.id}" class="manual-input qty-input" placeholder="Qty">` : `<span>${done ? t.qty : '---'}</span>`;
+                const webTime = formatWebDisplay(new Date()), dateInput = (isMine && !done) ? `<input type="text" id="date-${t.id}" class="manual-input" value="${webTime}">` : `<span>${done ? t.completeDateDisplay : '---'}</span>`, qtyInput = (isMine && !done) ? `<input type="number" id="qty-${t.id}" class="manual-input qty-input" placeholder="Qty">` : `<span>${done ? t.qty : '---'}</span>`;
                 return `<tr class="border-b hover:bg-slate-50">
-                    <td class="p-3 text-slate-400 font-mono">${t.id}</td><td class="p-3 text-slate-500">${t.startTime}</td><td class="p-3">${t.section}</td><td class="p-3">${t.requestor}</td><td class="p-3 font-bold">${t.style}</td><td class="p-3">${t.jobNo}</td><td class="p-3 font-semibold text-purple-700">${t.protoStage}</td><td class="p-3 text-blue-700">${templateNoCell}</td><td class="p-3 text-orange-700 font-bold">${t.templateType}</td><td class="p-3 text-slate-500 italic text-[10px]">${t.description}</td><td class="p-3">${t.machine}</td><td class="p-3">${t.requiredDate}</td><td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${done ? 'bg-emerald-100 text-emerald-600' : (t.status === 'DELAYED' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600')}">${t.status}</span></td><td class="p-3 font-medium">${picCell}</td><td class="p-3">${qtyInput}</td><td class="p-3">${dateInput}</td><td class="p-3"><div class="flex flex-col gap-1">${canEdit ? `<input type="text" id="remark-${t.id}" class="manual-input" value="${t.remark === '---' ? '' : t.remark}" placeholder="Add remark..."><button onclick="adminUpdate('${t.id}', event)" class="bg-blue-600 text-white text-[9px] font-bold py-1 rounded">SAVE</button>` : `<span class="text-[10px]">${t.remark}</span>`}</div></td>
+                    <td class="p-3 text-slate-400 font-mono">${t.id}</td><td class="p-3 text-slate-500">${t.startTime}</td><td class="p-3">${t.section}</td><td class="p-3">${t.requestor}</td><td class="p-3 font-bold">${t.style}</td><td class="p-3">${t.jobNo}</td><td class="p-3 font-semibold text-purple-700">${t.protoStage}</td><td class="p-3 text-blue-700">${templateNoCell}</td><td class="p-3 text-orange-700 font-bold">${t.templateType}</td><td class="p-3 text-slate-500 italic text-[10px]">${t.description}</td><td class="p-3">${t.machine}</td><td class="p-3">${t.requiredDate}</td><td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${done ? 'bg-emerald-100 text-emerald-600' : (t.status === 'DELAYED' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600')}">${t.status}</span></td><td class="p-3 font-medium">${picCell}</td><td class="p-3">${qtyInput}</td><td class="p-3">${dateInput}</td><td class="p-3"><div class="flex flex-col gap-1">${canEdit ?
+                `<input type="text" id="remark-${t.id}" class="manual-input" value="${t.remark === '---' ? '' : t.remark}" placeholder="Add remark..."><button onclick="adminUpdate('${t.id}', event)" class="bg-blue-600 text-white text-[9px] font-bold py-1 rounded">SAVE</button>` : `<span class="text-[10px]">${t.remark}</span>`}</div></td>
                 </tr>`;
             }).join('');
         }
@@ -470,12 +494,7 @@
         async function adminUpdate(simpleId, event) {
             const record = allTemplates.find(t => String(t.id) === String(simpleId));
             if (!record) return;
-            const tNo = document.getElementById(`edit-tno-${simpleId}`)?.value || "";
-            const picDropdown = document.getElementById(`edit-pic-${simpleId}`);
-            const tQty = document.getElementById(`qty-${simpleId}`)?.value || "";
-            const tDateRaw = document.getElementById(`date-${simpleId}`)?.value || "";
-            const tRem = document.getElementById(`remark-${simpleId}`)?.value || "";
-            const tDateExcel = formatExcelPayload(tDateRaw);
+            const tNo = document.getElementById(`edit-tno-${simpleId}`)?.value || "", picDropdown = document.getElementById(`edit-pic-${simpleId}`), tQty = document.getElementById(`qty-${simpleId}`)?.value || "", tDateRaw = document.getElementById(`date-${simpleId}`)?.value || "", tRem = document.getElementById(`remark-${simpleId}`)?.value || "", tDateExcel = formatExcelPayload(tDateRaw);
             let tPic = picDropdown ? picDropdown.value : (record.pic || (currentUser || ""));
             if (!currentUser) return alert("Please login first.");
             const btn = event.target; btn.innerText = "SAVING..."; btn.disabled = true;
@@ -487,26 +506,26 @@
         }
 
         function generateMonthOptions() {
-            const select = document.getElementById('monthFilter');
-            const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const select = document.getElementById('monthFilter'), months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
             const uniqueMonths = new Set();
             allTemplates.forEach(t => {
                 const dateParts = t.startTime.split(' ')[0].split('/');
                 if (dateParts.length === 3) uniqueMonths.add(`${months[parseInt(dateParts[1]) - 1]}-${dateParts[2]}`);
             });
-            const currentVal = select.value;
-            select.innerHTML = '<option value="ALL">All History</option>';
+            const currentVal = select.value; select.innerHTML = '<option value="ALL">All History</option>';
             Array.from(uniqueMonths).sort().forEach(m => { select.innerHTML += `<option value="${m}">${m}</option>`; });
             select.value = currentVal || "ALL";
         }
 
         function clearTempSearch() { document.getElementById('tempSearch').value = ""; applyTempFilters(false); }
+        
         function switchTab(t) { 
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(`content-${t}`).classList.remove('hidden');
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active'));
             document.getElementById(`tab-${t}`).classList.add('tab-active');
         }
+
         function login() { currentUser = document.getElementById('userSelect').value; localStorage.setItem('ma_session_user', currentUser); updateSessionUI(); applyTempFilters(false); }
         function logout() { currentUser = null; localStorage.removeItem('ma_session_user'); updateSessionUI(); applyTempFilters(false); }
         function updateSessionUI() { 
@@ -522,7 +541,14 @@
             document.getElementById('filterContainer').appendChild(b);
         });
 
-        window.onload = () => { updateSessionUI(); updateMachineImage(); refreshTemplateLogs(); refreshLiveLogs(); setInterval(() => { refreshTemplateLogs(true); refreshLiveLogs(true); }, 60000); };
+        window.onload = () => { 
+            prefetchMachineImages(); 
+            updateSessionUI(); 
+            updateMachineImage(); 
+            refreshTemplateLogs(); 
+            refreshLiveLogs(); 
+            setInterval(() => { refreshTemplateLogs(true); refreshLiveLogs(true); }, 60000); 
+        };
     </script>
 </body>
 </html>
