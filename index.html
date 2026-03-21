@@ -59,6 +59,7 @@
             <button onclick="switchTab('laser')" id="tab-laser" class="flex-1 py-4 text-sm uppercase tracking-widest font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50">Laser Tracking</button>
             <button onclick="switchTab('dashboard')" id="tab-dashboard" class="flex-1 py-4 text-sm uppercase tracking-widest font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50">Dashboard</button>
             <button onclick="switchTab('setting')" id="tab-setting" class="flex-1 py-4 text-sm uppercase tracking-widest font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50">Machine Setting</button>
+            <button onclick="switchTab('support')" id="tab-support" class="flex-1 py-4 text-sm uppercase tracking-widest font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50">M&A Support</button>
         </nav>
 
         <div id="content-laser" class="tab-content hidden">
@@ -141,8 +142,14 @@
                 </div>
             </div>
 
+            <!-- Laser Search Bar -->
+            <div class="bg-white p-4 rounded-xl border shadow-sm mb-4 flex gap-2 items-center">
+                <input type="text" id="laserSearch" oninput="applyLaserFilter()" placeholder="Search Style, Season, Section, PIC, Category..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                <button onclick="clearLaserSearch()" class="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-300">CLEAR</button>
+            </div>
+
             <!-- Laser Table -->
-            <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
+            <div id="laserTableWrapper" class="bg-white rounded-xl shadow-sm border overflow-x-auto">
                 <table class="w-full text-left min-w-[2200px]">
                     <thead class="bg-slate-100 border-b text-[10px] uppercase tracking-wider text-slate-500 font-bold">
                         <tr>
@@ -176,7 +183,7 @@
         <div id="content-dashboard" class="tab-content hidden">
             <div class="mb-6 flex justify-end">
                 <div class="flex items-center gap-2 bg-white p-2 px-4 rounded-lg border shadow-sm">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Select Month:</span>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Select Month (Template &amp; Laser):</span>
                     <select id="monthFilter" onchange="updateDashboard()" class="text-xs font-bold border-none outline-none bg-transparent text-blue-600 cursor-pointer">
                         <option value="ALL">All History</option>
                     </select>
@@ -206,7 +213,7 @@
                     <div class="h-[300px]"><canvas id="sectionChart"></canvas></div>
                 </div>
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Volume Trends</h3>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Completion Trends (Daily)</h3>
                     <div class="h-[300px]"><canvas id="volumeChart"></canvas></div>
                 </div>
             </div>
@@ -219,6 +226,202 @@
                         </thead>
                         <tbody id="pic-workload-table"></tbody>
                     </table>
+                </div>
+            </div>
+
+            <!-- Laser Section Divider -->
+            <div class="mt-8 mb-4 flex items-center gap-3">
+                <div class="flex-1 border-t border-slate-200"></div>
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">Laser Tracking</span>
+                <div class="flex-1 border-t border-slate-200"></div>
+            </div>
+
+            <!-- Laser Stat Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-white p-6 rounded-xl border shadow-sm">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Laser Jobs (Month)</p>
+                    <h2 id="ld-total" class="text-3xl font-bold text-slate-800">0</h2>
+                </div>
+                <div onclick="switchTab('laser')" class="bg-white p-6 rounded-xl border shadow-sm cursor-pointer hover:border-amber-400 transition-all">
+                    <p class="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1">Pending Consumption</p>
+                    <h2 id="ld-pending" class="text-3xl font-bold text-amber-600">0</h2>
+                    <p class="text-[9px] text-slate-400 mt-1">Complete Date filled · No Consumption Start · P1–P6 / Concept / GGP etc.</p>
+                </div>
+                <div class="bg-white p-6 rounded-xl border shadow-sm">
+                    <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Consumption Done</p>
+                    <h2 id="ld-done" class="text-3xl font-bold text-emerald-600">0</h2>
+                </div>
+            </div>
+
+            <!-- Laser Charts: Volume + SLA side by side (same size) -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white p-6 rounded-xl border shadow-sm">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Laser Cut Loading (Daily)</h3>
+                    <div class="h-[300px]"><canvas id="laserTrendChart"></canvas></div>
+                </div>
+                <div class="bg-white p-6 rounded-xl border shadow-sm">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Completion Rate (Received → Complete, 6hr SLA)</h3>
+                    <div class="h-[300px]"><canvas id="laserSLAChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Pending Consumption Styles -->
+            <div class="bg-white p-6 rounded-xl border shadow-sm mb-6">
+                <h3 class="text-xs font-bold text-amber-500 uppercase tracking-widest mb-4">Pending Consumption Styles</h3>
+                <div class="overflow-y-auto max-h-[300px] rounded-lg border">
+                    <table class="w-full text-left text-[11px]">
+                        <thead class="bg-slate-50 border-b font-bold text-slate-500 sticky top-0">
+                            <tr>
+                                <th class="p-2">Style</th>
+                                <th class="p-2">Proto Stage</th>
+                                <th class="p-2">Season</th>
+                                <th class="p-2">Section</th>
+                                <th class="p-2">M&A PIC</th>
+                                <th class="p-2">Complete Date</th>
+                                <th class="p-2"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="ld-pending-table"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Over 6hrs Drill-Down Modal -->
+            <div id="slaModal" class="hidden fixed inset-0 bg-black bg-opacity-40 z-50 flex items-center justify-center p-4">
+                <div class="bg-white rounded-xl shadow-xl w-full max-w-2xl max-h-[80vh] flex flex-col">
+                    <div class="flex justify-between items-center p-5 border-b">
+                        <h3 class="text-sm font-bold text-slate-700 uppercase tracking-widest">Styles Taking &gt; 6 Hours</h3>
+                        <button onclick="document.getElementById('slaModal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 text-xl font-bold leading-none">×</button>
+                    </div>
+                    <div class="overflow-y-auto p-4">
+                        <table class="w-full text-left text-[11px]">
+                            <thead class="bg-slate-50 border-b font-bold text-slate-500 sticky top-0">
+                                <tr>
+                                    <th class="p-2">Style</th>
+                                    <th class="p-2">Season</th>
+                                    <th class="p-2">Section</th>
+                                    <th class="p-2">M&A PIC</th>
+                                    <th class="p-2">Received</th>
+                                    <th class="p-2">Complete Date</th>
+                                    <th class="p-2">Hours Taken</th>
+                                </tr>
+                            </thead>
+                            <tbody id="slaModalTable"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- M&A Support Section Divider -->
+            <div class="mt-8 mb-4 flex items-center gap-3">
+                <div class="flex-1 border-t border-slate-200"></div>
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">M&A Support</span>
+                <div class="flex-1 border-t border-slate-200"></div>
+            </div>
+
+            <!-- Support Stat Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white p-6 rounded-xl border shadow-sm">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Support Requests (Month)</p>
+                    <h2 id="ds-total" class="text-3xl font-bold text-slate-800">0</h2>
+                </div>
+                <div class="bg-white p-6 rounded-xl border shadow-sm">
+                    <p class="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1">Pending (No Complete Time)</p>
+                    <h2 id="ds-pending" class="text-3xl font-bold text-amber-600">0</h2>
+                </div>
+                <div class="bg-white p-6 rounded-xl border shadow-sm">
+                    <p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Avg Response (hrs)</p>
+                    <h2 id="ds-avg" class="text-3xl font-bold text-blue-600">0</h2>
+                </div>
+                <div class="bg-white p-6 rounded-xl border shadow-sm">
+                    <p class="text-[10px] font-bold text-purple-400 uppercase tracking-widest mb-1">Repair & Support</p>
+                    <h2 id="ds-repair" class="text-3xl font-bold text-purple-600">0</h2>
+                </div>
+            </div>
+
+            <!-- Support Charts Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white p-6 rounded-xl border shadow-sm">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Requests by Section</h3>
+                    <div class="h-[280px]"><canvas id="supSectionChart"></canvas></div>
+                </div>
+                <div class="bg-white p-6 rounded-xl border shadow-sm">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Support Volume Trend (Daily)</h3>
+                    <div class="h-[280px]"><canvas id="supVolumeChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Support Bottom Row -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <!-- Risk Type Breakdown -->
+                <div class="bg-white p-6 rounded-xl border shadow-sm">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Avg Elapsed by Support Type (hrs)</h3>
+                    <div class="h-[220px]"><canvas id="supTypeChart"></canvas></div>
+                </div>
+                <!-- PIC Workload -->
+                <div class="bg-white p-6 rounded-xl border shadow-sm">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">PIC Pending Support</h3>
+                    <div class="overflow-x-auto rounded-lg border">
+                        <table class="w-full text-left text-[11px]">
+                            <thead class="bg-slate-50 border-b font-bold text-slate-500">
+                                <tr><th class="p-3 w-28">M&A PIC</th><th class="p-3">Pending Requests</th></tr>
+                            </thead>
+                            <tbody id="ds-pic-table"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- PIC Utilization Section Divider -->
+            <div class="mt-8 mb-4 flex items-center gap-3">
+                <div class="flex-1 border-t border-slate-200"></div>
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">PIC Utilization</span>
+                <div class="flex-1 border-t border-slate-200"></div>
+            </div>
+
+            <!-- Capacity Banner -->
+            <div class="bg-white p-4 rounded-xl border shadow-sm mb-4 flex flex-wrap items-center gap-4">
+                <div class="flex items-center gap-2">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Working Days:</span>
+                    <input type="number" id="util-days" value="22" min="1" max="31"
+                        class="w-16 text-center font-bold text-blue-600 border rounded p-1 text-sm outline-none focus:ring-2 focus:ring-blue-400"
+                        oninput="renderUtilization()">
+                    <span class="text-[10px] text-slate-400">days ×</span>
+                    <input type="number" id="util-hrs" value="9" min="1" max="24"
+                        class="w-14 text-center font-bold text-blue-600 border rounded p-1 text-sm outline-none focus:ring-2 focus:ring-blue-400"
+                        oninput="renderUtilization()">
+                    <span class="text-[10px] text-slate-400">hrs = </span>
+                    <span id="util-capacity" class="font-bold text-slate-700 text-sm">176 hrs capacity / PIC</span>
+                </div>
+                <div class="flex items-center gap-3 ml-auto text-[10px] text-slate-400">
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-emerald-500 inline-block"></span> Laser hrs</span>
+                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-blue-500 inline-block"></span> Support hrs</span>
+
+                </div>
+            </div>
+
+            <!-- Utilization Chart + Table -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+                <div class="bg-white p-6 rounded-xl border shadow-sm">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Hours Utilized per PIC</h3>
+                    <div class="h-[300px]"><canvas id="utilChart"></canvas></div>
+                </div>
+                <div class="bg-white p-6 rounded-xl border shadow-sm">
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Utilization Breakdown</h3>
+                    <div class="overflow-x-auto rounded-lg border">
+                        <table class="w-full text-left text-[11px]">
+                            <thead class="bg-slate-50 border-b font-bold text-slate-500">
+                                <tr>
+                                    <th class="p-3">PIC</th>
+                                    <th class="p-3 text-emerald-600">Laser (hrs)</th>
+                                    <th class="p-3 text-blue-600">Support (hrs)</th>
+                                    <th class="p-3">Total hrs</th>
+                                    <th class="p-3">Utilization %</th>
+                                </tr>
+                            </thead>
+                            <tbody id="util-table"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -317,12 +520,69 @@
         </div>
     </div>
 
+        <!-- M&A Support Tab -->
+        <div id="content-support" class="tab-content hidden">
+            <!-- Search bar -->
+            <div class="bg-white p-4 rounded-xl border shadow-sm mb-4 flex gap-2 items-center">
+                <input type="text" id="supportSearch" oninput="applySupport()" placeholder="Search Style, Name, Machine, Type, PIC..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                <button onclick="clearSupportSearch()" class="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-300">CLEAR</button>
+                <span id="supportSyncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-2">Syncing...</span>
+            </div>
+            <!-- Stats -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
+                <div class="bg-white p-5 rounded-xl border shadow-sm">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Requests</p>
+                    <h2 id="sup-total" class="text-3xl font-bold text-slate-800">0</h2>
+                </div>
+                <div class="bg-white p-5 rounded-xl border shadow-sm">
+                    <p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Repair & Support</p>
+                    <h2 id="sup-repair" class="text-3xl font-bold text-blue-600">0</h2>
+                </div>
+                <div class="bg-white p-5 rounded-xl border shadow-sm">
+                    <p class="text-[10px] font-bold text-amber-400 uppercase tracking-widest mb-1">Avg Elapsed (hrs)</p>
+                    <h2 id="sup-avg" class="text-3xl font-bold text-amber-600">0</h2>
+                </div>
+                <div class="bg-white p-5 rounded-xl border shadow-sm">
+                    <p class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Completed</p>
+                    <h2 id="sup-done" class="text-3xl font-bold text-emerald-600">0</h2>
+                </div>
+            </div>
+            <!-- Table -->
+            <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
+                <table class="w-full text-left min-w-[1600px]">
+                    <thead class="bg-slate-100 border-b text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+                        <tr>
+                            <th class="p-3">Received Time</th>
+                            <th class="p-3">Request ID</th>
+                            <th class="p-3">Name</th>
+                            <th class="p-3">Support Type</th>
+                            <th class="p-3">Section</th>
+                            <th class="p-3">Machine No</th>
+                            <th class="p-3">Risk Type</th>
+                            <th class="p-3">Description</th>
+                            <th class="p-3">Month</th>
+                            <th class="p-3">Start Time</th>
+                            <th class="p-3">Complete Time</th>
+                            <th class="p-3">Elapsed (hrs)</th>
+                            <th class="p-3">M&A PIC</th>
+                            <th class="p-3">Remark</th>
+                        </tr>
+                    </thead>
+                    <tbody id="supportTable" class="text-slate-700">
+                        <tr><td colspan="14" class="p-6 text-center text-slate-400 italic text-xs">Loading support data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <script>
         // --- API URL Constants ---
         const postURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/8467b362b45c4408a5c3b36138d34d8d/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=kYDfwYnTE9IU71pqIibsp0QU2WYzQ0zORaGj2bjaDAs";
         const fetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/47006a48f8764a49ab01dbb665617acf/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=2eqeoBWF-80BETYDfV2HdHZeqJW7-fDYjd3GXri1wNo";
         const templateFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/81581050d13a4df09275905e9e05e2df/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=yWugYHV-OyqB2yVi3eSd94XXEA2CgOngdaCVf83xBtA";
         const updateURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/a37c891f30994fef90aac14c55e2388e/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=6ostk6jCT6jb4Nx4lBi6fO_56axOeQPPm9Oo1_hcw7c";
+        const supportFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/cc862bcb25864cf3821934bb3954e426/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=sd0SSGGkna3TT74vR7V1jTT6E8qPxp-a4O1w0AlrqCY";
         const laserFetchURL  = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/f7fd69d7c4114bd2af5d8fffe467982a/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=hAWB_aTnAgdah1KM8cUx2fbYcjNNLN67GGAMOT3jeLI";
         const laserAddURL    = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/2a02949cf9a843cc820034dbbb755a78/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=N6f1qPIEpKL-Kyns7-9t1l2KTKpCD90gM--hO5AojvU";
         const laserUpdateURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/b95ddd4d695844b296c4917272ae318e/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=dp4tjbo8kArWt-sSfRcj3nmBCxL_o42g1mAtqIcTE_c";
@@ -440,6 +700,23 @@
             return "---";
         }
 
+        // Convert raw Excel value to LOCAL Date object (avoids UTC timezone shift).
+        // Use this when building month/day labels — never convertExcelDate which uses UTC.
+        function rawToLocalDate(v) {
+            if (!v || v === '---' || String(v).trim() === '') return null;
+            let date;
+            if (typeof v === 'number' || (!isNaN(v) && !isNaN(parseFloat(v)))) {
+                // Excel serial → milliseconds, then adjust to local midnight
+                const ms = (parseFloat(v) - 25569) * 86400 * 1000;
+                date = new Date(ms);
+                // Use local interpretation: shift by timezone offset
+                date = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+            } else {
+                date = new Date(String(v).replace('Z','').trim());
+            }
+            return isNaN(date.getTime()) ? null : date;
+        }
+
         function convertExcelDate(v, isTimestamp = true) {
             if (!v || v === "---" || String(v).trim() === "") return "---";
             let date;
@@ -506,7 +783,7 @@
                         remark: getVal(i, ['Remark']), status: currentStatus, raw: getVal(i, ['Start time'])
                     };
                 }).sort((a,b)=>b.raw - a.raw);
-                generateMonthOptions(); updateDashboard(); applyTempFilters(false);
+                generateMonthOptions(); updateDashboard(); applyTempFilters(false); renderUtilization();
                 if(st) { st.innerText = "LIVE: " + new Date().toLocaleTimeString(); st.classList.remove('sync-active'); }
             } catch (e) { if(st) st.innerText = "Error"; }
         }
@@ -548,22 +825,198 @@
                 data: { labels: Object.keys(secStats), datasets: [{ label: 'Requests', data: Object.values(secStats), backgroundColor: '#3b82f6' }] },
                 options: { responsive: true, maintainAspectRatio: false }
             });
+            // Volume Trends — group COMPLETED jobs by their Complete Date (daily within selected month)
             const volStats = {};
-            filteredByMonth.forEach(t => { volStats[t.requiredDate] = (volStats[t.requiredDate] || 0) + 1; });
+            filteredByMonth.forEach(t => {
+                if (!t.completeDateDisplay || t.completeDateDisplay === '---') return;
+                const dateOnly = t.completeDateDisplay.split(' ')[0]; // M/D/YYYY
+                volStats[dateOnly] = (volStats[dateOnly] || 0) + 1;
+            });
             const sortedDates = Object.keys(volStats).sort((a,b) => {
-                const partsA = a.split('/'), partsB = b.split('/');
-                return new Date(partsA[2], partsA[1]-1, partsA[0]) - new Date(partsB[2], partsB[1]-1, partsB[0]);
+                const [ma,da,ya] = a.split('/'), [mb,db,yb] = b.split('/');
+                return new Date(parseInt(ya),parseInt(ma)-1,parseInt(da)) - new Date(parseInt(yb),parseInt(mb)-1,parseInt(db));
             });
             if(volumeChart) volumeChart.destroy();
             volumeChart = new Chart(document.getElementById('volumeChart'), {
                 type: 'line',
-                data: { labels: sortedDates, datasets: [{ label: 'Volume', data: sortedDates.map(d => volStats[d]), borderColor: '#10b981', tension: 0.3 }] },
+                data: { labels: sortedDates, datasets: [{ label: 'Completed', data: sortedDates.map(d => volStats[d]), borderColor: '#10b981', tension: 0.3, fill: true, backgroundColor: 'rgba(16,185,129,0.07)', pointRadius: 4 }] },
                 options: { responsive: true, maintainAspectRatio: false }
             });
+            // Render laser section whenever dashboard tab is opened/refreshed
+            renderLaserDashboard();
+            requestAnimationFrame(() => renderLaserSLA());
+            // Render support dashboard section
+            renderSupportDashboard();
+            // Render PIC utilization
+            renderUtilization();
         }
 
         // Store laser rows in memory
         let allLaserRows = [];
+        let laserSearchQuery = '';
+        let allSupportRows = [];
+        let supportSearchQuery = '';
+
+        function applyLaserFilter() {
+            laserSearchQuery = document.getElementById('laserSearch')?.value.toLowerCase() || '';
+            renderLaserTable();
+        }
+
+        function clearLaserSearch() {
+            const el = document.getElementById('laserSearch');
+            if (el) el.value = '';
+            laserSearchQuery = '';
+            renderLaserTable();
+        }
+
+        function drillDownLaser(style) {
+            switchTab('laser');
+            const el = document.getElementById('laserSearch');
+            if (el) { el.value = style; laserSearchQuery = style.toLowerCase(); }
+            renderLaserTable();
+            setTimeout(() => {
+                document.getElementById('laserTableWrapper')?.scrollIntoView({ behavior: 'smooth' });
+            }, 150);
+        }
+        let laserTrendChart = null;
+
+        // Proto stages that qualify for pending consumption tracking
+        const pendingProtoStages = ['p1','p2','p3','p4','p5','p6','concept','ggp',
+            'final sample','final','reference sample','reference','proto','sms','pp','tss'];
+
+        function isTrackedProtoStage(proto) {
+            if (!proto || proto === '---') return false;
+            const p = proto.trim().toLowerCase();
+            // Match exact values or anything starting with p followed by a digit
+            return pendingProtoStages.includes(p) || /^p\d+$/.test(p);
+        }
+
+        function renderLaserDashboard() {
+            if (!allLaserRows.length) {
+                ['ld-total','ld-pending','ld-done'].forEach(id => {
+                    const el = document.getElementById(id); if (el) el.innerText = '0';
+                });
+                return;
+            }
+            const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+
+            // Use the shared template monthFilter for laser dashboard too
+            const sharedMonth = document.getElementById('monthFilter')?.value || 'ALL';
+            const laserMonthFiltered = allLaserRows.filter(r => {
+                if (sharedMonth === 'ALL') return true;
+                const localDate = rawToLocalDate(getVal(r, ['Complete Date','CompleteDate']));
+                if (!localDate) return false;
+                return `${months[localDate.getMonth()]}-${localDate.getFullYear()}` === sharedMonth;
+            });
+            const total = laserMonthFiltered.length;
+
+            // Build composite key: Season+Style+Category+ProtoStage+GarmentQty
+            // Used to detect split jobs (2 rows for same job)
+            const jobKey = r => [
+                getVal(r, ['Season']),
+                getVal(r, ['Style Number','StyleNumber','Style']),
+                getVal(r, ['Category']),
+                getVal(r, ['Proto Stage','ProtoStage','Stage']),
+                getVal(r, ['Garment Quantity','GarmentQty','Garment Qty'])
+            ].map(v => String(v).trim().toLowerCase()).join('|');
+
+            // Build set of keys where ANY row in the group has Consumption Complete filled
+            const doneJobKeys = new Set();
+            allLaserRows.forEach(r => {
+                const ce = convertExcelDate(getVal(r, ['Consumption Complete Date','ConsumptionCompleteDate','Cons End']));
+                if (ce && ce !== '---') doneJobKeys.add(jobKey(r));
+            });
+
+            // Pending = Complete Date filled + tracked proto stage + not done + not hidden this session
+            const pending = allLaserRows.filter(r => {
+                const cd    = convertExcelDate(getVal(r, ['Complete Date','CompleteDate']));
+                const cs    = convertExcelDate(getVal(r, ['Consumption Start Date','ConsumptionStartDate','Cons Start']));
+                const proto = getVal(r, ['Proto Stage','ProtoStage','Stage']);
+                const rid   = String(getVal(r, ['Id','ID','id']));
+                return cd && cd !== '---'
+                    && (!cs || cs === '---')
+                    && isTrackedProtoStage(proto)
+                    && !doneJobKeys.has(jobKey(r))  // exclude if a sibling row is already done
+                    && !naHiddenIds.has(rid);        // exclude if hidden this session via N/A
+            });
+
+            // Done = Consumption End Date is filled
+            const done = allLaserRows.filter(r => {
+                const ce = convertExcelDate(getVal(r, ['Consumption Complete Date','ConsumptionCompleteDate','Cons End']));
+                return ce && ce !== '---';
+            });
+
+            const elTotal   = document.getElementById('ld-total');
+            const elPending = document.getElementById('ld-pending');
+            const elDone    = document.getElementById('ld-done');
+            if (elTotal)   elTotal.innerText   = total;
+            if (elPending) elPending.innerText = pending.length;
+            if (elDone)    elDone.innerText    = done.length;
+
+            // Pending table — sorted by complete date ascending (oldest first = most urgent)
+            const ptbody = document.getElementById('ld-pending-table');
+            if (ptbody) {
+                ptbody.innerHTML = pending.length
+                    ? pending
+                        .slice()
+                        .sort((a, b) => {
+                            const da = getVal(a, ['Complete Date','CompleteDate']);
+                            const db = getVal(b, ['Complete Date','CompleteDate']);
+                            return (parseFloat(da) || 0) - (parseFloat(db) || 0);
+                        })
+                        .map(r => {
+                            const style   = getVal(r, ['Style Number','StyleNumber','Style']);
+                            const proto   = getVal(r, ['Proto Stage','ProtoStage','Stage']);
+                            const season  = getVal(r, ['Season']);
+                            const section = getVal(r, ['Section']);
+                            const pic     = getMAPic(r);
+                            const cd      = convertExcelDate(getVal(r, ['Complete Date','CompleteDate']));
+                            const rid = getVal(r, ['Id','ID','id']);
+                            return `<tr class="border-b hover:bg-amber-50">
+                                <td class="p-2 font-bold text-blue-700 cursor-pointer" onclick="drillDownLaser('${style.replace(/'/g,"\\'")}')" title="Click to find in Laser Tracking">${style}</td>
+                                <td class="p-2 font-semibold text-purple-700">${proto}</td>
+                                <td class="p-2">${season}</td>
+                                <td class="p-2">${section}</td>
+                                <td class="p-2 font-medium">${pic}</td>
+                                <td class="p-2 text-emerald-600 font-bold">${cd}</td>
+                                <td class="p-2">${currentUser === 'Gavin' ? `<button onclick="markLaserNA('${rid}', event)" class="bg-slate-400 text-white text-[9px] font-bold px-2 py-1 rounded hover:bg-slate-500 whitespace-nowrap">N/A</button>` : ''}</td>
+                            </tr>`;
+                        }).join('')
+                    : '<tr><td colspan="7" class="p-6 text-center italic text-slate-400">All caught up! No pending consumption.</td></tr>';
+            }
+
+            // Laser trend — uses same monthFilter as template dashboard
+            const sharedMonthVal = document.getElementById('monthFilter')?.value || 'ALL';
+            const laserTrendFiltered = allLaserRows.filter(r => {
+                if (sharedMonthVal === 'ALL') return true;
+                const localDate = rawToLocalDate(getVal(r, ['Complete Date','CompleteDate']));
+                if (!localDate) return false;
+                return `${months[localDate.getMonth()]}-${localDate.getFullYear()}` === sharedMonthVal;
+            });
+            const dayCounts = {};
+            laserTrendFiltered.forEach(r => {
+                const localDate = rawToLocalDate(getVal(r, ['Complete Date','CompleteDate']));
+                if (!localDate) return;
+                const dayKey = `${localDate.getMonth()+1}/${localDate.getDate()}/${localDate.getFullYear()}`;
+                dayCounts[dayKey] = (dayCounts[dayKey] || 0) + 1;
+            });
+            const sortedDays = Object.keys(dayCounts).sort((a, b) => {
+                const [ma,da,ya] = a.split('/'), [mb,db,yb] = b.split('/');
+                return new Date(parseInt(ya),parseInt(ma)-1,parseInt(da)) - new Date(parseInt(yb),parseInt(mb)-1,parseInt(db));
+            });
+            if (laserTrendChart) laserTrendChart.destroy();
+            const ctx = document.getElementById('laserTrendChart');
+            if (ctx) {
+                laserTrendChart = new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: sortedDays,
+                        datasets: [{ label: 'Laser Jobs', data: sortedDays.map(d => dayCounts[d]), borderColor: '#10b981', tension: 0.3, fill: true, backgroundColor: 'rgba(16,185,129,0.07)' }]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+            }
+        }
 
         async function refreshLaserData(isSilent = false) {
             const st = document.getElementById('laserSyncStatus');
@@ -572,9 +1025,20 @@
                 const r = await fetch(laserFetchURL + "&cb=" + Date.now(), { method: 'POST', body: JSON.stringify({}) });
                 const d = await r.json();
                 let rows = [];
-                if (Array.isArray(d)) { rows = d; }
-                else if (d && Array.isArray(d.value)) { rows = d.value; }
-                else { for (const k of Object.keys(d || {})) { if (Array.isArray(d[k])) { rows = d[k]; break; } } }
+                if (Array.isArray(d)) {
+                    rows = d;
+                } else if (d && Array.isArray(d.value)) {
+                    rows = d.value;
+                } else if (d && d.body && Array.isArray(d.body.value)) {
+                    rows = d.body.value;  // Body token wraps as {body:{value:[]}}
+                } else if (d && d.body && Array.isArray(d.body)) {
+                    rows = d.body;
+                } else {
+                    // Last resort: find any array key
+                    for (const k of Object.keys(d || {})) {
+                        if (Array.isArray(d[k]) && d[k].length > 0) { rows = d[k]; break; }
+                    }
+                }
                 // Sort by ID descending — largest (newest) on top
                 rows.sort((a, b) => {
                     const ia = parseInt(getVal(a, ['Id','ID','id'])) || 0;
@@ -583,6 +1047,7 @@
                 });
                 allLaserRows = rows;
                 renderLaserTable();
+                renderLaserDashboard();
                 if (st) { st.innerText = 'LIVE: ' + new Date().toLocaleTimeString(); st.classList.remove('sync-active'); }
             } catch(e) {
                 const tbody = document.getElementById('laserTable');
@@ -599,7 +1064,26 @@
                 tbody.innerHTML = '<tr><td colspan="18" class="p-6 text-center text-slate-400 italic text-xs">No laser records found.</td></tr>';
                 return;
             }
-            tbody.innerHTML = allLaserRows.map(i => {
+            const laserRowsToShow = laserSearchQuery
+                ? allLaserRows.filter(i => {
+                    const vals = [
+                        getVal(i, ['Style Number','StyleNumber','Style']),
+                        getVal(i, ['Season']),
+                        getVal(i, ['Section']),
+                        getVal(i, ['Category']),
+                        getMAPic(i),
+                        getVal(i, ['Consumption PIC','ConsumptionPIC','Cons PIC']),
+                        getVal(i, ['Proto Stage','ProtoStage','Stage']),
+                        getVal(i, ['Remark','Remarks'])
+                    ];
+                    return vals.some(v => String(v).toLowerCase().includes(laserSearchQuery));
+                })
+                : allLaserRows;
+            if (!laserRowsToShow.length) {
+                tbody.innerHTML = `<tr><td colspan="18" class="p-6 text-center text-slate-400 italic text-xs">No results for "${laserSearchQuery}".</td></tr>`;
+                return;
+            }
+            tbody.innerHTML = laserRowsToShow.map(i => {
                 const id           = getVal(i, ['Id','ID','id']);
                 const received     = convertExcelDate(getVal(i, ['Received Time','ReceivedTime','Received']));
                 const season       = getVal(i, ['Season']);
@@ -649,7 +1133,9 @@
                         <td class="p-2"><input id="le-consEnd-${rid}" class="${consClass}" value="${consEnd==='---'?'':consEnd}" placeholder="m/d/yyyy"${consDisabled}></td>
                         <td class="p-2"><input id="le-consPic-${rid}" class="${consClass}" value="${consPic==='---'?'':consPic}" placeholder="PIC"${consDisabled}></td>
                         <td class="p-2"><input id="le-remark-${rid}" class="manual-input" value="${remark==='---'?'':remark}" placeholder="Remark"></td>
-                        <td class="p-2"><button onclick="saveLaserRow('${rid}', event)" class="bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-blue-700 whitespace-nowrap">SAVE</button></td>
+                        <td class="p-2">
+                            <button onclick="saveLaserRow('${rid}', event)" class="bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-blue-700 whitespace-nowrap">SAVE</button>
+                        </td>
                     </tr>`;
                 } else {
                     // Regular users: consumption fields always editable by ANY logged-in user
@@ -680,7 +1166,9 @@
                                 ? `<span class="text-blue-700 font-bold text-xs bg-blue-50 px-2 py-1 rounded border border-blue-200">${currentUser}</span>`
                                 : consPic}
                         </td>
-                        <td class="p-3 italic text-slate-400 text-[10px]">${remark}</td>
+                        <td class="p-3">${canEditCons
+                            ? `<input id="le-remark-${rid}" class="manual-input admin-input" value="${remark==='---'?'':remark}" placeholder="Remark">`
+                            : `<span class="italic text-slate-400 text-[10px]">${remark}</span>`}</td>
                         <td class="p-3">${canEditCons
                             ? `<button onclick="saveConsumption('${rid}', event)" class="bg-emerald-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-emerald-700 whitespace-nowrap">SAVE</button>`
                             : ''}</td>
@@ -752,8 +1240,88 @@
             }
         }
 
-        // Gavin full-row save
-        async function saveLaserRow(rid, event) {
+        // Gavin quick-mark: OK = today's date as Consumption End, N/A = "N/A"
+
+
+        // Gavin quick-action: ✓ mark consumption complete (fills Cons Start+End+PIC with today)
+        // N/A: session-only hide — no Excel write, just removes from pending table for this session
+        // Stores hidden row IDs in a Set; cleared on page refresh
+        const naHiddenIds = new Set();
+
+        function markLaserNA(rid, event) {
+            naHiddenIds.add(String(rid));
+            renderLaserDashboard();
+
+            // SLA chart rendered separately — needs visible canvas
+            renderLaserSLA();
+        }
+
+
+        // Gavin quick-action: ✓ mark consumption complete
+        async function quickConsDone(rid, event) {
+            const btn = event.target; btn.innerText = '...'; btn.disabled = true;
+            const today = nowAsLaserDate().split(' ')[0];
+            const row = allLaserRows.find(r => String(getVal(r, ['Id','ID','id'])) === String(rid));
+            if (!row) { btn.innerText = '✓'; btn.disabled = false; return; }
+            const payload = {
+                recordID: rid,
+                receivedTime:   convertExcelDate(getVal(row, ['Received Time','ReceivedTime','Received'])),
+                season:         getVal(row, ['Season']),
+                styleNumber:    getVal(row, ['Style Number','StyleNumber','Style']),
+                section:        getVal(row, ['Section']),
+                category:       getVal(row, ['Category']),
+                protoStage:     getVal(row, ['Proto Stage','ProtoStage','Stage']),
+                garmentQty:     getVal(row, ['Garment Quantity','GarmentQty','Garment Qty']),
+                laserParts:     getVal(row, ['Laser Part Count','LaserPartCount','Laser Parts']),
+                ironParts:      getVal(row, ['Ironing Part Count','IroningPartCount','Iron Parts']),
+                trimParts:      getVal(row, ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']),
+                completeDate:   convertExcelDate(getVal(row, ['Complete Date','CompleteDate'])),
+                maPic:          getMAPic(row),
+                consStart:      today,
+                consEnd:        today,
+                consumptionPic: 'Gavin',
+                remark:         getVal(row, ['Remark','Remarks'])
+            };
+            try {
+                const res = await fetch(laserUpdateURL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+                if (res.ok) { setTimeout(() => refreshLaserData(true), 1500); }
+                else { btn.innerText = '✓'; btn.disabled = false; alert('Save failed.'); }
+            } catch(e) { btn.innerText = '✓'; btn.disabled = false; }
+        }
+
+        // Gavin quick-action: ✗ no consumption required — fills Cons End with today
+        async function quickConsNone(rid, event) {
+            const btn = event.target; btn.innerText = '...'; btn.disabled = true;
+            const today = nowAsLaserDate().split(' ')[0];
+            const row = allLaserRows.find(r => String(getVal(r, ['Id','ID','id'])) === String(rid));
+            if (!row) { btn.innerText = '✗'; btn.disabled = false; return; }
+            const payload = {
+                recordID: rid,
+                receivedTime:   convertExcelDate(getVal(row, ['Received Time','ReceivedTime','Received'])),
+                season:         getVal(row, ['Season']),
+                styleNumber:    getVal(row, ['Style Number','StyleNumber','Style']),
+                section:        getVal(row, ['Section']),
+                category:       getVal(row, ['Category']),
+                protoStage:     getVal(row, ['Proto Stage','ProtoStage','Stage']),
+                garmentQty:     getVal(row, ['Garment Quantity','GarmentQty','Garment Qty']),
+                laserParts:     getVal(row, ['Laser Part Count','LaserPartCount','Laser Parts']),
+                ironParts:      getVal(row, ['Ironing Part Count','IroningPartCount','Iron Parts']),
+                trimParts:      getVal(row, ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']),
+                completeDate:   convertExcelDate(getVal(row, ['Complete Date','CompleteDate'])),
+                maPic:          getMAPic(row),
+                consStart:      '',
+                consEnd:        today,
+                consumptionPic: 'Gavin',
+                remark:         getVal(row, ['Remark','Remarks'])
+            };
+            try {
+                const res = await fetch(laserUpdateURL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+                if (res.ok) { setTimeout(() => refreshLaserData(true), 1500); }
+                else { btn.innerText = '✗'; btn.disabled = false; alert('Save failed.'); }
+            } catch(e) { btn.innerText = '✗'; btn.disabled = false; }
+        }
+
+                async function saveLaserRow(rid, event) {
             const btn = event.target; btn.innerText = 'SAVING...'; btn.disabled = true;
             const g = id => document.getElementById(`le-${id}-${rid}`)?.value.trim() || '';
             const payload = {
@@ -813,7 +1381,7 @@
                 consStart:      toExcelDateFormat(consStart),
                 consEnd:        toExcelDateFormat(consEnd),
                 consumptionPic: currentUser,
-                remark:         getVal(row, ['Remark','Remarks'])
+                remark:         document.getElementById(`le-remark-${rid}`)?.value.trim() || getVal(row, ['Remark','Remarks'])
             };
             try {
                 const res = await fetch(laserUpdateURL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
@@ -957,24 +1525,401 @@
         }
 
         function generateMonthOptions() {
-            const select = document.getElementById('monthFilter'), months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const select = document.getElementById('monthFilter');
+            const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             const uniqueMonths = new Set();
+            // Template months from startTime
             allTemplates.forEach(t => {
                 const dateParts = t.startTime.split(' ')[0].split('/');
                 if (dateParts.length === 3) uniqueMonths.add(`${months[parseInt(dateParts[1]) - 1]}-${dateParts[2]}`);
             });
-            const currentVal = select.value; select.innerHTML = '<option value="ALL">All History</option>';
-            Array.from(uniqueMonths).sort().forEach(m => { select.innerHTML += `<option value="${m}">${m}</option>`; });
-            select.value = currentVal || "ALL";
+            // Laser months from Complete Date — so shared filter covers laser chart too
+            allLaserRows.forEach(r => {
+                const localDate = rawToLocalDate(getVal(r, ['Complete Date','CompleteDate']));
+                if (localDate) uniqueMonths.add(`${months[localDate.getMonth()]}-${localDate.getFullYear()}`);
+            });
+            const currentVal = select.value;
+            select.innerHTML = '<option value="ALL">All History</option>';
+            Array.from(uniqueMonths).sort((a, b) => {
+                const [ma, ya] = a.split('-'), [mb, yb] = b.split('-');
+                return new Date(`1 ${ma} ${ya}`) - new Date(`1 ${mb} ${yb}`);
+            }).forEach(m => { select.innerHTML += `<option value="${m}">${m}</option>`; });
+            // Restore previous selection, default to latest month
+            if (currentVal && select.querySelector(`option[value="${currentVal}"]`)) {
+                select.value = currentVal;
+            } else {
+                select.value = "ALL";
+            }
         }
 
         function clearTempSearch() { document.getElementById('tempSearch').value = ""; applyTempFilters(false); }
         
+        // Store over-6hr rows for modal drill-down
+        let slaOverRows = [];
+
+        function renderLaserSLA() {
+            const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            const sharedMonthVal = document.getElementById('monthFilter')?.value || 'ALL';
+            let slaWithin = 0, slaOver = 0;
+            slaOverRows = [];
+            allLaserRows.forEach(r => {
+                const received  = rawToLocalDate(getVal(r, ['Received Time','ReceivedTime','Received']));
+                const completed = rawToLocalDate(getVal(r, ['Complete Date','CompleteDate']));
+                if (!received || !completed) return;
+                const cMonth = `${months[completed.getMonth()]}-${completed.getFullYear()}`;
+                if (sharedMonthVal !== 'ALL' && cMonth !== sharedMonthVal) return;
+                const hrs = (completed - received) / 3600000;
+                if (hrs <= 6) slaWithin++;
+                else { slaOver++; slaOverRows.push({ r, hrs }); }
+            });
+            const slaTotal = slaWithin + slaOver;
+            const slaLabel = sharedMonthVal === 'ALL' ? 'All Time' : sharedMonthVal;
+            const slaCtx = document.getElementById('laserSLAChart');
+            if (!slaCtx) return;
+            if (window._laserSLAChart) window._laserSLAChart.destroy();
+            window._laserSLAChart = new Chart(slaCtx, {
+                type: 'bar',
+                data: {
+                    labels: [`≤ 6 hrs (${slaLabel})`, `> 6 hrs (${slaLabel})`],
+                    datasets: [{
+                        label: 'Styles',
+                        data: [slaWithin, slaOver],
+                        backgroundColor: ['#10b981', '#f59e0b'],
+                        borderRadius: 6,
+                        barThickness: 80
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: { callbacks: {
+                            label: ctx => `${ctx.raw} styles (${slaTotal ? Math.round(ctx.raw/slaTotal*100) : 0}%)${ctx.dataIndex === 1 ? ' — click to view' : ''}`
+                        }}
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 },
+                             title: { display: true, text: 'No. of Styles', font: { size: 10 } } }
+                    },
+                    onClick(evt, elements) {
+                        if (!elements.length) return;
+                        if (elements[0].index === 1) showSLAModal(); // index 1 = > 6hrs bar
+                    },
+                    onHover(evt, elements) {
+                        evt.native.target.style.cursor = elements.length && elements[0].index === 1 ? 'pointer' : 'default';
+                    }
+                }
+            });
+        }
+
+        function showSLAModal() {
+            const tbody = document.getElementById('slaModalTable');
+            if (!tbody) return;
+            tbody.innerHTML = slaOverRows.length
+                ? slaOverRows
+                    .sort((a, b) => b.hrs - a.hrs)
+                    .map(({ r, hrs }) => {
+                        const style    = getVal(r, ['Style Number','StyleNumber','Style']);
+                        const season   = getVal(r, ['Season']);
+                        const section  = getVal(r, ['Section']);
+                        const pic      = getMAPic(r);
+                        const received = convertExcelDate(getVal(r, ['Received Time','ReceivedTime','Received']));
+                        const complete = convertExcelDate(getVal(r, ['Complete Date','CompleteDate']));
+                        const hrsStr   = hrs < 24 ? `${hrs.toFixed(1)} hrs` : `${(hrs/24).toFixed(1)} days`;
+                        return `<tr class="border-b hover:bg-amber-50 cursor-pointer" onclick="drillDownLaser('${style.replace(/'/g,"\\'")}')">
+                            <td class="p-2 font-bold text-blue-700">${style}</td>
+                            <td class="p-2">${season}</td>
+                            <td class="p-2">${section}</td>
+                            <td class="p-2 font-medium">${pic}</td>
+                            <td class="p-2 text-slate-500">${received}</td>
+                            <td class="p-2 text-emerald-600 font-bold">${complete}</td>
+                            <td class="p-2 font-bold text-amber-600">${hrsStr}</td>
+                        </tr>`;
+                    }).join('')
+                : '<tr><td colspan="7" class="p-4 text-center italic text-slate-400">No styles over 6 hours.</td></tr>';
+            document.getElementById('slaModal').classList.remove('hidden');
+        }
+
+        let supSectionChart = null, supVolumeChart = null, supTypeChart = null;
+        let utilChart = null;
+
+        function renderUtilization() {
+            const months  = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            const sharedMonth = document.getElementById('monthFilter')?.value || 'ALL';
+            const days    = parseInt(document.getElementById('util-days')?.value) || 22;
+            const hrsDay  = parseInt(document.getElementById('util-hrs')?.value) || 9;
+            const capacity = days * hrsDay;
+            const capEl = document.getElementById('util-capacity');
+            if (capEl) capEl.innerText = `${capacity} hrs capacity / PIC`;
+
+            // Helper: filter by selected month using a date field
+            const inMonth = (dateVal) => {
+                if (sharedMonth === 'ALL') return true;
+                const d = rawToLocalDate(dateVal);
+                if (!d) return false;
+                return `${months[d.getMonth()]}-${d.getFullYear()}` === sharedMonth;
+            };
+
+            // Collect all known PICs across all sources
+            const allPICs = new Set([...picList]);
+
+            // ── Laser hrs per PIC (Received Time → Complete Date) ─────────────
+            const laserHrs = {};
+            allLaserRows.forEach(r => {
+                const cdRaw = getVal(r, ['Complete Date','CompleteDate']);
+                if (!inMonth(cdRaw)) return;
+                const received  = rawToLocalDate(getVal(r, ['Received Time','ReceivedTime','Received']));
+                const completed = rawToLocalDate(cdRaw);
+                if (!received || !completed) return;
+                const hrs = Math.max(0, (completed - received) / 3600000);
+                const pic = getMAPic(r);
+                if (!pic || pic === '---') return;
+                allPICs.add(pic);
+                laserHrs[pic] = (laserHrs[pic] || 0) + hrs;
+            });
+
+            // ── Support hrs per PIC (Start Time → Complete Time) ─────────────
+            // Falls back to Job Elapsed Calendar Hrs if Complete Time is missing
+            const supportHrs = {};
+            allSupportRows.forEach(r => {
+                const rcvRaw = getVal(r, ['Received Time','ReceivedTime']);
+                if (!inMonth(rcvRaw)) return;
+                const pic = getMAPic(r);
+                if (!pic || pic === '---') return;
+                allPICs.add(pic);
+                // Only count when both Start and Complete Time exist (in progress = 0 hrs)
+                const startDate   = rawToLocalDate(getVal(r, ['Start Time','StartTime']));
+                const endDate     = rawToLocalDate(getVal(r, ['Complete Time','CompleteTime']));
+                if (!startDate || !endDate || endDate <= startDate) return;
+                const hrs = (endDate - startDate) / 3600000;
+                if (hrs > 0) supportHrs[pic] = (supportHrs[pic] || 0) + hrs;
+            });
+
+            // Template excluded from utilization — tracked separately
+            const templateHrs  = {};
+            const templateJobs = {};
+
+            // Build sorted PIC list — sort by total hours desc
+            const picArr = Array.from(allPICs).filter(p => p && p !== '---').sort((a, b) => {
+                const totalA = (laserHrs[a]||0) + (supportHrs[a]||0);
+                const totalB = (laserHrs[b]||0) + (supportHrs[b]||0);
+                return totalB - totalA;
+            });
+
+            // ── Stacked bar chart ─────────────────────────────────────────────
+            if (utilChart) utilChart.destroy();
+            const utCtx = document.getElementById('utilChart');
+            if (utCtx) {
+                utilChart = new Chart(utCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: picArr,
+                        datasets: [
+                            {
+                                label: 'Laser (hrs)',
+                                data: picArr.map(p => parseFloat((laserHrs[p]||0).toFixed(1))),
+                                backgroundColor: '#10b981', borderRadius: 0
+                            },
+                            {
+                                label: 'Support (hrs)',
+                                data: picArr.map(p => parseFloat((supportHrs[p]||0).toFixed(1))),
+                                backgroundColor: '#3b82f6', borderRadius: 4
+                            }
+                        ]
+                    },
+                    options: {
+                        responsive: true, maintainAspectRatio: false,
+                        plugins: {
+                            legend: { position: 'bottom', labels: { font: { size: 10 } } },
+                            tooltip: { mode: 'index', intersect: false, callbacks: {
+                                footer: items => {
+                                    const laserV   = items.find(i => i.datasetIndex === 0)?.raw || 0;
+                                    const supportV = items.find(i => i.datasetIndex === 1)?.raw || 0;
+                                    const total    = laserV + supportV;
+                                    const pct      = capacity ? Math.round(total/capacity*100) : 0;
+                                    return `Total: ${total.toFixed(1)} hrs / ${capacity} hrs (${pct}%)`;
+                                }
+                            }}
+                        },
+                        scales: {
+                            x: { stacked: true },
+                            y: {
+                                stacked: true, beginAtZero: true,
+                                title: { display: true, text: 'Hours', font: { size: 10 } },
+                                max: Math.max(capacity, ...picArr.map(p => (laserHrs[p]||0)+(supportHrs[p]||0))) * 1.15
+                            }
+                        }
+                    }
+                });
+                // Draw capacity line as annotation overlay using afterDraw plugin
+                utilChart.options.plugins.annotation = undefined; // no plugin needed
+                // Draw a dashed capacity line manually
+                const origDraw = utCtx.getContext('2d');
+            }
+
+            // ── Breakdown table ───────────────────────────────────────────────
+            const tbody = document.getElementById('util-table');
+            if (tbody) {
+                tbody.innerHTML = picArr.length ? picArr.map(p => {
+                    const lHrs  = laserHrs[p]   || 0;
+                    const sHrs  = supportHrs[p]  || 0;
+                    const total = lHrs + sHrs;
+                    const pct   = capacity ? Math.round(total / capacity * 100) : 0;
+                    const barColor = pct >= 90 ? 'bg-red-500' : pct >= 70 ? 'bg-amber-400' : 'bg-emerald-500';
+                    return `<tr class="border-b hover:bg-slate-50">
+                        <td class="p-3 font-bold">${p}</td>
+                        <td class="p-3 text-emerald-600 font-bold">${lHrs.toFixed(1)}</td>
+                        <td class="p-3 text-blue-600 font-bold">${sHrs.toFixed(1)}</td>
+                        <td class="p-3 font-bold">${total.toFixed(1)}</td>
+                        <td class="p-3">
+                            <div class="flex items-center gap-2">
+                                <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
+                                    <div class="${barColor} h-2 rounded-full" style="width:${Math.min(pct,100)}%"></div>
+                                </div>
+                                <span class="text-[10px] font-bold ${pct>=90?'text-red-500':pct>=70?'text-amber-500':'text-emerald-600'} w-10 text-right">${pct}%</span>
+                            </div>
+                        </td>
+                    </tr>`;
+                }).join('') : '<tr><td colspan="6" class="p-6 text-center italic text-slate-400">No utilization data for this month.</td></tr>';
+            }
+        }
+
+        function renderSupportDashboard() {
+            if (!allSupportRows.length) return;
+            const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            const sharedMonth = document.getElementById('monthFilter')?.value || 'ALL';
+
+            // Filter by selected month using Received Time
+            const filtered = allSupportRows.filter(r => {
+                if (sharedMonth === 'ALL') return true;
+                const raw = getVal(r, ['Received Time','ReceivedTime']);
+                const d = rawToLocalDate(raw);
+                if (!d) return false;
+                return `${months[d.getMonth()]}-${d.getFullYear()}` === sharedMonth;
+            });
+
+            // Stat cards
+            const total   = filtered.length;
+            const pending = filtered.filter(r => {
+                const ct = getVal(r, ['Complete Time','CompleteTime']);
+                return !ct || ct === '---' || String(ct).trim() === '';
+            }).length;
+            const repair  = filtered.filter(r =>
+                String(getVal(r, ['Support Type','SupportType','Type'])).toLowerCase().includes('repair')
+            ).length;
+            const elapsedVals = filtered
+                .map(r => parseFloat(getVal(r, ['Job Elapsed Calendar Hrs','ElapsedHrs','Elapsed','Job Elapsed'])))
+                .filter(v => !isNaN(v) && v > 0);
+            const avg = elapsedVals.length
+                ? (elapsedVals.reduce((a,b) => a+b, 0) / elapsedVals.length).toFixed(1) : '0';
+
+            const el = id => document.getElementById(id);
+            if (el('ds-total'))   el('ds-total').innerText   = total;
+            if (el('ds-pending')) el('ds-pending').innerText = pending;
+            if (el('ds-avg'))     el('ds-avg').innerText     = avg;
+            if (el('ds-repair'))  el('ds-repair').innerText  = repair;
+
+            // Chart 1: Requests by Section (bar — same style as template sectionChart)
+            const secStats = {};
+            filtered.forEach(r => {
+                const s = getVal(r, ['Section']) || 'Unknown';
+                secStats[s] = (secStats[s] || 0) + 1;
+            });
+            if (supSectionChart) supSectionChart.destroy();
+            const ssc = document.getElementById('supSectionChart');
+            if (ssc) supSectionChart = new Chart(ssc, {
+                type: 'bar',
+                data: { labels: Object.keys(secStats), datasets: [{ label: 'Requests', data: Object.values(secStats), backgroundColor: '#8b5cf6', borderRadius: 4 }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+            });
+
+            // Chart 2: Daily volume trend (line — same style as volumeChart)
+            const dayStats = {};
+            filtered.forEach(r => {
+                const d = rawToLocalDate(getVal(r, ['Received Time','ReceivedTime']));
+                if (!d) return;
+                const key = `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}`;
+                dayStats[key] = (dayStats[key] || 0) + 1;
+            });
+            const sortedDays = Object.keys(dayStats).sort((a,b) => {
+                const [ma,da,ya] = a.split('/'), [mb,db,yb] = b.split('/');
+                return new Date(parseInt(ya),parseInt(ma)-1,parseInt(da)) - new Date(parseInt(yb),parseInt(mb)-1,parseInt(db));
+            });
+            if (supVolumeChart) supVolumeChart.destroy();
+            const svc = document.getElementById('supVolumeChart');
+            if (svc) supVolumeChart = new Chart(svc, {
+                type: 'line',
+                data: { labels: sortedDays, datasets: [{ label: 'Requests', data: sortedDays.map(d => dayStats[d]), borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.07)', tension: 0.3, fill: true }] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+            });
+
+            // Chart 3: Avg elapsed by support type (horizontal bar)
+            const typeElapsed = {};
+            filtered.forEach(r => {
+                const type = getVal(r, ['Support Type','SupportType','Type']) || 'Other';
+                const hrs  = parseFloat(getVal(r, ['Job Elapsed Calendar Hrs','ElapsedHrs','Elapsed','Job Elapsed']));
+                if (isNaN(hrs) || hrs <= 0) return;
+                if (!typeElapsed[type]) typeElapsed[type] = [];
+                typeElapsed[type].push(hrs);
+            });
+            const typeLabels = Object.keys(typeElapsed);
+            const typeAvgs   = typeLabels.map(t => (typeElapsed[t].reduce((a,b)=>a+b,0)/typeElapsed[t].length).toFixed(1));
+            if (supTypeChart) supTypeChart.destroy();
+            const stc = document.getElementById('supTypeChart');
+            if (stc) supTypeChart = new Chart(stc, {
+                type: 'bar',
+                data: { labels: typeLabels, datasets: [{ label: 'Avg hrs', data: typeAvgs, backgroundColor: '#f59e0b', borderRadius: 4 }] },
+                options: {
+                    indexAxis: 'y', responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: { x: { beginAtZero: true, title: { display: true, text: 'Avg hrs', font: { size: 10 } } } }
+                }
+            });
+
+            // Table: PIC pending support jobs
+            const picPending = {};
+            filtered.forEach(r => {
+                const ct = getVal(r, ['Complete Time','CompleteTime']);
+                if (ct && ct !== '---' && String(ct).trim() !== '') return;
+                const pic = getMAPic(r) || '---';
+                if (!picPending[pic]) picPending[pic] = [];
+                const machineNo = getVal(r, ['Machine No','MachineNo','Machine']);
+                const type      = getVal(r, ['Support Type','SupportType','Type']);
+                const rid       = getVal(r, ['Request ID','RequestID']);
+                picPending[pic].push({ machineNo, type, rid });
+            });
+            const picTbody = document.getElementById('ds-pic-table');
+            if (picTbody) {
+                picTbody.innerHTML = Object.keys(picPending).length
+                    ? Object.entries(picPending).map(([name, jobs]) => `
+                        <tr class="border-b hover:bg-purple-50 cursor-pointer transition-colors" onclick="switchTab('support')">
+                            <td class="p-3 font-bold border-r bg-slate-50/50">${name}</td>
+                            <td class="p-3 flex flex-wrap gap-2">
+                                ${jobs.map(j => `<div class="flex items-center gap-1.5 border rounded-lg px-2.5 py-1.5 bg-white shadow-sm">
+                                    <span class="w-2 h-2 rounded-full bg-amber-400"></span>
+                                    <span class="font-bold text-slate-800 text-[10px]">${j.machineNo}</span>
+                                    <span class="text-slate-500 text-[9px]">${j.type}</span>
+                                </div>`).join('')}
+                            </td>
+                        </tr>`).join('')
+                    : '<tr><td colspan="2" class="p-6 text-center italic text-slate-400">All support jobs completed!</td></tr>';
+            }
+        }
+
         function switchTab(t) { 
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(`content-${t}`).classList.remove('hidden');
             document.querySelectorAll('nav button').forEach(b => b.classList.remove('tab-active'));
             document.getElementById(`tab-${t}`).classList.add('tab-active');
+            // Re-render laser dashboard + SLA chart when switching to it (canvas must be visible)
+            if (t === 'dashboard' && allLaserRows.length) {
+                renderLaserDashboard();
+                requestAnimationFrame(() => renderLaserSLA());
+            }
+            if (t === 'dashboard' && allSupportRows.length) renderSupportDashboard();
+            if (t === 'dashboard') renderUtilization();
+            // Refresh support data when switching to support tab
+            if (t === 'support') refreshSupportData(true);
         }
 
         function login() { currentUser = document.getElementById('userSelect').value; localStorage.setItem('ma_session_user', currentUser); updateSessionUI(); updateLaserPicDisplay(); applyTempFilters(false); renderLaserTable(); }
@@ -993,6 +1938,141 @@
         });
 
         // FIX 3: Removed prefetchMachineImages() call — see note above
+        async function refreshSupportData(isSilent = false) {
+            const st = document.getElementById('supportSyncStatus');
+            if (!isSilent && st) { st.innerText = 'Syncing...'; st.classList.add('sync-active'); }
+            try {
+                const r = await fetch(supportFetchURL + "&cb=" + Date.now(), { method: 'POST', body: JSON.stringify({}) });
+                const rawText = await r.text();
+                if (!r.ok) {
+                    throw new Error(`HTTP ${r.status}: ${rawText.substring(0, 200)}`);
+                }
+                let d;
+                try { d = JSON.parse(rawText); } catch(pe) {
+                    throw new Error(`Bad JSON: ${rawText.substring(0, 200)}`);
+                }
+                let rows = [];
+                if (Array.isArray(d)) {
+                    rows = d;
+                } else if (d && Array.isArray(d.value)) {
+                    rows = d.value;
+                } else if (d && d.body && Array.isArray(d.body.value)) {
+                    rows = d.body.value;  // Body token wraps as {body:{value:[]}}
+                } else if (d && d.body && Array.isArray(d.body)) {
+                    rows = d.body;
+                } else {
+                    // Last resort: find any array key
+                    for (const k of Object.keys(d || {})) {
+                        if (Array.isArray(d[k]) && d[k].length > 0) { rows = d[k]; break; }
+                    }
+                }
+                // Sort by received time descending — newest first
+                rows.sort((a, b) => {
+                    const ra = rawToLocalDate(getVal(a, ['Received Time','ReceivedTime']));
+                    const rb = rawToLocalDate(getVal(b, ['Received Time','ReceivedTime']));
+                    return (rb ? rb.getTime() : 0) - (ra ? ra.getTime() : 0);
+                });
+                allSupportRows = rows;
+                renderSupportTable();
+                renderSupportDashboard();
+                if (st) { st.innerText = 'LIVE: ' + new Date().toLocaleTimeString(); st.classList.remove('sync-active'); }
+            } catch(e) {
+                const tbody = document.getElementById('supportTable');
+                if (tbody) tbody.innerHTML = `<tr><td colspan="14" class="p-6 text-center text-red-400 italic text-xs">Failed to load: ${e.message}<br><br>Check your Power Automate Flow has a Response action returning body/value.</td></tr>`;
+                if (st) st.innerText = 'Error';
+            }
+        }
+
+        function applySupport() {
+            supportSearchQuery = document.getElementById('supportSearch')?.value.toLowerCase() || '';
+            renderSupportTable();
+        }
+
+        function clearSupportSearch() {
+            const el = document.getElementById('supportSearch');
+            if (el) el.value = '';
+            supportSearchQuery = '';
+            renderSupportTable();
+        }
+
+        function renderSupportTable() {
+            const tbody = document.getElementById('supportTable');
+            if (!tbody) return;
+
+            const rows = supportSearchQuery
+                ? allSupportRows.filter(r => {
+                    const vals = [
+                        getVal(r, ['Style Number','StyleNumber','Style','Name']),
+                        getVal(r, ['Name']),
+                        getVal(r, ['Machine No','MachineNo','Machine']),
+                        getVal(r, ['Support Type','SupportType','Type']),
+                        getVal(r, ['Risk Type','RiskType']),
+                        getVal(r, ['Section']),
+                        getVal(r, ['M&A PIC','PIC']),
+                        getVal(r, ['Description','Desc']),
+                        getVal(r, ['Request ID','RequestID'])
+                    ];
+                    return vals.some(v => String(v).toLowerCase().includes(supportSearchQuery));
+                })
+                : allSupportRows;
+
+            // Update stats
+            const total   = rows.length;
+            const repair  = rows.filter(r => String(getVal(r, ['Support Type','SupportType','Type'])).toLowerCase().includes('repair')).length;
+            const done    = rows.filter(r => { const ct = getVal(r, ['Complete Time','CompleteTime']); return ct && ct !== '---' && String(ct).trim() !== ''; }).length;
+            const elapsedVals = rows.map(r => parseFloat(getVal(r, ['Job Elapsed Calendar Hrs','ElapsedHrs','Elapsed']))).filter(v => !isNaN(v) && v > 0);
+            const avg = elapsedVals.length ? (elapsedVals.reduce((a,b) => a+b, 0) / elapsedVals.length).toFixed(1) : '0';
+
+            const elTotal  = document.getElementById('sup-total');  if (elTotal)  elTotal.innerText  = total;
+            const elRepair = document.getElementById('sup-repair'); if (elRepair) elRepair.innerText = repair;
+            const elAvg    = document.getElementById('sup-avg');    if (elAvg)    elAvg.innerText    = avg;
+            const elDone   = document.getElementById('sup-done');   if (elDone)   elDone.innerText   = done;
+
+            if (!rows.length) {
+                tbody.innerHTML = `<tr><td colspan="14" class="p-6 text-center text-slate-400 italic text-xs">${supportSearchQuery ? 'No results found.' : 'No support records found.'}</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = rows.map(i => {
+                const received    = convertExcelDate(getVal(i, ['Received Time','ReceivedTime']));
+                const requestID   = getVal(i, ['Request ID','RequestID','Id']);
+                const name        = getVal(i, ['Name']);
+                const suppType    = getVal(i, ['Support Type','SupportType','Type']);
+                const section     = getVal(i, ['Section']);
+                const machineNo   = getVal(i, ['Machine No','MachineNo','Machine']);
+                const riskType    = getVal(i, ['Risk Type','RiskType']);
+                const desc        = getVal(i, ['Description','Desc']);
+                const month       = getVal(i, ['Month']);
+                const startTime   = convertExcelDate(getVal(i, ['Start Time','StartTime']));
+                const completeTime= convertExcelDate(getVal(i, ['Complete Time','CompleteTime']));
+                const elapsed     = getVal(i, ['Job Elapsed Calendar Hrs','ElapsedHrs','Elapsed','Job Elapsed']);
+                const pic         = getMAPic(i);
+                const remark      = getVal(i, ['Remark','Remarks']);
+                const isDone      = completeTime && completeTime !== '---';
+                // Risk type badge color
+                const riskColor   = riskType.toLowerCase().includes('quality') ? 'bg-red-100 text-red-600' :
+                                    riskType.toLowerCase().includes('break') ? 'bg-orange-100 text-orange-600' :
+                                    'bg-slate-100 text-slate-600';
+                const typeColor   = suppType.toLowerCase().includes('repair') ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600';
+                return `<tr class="border-b hover:bg-slate-50">
+                    <td class="p-3 text-slate-500 text-[10px]">${received}</td>
+                    <td class="p-3 font-mono text-[10px] text-slate-400">${requestID}</td>
+                    <td class="p-3 text-xs">${name}</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${typeColor}">${suppType}</span></td>
+                    <td class="p-3">${section}</td>
+                    <td class="p-3 font-bold text-blue-700">${machineNo}</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${riskColor}">${riskType}</span></td>
+                    <td class="p-3 text-slate-500 italic text-[10px] max-w-[200px]">${desc}</td>
+                    <td class="p-3 text-[10px]">${month}</td>
+                    <td class="p-3 text-slate-500 text-[10px]">${startTime}</td>
+                    <td class="p-3 ${isDone ? 'text-emerald-600 font-bold' : 'text-slate-400'} text-[10px]">${completeTime}</td>
+                    <td class="p-3 font-bold ${parseFloat(elapsed) > 8 ? 'text-red-500' : 'text-slate-700'}">${elapsed !== '---' ? elapsed + ' hrs' : '---'}</td>
+                    <td class="p-3 font-medium">${pic}</td>
+                    <td class="p-3 italic text-slate-400 text-[10px]">${remark}</td>
+                </tr>`;
+            }).join('');
+        }
+
         window.onload = () => { 
             updateSessionUI();
             updateLaserPicDisplay();
@@ -1000,7 +2080,8 @@
             refreshTemplateLogs(); 
             refreshLiveLogs();
             refreshLaserData();
-            setInterval(() => { refreshTemplateLogs(true); refreshLiveLogs(true); refreshLaserData(true); }, 60000); 
+            refreshSupportData();
+            setInterval(() => { refreshTemplateLogs(true); refreshLiveLogs(true); refreshLaserData(true); refreshSupportData(true); }, 60000); 
         };
     </script>
 </body>
