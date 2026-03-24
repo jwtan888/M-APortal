@@ -26,40 +26,50 @@
 
         /* FIX 3: Machine image - default visible so no infinite loading spinner */
         #machineImg { transition: opacity 0.3s ease-in-out; opacity: 1; }
+        /* Mobile optimizations */
+        .scrollbar-none::-webkit-scrollbar { display: none; }
+        .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+        @media (max-width: 640px) {
+            td, th { font-size: 0.65rem !important; padding: 0.35rem 0.5rem !important; }
+            .manual-input { width: 80px !important; font-size: 9px !important; }
+            .qty-input { width: 48px !important; }
+        }
     </style>
 </head>
-<body class="bg-slate-50 p-4 font-sans text-slate-900">
+<body class="bg-slate-50 p-2 md:p-4 font-sans text-slate-900">
     <div class="max-w-[1600px] mx-auto">
-        <header class="mb-4 flex flex-row justify-between items-center bg-white p-6 rounded-t-xl border-x border-t shadow-sm">
-            <div class="flex-shrink-0 flex items-center gap-4">
-                <img src="logo.png" alt="Logo" class="h-10 w-auto" onerror="this.src='https://via.placeholder.com/40?text=MA'">
-                <div>
-                    <h1 class="text-xl md:text-3xl font-bold text-slate-800 leading-tight" id="mainTitle">M&A Portal</h1>
-                    <p class="text-slate-400 text-xs font-bold tracking-[0.3em] uppercase mt-0.5">Modernization & Automation</p>
+        <header class="mb-4 bg-white rounded-t-xl border-x border-t shadow-sm">
+            <!-- Top row: logo + title -->
+            <div class="flex items-center gap-4 p-4 pb-3">
+                <img src="logo.png" alt="Logo" class="h-9 w-auto flex-shrink-0" onerror="this.src='https://via.placeholder.com/40?text=MA'">
+                <div class="min-w-0">
+                    <h1 class="text-xl md:text-3xl font-bold text-slate-800 leading-tight truncate" id="mainTitle">M&A Portal</h1>
+                    <p class="text-slate-400 text-[10px] font-bold tracking-[0.25em] uppercase mt-0.5">Modernization & Automation</p>
                 </div>
             </div>
-            <div id="userSessionArea" class="flex items-center gap-3 bg-slate-50 border p-2 rounded-xl shadow-inner">
+            <!-- Bottom row: login — full width on mobile, right-aligned on desktop -->
+            <div id="userSessionArea" class="border-t px-4 py-3 bg-slate-50 rounded-b-none md:rounded-none">
                 <div id="loginView" class="flex items-center gap-2">
-                    <select id="userSelect" class="text-xs font-bold p-2 border rounded bg-white outline-none focus:ring-2 focus:ring-blue-500">
+                    <select id="userSelect" class="flex-1 text-sm font-bold p-2.5 border rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-500 min-w-0">
                         <option value="">Select User...</option>
                         <option>Gavin</option><option>Keat</option><option>Viki</option><option>Ram</option>
                         <option>James</option><option>Phone</option><option>Mark</option><option>Joe</option>
                     </select>
-                    <button onclick="login()" class="bg-slate-800 text-white text-[10px] font-bold px-4 py-2 rounded uppercase hover:bg-blue-600 transition-all">Login</button>
+                    <button onclick="login()" class="bg-slate-800 text-white text-xs font-bold px-5 py-2.5 rounded-lg uppercase hover:bg-blue-600 transition-all whitespace-nowrap flex-shrink-0">Login</button>
                 </div>
-                <div id="activeUserView" class="hidden flex items-center gap-3">
-                    <span class="text-xs font-bold text-slate-500 uppercase tracking-tighter">Active: <span id="displayUserName" class="text-blue-600 ml-1">---</span></span>
-                    <button onclick="logout()" class="text-[10px] font-bold text-red-500 border border-red-200 px-2 py-1 rounded hover:bg-red-50">Logout</button>
+                <div id="activeUserView" class="hidden flex items-center justify-between gap-3">
+                    <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Active: <span id="displayUserName" class="text-blue-600 ml-1">---</span></span>
+                    <button onclick="logout()" class="text-xs font-bold text-red-500 border border-red-200 px-3 py-2 rounded-lg hover:bg-red-50">Logout</button>
                 </div>
             </div>
         </header>
 
-        <nav class="flex bg-white border-x border-b rounded-b-xl mb-6 shadow-sm overflow-hidden">
-            <button onclick="switchTab('template')" id="tab-template" class="flex-1 py-4 text-sm uppercase tracking-widest font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50 tab-active">Template Requests</button>
-            <button onclick="switchTab('laser')" id="tab-laser" class="flex-1 py-4 text-sm uppercase tracking-widest font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50">Laser Tracking</button>
-            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="flex-1 py-4 text-sm uppercase tracking-widest font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50">Dashboard</button>
-            <button onclick="switchTab('setting')" id="tab-setting" class="flex-1 py-4 text-sm uppercase tracking-widest font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50">Machine Setting</button>
-            <button onclick="switchTab('support')" id="tab-support" class="flex-1 py-4 text-sm uppercase tracking-widest font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50">M&A Support</button>
+        <nav class="flex bg-white border-x border-b rounded-b-xl mb-4 shadow-sm overflow-x-auto scrollbar-none">
+            <button onclick="switchTab('template')" id="tab-template" class="flex-shrink-0 flex-1 min-w-[100px] py-3 text-[10px] md:text-sm uppercase tracking-wider font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50 tab-active whitespace-nowrap px-2">Template</button>
+            <button onclick="switchTab('laser')" id="tab-laser" class="flex-shrink-0 flex-1 min-w-[90px] py-3 text-[10px] md:text-sm uppercase tracking-wider font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50 whitespace-nowrap px-2">Laser</button>
+            <button onclick="switchTab('dashboard')" id="tab-dashboard" class="flex-shrink-0 flex-1 min-w-[100px] py-3 text-[10px] md:text-sm uppercase tracking-wider font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50 whitespace-nowrap px-2">Dashboard</button>
+            <button onclick="switchTab('setting')" id="tab-setting" class="flex-shrink-0 flex-1 min-w-[90px] py-3 text-[10px] md:text-sm uppercase tracking-wider font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50 whitespace-nowrap px-2">Settings</button>
+            <button onclick="switchTab('support')" id="tab-support" class="flex-shrink-0 flex-1 min-w-[90px] py-3 text-[10px] md:text-sm uppercase tracking-wider font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50 whitespace-nowrap px-2">Support</button>
         </nav>
 
         <div id="content-laser" class="tab-content hidden">
@@ -912,8 +922,9 @@
 
             // Build composite key: Season+Style+Category+ProtoStage+GarmentQty
             // Used to detect split jobs (2 rows for same job)
+            // Composite key for split-job detection — Season excluded intentionally
+            // because the same style can span two seasons (e.g. SU27 + SP27 same job)
             const jobKey = r => [
-                getVal(r, ['Season']),
                 getVal(r, ['Style Number','StyleNumber','Style']),
                 getVal(r, ['Category']),
                 getVal(r, ['Proto Stage','ProtoStage','Stage']),
@@ -1447,7 +1458,18 @@
 
         function applyTempFilters(prioritySort = false) {
             const sv = document.getElementById('tempSearch').value.toLowerCase(), isAdmin = (currentUser === "Gavin");
-            let filtered = allTemplates.filter(t => t.style.toLowerCase().includes(sv) || t.pic.toLowerCase().includes(sv) || t.status.toLowerCase().includes(sv));
+            let filtered = allTemplates.filter(t =>
+                t.style.toLowerCase().includes(sv) ||
+                t.pic.toLowerCase().includes(sv) ||
+                t.status.toLowerCase().includes(sv) ||
+                String(t.jobNo).toLowerCase().includes(sv) ||
+                String(t.templateNo).toLowerCase().includes(sv) ||
+                String(t.templateType).toLowerCase().includes(sv) ||
+                String(t.description).toLowerCase().includes(sv) ||
+                String(t.section).toLowerCase().includes(sv) ||
+                String(t.requestor).toLowerCase().includes(sv) ||
+                String(t.protoStage).toLowerCase().includes(sv)
+            );
             if (prioritySort) {
                 const weights = { 'DELAYED': 0, 'PENDING': 1, 'COMPLETED': 2 };
                 filtered.sort((a, b) => weights[a.status] - weights[b.status]);
