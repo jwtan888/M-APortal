@@ -598,6 +598,7 @@
                                     <th class="p-3">PIC</th>
                                     <th class="p-3 text-emerald-600">Laser (hrs)</th>
                                     <th class="p-3 text-blue-600">Support (hrs)</th>
+                                    <th class="p-3 text-indigo-600">Consumption (hrs)</th>
                                     <th class="p-3">Total hrs</th>
                                     <th class="p-3">Utilization %</th>
                                 </tr>
@@ -719,51 +720,58 @@
 
         <!-- Consumption Tab -->
         <div id="content-consumption" class="tab-content hidden">
-            <!-- Add New Row Form (Laser-style) -->
-            <div class="bg-white p-5 rounded-xl border shadow-sm mb-4">
+            <!-- Add New Row Form (matching Laser page style) -->
+            <div class="bg-white p-6 rounded-xl border shadow-sm mb-4">
                 <div class="flex justify-between items-center mb-4 border-b pb-3">
-                    <h2 class="text-sm font-bold text-slate-400 uppercase tracking-widest">Add New Consumption Request</h2>
-                    <span id="c_picDisplay" class="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full"></span>
-                </div>
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Received Time</label>
-                        <input id="c_receivedTime" class="manual-input w-full" placeholder="m/d/yyyy hh:mm">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Season</label>
-                        <input id="c_season" class="manual-input w-full" placeholder="e.g. SP27">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Style Number</label>
-                        <input id="c_style" class="manual-input w-full" placeholder="e.g. IZ4924">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Job Number</label>
-                        <input id="c_jobNo" class="manual-input w-full" placeholder="Job No.">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Proto Stage</label>
-                        <input id="c_protoStage" class="manual-input w-full" placeholder="e.g. P2">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Request Type</label>
-                        <input id="c_requestType" class="manual-input w-full" placeholder="e.g. Consumption and Artwork">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Start Date</label>
-                        <input id="c_startDate" class="manual-input w-full" placeholder="m/d/yyyy hh:mm">
-                    </div>
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Complete Date</label>
-                        <input id="c_completeDate" class="manual-input w-full" placeholder="m/d/yyyy hh:mm">
+                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">New Consumption Entry</h2>
+                    <div class="flex items-center gap-3">
+                        <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">M&A PIC:</span>
+                        <span id="c_picDisplay" class="text-sm font-bold text-blue-600"></span>
+                        <span id="consumptionSyncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest ml-4">Syncing...</span>
                     </div>
                 </div>
-                <div class="mb-3">
-                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Remark</label>
-                    <input id="c_remark" class="manual-input w-full" placeholder="Remark..." style="width:100%">
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Received Time</label>
+                        <input type="text" id="c_receivedTime" placeholder="3/18/2026 13:15 (M/D/YYYY)" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Season</label>
+                        <input type="text" id="c_season" placeholder="e.g. SP27" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Style Number</label>
+                        <input type="text" id="c_style" placeholder="e.g. IZ4924" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Job Number</label>
+                        <input type="text" id="c_jobNo" placeholder="Job No." class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Proto Stage</label>
+                        <input type="text" id="c_protoStage" placeholder="e.g. P2" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Request Type</label>
+                        <input type="text" id="c_requestType" placeholder="Consumption and Artwork" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Start Date</label>
+                        <input type="text" id="c_startDate" placeholder="m/d/yyyy hh:mm" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Complete Date</label>
+                        <input type="text" id="c_completeDate" placeholder="m/d/yyyy hh:mm" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Remark</label>
+                        <input type="text" id="c_remark" placeholder="Remark..." class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
                 </div>
-                <button id="consumptionAddBtn" onclick="addConsumptionRow()" class="bg-emerald-600 text-white text-xs font-bold px-6 py-2.5 rounded-lg hover:bg-emerald-700 transition-all">+ ADD ROW</button>
+                <button id="consumptionAddBtn" onclick="addConsumptionRow()"
+                    class="bg-emerald-600 text-white text-xs font-bold px-6 py-2 rounded-lg hover:bg-emerald-700 transition-all disabled:opacity-50">
+                    + ADD ROW
+                </button>
             </div>
 
             <!-- Search + Filter -->
@@ -773,7 +781,7 @@
                     <option value="">All Months</option>
                 </select>
                 <button onclick="clearConsumptionSearch()" class="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-300">CLEAR</button>
-                <span id="consumptionSyncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Syncing...</span>
+
             </div>
 
             <!-- Table -->
@@ -1272,6 +1280,8 @@
         // Patch Update Flow — Key Column: No., Key Value: triggerBody()?['No.']
         const patchUpdateURL = "PASTE_PATCH_UPDATE_FLOW_URL_HERE";
         // Attendance Fetch Flow URL
+        // Consumption: use fetch URL for listing, same URL handles add if flow is configured for both
+        // If you have a separate Add flow, set consumptionAddURL to that URL
         const consumptionFetchURL  = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/aee706c4629744f5b5aa3a756eec00f2/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=tU6CI-qPTZJIJgVViryVC6t9oxk4_gL8xvDgB4e_jwE";
         const consumptionUpdateURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/f0612d5d6e1645c1a3a44c2201299a93/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Q_RMUTXSecFlsNb_o2HhIcjrpN_LyunPb4bkvcUJCpI";
         const attendanceFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/9f7d2b43fe80443ea830ec0ef1631183/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=0geeH4paQU60TyHlrF0_6_CGqXBmke3BEmk5IiwTxZ0";
@@ -2943,14 +2953,30 @@
                 if (hrs > 0) supportHrs[pic] = (supportHrs[pic] || 0) + hrs;
             });
 
+            // ── Consumption hrs per PIC (Start Date → Complete Date) ──────────
+            const consumptionHrs = {};
+            allConsumptionRows.forEach(r => {
+                const rcvRaw = getVal(r, ['Received Time m/d/yyyy','Received Time','ReceivedTime']);
+                if (!inMonth(rcvRaw)) return;
+                const pic = getMAPic(r);
+                if (!pic || pic === '---') return;
+                allPICs.add(pic);
+                const startDate = rawToLocalDate(getVal(r, ['Start Date m/d/yyyy','Start Date','StartDate']));
+                const endDate   = rawToLocalDate(getVal(r, ['Complete Date m/d/yyyy','Complete Date','CompleteDate']));
+                if (startDate && endDate && endDate > startDate) {
+                    const hrs = (endDate - startDate) / 3600000;
+                    if (hrs > 0) consumptionHrs[pic] = (consumptionHrs[pic] || 0) + hrs;
+                }
+            });
+
             // Template excluded from utilization — tracked separately
             const templateHrs  = {};
             const templateJobs = {};
 
             // Build sorted PIC list — sort by total hours desc
             const picArr = Array.from(allPICs).filter(p => p && p !== '---').sort((a, b) => {
-                const totalA = (laserHrs[a]||0) + (supportHrs[a]||0);
-                const totalB = (laserHrs[b]||0) + (supportHrs[b]||0);
+                const totalA = (laserHrs[a]||0) + (supportHrs[a]||0) + (consumptionHrs[a]||0);
+                const totalB = (laserHrs[b]||0) + (supportHrs[b]||0) + (consumptionHrs[b]||0);
                 return totalB - totalA;
             });
 
@@ -2971,7 +2997,12 @@
                             {
                                 label: 'Support (hrs)',
                                 data: picArr.map(p => parseFloat((supportHrs[p]||0).toFixed(1))),
-                                backgroundColor: '#3b82f6', borderRadius: 4
+                                backgroundColor: '#3b82f6', borderRadius: 0
+                            },
+                            {
+                                label: 'Consumption (hrs)',
+                                data: picArr.map(p => parseFloat((consumptionHrs[p]||0).toFixed(1))),
+                                backgroundColor: '#6366f1', borderRadius: 4
                             }
                         ]
                     },
@@ -2981,10 +3012,11 @@
                             legend: { position: 'bottom', labels: { font: { size: 10 } } },
                             tooltip: { mode: 'index', intersect: false, callbacks: {
                                 footer: items => {
-                                    const laserV   = items.find(i => i.datasetIndex === 0)?.raw || 0;
-                                    const supportV = items.find(i => i.datasetIndex === 1)?.raw || 0;
-                                    const total    = laserV + supportV;
-                                    const pct      = capacity ? Math.round(total/capacity*100) : 0;
+                                    const laserV  = items.find(i => i.datasetIndex === 0)?.raw || 0;
+                                    const suppV   = items.find(i => i.datasetIndex === 1)?.raw || 0;
+                                    const conV    = items.find(i => i.datasetIndex === 2)?.raw || 0;
+                                    const total   = laserV + suppV + conV;
+                                    const pct     = capacity ? Math.round(total/capacity*100) : 0;
                                     return `Total: ${total.toFixed(1)} hrs / ${capacity} hrs (${pct}%)`;
                                 }
                             }}
@@ -2994,7 +3026,7 @@
                             y: {
                                 stacked: true, beginAtZero: true,
                                 title: { display: true, text: 'Hours', font: { size: 10 } },
-                                max: Math.max(capacity, ...picArr.map(p => (laserHrs[p]||0)+(supportHrs[p]||0))) * 1.15
+                                max: Math.max(capacity, ...picArr.map(p => (laserHrs[p]||0)+(supportHrs[p]||0)+(consumptionHrs[p]||0))) * 1.15
                             }
                         }
                     }
@@ -3009,9 +3041,10 @@
             const tbody = document.getElementById('util-table');
             if (tbody) {
                 tbody.innerHTML = picArr.length ? picArr.map(p => {
-                    const lHrs  = laserHrs[p]   || 0;
-                    const sHrs  = supportHrs[p]  || 0;
-                    const total = lHrs + sHrs;
+                    const lHrs  = laserHrs[p]      || 0;
+                    const sHrs  = supportHrs[p]    || 0;
+                    const cHrs  = consumptionHrs[p] || 0;
+                    const total = lHrs + sHrs + cHrs;
                     // Use individual PIC capacity from attendance if available, else group avg
                     const picCap = attCapMap[p] || capacity;
                     const pct   = (picCap && total) ? Math.round(total / picCap * 100) : 0;
@@ -3020,6 +3053,7 @@
                         <td class="p-3 font-bold">${p}</td>
                         <td class="p-3 text-emerald-600 font-bold">${lHrs.toFixed(1)}</td>
                         <td class="p-3 text-blue-600 font-bold">${sHrs.toFixed(1)}</td>
+                        <td class="p-3 text-indigo-600 font-bold">${cHrs.toFixed(1)}</td>
                         <td class="p-3 font-bold">${total.toFixed(1)}</td>
                         <td class="p-3">
                             <div class="flex items-center gap-2">
@@ -3740,12 +3774,18 @@
                 }
                 let d;
                 try { d = JSON.parse(rawText); }
-                catch(pe) { throw new Error(`Bad JSON (${rawText.substring(0,100)})`); }
+                catch(pe) { throw new Error(`Bad JSON: ${rawText.substring(0,150)}`); }
                 let rows = [];
                 if (Array.isArray(d)) rows = d;
                 else if (d?.value && Array.isArray(d.value)) rows = d.value;
                 else if (d?.body?.value && Array.isArray(d.body.value)) rows = d.body.value;
-                else { for (const k of Object.keys(d||{})) { if (Array.isArray(d[k])) { rows = d[k]; break; } } }
+                else if (d?.body && Array.isArray(d.body)) rows = d.body;
+                else {
+                    for (const k of Object.keys(d||{})) {
+                        if (Array.isArray(d[k]) && d[k].length > 0) { rows = d[k]; break; }
+                    }
+                }
+                console.log('[CON] Received', rows.length, 'rows from consumption fetch');
                 // Sort by ID descending
                 rows.sort((a,b) => (parseInt(getVal(b,['Id','ID','id']))||0) - (parseInt(getVal(a,['Id','ID','id']))||0));
                 allConsumptionRows = rows;
@@ -3879,7 +3919,7 @@
             btn.innerText = 'Saving...'; btn.disabled = true;
             try {
                 // Note: if you have a separate Add flow URL, replace consumptionFetchURL here
-                const res = await fetch(consumptionFetchURL + '&cb=' + Date.now(), {
+                const res = await fetch(consumptionFetchURL, {
                     method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
                 });
                 if (res.ok) {
