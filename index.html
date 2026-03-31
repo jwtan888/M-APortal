@@ -71,6 +71,7 @@
             <button onclick="switchTab('patch')" id="tab-patch" class="flex-shrink-0 flex-1 min-w-[80px] py-3 text-[10px] md:text-sm uppercase tracking-wider font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50 whitespace-nowrap px-2">Patch</button>
             <button onclick="switchTab('laser')" id="tab-laser" class="flex-shrink-0 flex-1 min-w-[90px] py-3 text-[10px] md:text-sm uppercase tracking-wider font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50 whitespace-nowrap px-2">Laser</button>
             <button onclick="switchTab('setting')" id="tab-setting" class="flex-shrink-0 flex-1 min-w-[90px] py-3 text-[10px] md:text-sm uppercase tracking-wider font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50 whitespace-nowrap px-2">Settings</button>
+            <button onclick="switchTab('consumption')" id="tab-consumption" class="flex-shrink-0 flex-1 min-w-[100px] py-3 text-[10px] md:text-sm uppercase tracking-wider font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50 whitespace-nowrap px-2">Consumption</button>
             <button onclick="switchTab('support')" id="tab-support" class="flex-shrink-0 flex-1 min-w-[90px] py-3 text-[10px] md:text-sm uppercase tracking-wider font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50 whitespace-nowrap px-2">Support</button>
         </nav>
 
@@ -677,6 +678,92 @@
         </div>
     </div>
 
+        <!-- Consumption Tab -->
+        <div id="content-consumption" class="tab-content hidden">
+            <!-- Add New Row Form (Laser-style) -->
+            <div class="bg-white p-5 rounded-xl border shadow-sm mb-4">
+                <div class="flex justify-between items-center mb-4 border-b pb-3">
+                    <h2 class="text-sm font-bold text-slate-400 uppercase tracking-widest">Add New Consumption Request</h2>
+                    <span id="c_picDisplay" class="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full"></span>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-3">
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Received Time</label>
+                        <input id="c_receivedTime" class="manual-input w-full" placeholder="m/d/yyyy hh:mm">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Season</label>
+                        <input id="c_season" class="manual-input w-full" placeholder="e.g. SP27">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Style Number</label>
+                        <input id="c_style" class="manual-input w-full" placeholder="e.g. IZ4924">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Job Number</label>
+                        <input id="c_jobNo" class="manual-input w-full" placeholder="Job No.">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Proto Stage</label>
+                        <input id="c_protoStage" class="manual-input w-full" placeholder="e.g. P2">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Request Type</label>
+                        <input id="c_requestType" class="manual-input w-full" placeholder="e.g. Consumption and Artwork">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Start Date</label>
+                        <input id="c_startDate" class="manual-input w-full" placeholder="m/d/yyyy hh:mm">
+                    </div>
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Complete Date</label>
+                        <input id="c_completeDate" class="manual-input w-full" placeholder="m/d/yyyy hh:mm">
+                    </div>
+                </div>
+                <div class="mb-3">
+                    <label class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1 block">Remark</label>
+                    <input id="c_remark" class="manual-input w-full" placeholder="Remark..." style="width:100%">
+                </div>
+                <button id="consumptionAddBtn" onclick="addConsumptionRow()" class="bg-emerald-600 text-white text-xs font-bold px-6 py-2.5 rounded-lg hover:bg-emerald-700 transition-all">+ ADD ROW</button>
+            </div>
+
+            <!-- Search + Filter -->
+            <div class="bg-white p-4 rounded-xl border shadow-sm mb-4 flex flex-wrap gap-2 items-center">
+                <input type="text" id="consumptionSearch" oninput="applyConsumptionFilter()" placeholder="Search Style, Season, PIC, Request Type..." class="flex-1 min-w-[180px] p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                <select id="consumptionMonthFilter" onchange="applyConsumptionFilter()" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">All Months</option>
+                </select>
+                <button onclick="clearConsumptionSearch()" class="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-300">CLEAR</button>
+                <span id="consumptionSyncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Syncing...</span>
+            </div>
+
+            <!-- Table -->
+            <div id="consumptionTableWrapper" class="bg-white rounded-xl shadow-sm border overflow-x-auto">
+                <table class="w-full text-left min-w-[1400px]">
+                    <thead class="bg-slate-100 border-b text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+                        <tr>
+                            <th class="p-3">ID</th>
+                            <th class="p-3">Received Time</th>
+                            <th class="p-3">Season</th>
+                            <th class="p-3 text-blue-600">Style Number</th>
+                            <th class="p-3">Job Number</th>
+                            <th class="p-3">Request By</th>
+                            <th class="p-3 text-purple-600">Proto Stage</th>
+                            <th class="p-3 text-orange-600">Request Type</th>
+                            <th class="p-3">Start Date</th>
+                            <th class="p-3 text-emerald-600">Complete Date</th>
+                            <th class="p-3">M&A PIC</th>
+                            <th class="p-3">Remark</th>
+                            <th class="p-3">Action</th>
+                        </tr>
+                    </thead>
+                    <tbody id="consumptionTable" class="text-slate-700">
+                        <tr><td colspan="13" class="p-6 text-center text-slate-400 italic text-xs">Loading consumption data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- M&A Support Tab -->
         <div id="content-support" class="tab-content hidden">
             <!-- Search bar -->
@@ -901,12 +988,33 @@
                 // Support multiple formats:
                 // Format A (summary): { Month:"Mar-26", Name:"Phone", Day_1:9, ..., Total:176 }
                 // Format B (daily):   { Month:"Mar-26", Name:"Phone", Day:5, Hours:9 }
-                const monthLabel = String(row.Month || row.month || '').trim();
-                if (!monthLabel) return;
-                const [mStr, yStr] = monthLabel.split('-');
-                const mIdx = months.indexOf(mStr);
-                if (mIdx < 0) return;
-                const fullYear = 2000 + parseInt(yStr);
+                let rawMonth = row.Month || row.month || '';
+                let mIdx = -1, fullYear = 0;
+                // Handle Excel serial date number (e.g. 46107 = 2026-03-26)
+                if (typeof rawMonth === 'number' || (!isNaN(rawMonth) && String(rawMonth).length > 4 && !String(rawMonth).includes('-'))) {
+                    const serial = parseFloat(rawMonth);
+                    if (serial > 40000 && serial < 60000) {
+                        // Convert Excel serial to Date (UTC)
+                        const d = new Date((serial - 25569) * 86400 * 1000);
+                        mIdx = d.getUTCMonth();
+                        fullYear = d.getUTCFullYear();
+                    }
+                }
+                const monthLabel = String(rawMonth).trim();
+                if (mIdx < 0 && monthLabel) {
+                    const parts = monthLabel.split('-');
+                    if (parts.length >= 3 && parts[0].length === 4) {
+                        // ISO format: 2026-03-26
+                        fullYear = parseInt(parts[0]);
+                        mIdx = parseInt(parts[1]) - 1;
+                    } else if (parts.length === 2 && isNaN(parts[0])) {
+                        // Short format: Mar-26
+                        mIdx = months.indexOf(parts[0]);
+                        fullYear = 2000 + parseInt(parts[1]);
+                    }
+                }
+                if (!monthLabel && mIdx < 0) return;
+                if (mIdx < 0 || mIdx > 11 || !fullYear) return;
                 const key = `${fullYear}-${String(mIdx+1).padStart(2,'0')}`;
                 const name = String(row.Name || row.name || '').trim();
                 if (!name) return;
@@ -1125,6 +1233,8 @@
         // Patch Update Flow — Key Column: No., Key Value: triggerBody()?['No.']
         const patchUpdateURL = "PASTE_PATCH_UPDATE_FLOW_URL_HERE";
         // Attendance Fetch Flow URL
+        const consumptionFetchURL  = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/aee706c4629744f5b5aa3a756eec00f2/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=tU6CI-qPTZJIJgVViryVC6t9oxk4_gL8xvDgB4e_jwE";
+        const consumptionUpdateURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/f0612d5d6e1645c1a3a44c2201299a93/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Q_RMUTXSecFlsNb_o2HhIcjrpN_LyunPb4bkvcUJCpI";
         const attendanceFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/9f7d2b43fe80443ea830ec0ef1631183/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=0geeH4paQU60TyHlrF0_6_CGqXBmke3BEmk5IiwTxZ0";
 
         const machineSpecs = { 
@@ -1511,8 +1621,17 @@
             if (el) { el.value = style; laserSearchQuery = style.toLowerCase(); }
             renderLaserTable();
             setTimeout(() => {
-                document.getElementById('laserTableWrapper')?.scrollIntoView({ behavior: 'smooth' });
-            }, 150);
+                // Scroll to first matching row (not table top)
+                const rows = document.querySelectorAll('#laserTable tr');
+                for (const row of rows) {
+                    if (row.innerText.toLowerCase().includes(style.toLowerCase())) {
+                        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        row.classList.add('bg-yellow-50');
+                        setTimeout(() => row.classList.remove('bg-yellow-50'), 2000);
+                        break;
+                    }
+                }
+            }, 250);
         }
         let laserTrendChart = null;
 
@@ -1567,8 +1686,11 @@
                 const proto = getVal(r, ['Proto Stage','ProtoStage','Stage']);
                 const rid   = String(getVal(r, ['Id','ID','id']));
                 const stylePro = `${getVal(r,['Style Number','StyleNumber','Style'])}|${proto}`;
+                // Also exclude if consPic was set to 'N/A' in Excel (cross-device N/A)
+                const consPicVal = String(getVal(r, ['Consumption PIC','ConsumptionPIC','Cons PIC'])).trim();
                 return cd && cd !== '---'
                     && (!cs || cs === '---')
+                    && consPicVal !== 'N/A'
                     && isTrackedProtoStage(proto)
                     && !doneJobKeys.has(jobKey(r))
                     && !naHiddenIds.has(rid)
@@ -1909,17 +2031,50 @@
             localStorage.setItem('ma_na_hidden', JSON.stringify(Array.from(naHiddenIds)));
         }
 
-        function markLaserNA(rid, event) {
+        async function markLaserNA(rid, event) {
+            const btn = event?.target;
+            if (btn) { btn.innerText = '...'; btn.disabled = true; }
             const ridStr = String(rid);
             const ridInt = String(parseInt(rid) || rid);
-            naHiddenIds.add(ridStr);
-            naHiddenIds.add(ridInt);
-            // Find row by multiple ID fields and store all variants
+
+            // Find row data to send full payload to Excel
             const row = allLaserRows.find(r => {
                 const rowId = String(getVal(r, ['Id','ID','id']));
                 return rowId === ridStr || rowId === ridInt ||
                        String(r['__PowerAppsId__'] || '') === ridStr;
             });
+
+            // Write 'N/A' to Consumption PIC in Excel — persists across all devices
+            if (row) {
+                const payload = {
+                    recordID:       ridStr,
+                    receivedTime:   convertExcelDate(getVal(row, ['Received Time','ReceivedTime','Received'])),
+                    season:         getVal(row, ['Season']),
+                    styleNumber:    getVal(row, ['Style Number','StyleNumber','Style']),
+                    section:        getVal(row, ['Section']),
+                    category:       getVal(row, ['Category']),
+                    protoStage:     getVal(row, ['Proto Stage','ProtoStage','Stage']),
+                    garmentQty:     getVal(row, ['Garment Quantity','GarmentQty','Garment Qty']),
+                    laserParts:     getVal(row, ['Laser Part Count','LaserPartCount','Laser Parts']),
+                    ironParts:      getVal(row, ['Ironing Part Count','IroningPartCount','Iron Parts']),
+                    trimParts:      getVal(row, ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']),
+                    completeDate:   convertExcelDate(getVal(row, ['Complete Date','CompleteDate'])),
+                    maPic:          getMAPic(row),
+                    consStart:      '',
+                    consEnd:        '',
+                    consumptionPic: 'N/A',
+                    remark:         getVal(row, ['Remark','Remarks'])
+                };
+                try {
+                    await fetch(laserUpdateURL, { method: 'POST',
+                        headers: {'Content-Type':'application/json'},
+                        body: JSON.stringify(payload) });
+                } catch(e) { /* silent — still hide locally */ }
+            }
+
+            // Also store in localStorage as immediate local cache
+            naHiddenIds.add(ridStr);
+            naHiddenIds.add(ridInt);
             if (row) {
                 naHiddenIds.add(jobKey(row));
                 if (row['__PowerAppsId__']) naHiddenIds.add(String(row['__PowerAppsId__']));
@@ -1928,6 +2083,10 @@
                 if (style && style !== '---') naHiddenIds.add(`${style}|${proto}`);
             }
             saveNaHidden();
+
+            // Refresh from Excel after 3s so all devices see the update
+            setTimeout(() => refreshLaserData(true), 3000);
+            if (btn) { btn.innerText = 'N/A'; btn.disabled = false; }
             renderLaserDashboard();
             renderLaserSLA();
         }
@@ -2132,14 +2291,17 @@
             const selMonth = document.getElementById('tempMonthFilter')?.value || '';
             const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             let filtered = allTemplates.filter(t => {
-                // Month filter by Complete Date
+                // Month filter by Start Time (matches what populateTabMonthFilters uses)
                 if (selMonth) {
-                    if (!t.completeDateDisplay || t.completeDateDisplay === '---') return false;
-                    const d = rawToLocalDate(t.completeDateDisplay.split(' ')[0]);
-                    if (!d) return false;
-                    const mLabel = `${months[d.getMonth()]}-${d.getFullYear()}`;
-                    if (mLabel !== selMonth) return false;
+                    const dp = t.startTime.split(' ')[0].split('/');
+                    if (dp.length !== 3) return false;
+                    // startTime is d/m/yyyy (from convertExcelDate) — dp[0]=day, dp[1]=month
+                    const [da, mo, yr] = dp.map(Number);
+                    if (!mo || mo > 12) return false;
+                    const label = `${months[mo-1]}-${yr}`;
+                    if (label !== selMonth) return false;
                 }
+
                 return true;
             });
             filtered = filtered.filter(t =>
@@ -2163,49 +2325,58 @@
                 const canEdit    = isAdmin || (isMine && !done); // structural edits (Gavin always, PIC only when pending)
                 const canEditPIC = isAdmin || isMine;            // remark/date/qty: PIC can always update even after completion
                 const templateNoCell = isAdmin ? `<input type="text" id="edit-tno-${t.id}" class="manual-input admin-input" value="${t.templateNo === '---' ? '' : t.templateNo}" placeholder="Assign No.">` : `<span class="font-bold">${t.templateNo}</span>`;
-                const picCell = (isAdmin && !done) ? `<select id="edit-pic-${t.id}" class="manual-input admin-input"><option value="">Select PIC</option>${picList.map(p => `<option value="${p}" ${p === t.pic ? 'selected' : ''}>${p}</option>`).join('')}</select>` : `<span>${t.pic}</span>`;
+                const picCell = (isAdmin) ? `<select id="edit-pic-${t.id}" class="manual-input admin-input"><option value="">Select PIC</option>${picList.map(p => `<option value="${p}" ${p === t.pic ? 'selected' : ''}>${p}</option>`).join('')}</select>` : `<span>${t.pic}</span>`;
                 const webTime = formatWebDisplay(new Date()), dateInput = canEditPIC ? `<input type="text" id="date-${t.id}" class="manual-input" value="${done ? t.completeDateDisplay : webTime}">` : `<span>${done ? t.completeDateDisplay : '---'}</span>`, qtyInput = canEditPIC ? `<input type="number" id="qty-${t.id}" class="manual-input qty-input" placeholder="Qty" value="${done?t.qty:''}">` : `<span>${done ? t.qty : '---'}</span>`;
                 return `<tr class="border-b hover:bg-slate-50">
                     <td class="p-3 text-slate-400 font-mono text-[10px]">${t.id}</td>
-                    <td class="p-3 text-slate-500 text-[10px]">${t.startTime}</td>
-                    <td class="p-3 text-[10px]">${t.requestor}</td>
-                    <td class="p-3 text-[10px]">${t.section}</td>
+                    <td class="p-3 text-[10px] text-slate-500">${t.startTime}</td>
+                    <td class="p-3 text-[11px]">${t.requestor}</td>
+                    <td class="p-3 text-[11px]">${t.section}</td>
                     <td class="p-3 font-bold">${t.style}</td>
-                    <td class="p-3 text-[10px]">${t.jobNo}</td>
-                    <td class="p-3 font-semibold text-purple-700 text-[10px]">${t.protoStage}</td>
+                    <td class="p-3 text-[11px]">${t.jobNo}</td>
+                    <td class="p-3 font-semibold text-purple-700">${t.protoStage}</td>
                     <td class="p-3 text-orange-700 font-bold text-[10px]">${t.templateType}</td>
-                    <td class="p-3">${isAdmin
-                        ? `<input type="text" id="desc-${t.id}" class="manual-input" style="width:130px" value="${t.description&&t.description!=='---'?t.description:''}" placeholder="Description">`
-                        : `<span class="text-slate-500 italic text-[10px]">${t.description}</span>`
+                    <td class="p-3 max-w-[180px]">${isAdmin
+                        ? `<input type="text" id="desc-${t.id}" class="manual-input admin-input" style="width:160px" value="${t.description && t.description !== '---' ? t.description : ''}" placeholder="Description">`
+                        : `<span class="text-slate-500 italic text-[10px] whitespace-normal">${t.description}</span>`
                     }</td>
-                    <td class="p-3 text-[10px]">${t.machine}</td>
-                    <td class="p-3 text-[10px]">${t.requiredDate}</td>
+                    <td class="p-3 text-[11px]">${t.machine}</td>
+                    <td class="p-3 text-[11px]">${t.requiredDate}</td>
                     <td class="p-3">${isAdmin
                         ? `<select id="complexity-${t.id}" class="manual-input admin-input" style="width:80px">
                             <option value="">—</option>
-                            ${[1,2,3,4,5].map(l=>`<option value="Level ${l}" ${t.complexity==='Level '+l?'selected':''}>Level ${l}</option>`).join('')}
+                            ${[1,2,3,4,5].map(l => `<option value="Level ${l}" ${t.complexity === 'Level ' + l ? 'selected' : ''}>Level ${l}</option>`).join('')}
                            </select>`
-                        : `<span class="text-[10px] font-bold ${t.complexity&&t.complexity!=='---'?'text-indigo-600':''}">${t.complexity&&t.complexity!=='---'?t.complexity:'—'}</span>`
+                        : `<span class="text-[10px] font-bold ${t.complexity && t.complexity !== '---' ? 'text-indigo-600' : ''}">${t.complexity && t.complexity !== '---' ? t.complexity : '—'}</span>`
                     }</td>
                     <td class="p-3">${isAdmin
-                        ? `<input type="text" id="dfm-${t.id}" class="manual-input admin-input" style="width:90px" value="${t.dfm&&t.dfm!=='---'?t.dfm:''}" placeholder="Code / No">`
-                        : `<span class="text-[10px] font-bold ${t.dfm&&t.dfm!=='---'?'text-teal-600':''}">${t.dfm&&t.dfm!=='---'?t.dfm:'—'}</span>`
+                        ? `<input type="text" id="dfm-${t.id}" class="manual-input admin-input" style="width:80px" value="${t.dfm && t.dfm !== '---' ? t.dfm : ''}" placeholder="Code/No">`
+                        : `<span class="text-[10px] font-bold ${t.dfm && t.dfm !== '---' ? 'text-teal-600' : ''}">${t.dfm && t.dfm !== '---' ? t.dfm : '—'}</span>`
                     }</td>
-                    <td class="p-3">${dateInput}</td>
-                    <td class="p-3">${qtyInput}</td>
-                    <td class="p-3 text-blue-700">${templateNoCell}</td>
+                    <td class="p-3">${canEdit
+                        ? `<input type="text" id="date-${t.id}" class="manual-input${isAdmin ? ' admin-input' : ''}" value="${done ? t.completeDateDisplay : ''}" placeholder="m/d/yyyy">`
+                        : `<span class="${done ? 'text-emerald-600 font-bold' : 'text-slate-400'} text-[10px]">${done ? t.completeDateDisplay : '---'}</span>`
+                    }</td>
+                    <td class="p-3">${canEdit
+                        ? `<input type="number" id="qty-${t.id}" class="manual-input qty-input" placeholder="Qty" value="${done ? t.qty : ''}">`
+                        : `<span>${done ? t.qty : '---'}</span>`
+                    }</td>
+                    <td class="p-3 text-blue-700">${canEdit
+                        ? `<input type="text" id="edit-tno-${t.id}" class="manual-input admin-input" value="${t.templateNo !== '---' ? t.templateNo : ''}" placeholder="Assign No.">`
+                        : `<span class="font-bold">${t.templateNo}</span>`
+                    }</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${done ? 'bg-emerald-100 text-emerald-600' : t.status === 'DELAYED' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600'}">${t.status}</span></td>
                     <td class="p-3 font-medium">${picCell}</td>
-                    <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${done ? 'bg-emerald-100 text-emerald-600' : (t.status === 'DELAYED' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600')}">${t.status}</span></td>
-                    <td class="p-3">${canEditPIC
-                        ? `<input type="text" id="remark-${t.id}" class="manual-input" value="${t.remark === '---' ? '' : t.remark}" placeholder="Add remark...">`
+                    <td class="p-3">${canEdit
+                        ? `<input type="text" id="remark-${t.id}" class="manual-input" value="${t.remark !== '---' ? t.remark : ''}" placeholder="Add remark...">`
                         : `<span class="text-[10px]">${t.remark}</span>`
                     }</td>
-                    <td class="p-3">${canEditPIC
+                    <td class="p-3">${canEdit
                         ? `<button onclick="adminUpdate('${t.id}', event)" class="bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-blue-700 whitespace-nowrap">SAVE</button>`
                         : ''
                     }</td>
                 </tr>`;
-            }).join('');
+            }).join('');;
         }
 
         async function adminUpdate(simpleId, event) {
@@ -2279,15 +2450,19 @@
             const select = document.getElementById('monthFilter');
             const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             const uniqueMonths = new Set();
-            // Template months from startTime
+            // Template months from startTime — only past/current months (no future)
+            const today_gm = new Date();
             allTemplates.forEach(t => {
                 const dateParts = t.startTime.split(' ')[0].split('/');
-                if (dateParts.length === 3) uniqueMonths.add(`${months[parseInt(dateParts[1]) - 1]}-${dateParts[2]}`);
+                if (dateParts.length !== 3) return;
+                const d = new Date(parseInt(dateParts[2]), parseInt(dateParts[1])-1, parseInt(dateParts[0]));
+                if (isNaN(d.getTime()) || d > today_gm) return;
+                uniqueMonths.add(`${months[parseInt(dateParts[1]) - 1]}-${dateParts[2]}`);
             });
-            // Laser months from Complete Date — so shared filter covers laser chart too
+            // Laser months from Complete Date — capped at today (no future months)
             allLaserRows.forEach(r => {
                 const localDate = rawToLocalDate(getVal(r, ['Complete Date','CompleteDate']));
-                if (localDate) uniqueMonths.add(`${months[localDate.getMonth()]}-${localDate.getFullYear()}`);
+                if (localDate && localDate <= today_gm) uniqueMonths.add(`${months[localDate.getMonth()]}-${localDate.getFullYear()}`);
             });
             const currentVal = select.value;
             select.innerHTML = '<option value="ALL">All History</option>';
@@ -2326,10 +2501,27 @@
                 if (cur && sel.querySelector(`option[value="${cur}"]`)) sel.value = cur;
             };
 
-            // Template: Complete Date month
+            // Parse d/m/yyyy display string (from convertExcelDate) to Date
+            const parseDisplay = str => {
+                if (!str || str === '---') return null;
+                const parts = str.split(' ')[0].split('/');
+                if (parts.length !== 3) return null;
+                // convertExcelDate returns d/m/yyyy (day first)
+                const [day, mon, yr] = parts.map(Number);
+                if (!day || !mon || !yr || mon > 12) return null;
+                return new Date(yr, mon - 1, day);
+            };
+
+            // Template: Start Time month — only up to current month
+            const todayPop = new Date();
             buildOptions('tempMonthFilter', allTemplates.map(t => {
-                if (!t.completeDateDisplay || t.completeDateDisplay === '---') return null;
-                const d = rawToLocalDate(t.completeDateDisplay.split(' ')[0]);
+                const dp = t.startTime.split(' ')[0].split('/');
+                if (dp.length !== 3) return null;
+                // startTime is d/m/yyyy — dp[0]=day, dp[1]=month, dp[2]=year
+                const [da, mo, yr] = dp.map(Number);
+                if (!mo || mo > 12 || !yr) return null;
+                const d = new Date(yr, mo - 1, da);
+                if (isNaN(d.getTime()) || d > todayPop) return null;
                 return fmt(d);
             }));
 
@@ -2339,11 +2531,9 @@
                 return fmt(d);
             }));
 
-            // Support: Complete Time month
+            // Support: Received Time month (always present unlike Complete Time)
             buildOptions('supportMonthFilter', allSupportRows.map(r => {
-                const ct = getVal(r, ['Complete Time','CompleteTime']);
-                if (!ct || ct === '---' || String(ct).trim() === '') return null;
-                const d = rawToLocalDate(ct);
+                const d = rawToLocalDate(getVal(r, ['Received Time','ReceivedTime']));
                 return fmt(d);
             }));
 
@@ -2866,7 +3056,12 @@
             }
             if (t === 'dashboard' && allSupportRows.length) renderSupportDashboard();
             if (t === 'dashboard' && allPatchRows.length) renderPatchDashboard();
-            if (t === 'dashboard') { loadAttData(); renderUtilization(); }
+            if (t === 'dashboard') {
+                fetchAttendanceFromCloud(); // refresh capacity on every dashboard visit
+                loadAttData(); renderUtilization();
+                // Re-fetch attendance from cloud each time dashboard opens — keeps capacity fresh on all PCs
+                fetchAttendanceFromCloud().then(() => renderUtilization()).catch(() => {});
+            }
             // Refresh support data when switching to support tab
             if (t === 'support') refreshSupportData(true);
         }
@@ -2880,11 +3075,25 @@
                 document.getElementById('displayUserName').innerText = currentUser;
                 const attLink = document.getElementById('att-link');
                 if (attLink) { if (['Gavin','Joe'].includes(currentUser)) attLink.classList.remove('hidden'); else attLink.classList.add('hidden'); }
+                // Show Reset N/A button only for Gavin
+                const naBtn = document.getElementById('clearNA-btn');
+                if (naBtn) naBtn.classList.toggle('hidden', currentUser !== 'Gavin');
             } else {
                 lv.classList.remove('hidden'); av.classList.add('hidden');
                 const attLink = document.getElementById('att-link');
                 if (attLink) attLink.classList.add('hidden');
+                const naBtn = document.getElementById('clearNA-btn');
+                if (naBtn) naBtn.classList.add('hidden');
             }
+        }
+
+        function clearAllNA() {
+            if (!confirm('Reset all N/A hidden styles? They will reappear in the pending list.')) return;
+            naHiddenIds.clear();
+            saveNaHidden();
+            renderLaserDashboard();
+            const btn = document.getElementById('clearNA-btn');
+            if (btn) { btn.innerText = 'Reset ✓'; setTimeout(() => btn.innerText = 'Reset N/A', 2000); }
         }
 
         Object.keys(machineSpecs).forEach(m => { 
@@ -3370,9 +3579,236 @@
             }
         }
 
+        // ══════════════════════════════════════════════════════════════
+        // CONSUMPTION PAGE
+        // ══════════════════════════════════════════════════════════════
+        let allConsumptionRows = [], consumptionSearchQuery = '', consumptionMonthQuery = '';
+
+        function updateConsumptionPicDisplay() {
+            const el = document.getElementById('c_picDisplay');
+            if (el) el.innerText = currentUser ? `PIC: ${currentUser}` : 'Not logged in';
+        }
+
+        function applyConsumptionFilter() {
+            consumptionSearchQuery = document.getElementById('consumptionSearch')?.value.toLowerCase() || '';
+            consumptionMonthQuery  = document.getElementById('consumptionMonthFilter')?.value || '';
+            renderConsumptionTable();
+        }
+
+        function clearConsumptionSearch() {
+            const el = document.getElementById('consumptionSearch');
+            if (el) el.value = '';
+            consumptionSearchQuery = '';
+            consumptionMonthQuery  = '';
+            const mf = document.getElementById('consumptionMonthFilter');
+            if (mf) mf.value = '';
+            renderConsumptionTable();
+        }
+
+        async function refreshConsumptionData(isSilent = false) {
+            const st = document.getElementById('consumptionSyncStatus');
+            if (!isSilent && st) { st.innerText = 'Syncing...'; st.classList.add('sync-active'); }
+            try {
+                const _ctrl = new AbortController();
+                const _t = setTimeout(() => _ctrl.abort(), 25000);
+                const r = await fetch(consumptionFetchURL + '&cb=' + Date.now(), {
+                    method: 'POST', body: JSON.stringify({}), signal: _ctrl.signal
+                }); clearTimeout(_t);
+                const rawText = await r.text();
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                const d = JSON.parse(rawText);
+                let rows = [];
+                if (Array.isArray(d)) rows = d;
+                else if (d?.value && Array.isArray(d.value)) rows = d.value;
+                else if (d?.body?.value && Array.isArray(d.body.value)) rows = d.body.value;
+                else { for (const k of Object.keys(d||{})) { if (Array.isArray(d[k])) { rows = d[k]; break; } } }
+                // Sort by ID descending
+                rows.sort((a,b) => (parseInt(getVal(b,['Id','ID','id']))||0) - (parseInt(getVal(a,['Id','ID','id']))||0));
+                allConsumptionRows = rows;
+                renderConsumptionTable();
+                populateConsumptionMonthFilter();
+                if (st) { st.innerText = 'LIVE: ' + new Date().toLocaleTimeString(); st.classList.remove('sync-active'); }
+            } catch(e) {
+                const tbody = document.getElementById('consumptionTable');
+                if (tbody) tbody.innerHTML = `<tr><td colspan="13" class="p-6 text-center text-red-400 italic text-xs">Failed to load: ${e.message}</td></tr>`;
+                if (st) { st.innerText = 'Error'; st.classList.remove('sync-active'); }
+            }
+        }
+
+        function populateConsumptionMonthFilter() {
+            const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            const sel = document.getElementById('consumptionMonthFilter');
+            if (!sel) return;
+            const cur = sel.value;
+            const monthSet = new Set();
+            allConsumptionRows.forEach(r => {
+                const d = rawToLocalDate(getVal(r, ['Received Time m/d/yyyy','Received Time','ReceivedTime']));
+                if (d) monthSet.add(`${months[d.getMonth()]}-${d.getFullYear()}`);
+            });
+            sel.innerHTML = '<option value="">All Months</option>';
+            Array.from(monthSet).sort((a,b) => {
+                const [ma,ya] = a.split('-'), [mb,yb] = b.split('-');
+                return new Date(`1 ${mb} ${yb}`) - new Date(`1 ${ma} ${ya}`);
+            }).forEach(m => sel.innerHTML += `<option value="${m}" ${m===cur?'selected':''}>${m}</option>`);
+        }
+
+        function renderConsumptionTable() {
+            const tbody = document.getElementById('consumptionTable');
+            if (!tbody) return;
+            const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            const isAdmin = currentUser === 'Gavin';
+
+            const rows = allConsumptionRows.filter(r => {
+                // Month filter by Received Time
+                if (consumptionMonthQuery) {
+                    const d = rawToLocalDate(getVal(r, ['Received Time m/d/yyyy','Received Time','ReceivedTime']));
+                    if (!d) return false;
+                    if (`${months[d.getMonth()]}-${d.getFullYear()}` !== consumptionMonthQuery) return false;
+                }
+                if (!consumptionSearchQuery) return true;
+                const vals = [
+                    getVal(r, ['Style Number','StyleNumber']),
+                    getVal(r, ['Season']),
+                    getVal(r, ['Job Number','JobNo']),
+                    getVal(r, ['Request By','RequestBy','Requestor']),
+                    getVal(r, ['Proto Stage','ProtoStage']),
+                    getVal(r, ['Request Type','RequestType']),
+                    getMAPic(r),
+                    getVal(r, ['Remark','Remarks'])
+                ];
+                return vals.some(v => String(v).toLowerCase().includes(consumptionSearchQuery));
+            });
+
+            if (!rows.length) {
+                tbody.innerHTML = `<tr><td colspan="13" class="p-6 text-center text-slate-400 italic text-xs">${consumptionSearchQuery||consumptionMonthQuery ? 'No results.' : 'No consumption records.'}</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = rows.map(i => {
+                const rawID    = i['__PowerAppsId__'] || i['Id'] || i['ID'];
+                const sid      = String(rawID).replace(/['"]/g,'');
+                const rowId    = getVal(i, ['Id','ID','id']);
+                const received = convertExcelDate(getVal(i, ['Received Time m/d/yyyy','Received Time','ReceivedTime']));
+                const season   = getVal(i, ['Season']);
+                const style    = getVal(i, ['Style Number','StyleNumber']);
+                const jobNo    = getVal(i, ['Job Number','JobNo','Job No']);
+                const reqBy    = getVal(i, ['Request By','RequestBy','Requestor']);
+                const proto    = getVal(i, ['Proto Stage','ProtoStage','Stage']);
+                const reqType  = getVal(i, ['Request Type','RequestType','Type']);
+                const startDt  = convertExcelDate(getVal(i, ['Start Date m/d/yyyy','Start Date','StartDate']));
+                const completeDt = convertExcelDate(getVal(i, ['Complete Date m/d/yyyy','Complete Date','CompleteDate']));
+                const pic      = getMAPic(i);
+                const remark   = getVal(i, ['Remark','Remarks']);
+                const isDone   = completeDt && completeDt !== '---';
+                // PIC edit: own row or Gavin
+                const rowPic   = pic && pic !== '---' ? pic : null;
+                const canEdit  = !!currentUser && (isAdmin || !rowPic || rowPic === currentUser);
+
+                return `<tr class="border-b hover:bg-slate-50 ${isDone ? 'bg-emerald-50/20' : ''}">
+                    <td class="p-3 font-mono text-slate-400 text-[10px]">${rowId}</td>
+                    <td class="p-3 text-slate-500 text-[10px]">${received}</td>
+                    <td class="p-3 text-[10px]">${season}</td>
+                    <td class="p-3 font-bold text-blue-700">${style}</td>
+                    <td class="p-3 text-[10px]">${jobNo}</td>
+                    <td class="p-3 text-[10px]">${reqBy}</td>
+                    <td class="p-3 font-semibold text-purple-700">${proto}</td>
+                    <td class="p-3 text-orange-700 text-[10px] font-bold">${reqType}</td>
+                    <td class="p-3 text-[10px]">${canEdit
+                        ? `<input id="con-start-${sid}" class="manual-input admin-input" value="${startDt !== '---' ? startDt : ''}" placeholder="m/d/yyyy hh:mm">`
+                        : startDt}</td>
+                    <td class="p-3 ${isDone ? 'text-emerald-600 font-bold' : 'text-slate-400'}">${canEdit
+                        ? `<input id="con-complete-${sid}" class="manual-input admin-input" value="${isDone ? completeDt : ''}" placeholder="m/d/yyyy hh:mm">`
+                        : (isDone ? completeDt : '---')}</td>
+                    <td class="p-3 font-bold ${(!pic||pic==='---') ? 'text-blue-600' : ''}">${
+                        (!pic||pic==='---') && canEdit
+                        ? `<span class="text-blue-600 text-xs font-bold">${currentUser} <span class="text-[9px] text-slate-400">(on save)</span></span>`
+                        : pic}</td>
+                    <td class="p-3">${canEdit
+                        ? `<input id="con-remark-${sid}" class="manual-input" value="${remark !== '---' ? remark : ''}" placeholder="Remark...">`
+                        : `<span class="italic text-slate-400 text-[10px]">${remark}</span>`}</td>
+                    <td class="p-3">${canEdit
+                        ? `<button onclick="saveConsumptionRow('${sid}', event)" class="bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-blue-700 whitespace-nowrap">SAVE</button>`
+                        : ''}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        async function addConsumptionRow() {
+            if (!currentUser) return alert('Please login first.');
+            const receivedTime = document.getElementById('c_receivedTime').value.trim() || nowAsLaserDate();
+            const payload = {
+                receivedTime:  toExcelDateFormat(receivedTime),
+                season:        document.getElementById('c_season').value.trim(),
+                styleNumber:   document.getElementById('c_style').value.trim(),
+                jobNo:         document.getElementById('c_jobNo').value.trim(),
+                requestBy:     currentUser,
+                protoStage:    document.getElementById('c_protoStage').value.trim(),
+                requestType:   document.getElementById('c_requestType').value.trim(),
+                startDate:     toExcelDateFormat(document.getElementById('c_startDate').value.trim()),
+                completeDate:  toExcelDateFormat(document.getElementById('c_completeDate').value.trim()),
+                pic:           currentUser,
+                remark:        document.getElementById('c_remark').value.trim()
+            };
+            if (!payload.styleNumber) return alert('Style Number is required.');
+            const btn = document.getElementById('consumptionAddBtn');
+            btn.innerText = 'Saving...'; btn.disabled = true;
+            try {
+                const res = await fetch(consumptionFetchURL, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    btn.innerText = 'ADDED!';
+                    ['c_receivedTime','c_season','c_style','c_jobNo','c_protoStage',
+                     'c_requestType','c_startDate','c_completeDate','c_remark'].forEach(id => {
+                        const el = document.getElementById(id); if (el) el.value = '';
+                    });
+                    setTimeout(() => { btn.innerText = '+ ADD ROW'; btn.disabled = false; refreshConsumptionData(); }, 2500);
+                } else {
+                    alert(`Add failed (HTTP ${res.status}). Check Power Automate flow.`);
+                    btn.innerText = '+ ADD ROW'; btn.disabled = false;
+                }
+            } catch(e) {
+                alert(`Network error: ${e.message}`);
+                btn.innerText = '+ ADD ROW'; btn.disabled = false;
+            }
+        }
+
+        async function saveConsumptionRow(sid, event) {
+            if (!currentUser) return alert('Please login first.');
+            const btn = event.target; btn.innerText = 'SAVING...'; btn.disabled = true;
+            const startVal    = document.getElementById(`con-start-${sid}`)?.value.trim() || '';
+            const completeVal = document.getElementById(`con-complete-${sid}`)?.value.trim() || '';
+            const remarkVal   = document.getElementById(`con-remark-${sid}`)?.value.trim() || '';
+            // Preserve existing PIC; only stamp currentUser if blank
+            const existing = allConsumptionRows.find(r => String(r['__PowerAppsId__']||r['Id']||r['ID']) === String(sid));
+            const existingPic = existing ? getMAPic(existing) : '---';
+            const picToSave = (!existingPic || existingPic === '---') ? currentUser : existingPic;
+            const payload = {
+                recordID:     sid,
+                startDate:    toExcelDateFormat(startVal),
+                completeDate: toExcelDateFormat(completeVal),
+                pic:          picToSave,
+                remark:       remarkVal
+            };
+            try {
+                const res = await fetch(consumptionUpdateURL, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    btn.innerText = 'SAVED!';
+                    setTimeout(() => { btn.innerText = 'SAVE'; btn.disabled = false; refreshConsumptionData(true); }, 2500);
+                } else {
+                    const txt = await res.text();
+                    btn.innerText = 'ERROR'; btn.disabled = false;
+                    alert(`Save failed HTTP ${res.status}: ${txt.substring(0,200)}`);
+                }
+            } catch(e) { btn.innerText = 'ERROR'; btn.disabled = false; }
+        }
+
         window.onload = () => { 
             updateSessionUI();
             updateLaserPicDisplay();
+            updateConsumptionPicDisplay();
             updateMachineImage();
             loadAttData(); // load localStorage attendance so utilization works on first render
             switchTab('dashboard'); // always start on dashboard
@@ -3382,7 +3818,8 @@
                 refreshTemplateLogs(),
                 refreshLaserData(),
                 refreshSupportData(),
-                refreshPatchData()
+                refreshPatchData(),
+                refreshConsumptionData()
             ]).catch(() => {}); // errors handled inside each function
 
             // Defer secondary fetches so primary data renders first
@@ -3393,7 +3830,8 @@
             setInterval(() => refreshTemplateLogs(true), 60000);
             setInterval(() => refreshLaserData(true),    63000);
             setInterval(() => refreshSupportData(true),  66000);
-            setInterval(() => refreshPatchData(true),    69000);
+            setInterval(() => refreshPatchData(true),       69000);
+            setInterval(() => refreshConsumptionData(true),  72000);
             setInterval(() => refreshLiveLogs(true),     72000);
         };
     </script>
