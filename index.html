@@ -80,6 +80,7 @@
             <button onclick="switchTab('laser')" id="tab-laser" class="flex-shrink-0 flex-1 min-w-[90px] py-3 text-[10px] md:text-sm uppercase tracking-wider font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50 whitespace-nowrap px-2">Laser</button>
             <button onclick="switchTab('consumption')" id="tab-consumption" class="flex-shrink-0 flex-1 min-w-[100px] py-3 text-[10px] md:text-sm uppercase tracking-wider font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50 whitespace-nowrap px-2">Consumption</button>
             <button onclick="switchTab('support')" id="tab-support" class="flex-shrink-0 flex-1 min-w-[90px] py-3 text-[10px] md:text-sm uppercase tracking-wider font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50 whitespace-nowrap px-2">Support</button>
+            <button onclick="switchTab('downfilling')" id="tab-downfilling" class="flex-shrink-0 flex-1 min-w-[100px] py-3 text-[10px] md:text-sm uppercase tracking-wider font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50 whitespace-nowrap px-2">Down Filling</button>
         </nav>
 
         
@@ -892,6 +893,165 @@
             </div>
         </div>
 
+        <!-- ═══════ DOWN FILLING PAGE ════════════════════════════════════ -->
+        <div id="content-downfilling" class="tab-content hidden">
+            <!-- Add New Row Form -->
+            <div class="bg-white p-6 rounded-xl border shadow-sm mb-4">
+                <div class="flex justify-between items-center mb-4 border-b pb-3">
+                    <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">New Down Filling Entry</h2>
+                    <span id="downSyncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Syncing...</span>
+                </div>
+                <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-3">
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Date Update</label>
+                        <input type="text" id="d_dateUpdate" placeholder="3/18/2026 13:15 (M/D/YYYY)" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Season</label>
+                        <input type="text" id="d_season" placeholder="e.g. SP27" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">BDD PIC</label>
+                        <input type="text" id="d_bddPic" placeholder="e.g. Keat" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Category</label>
+                        <input type="text" id="d_category" placeholder="e.g. NK/JORDAN" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Style</label>
+                        <input type="text" id="d_style" placeholder="e.g. IU3284" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Job</label>
+                        <input type="text" id="d_job" placeholder="e.g. J001" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Layer</label>
+                        <input type="text" id="d_layer" placeholder="e.g. L1" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-emerald-600 uppercase tracking-wider">Fabric Item</label>
+                        <input type="text" id="d_fabricItem" placeholder="e.g. F001" class="p-2 border rounded text-xs focus:ring-2 focus:ring-emerald-500 outline-none bg-emerald-50">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-purple-600 uppercase tracking-wider">Down Bag Item</label>
+                        <input type="text" id="d_downBagItem" placeholder="e.g. DB001" class="p-2 border rounded text-xs focus:ring-2 focus:ring-purple-500 outline-none bg-purple-50">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-amber-600 uppercase tracking-wider">Down Item</label>
+                        <input type="text" id="d_downItem" placeholder="e.g. D001" class="p-2 border rounded text-xs focus:ring-2 focus:ring-amber-500 outline-none bg-amber-50">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Down Description</label>
+                        <input type="text" id="d_downDesc" placeholder="Description" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Lining Item</label>
+                        <input type="text" id="d_liningItem" placeholder="e.g. LI001" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Needle</label>
+                        <input type="text" id="d_needle" placeholder="e.g. N75" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Thread</label>
+                        <input type="text" id="d_thread" placeholder="e.g. T50" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Upper Chamber RPM</label>
+                        <input type="number" id="d_upperRpm" placeholder="0" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Lower Chamber RPM</label>
+                        <input type="number" id="d_lowerRpm" placeholder="0" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Inlet Air Pressure (Mpa)</label>
+                        <input type="number" step="0.01" id="d_inletPressure" placeholder="0.00" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Outlet Air Pressure (Mpa)</label>
+                        <input type="number" step="0.01" id="d_outletPressure" placeholder="0.00" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Humidity</label>
+                        <input type="text" id="d_humidity" placeholder="e.g. 55%" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Down Relaxed Time</label>
+                        <input type="text" id="d_relaxedTime" placeholder="e.g. 30min" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">M&A PIC</label>
+                        <div id="d_picDisplay" class="p-2 border rounded text-xs bg-slate-50 text-blue-700 font-bold">Not logged in</div>
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Start Time</label>
+                        <input type="text" id="d_startTime" placeholder="m/d/yyyy" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Complete Time</label>
+                        <input type="text" id="d_completeTime" placeholder="m/d/yyyy" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Remark</label>
+                        <input type="text" id="d_remark" placeholder="Optional" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col justify-end">
+                        <button onclick="addDownRow()" id="downAddBtn" class="bg-blue-600 text-white text-xs font-bold py-2 px-6 rounded-lg hover:bg-blue-700 active:scale-95 transition-all shadow-sm">+ ADD ROW</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Search Bar -->
+            <div class="bg-white p-4 rounded-xl border shadow-sm mb-4 flex flex-wrap gap-2 items-center">
+                <input type="text" id="downSearch" oninput="applyDownFilter()" placeholder="Search Style, Season, Job, PIC, Category..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none min-w-[200px]">
+                <select id="downMonthFilter" onchange="applyDownFilter()" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500">
+                    <option value="">All Months</option>
+                </select>
+                <button onclick="clearDownSearch()" class="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-300">CLEAR</button>
+            </div>
+
+            <!-- Table -->
+            <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
+                <table class="w-full text-left min-w-[3600px]">
+                    <thead class="bg-slate-100 border-b text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+                        <tr>
+                            <th class="p-3">ID</th>
+                            <th class="p-3">Date Update</th>
+                            <th class="p-3">Season</th>
+                            <th class="p-3">BDD PIC</th>
+                            <th class="p-3">Category</th>
+                            <th class="p-3">Style</th>
+                            <th class="p-3">Job</th>
+                            <th class="p-3">Layer</th>
+                            <th class="p-3 text-emerald-600">Fabric Item</th>
+                            <th class="p-3 text-purple-600">Down Bag Item</th>
+                            <th class="p-3 text-amber-600">Down Item</th>
+                            <th class="p-3">Down Description</th>
+                            <th class="p-3">Lining Item</th>
+                            <th class="p-3">Needle</th>
+                            <th class="p-3">Thread</th>
+                            <th class="p-3">Upper Chamber RPM</th>
+                            <th class="p-3">Lower Chamber RPM</th>
+                            <th class="p-3">Inlet Air Pressure (Mpa)</th>
+                            <th class="p-3">Outlet Air Pressure (Mpa)</th>
+                            <th class="p-3">Humidity</th>
+                            <th class="p-3">Down Relaxed Time</th>
+                            <th class="p-3">M&A PIC</th>
+                            <th class="p-3">Start Time</th>
+                            <th class="p-3">Complete Time</th>
+                            <th class="p-3">Remark</th>
+                        </tr>
+                    </thead>
+                    <tbody id="downTable" class="text-slate-700">
+                        <tr><td colspan="25" class="p-6 text-center text-slate-400 italic text-xs">Loading down filling data...</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- ═══════ PATCH PAGE ════════════════════════════════════ -->
         <div id="content-patch" class="tab-content hidden">
             <!-- Search + Sync -->
@@ -1307,6 +1467,10 @@
         const consumptionUpdateURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/f0612d5d6e1645c1a3a44c2201299a93/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Q_RMUTXSecFlsNb_o2HhIcjrpN_LyunPb4bkvcUJCpI";
         const consumptionAddURL    = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/116473b95bb84850832555a76351ddd1/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=ZzA8AD1K6CBOYFBNxzSJv3p2aKFgxvfuD_Q3VJifGGM";
         const attendanceFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/9f7d2b43fe80443ea830ec0ef1631183/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=0geeH4paQU60TyHlrF0_6_CGqXBmke3BEmk5IiwTxZ0";
+        // Down Filling URLs
+        const downFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/925d86d436044eda8ba9dc7b0d628f8d/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=WW4a2zXKZfD-IDWzdX_8XYcGa0Qgh1lGxnbz5WHcE3k";
+        const downAddURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/89d23341800c48d69fcdedb837093895/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=aIsZsbMmBRBx2wABXahBVB6b_EuDe9Dv8mEFm3lAIq8";
+        const downUpdateURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/f1e333a19f6d4363abb7c5da664c96d9/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=8U10fyRS0Cb4Rw0d10gQBvOTx-RWDvTSoBZECMiezXo";
 
         const machineSpecs = { 
             "AQM0001": { brand: "ZOJE", model: "ZJ-AM5770AH-750" }, 
@@ -3362,10 +3526,12 @@
             // Re-render patch/consumption with correct canEdit state each time tab is opened
             if (t === 'patch' && allPatchRows.length) renderPatchTable();
             if (t === 'consumption' && allConsumptionRows.length) renderConsumptionTable();
+            // Refresh down filling data when switching to down filling tab
+            if (t === 'downfilling') { refreshDownData(true); updateDownPicDisplay(); }
         }
 
-        function login() { currentUser = document.getElementById('userSelect').value; sessionStorage.setItem('ma_session_user', currentUser); updateSessionUI(); updateLaserPicDisplay(); updateConsumptionPicDisplay(); applyTempFilters(false); renderLaserTable(); renderSupportTable(); renderPatchTable(); renderConsumptionTable(); }
-        function logout() { currentUser = null; sessionStorage.removeItem('ma_session_user'); updateSessionUI(); updateLaserPicDisplay(); updateConsumptionPicDisplay(); applyTempFilters(false); renderLaserTable(); renderSupportTable(); renderPatchTable(); renderConsumptionTable(); }
+        function login() { currentUser = document.getElementById('userSelect').value; sessionStorage.setItem('ma_session_user', currentUser); updateSessionUI(); updateLaserPicDisplay(); updateConsumptionPicDisplay(); updateDownPicDisplay(); applyTempFilters(false); renderLaserTable(); renderSupportTable(); renderPatchTable(); renderConsumptionTable(); }
+        function logout() { currentUser = null; sessionStorage.removeItem('ma_session_user'); updateSessionUI(); updateLaserPicDisplay(); updateConsumptionPicDisplay(); updateDownPicDisplay(); applyTempFilters(false); renderLaserTable(); renderSupportTable(); renderPatchTable(); renderConsumptionTable(); }
         function updateSessionUI() { 
             const lv = document.getElementById('loginView'), av = document.getElementById('activeUserView');
             if (currentUser) {
@@ -3876,6 +4042,201 @@
         }
 
         // ══════════════════════════════════════════════════════════════
+        // DOWN FILLING PAGE
+        // ══════════════════════════════════════════════════════════════
+        let allDownRows = [], downSearchQuery = '', downMonthQuery = '';
+
+        function updateDownPicDisplay() {
+            const el = document.getElementById('d_picDisplay');
+            if (el) el.innerText = currentUser || 'Not logged in';
+        }
+
+        async function refreshDownData(isSilent = false) {
+            const st = document.getElementById('downSyncStatus');
+            if (!isSilent && st) { st.innerText = 'Syncing...'; st.classList.add('sync-active'); }
+            try {
+                const _ctrl = new AbortController(); const _t = setTimeout(() => _ctrl.abort(), 25000);
+                const r = await fetch(downFetchURL + '&cb=' + Date.now(), { method: 'POST', body: JSON.stringify({ '$top': 5000 }), signal: _ctrl.signal }); clearTimeout(_t);
+                if (!r.ok) throw new Error(`HTTP ${r.status}`);
+                const rows = extractRows(await r.json());
+                rows.sort((a,b) => (parseInt(getVal(b,['Id','ID','id']))||0) - (parseInt(getVal(a,['Id','ID','id']))||0));
+                allDownRows = rows;
+                renderDownTable();
+                populateDownMonthFilter();
+                if (st) { st.innerText = 'LIVE: ' + new Date().toLocaleTimeString() + ` (${rows.length} rows)`; st.classList.remove('sync-active'); }
+            } catch(e) {
+                const tbody = document.getElementById('downTable');
+                if (tbody) tbody.innerHTML = '<tr><td colspan="25" class="p-6 text-center text-red-400 italic text-xs">Failed to load down filling data. Check the Power Automate flow.</td></tr>';
+                if (st) { st.innerText = 'Error'; st.classList.remove('sync-active'); }
+            }
+        }
+
+        function renderDownTable() {
+            const tbody = document.getElementById('downTable');
+            if (!tbody) return;
+            if (!allDownRows.length) {
+                tbody.innerHTML = '<tr><td colspan="25" class="p-6 text-center text-slate-400 italic text-xs">No down filling records found.</td></tr>';
+                return;
+            }
+            const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            const rowsToShow = allDownRows.filter(row => {
+                if (downMonthQuery) {
+                    const cd = rawToLocalDate(getVal(row,['Date Update','DateUpdate','Date']));
+                    if (!cd) return false;
+                    const cdL = `${months[cd.getMonth()]}-${cd.getFullYear()}`;
+                    if (cdL !== downMonthQuery) return false;
+                }
+                if (downSearchQuery) {
+                    const txt = Object.values(row).join(' ').toLowerCase();
+                    if (!txt.includes(downSearchQuery)) return false;
+                }
+                return true;
+            });
+            tbody.innerHTML = rowsToShow.map(row => {
+                const id = getVal(row, ['Id','ID','id']);
+                const dateUpdate = convertExcelDate(getVal(row, ['Date Update','DateUpdate','Date']));
+                const season = getVal(row, ['Season']);
+                const bddPic = getVal(row, ['BDD PIC','BDDPIC','BDD']);
+                const category = getVal(row, ['Category']);
+                const style = getVal(row, ['Style','Style Number','StyleNumber']);
+                const job = getVal(row, ['Job','Job Number','JobNumber']);
+                const layer = getVal(row, ['Layer']);
+                const fabricItem = getVal(row, ['Fabric Item','FabricItem']);
+                const downBagItem = getVal(row, ['Down Bag Item','DownBagItem']);
+                const downItem = getVal(row, ['Down Item','DownItem']);
+                const downDesc = getVal(row, ['Down Description','DownDescription']);
+                const liningItem = getVal(row, ['Lining Item','LiningItem']);
+                const needle = getVal(row, ['Needle']);
+                const thread = getVal(row, ['Thread']);
+                const upperRpm = getVal(row, ['Upper Chamber RPM','UpperChamberRPM','Upper RPM']);
+                const lowerRpm = getVal(row, ['Lower Chamber RPM','LowerChamberRPM','Lower RPM']);
+                const inletPressure = getVal(row, ['Inlet Air Pressure (Mpa)','InletAirPressure','Inlet Pressure']);
+                const outletPressure = getVal(row, ['Outlet Air Pressure (Mpa)','OutletAirPressure','Outlet Pressure']);
+                const humidity = getVal(row, ['Humidity']);
+                const relaxedTime = getVal(row, ['Down Relaxed Time','DownRelaxedTime','Relaxed Time']);
+                const maPic = getMAPic(row);
+                const startTime = convertExcelDate(getVal(row, ['Start Time','StartTime','Start Time m/d/yyyy']));
+                const completeTime = convertExcelDate(getVal(row, ['Complete Time','CompleteTime','Complete Time m/d/yyyy']));
+                const remark = getVal(row, ['Remark','Remarks']);
+                return `<tr class="border-b hover:bg-slate-50">
+                    <td class="p-3 font-mono text-[10px]">${id}</td>
+                    <td class="p-3">${dateUpdate}</td>
+                    <td class="p-3">${season}</td>
+                    <td class="p-3">${bddPic}</td>
+                    <td class="p-3">${category}</td>
+                    <td class="p-3">${style}</td>
+                    <td class="p-3">${job}</td>
+                    <td class="p-3">${layer}</td>
+                    <td class="p-3">${fabricItem}</td>
+                    <td class="p-3">${downBagItem}</td>
+                    <td class="p-3">${downItem}</td>
+                    <td class="p-3">${downDesc}</td>
+                    <td class="p-3">${liningItem}</td>
+                    <td class="p-3">${needle}</td>
+                    <td class="p-3">${thread}</td>
+                    <td class="p-3">${upperRpm}</td>
+                    <td class="p-3">${lowerRpm}</td>
+                    <td class="p-3">${inletPressure}</td>
+                    <td class="p-3">${outletPressure}</td>
+                    <td class="p-3">${humidity}</td>
+                    <td class="p-3">${relaxedTime}</td>
+                    <td class="p-3">${maPic}</td>
+                    <td class="p-3">${startTime}</td>
+                    <td class="p-3">${completeTime}</td>
+                    <td class="p-3">${remark}</td>
+                </tr>`;
+            }).join('');
+        }
+
+        function populateDownMonthFilter() {
+            const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            const sel = document.getElementById('downMonthFilter');
+            if (!sel) return;
+            const cur = sel.value;
+            const monthSet = new Set();
+            allDownRows.forEach(r => {
+                const d = rawToLocalDate(getVal(r, ['Date Update','DateUpdate','Date']));
+                if (d) monthSet.add(`${months[d.getMonth()]}-${d.getFullYear()}`);
+            });
+            const opts = ['<option value="">All Months</option>'];
+            Array.from(monthSet).sort().forEach(m => {
+                opts.push(`<option value="${m}" ${m===cur?'selected':''}>${m}</option>`);
+            });
+            sel.innerHTML = opts.join('');
+        }
+
+        function applyDownFilter() {
+            downSearchQuery = document.getElementById('downSearch')?.value.toLowerCase() || '';
+            downMonthQuery = document.getElementById('downMonthFilter')?.value || '';
+            renderDownTable();
+        }
+
+        function clearDownSearch() {
+            const el = document.getElementById('downSearch');
+            if (el) el.value = '';
+            downSearchQuery = '';
+            downMonthQuery = '';
+            const mf = document.getElementById('downMonthFilter');
+            if (mf) mf.value = '';
+            renderDownTable();
+        }
+
+        async function addDownRow() {
+            if (!currentUser) return alert('Please login first.');
+            const dateUpdate = document.getElementById('d_dateUpdate').value.trim() || nowAsLaserDate();
+            const payload = {
+                dateUpdate:      toExcelDateFormat(dateUpdate),
+                season:          document.getElementById('d_season').value.trim(),
+                bddPic:          document.getElementById('d_bddPic').value.trim(),
+                category:        document.getElementById('d_category').value.trim(),
+                style:           document.getElementById('d_style').value.trim(),
+                job:             document.getElementById('d_job').value.trim(),
+                layer:           document.getElementById('d_layer').value.trim(),
+                fabricItem:      document.getElementById('d_fabricItem').value.trim(),
+                downBagItem:     document.getElementById('d_downBagItem').value.trim(),
+                downItem:        document.getElementById('d_downItem').value.trim(),
+                downDescription: document.getElementById('d_downDesc').value.trim(),
+                liningItem:      document.getElementById('d_liningItem').value.trim(),
+                needle:          document.getElementById('d_needle').value.trim(),
+                thread:          document.getElementById('d_thread').value.trim(),
+                upperRpm:        document.getElementById('d_upperRpm').value || '0',
+                lowerRpm:        document.getElementById('d_lowerRpm').value || '0',
+                inletPressure:   document.getElementById('d_inletPressure').value || '0',
+                outletPressure:  document.getElementById('d_outletPressure').value || '0',
+                humidity:        document.getElementById('d_humidity').value.trim(),
+                downRelaxedTime: document.getElementById('d_relaxedTime').value.trim(),
+                maPic:           currentUser,
+                startTime:       toExcelDateFormat(document.getElementById('d_startTime').value.trim()),
+                completeTime:    toExcelDateFormat(document.getElementById('d_completeTime').value.trim()),
+                remark:          document.getElementById('d_remark').value.trim()
+            };
+            if (!payload.style) return alert('Style is required.');
+            const btn = document.getElementById('downAddBtn');
+            btn.innerText = 'Saving...'; btn.disabled = true;
+            try {
+                const res = await fetch(downAddURL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+                const respText = await res.text();
+                if (res.ok) {
+                    btn.innerText = 'ADDED!';
+                    ['d_dateUpdate','d_season','d_bddPic','d_category','d_style','d_job','d_layer',
+                     'd_fabricItem','d_downBagItem','d_downItem','d_downDesc','d_liningItem',
+                     'd_needle','d_thread','d_upperRpm','d_lowerRpm','d_inletPressure','d_outletPressure',
+                     'd_humidity','d_relaxedTime','d_startTime','d_completeTime','d_remark'].forEach(id => {
+                        const el = document.getElementById(id); if(el) el.value = '';
+                    });
+                    refreshDownData();
+                    setTimeout(() => { btn.innerText = '+ ADD ROW'; btn.disabled = false; }, 2000);
+                } else {
+                    alert(`Add failed (HTTP ${res.status}). Check Power Automate flow.\nResponse: ${respText.substring(0,200)}`);
+                    btn.innerText = '+ ADD ROW'; btn.disabled = false;
+                }
+            } catch(e) {
+                alert(`Network error: ${e.message}`);
+                btn.innerText = '+ ADD ROW'; btn.disabled = false;
+            }
+        }
+
+        // ══════════════════════════════════════════════════════════════
         // CONSUMPTION PAGE
         // ══════════════════════════════════════════════════════════════
         let allConsumptionRows = [], consumptionSearchQuery = '', consumptionMonthQuery = '';
@@ -4118,10 +4479,11 @@
             return [];
         }
 
-        window.onload = () => { 
+        window.onload = () => {
             updateSessionUI();
             updateLaserPicDisplay();
             updateConsumptionPicDisplay();
+            updateDownPicDisplay();
             // If redirected from Skills page with a PIC filter, auto-apply it
             try {
                 const skillPic = localStorage.getItem('ma_skill_filter_pic');
@@ -4148,8 +4510,9 @@
             setTimeout(() => refreshSupportData(),      2000);
             setTimeout(() => refreshPatchData(),        4000);
             setTimeout(() => refreshConsumptionData(),  6000);
-            setTimeout(() => refreshLiveLogs(),         8000);
-            setTimeout(() => fetchAttendanceFromCloud(), 10000);
+            setTimeout(() => refreshDownData(),         8000);
+            setTimeout(() => refreshLiveLogs(),         10000);
+            setTimeout(() => fetchAttendanceFromCloud(), 12000);
 
             // Stagger auto-refresh intervals so not all hit Power Automate at once
             setInterval(() => refreshTemplateLogs(true), 60000);
@@ -4157,7 +4520,8 @@
             setInterval(() => refreshSupportData(true),  66000);
             setInterval(() => refreshPatchData(true),       69000);
             setInterval(() => refreshConsumptionData(true),  72000);
-            setInterval(() => refreshLiveLogs(true),     72000);
+            setInterval(() => refreshDownData(true),     75000);
+            setInterval(() => refreshLiveLogs(true),     78000);
         };
     </script>
 </body>
