@@ -7,72 +7,164 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
-        .machine-btn:active { transform: scale(0.95); }
-        .active-filter { border-color: #2563eb; background-color: #eff6ff; color: #1e40af; border-width: 2px; font-weight: 800; }
-        .tab-active { border-bottom: 4px solid #2563eb; color: #2563eb; font-weight: 800; }
+        /* ── Apple-inspired Design System ── */
+        :root {
+            --bg:       #f5f5f7;
+            --surface:  #ffffff;
+            --surface2: #f9f9fb;
+            --border:   rgba(0,0,0,0.08);
+            --border2:  rgba(0,0,0,0.12);
+            --text-1:   #1d1d1f;
+            --text-2:   #6e6e73;
+            --text-3:   #aeaeb2;
+            --accent:   #0071e3;
+            --accent-h: #0077ed;
+            --radius-lg: 16px;
+            --radius-md: 12px;
+            --radius-sm: 8px;
+            --shadow-sm: 0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);
+            --shadow-md: 0 4px 16px rgba(0,0,0,0.08), 0 1px 3px rgba(0,0,0,0.04);
+        }
+
+        * { box-sizing: border-box; }
+        body { background: var(--bg); font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif; color: var(--text-1); -webkit-font-smoothing: antialiased; }
+
+        /* Header */
+        header { background: rgba(255,255,255,0.85) !important; backdrop-filter: saturate(180%) blur(20px); -webkit-backdrop-filter: saturate(180%) blur(20px); border: 1px solid var(--border) !important; border-radius: var(--radius-lg) !important; box-shadow: var(--shadow-md) !important; }
+
+        /* Nav */
+        nav { background: rgba(255,255,255,0.85) !important; backdrop-filter: blur(20px); border: 1px solid var(--border) !important; border-radius: var(--radius-lg) !important; box-shadow: var(--shadow-sm) !important; padding: 4px 6px; gap: 2px; }
+        nav button { border-radius: 10px !important; border-bottom: none !important; padding: 8px 14px !important; font-size: 12px !important; letter-spacing: 0.01em; font-weight: 500 !important; color: var(--text-2) !important; transition: background 0.15s ease, color 0.15s ease; }
+        nav button:hover { background: rgba(0,0,0,0.04) !important; color: var(--text-1) !important; }
+        .tab-active { background: rgba(0,113,227,0.1) !important; color: var(--accent) !important; border-bottom: none !important; font-weight: 800 !important; letter-spacing: 0.02em !important; }
+
+        /* Cards */
+        .bg-white { background: var(--surface) !important; }
+        .rounded-xl { border-radius: var(--radius-lg) !important; }
+        .shadow-sm { box-shadow: var(--shadow-sm) !important; }
+        .border { border-color: var(--border) !important; }
+        .border-b { border-bottom-color: var(--border) !important; }
+        .border-t { border-top-color: var(--border) !important; }
+
+        /* Stat cards subtle gradient top border */
+        .bg-white.p-6.rounded-xl, .bg-white.p-5.rounded-xl {
+            border-top: 2px solid var(--border2) !important;
+        }
+
+        /* Inputs */
+        input, select {
+            border-radius: var(--radius-sm) !important;
+            border: 1px solid var(--border2) !important;
+            background: var(--surface2) !important;
+            color: var(--text-1) !important;
+            font-family: inherit;
+            transition: border-color 0.15s, box-shadow 0.15s;
+        }
+        input:focus, select:focus { border-color: var(--accent) !important; box-shadow: 0 0 0 3px rgba(0,113,227,0.15) !important; outline: none; background: #fff !important; }
+
+        /* Buttons */
+        button { font-family: inherit; }
+        .bg-blue-600 { background: var(--accent) !important; border-radius: var(--radius-sm) !important; }
+        .bg-blue-600:hover { background: var(--accent-h) !important; }
+        .bg-slate-800 { background: #1d1d1f !important; border-radius: var(--radius-sm) !important; }
+        .bg-slate-800:hover { background: var(--accent) !important; }
+        .bg-emerald-600 { border-radius: var(--radius-sm) !important; }
+        .bg-slate-200 { border-radius: var(--radius-sm) !important; background: rgba(0,0,0,0.06) !important; color: var(--text-2) !important; border: none !important; }
+        .bg-slate-200:hover { background: rgba(0,0,0,0.1) !important; }
+
+        /* Table */
+        table { border-collapse: separate; border-spacing: 0; }
+        thead th { background: var(--surface2) !important; font-size: 10px !important; letter-spacing: 0.06em; color: var(--text-2) !important; font-weight: 700; }
+        tbody tr:hover td { background: rgba(0,113,227,0.03) !important; }
+
+        /* Login area */
+        #userSessionArea { background: var(--surface2) !important; border-top: 1px solid var(--border) !important; border-radius: 0 0 var(--radius-lg) var(--radius-lg) !important; }
+
+        /* Badge pills */
+        .rounded-full { border-radius: 100px !important; }
+
+        /* Machine btn */
+        .machine-btn:active { transform: scale(0.96); }
+        .active-filter { border-color: var(--accent) !important; background: rgba(0,113,227,0.08) !important; color: var(--accent) !important; border-width: 2px; font-weight: 800; }
+
+        /* Toggle */
         .switch { position: relative; display: inline-block; width: 44px; height: 22px; }
         .switch input { opacity: 0; width: 0; height: 0; }
-        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #ccc; transition: .4s; border-radius: 34px; }
-        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 4px; bottom: 4px; background-color: white; transition: .4s; border-radius: 50%; }
-        input:checked + .slider { background-color: #2563eb; }
+        .slider { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #d1d1d6; transition: .3s cubic-bezier(0.4,0,0.2,1); border-radius: 34px; }
+        .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .3s cubic-bezier(0.4,0,0.2,1); border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
+        input:checked + .slider { background-color: var(--accent); }
         input:checked + .slider:before { transform: translateX(22px); }
-        @keyframes pulse-green { 0% { opacity: 1; } 50% { opacity: 0.5; } 100% { opacity: 1; } }
-        .sync-active { animation: pulse-green 2s infinite; }
-        td { font-size: 0.75rem; line-height: 1rem; }
-        .manual-input { font-size: 10px; padding: 2px 4px; border: 1px solid #cbd5e1; border-radius: 4px; width: 110px; outline: none; margin-bottom: 2px; font-family: monospace; }
-        .admin-input { border: 1px solid #3b82f6; background-color: #f0f7ff; width: 110px; font-weight: bold; }
-        .qty-input { width: 60px; font-weight: bold; color: #2563eb; border: 1px solid #94a3b8; }
-        .manual-input:focus { border-color: #2563eb; box-shadow: 0 0 0 1px #2563eb; }
 
-        /* FIX 3: Machine image - default visible so no infinite loading spinner */
+        @keyframes pulse-green { 0%{opacity:1}50%{opacity:0.5}100%{opacity:1} }
+        .sync-active { animation: pulse-green 2s infinite; }
+
+        /* Table cells */
+        td { font-size: 0.8rem; line-height: 1.2rem; }
+        /* Date/time cells must never wrap — add whitespace-nowrap to any td with date data */
+        td.date-cell, th.date-col { white-space: nowrap; min-width: 110px; }
+        .manual-input { font-size: 10px; padding: 4px 6px; border: 1px solid var(--border2) !important; border-radius: 6px; width: 110px; outline: none; margin-bottom: 2px; font-family: -apple-system, monospace; background: var(--surface2) !important; }
+        .admin-input { border: 1px solid rgba(0,113,227,0.4) !important; background: rgba(0,113,227,0.04) !important; font-weight: 600; }
+        .qty-input { width: 60px; font-weight: bold; color: var(--accent); border: 1px solid var(--border2) !important; }
+        .manual-input:focus { border-color: var(--accent) !important; box-shadow: 0 0 0 3px rgba(0,113,227,0.12) !important; background: #fff !important; }
+
         #machineImg { transition: opacity 0.3s ease-in-out; opacity: 1; }
-        /* Mobile optimizations */
         .scrollbar-none::-webkit-scrollbar { display: none; }
         .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
+
+        /* Section dividers */
+        .section-divider span { background: var(--bg); }
+
         @media (max-width: 640px) {
             td, th { font-size: 0.65rem !important; padding: 0.35rem 0.5rem !important; }
             .manual-input { width: 80px !important; font-size: 9px !important; }
             .qty-input { width: 48px !important; }
+            nav button { padding: 7px 10px !important; font-size: 9px !important; }
         }
     </style>
 </head>
-<body class="bg-slate-50 p-2 md:p-4 font-sans text-slate-900">
+<body class="p-3 md:p-5 font-sans" style="background:var(--bg);min-height:100vh">
     <div class="max-w-[1600px] mx-auto">
-        <header class="mb-4 bg-white rounded-t-xl border-x border-t shadow-sm">
+        <header class="mb-4 rounded-[var(--radius-lg)] border overflow-hidden" style="box-shadow:var(--shadow-md)">
             <!-- Top row: logo + title -->
-            <div class="flex items-center gap-4 p-4 pb-3">
-                <img src="logo.png" alt="Logo" class="h-9 w-auto flex-shrink-0" onerror="this.src='https://via.placeholder.com/40?text=MA'">
+            <div class="flex items-center gap-4 px-5 pt-4 pb-3" style="background:rgba(255,255,255,0.92);backdrop-filter:blur(20px)">
+                <div class="flex-shrink-0 flex items-center justify-center" style="height:48px;min-width:48px">
+                    <img src="logo.png" alt="M&A Logo" id="headerLogo"
+                        style="height:48px;width:auto;object-fit:contain;display:block"
+                        onerror="this.style.display='none';document.getElementById('logoFallback').style.display='flex'">
+                    <div id="logoFallback" style="display:none;height:48px;width:48px;background:var(--accent);border-radius:12px;align-items:center;justify-content:center">
+                        <span style="color:#fff;font-size:18px;font-weight:900;letter-spacing:-1px">M&A</span>
+                    </div>
+                </div>
                 <div class="min-w-0">
-                    <h1 class="text-xl md:text-3xl font-bold text-slate-800 leading-tight truncate" id="mainTitle">M&A Portal</h1>
-                    <p class="text-slate-400 text-[10px] font-bold tracking-[0.25em] uppercase mt-0.5">Modernization & Automation</p>
+                    <h1 class="text-xl md:text-2xl font-bold leading-tight truncate" style="color:var(--text-1);letter-spacing:-0.02em" id="mainTitle">M&A Portal</h1>
+                    <p style="color:var(--text-3);font-size:9px;font-weight:700;letter-spacing:0.2em" class="uppercase mt-0.5">Modernization & Automation</p>
                 </div>
             </div>
-            <!-- Bottom row: login — full width on mobile, right-aligned on desktop -->
-            <div id="userSessionArea" class="border-t px-4 py-3 bg-slate-50 rounded-b-none md:rounded-none">
+            <div id="userSessionArea" class="border-t px-5 py-3" style="background:var(--surface2);border-color:var(--border)">
                 <div id="loginView" class="flex items-center gap-2">
-                    <select id="userSelect" class="flex-1 text-sm font-bold p-2.5 border rounded-lg bg-white outline-none focus:ring-2 focus:ring-blue-500 min-w-0">
+                    <select id="userSelect" class="flex-1 text-sm font-semibold p-2.5 rounded-[10px] outline-none min-w-0" style="border:1px solid var(--border2);background:var(--surface);color:var(--text-1)">
                         <option value="">Select User...</option>
                         <option>Gavin</option><option>Keat</option><option>Viki</option><option>Ram</option>
                         <option>James</option><option>Phone</option><option>Mark</option><option>Joe</option>
                     </select>
-                    <button onclick="login()" class="bg-slate-800 text-white text-xs font-bold px-5 py-2.5 rounded-lg uppercase hover:bg-blue-600 transition-all whitespace-nowrap flex-shrink-0">Login</button>
+                    <button onclick="login()" class="text-white text-xs font-bold px-5 py-2.5 rounded-[10px] uppercase whitespace-nowrap flex-shrink-0 transition-all" style="background:var(--text-1)">Login</button>
                 </div>
                 <div id="activeUserView" class="hidden flex items-center justify-between gap-3">
-                    <span class="text-sm font-bold text-slate-500 uppercase tracking-tight">Active: <span id="displayUserName" class="text-blue-600 ml-1">---</span></span>
+                    <span class="text-sm font-semibold uppercase tracking-tight" style="color:var(--text-2)">Active: <span id="displayUserName" class="ml-1 font-bold" style="color:var(--accent)">---</span></span>
                     <a id="att-link" href="#attendance" onclick="setTimeout(openAttendance,50)"
-                           class="hidden items-center gap-1 text-[10px] font-bold text-slate-500 hover:text-blue-600 border border-slate-200 hover:border-blue-300 rounded-full px-2.5 py-1 hover:bg-blue-50 transition-all">
+                           class="hidden items-center gap-1 text-[10px] font-bold hover:underline rounded-full px-2.5 py-1 border transition-all" style="color:var(--text-2);border-color:var(--border2)">
                             📋 Attendance
                         </a>
                         <a href="MASkills.html" target="_self"
-                           class="flex items-center gap-1 text-[10px] font-bold text-indigo-600 hover:text-indigo-700 border border-indigo-200 hover:border-indigo-400 rounded-full px-2.5 py-1 hover:bg-indigo-50 transition-all">
+                           class="flex items-center gap-1 text-[10px] font-bold rounded-full px-2.5 py-1 border transition-all" style="color:#6366f1;border-color:rgba(99,102,241,0.3)">
                             ⚡ Skills
                         </a>
-                    <button onclick="logout()" class="text-xs font-bold text-red-500 border border-red-200 px-3 py-2 rounded-lg hover:bg-red-50">Logout</button>
+                    <button onclick="logout()" class="text-xs font-bold px-3 py-2 rounded-[10px] border transition-all" style="color:#ef4444;border-color:rgba(239,68,68,0.25)">Logout</button>
                 </div>
             </div>
         </header>
 
-        <nav class="flex bg-white border-x border-b rounded-b-xl mb-4 shadow-sm overflow-x-auto scrollbar-none">
+        <nav class="flex mb-4 overflow-x-auto scrollbar-none p-1.5" style="background:rgba(255,255,255,0.85);backdrop-filter:blur(20px);border:1px solid var(--border);border-radius:var(--radius-lg);box-shadow:var(--shadow-sm);gap:2px">
             <button onclick="switchTab('dashboard')" id="tab-dashboard" class="flex-shrink-0 flex-1 min-w-[100px] py-3 text-[10px] md:text-sm uppercase tracking-wider font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50 tab-active whitespace-nowrap px-2">Dashboard</button>
             <button onclick="switchTab('template')" id="tab-template" class="flex-shrink-0 flex-1 min-w-[100px] py-3 text-[10px] md:text-sm uppercase tracking-wider font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50 whitespace-nowrap px-2">Template</button>
             <button onclick="switchTab('patch')" id="tab-patch" class="flex-shrink-0 flex-1 min-w-[80px] py-3 text-[10px] md:text-sm uppercase tracking-wider font-bold text-slate-400 border-b-4 border-transparent hover:bg-slate-50 whitespace-nowrap px-2">Patch</button>
@@ -176,11 +268,11 @@
 
             <!-- Laser Table -->
             <div id="laserTableWrapper" class="bg-white rounded-xl shadow-sm border overflow-x-auto">
-                <table class="w-full text-left min-w-[2400px]">
-                    <thead class="bg-slate-100 border-b text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+                <table class="w-full text-left min-w-[1400px]">
+                    <thead class="bg-slate-100 border-b text-[11px] uppercase tracking-wider text-slate-500 font-bold">
                         <tr>
                             <th class="p-3">ID</th>
-                            <th class="p-3">Received Time</th>
+                            <th class="p-3 date-col">Received Time</th>
                             <th class="p-3">Season</th>
                             <th class="p-3">Style Number</th>
                             <th class="p-3">Section</th>
@@ -190,7 +282,7 @@
                             <th class="p-3">Laser Parts</th>
                             <th class="p-3">Ironing Parts</th>
                             <th class="p-3">Trim Parts</th>
-                            <th class="p-3">Complete Date</th>
+                            <th class="p-3 date-col">Complete Date</th>
                             <th class="p-3">M&A PIC</th>
                             <th class="p-3">Cons. Start</th>
                             <th class="p-3">Cons. End</th>
@@ -208,9 +300,9 @@
 
         <div id="content-dashboard" class="tab-content hidden">
             <div class="mb-4 flex justify-end">
-                <div class="flex items-center gap-2 bg-white p-2 px-4 rounded-lg border shadow-sm">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Select Month (Template &amp; Laser):</span>
-                    <select id="monthFilter" onchange="updateDashboard()" class="text-xs font-bold border-none outline-none bg-transparent text-blue-600 cursor-pointer">
+                <div class="flex items-center gap-2 px-4 py-2 rounded-[var(--radius-md)]" style="background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow-sm)">
+                    <span style="font-size:10px;font-weight:700;color:var(--text-3);letter-spacing:0.08em;text-transform:uppercase">Filter Month:</span>
+                    <select id="monthFilter" onchange="updateDashboard()" class="text-xs font-bold outline-none cursor-pointer" style="border:none;background:transparent;color:var(--accent)">
                         <option value="ALL">All Months</option>
                     </select>
                 </div>
@@ -495,7 +587,7 @@
                 <div class="flex-1 border-t border-slate-200"></div>
             </div>
             <!-- Patch Stat Cards -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-6">
                 <div class="bg-white p-5 rounded-xl border shadow-sm">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Patches</p>
                     <h2 id="db-patch-total" class="text-3xl font-bold text-slate-800">0</h2>
@@ -507,10 +599,6 @@
                 <div class="bg-white p-5 rounded-xl border shadow-sm">
                     <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Completed</p>
                     <h2 id="db-patch-done" class="text-3xl font-bold text-emerald-600">0</h2>
-                </div>
-                <div class="bg-white p-5 rounded-xl border shadow-sm">
-                    <p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Completion Rate</p>
-                    <h2 id="db-patch-rate" class="text-3xl font-bold text-blue-600">—</h2>
                 </div>
             </div>
             <!-- Patch Charts -->
@@ -576,52 +664,55 @@
                 </div>
             </div>
 
-            <!-- PIC Utilization Section Divider -->
+            <!-- Down Filling Section Divider -->
             <div class="mt-8 mb-4 flex items-center gap-3">
                 <div class="flex-1 border-t border-slate-200"></div>
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">PIC Utilization</span>
+                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">Down Filling</span>
                 <div class="flex-1 border-t border-slate-200"></div>
             </div>
 
-            <!-- Capacity Banner -->
-            <div class="bg-white p-4 rounded-xl border shadow-sm mb-4 flex flex-wrap items-center gap-4">
-                <div class="flex items-center gap-3 flex-wrap">
-                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Capacity:</span>
-                    <div class="flex items-center gap-2 bg-blue-50 border border-blue-200 rounded-lg px-3 py-1.5">
-                        <span class="text-[10px] font-bold text-blue-600 uppercase tracking-wider">📋 From Attendance</span>
-                        <span id="util-att-status" class="text-[9px] text-slate-400 italic">loading...</span>
-                    </div>
-                    <span id="util-capacity" class="font-bold text-blue-700 text-sm ml-1">— hrs capacity / PIC</span>
+            <!-- Down Filling Stat Cards -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+                <div class="bg-white p-5 rounded-xl border shadow-sm">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Records</p>
+                    <h2 id="dd-total" class="text-3xl font-bold text-slate-800">0</h2>
                 </div>
-                <div class="flex items-center gap-3 ml-auto text-[10px] text-slate-400">
-                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-emerald-500 inline-block"></span> Laser hrs</span>
-                    <span class="flex items-center gap-1"><span class="w-3 h-3 rounded bg-blue-500 inline-block"></span> Support hrs</span>
+                <div class="bg-white p-5 rounded-xl border shadow-sm">
+                    <p class="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1">In Progress</p>
+                    <h2 id="dd-pending" class="text-3xl font-bold text-amber-600">0</h2>
+                </div>
+                <div class="bg-white p-5 rounded-xl border shadow-sm">
+                    <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Completed</p>
+                    <h2 id="dd-done" class="text-3xl font-bold text-emerald-600">0</h2>
+                </div>
+                <div class="bg-white p-5 rounded-xl border shadow-sm">
+                    <p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Unique Styles</p>
+                    <h2 id="dd-styles" class="text-3xl font-bold text-blue-600">0</h2>
                 </div>
             </div>
 
-            <!-- Utilization Chart + Table -->
+            <!-- Down Filling Charts -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Hours Utilized per PIC</h3>
-                    <div class="h-[300px]"><canvas id="utilChart"></canvas></div>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Volume Trend (by Date Update)</h3>
+                    <div class="h-[240px]"><canvas id="downVolumeChart"></canvas></div>
                 </div>
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Utilization Breakdown</h3>
-                    <div class="overflow-x-auto rounded-lg border">
-                        <table class="w-full text-left text-[11px]">
-                            <thead class="bg-slate-50 border-b font-bold text-slate-500">
-                                <tr>
-                                    <th class="p-3">PIC</th>
-                                    <th class="p-3 text-emerald-600">Laser (hrs)</th>
-                                    <th class="p-3 text-blue-600">Support (hrs)</th>
-                                    <th class="p-3 text-indigo-600">Consumption (hrs)</th>
-                                    <th class="p-3">Total hrs</th>
-                                    <th class="p-3">Utilization %</th>
-                                </tr>
-                            </thead>
-                            <tbody id="util-table"></tbody>
-                        </table>
-                    </div>
+                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Records by Season</h3>
+                    <div class="h-[240px]"><canvas id="downSeasonChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Down Filling PIC Workload -->
+            <div class="bg-white p-6 rounded-xl border shadow-sm mb-6">
+                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">In-Progress Jobs by M&A PIC</h3>
+                <div class="overflow-x-auto rounded-lg border">
+                    <table class="w-full text-left text-[11px]">
+                        <thead class="bg-slate-50 border-b font-bold text-slate-500">
+                            <tr><th class="p-3 w-28">M&A PIC</th><th class="p-3">Pending Items</th></tr>
+                        </thead>
+                        <tbody id="dd-pic-table"></tbody>
+                    </table>
                 </div>
             </div>
         </div>
@@ -642,7 +733,7 @@
                     <thead class="bg-slate-100 border-b text-[11px] uppercase tracking-wider text-slate-500 font-bold">
                         <tr>
                             <th class="p-3">ID</th>
-                            <th class="p-3">Start Time</th>
+                            <th class="p-3 date-col">Start Time</th>
                             <th class="p-3">Requestor</th>
                             <th class="p-3">Section</th>
                             <th class="p-3">Style Number</th>
@@ -651,14 +742,14 @@
                             <th class="p-3 text-orange-600">Template Request Type</th>
                             <th class="p-3 text-orange-400">Description of Template Type</th>
                             <th class="p-3">Machine Type</th>
-                            <th class="p-3">Required Date</th>
+                            <th class="p-3 date-col">Required Date</th>
                             <th class="p-3 text-indigo-600">Complexity Level</th>
                             <th class="p-3 text-teal-600">DFM</th>
-                            <th class="p-3 text-emerald-600">Complete Date</th>
+                            <th class="p-3 text-emerald-600 date-col">Complete Date</th>
                             <th class="p-3 text-blue-600">Complete Qty</th>
                             <th class="p-3 text-blue-600">Template No.</th>
-                            <th class="p-3">M&A PIC</th>
                             <th class="p-3">Status</th>
+                            <th class="p-3">M&A PIC</th>
                             <th class="p-3">Remark</th>
                             <th class="p-3">Action</th>
                         </tr>
@@ -798,30 +889,32 @@
             </div>
 
             <!-- Search + Filter -->
-            <div class="bg-white p-4 rounded-xl border shadow-sm mb-4 flex flex-wrap gap-2 items-center">
-                <input type="text" id="consumptionSearch" oninput="applyConsumptionFilter()" placeholder="Search Style, Season, PIC, Request Type..." class="flex-1 min-w-[180px] p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
-                <select id="consumptionMonthFilter" onchange="applyConsumptionFilter()" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">All Months</option>
-                </select>
-                <button onclick="clearConsumptionSearch()" class="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-300">CLEAR</button>
-
+            <div class="bg-white p-6 rounded-xl border shadow-sm mb-4">
+                <div class="flex justify-between items-center gap-4">
+                    <div class="flex-1 flex gap-2">
+                        <input type="text" id="consumptionSearch" oninput="applyConsumptionFilter()" placeholder="Search Style, Season, PIC, Request Type..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                        <select id="consumptionMonthFilter" onchange="applyConsumptionFilter()" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 shrink-0"><option value="">All Months</option></select>
+                        <button onclick="clearConsumptionSearch()" class="bg-slate-200 text-slate-600 px-4 rounded-lg text-xs font-bold hover:bg-slate-300 shrink-0">CLEAR</button>
+                    </div>
+                    <div id="consumptionSyncStatus2" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"></div>
+                </div>
             </div>
 
             <!-- Table -->
             <div id="consumptionTableWrapper" class="bg-white rounded-xl shadow-sm border overflow-x-auto">
                 <table class="w-full text-left min-w-[1400px]">
-                    <thead class="bg-slate-100 border-b text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+                    <thead class="bg-slate-100 border-b text-[11px] uppercase tracking-wider text-slate-500 font-bold">
                         <tr>
                             <th class="p-3">ID</th>
-                            <th class="p-3">Received Time</th>
+                            <th class="p-3 date-col">Received Time</th>
                             <th class="p-3">Season</th>
                             <th class="p-3 text-blue-600">Style Number</th>
                             <th class="p-3">Job Number</th>
                             <th class="p-3">Request By</th>
                             <th class="p-3 text-purple-600">Proto Stage</th>
                             <th class="p-3 text-orange-600">Request Type</th>
-                            <th class="p-3">Start Date</th>
-                            <th class="p-3 text-emerald-600">Complete Date</th>
+                            <th class="p-3 date-col">Start Date</th>
+                            <th class="p-3 text-emerald-600 date-col">Complete Date</th>
                             <th class="p-3">M&A PIC</th>
                             <th class="p-3">Remark</th>
                             <th class="p-3">Action</th>
@@ -837,13 +930,15 @@
         <!-- M&A Support Tab -->
         <div id="content-support" class="tab-content hidden">
             <!-- Search bar -->
-            <div class="bg-white p-4 rounded-xl border shadow-sm mb-4 flex flex-wrap gap-2 items-center">
-                <input type="text" id="supportSearch" oninput="applySupport()" placeholder="Search Name, Machine, Type, PIC, Month..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none min-w-[200px]">
-                <select id="supportMonthFilter" onchange="applySupport()" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">All Months</option>
-                </select>
-                <button onclick="clearSupportSearch()" class="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-300">CLEAR</button>
-                <span id="supportSyncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Syncing...</span>
+            <div class="bg-white p-6 rounded-xl border shadow-sm mb-4">
+                <div class="flex justify-between items-center gap-4">
+                    <div class="flex-1 flex gap-2">
+                        <input type="text" id="supportSearch" oninput="applySupport()" placeholder="Search Name, Machine, Type, PIC, Month..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                        <select id="supportMonthFilter" onchange="applySupport()" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 shrink-0"><option value="">All Months</option></select>
+                        <button onclick="clearSupportSearch()" class="bg-slate-200 text-slate-600 px-4 rounded-lg text-xs font-bold hover:bg-slate-300 shrink-0">CLEAR</button>
+                    </div>
+                    <span id="supportSyncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest shrink-0">Syncing...</span>
+                </div>
             </div>
             <!-- Stats -->
             <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
@@ -866,10 +961,10 @@
             </div>
             <!-- Table -->
             <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
-                <table class="w-full text-left min-w-[1600px]">
-                    <thead class="bg-slate-100 border-b text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+                <table class="w-full text-left min-w-[1400px]">
+                    <thead class="bg-slate-100 border-b text-[11px] uppercase tracking-wider text-slate-500 font-bold">
                         <tr>
-                            <th class="p-3">Received Time</th>
+                            <th class="p-3 date-col">Received Time</th>
                             <th class="p-3">Request ID</th>
                             <th class="p-3">Name</th>
                             <th class="p-3">Support Type</th>
@@ -878,8 +973,8 @@
                             <th class="p-3">Risk Type</th>
                             <th class="p-3">Description</th>
                             <th class="p-3">Month</th>
-                            <th class="p-3">Start Time</th>
-                            <th class="p-3">Complete Time</th>
+                            <th class="p-3 date-col">Start Time</th>
+                            <th class="p-3 date-col">Complete Time</th>
                             <th class="p-3">Elapsed (hrs)</th>
                             <th class="p-3">M&A PIC</th>
                             <th class="p-3">Remark</th>
@@ -1005,27 +1100,29 @@
             </div>
 
             <!-- Search Bar -->
-            <div class="bg-white p-4 rounded-xl border shadow-sm mb-4 flex flex-wrap gap-2 items-center">
-                <input type="text" id="downSearch" oninput="applyDownFilter()" placeholder="Search Style, Season, Job, PIC, Category..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none min-w-[200px]">
-                <select id="downMonthFilter" onchange="applyDownFilter()" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">All Months</option>
-                </select>
-                <button onclick="clearDownSearch()" class="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-300">CLEAR</button>
+            <div class="bg-white p-6 rounded-xl border shadow-sm mb-4">
+                <div class="flex justify-between items-center gap-4">
+                    <div class="flex-1 flex gap-2">
+                        <input type="text" id="downSearch" oninput="applyDownFilter()" placeholder="Search Style, Season, Job, PIC, Category..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                        <select id="downMonthFilter" onchange="applyDownFilter()" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 shrink-0"><option value="">All Months</option></select>
+                        <button onclick="clearDownSearch()" class="bg-slate-200 text-slate-600 px-4 rounded-lg text-xs font-bold hover:bg-slate-300 shrink-0">CLEAR</button>
+                    </div>
+                </div>
             </div>
 
             <!-- Table -->
             <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
-                <table class="w-full text-left min-w-[3600px]">
-                    <thead class="bg-slate-100 border-b text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+                <table class="w-full text-left min-w-[1400px]">
+                    <thead class="bg-slate-100 border-b text-[11px] uppercase tracking-wider text-slate-500 font-bold">
                         <tr>
                             <th class="p-3">ID</th>
-                            <th class="p-3">Date Update</th>
+                            <th class="p-3 date-col">Date Update</th>
                             <th class="p-3">Season</th>
                             <th class="p-3">BDD PIC</th>
                             <th class="p-3">Category</th>
                             <th class="p-3">Style</th>
                             <th class="p-3">Job</th>
-                            <th class="p-3">Layer</th>
+                            <th class="p-3" style="min-width:160px">Layer</th>
                             <th class="p-3 text-emerald-600">Fabric Item</th>
                             <th class="p-3 text-purple-600">Down Bag Item</th>
                             <th class="p-3 text-amber-600">Down Item</th>
@@ -1040,8 +1137,8 @@
                             <th class="p-3">Humidity</th>
                             <th class="p-3">Down Relaxed Time</th>
                             <th class="p-3">M&A PIC</th>
-                            <th class="p-3">Start Time</th>
-                            <th class="p-3">Complete Time</th>
+                            <th class="p-3 date-col">Start Time</th>
+                            <th class="p-3 date-col">Complete Time</th>
                             <th class="p-3">Remark</th>
                         </tr>
                     </thead>
@@ -1055,35 +1152,21 @@
         <!-- ═══════ PATCH PAGE ════════════════════════════════════ -->
         <div id="content-patch" class="tab-content hidden">
             <!-- Search + Sync -->
-            <div class="bg-white p-4 rounded-xl border shadow-sm mb-4 flex flex-wrap gap-2 items-center">
-                <input type="text" id="patchSearch" oninput="applyPatchFilter()" placeholder="Search Style, Season, Template No, Machine, PIC, Month..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none min-w-[200px]">
-                <select id="patchMonthFilter" onchange="applyPatchFilter()" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500">
-                    <option value="">All Months</option>
-                </select>
-                <button onclick="clearPatchSearch()" class="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-300">CLEAR</button>
-                <span id="patchSyncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Syncing...</span>
-            </div>
-
-            <!-- Stat Cards -->
-            <div class="grid grid-cols-2 md:grid-cols-3 gap-4 mb-4">
-                <div class="bg-white p-5 rounded-xl border shadow-sm">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Patches</p>
-                    <h2 id="patch-total" class="text-3xl font-bold text-slate-800">0</h2>
-                </div>
-                <div class="bg-white p-5 rounded-xl border shadow-sm">
-                    <p class="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1">Pending</p>
-                    <h2 id="patch-pending" class="text-3xl font-bold text-amber-600">0</h2>
-                </div>
-                <div class="bg-white p-5 rounded-xl border shadow-sm">
-                    <p class="text-[10px] font-bold text-emerald-500 uppercase tracking-widest mb-1">Completed</p>
-                    <h2 id="patch-done" class="text-3xl font-bold text-emerald-600">0</h2>
+            <div class="bg-white p-6 rounded-xl border shadow-sm mb-4">
+                <div class="flex justify-between items-center gap-4">
+                    <div class="flex-1 flex gap-2">
+                        <input type="text" id="patchSearch" oninput="applyPatchFilter()" placeholder="Search Style, Season, Template No, Machine, PIC, Month..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                        <select id="patchMonthFilter" onchange="applyPatchFilter()" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 shrink-0"><option value="">All Months</option></select>
+                        <button onclick="clearPatchSearch()" class="bg-slate-200 text-slate-600 px-4 rounded-lg text-xs font-bold hover:bg-slate-300 shrink-0">CLEAR</button>
+                    </div>
+                    <span id="patchSyncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest shrink-0">Syncing...</span>
                 </div>
             </div>
 
             <!-- Table -->
             <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
-                <table class="w-full text-left min-w-[3200px]">
-                    <thead class="bg-slate-100 border-b text-[10px] uppercase tracking-wider text-slate-500 font-bold">
+                <table class="w-full text-left min-w-[1400px]">
+                    <thead class="bg-slate-100 border-b text-[11px] uppercase tracking-wider text-slate-500 font-bold">
                         <tr>
                             <th class="p-3">No.</th>
                             <th class="p-3">Season</th>
@@ -1099,11 +1182,11 @@
                             <th class="p-3">Thread Color</th>
                             <th class="p-3">Type of Sample</th>
                             <th class="p-3">Qty</th>
-                            <th class="p-3 text-amber-600">Patch & Fabric Receive Date</th>
+                            <th class="p-3 text-amber-600 date-col">Patch &amp; Fabric Receive Date</th>
                             <th class="p-3 text-blue-600">Template No.</th>
                             <th class="p-3">Machine No.</th>
                             <th class="p-3">Month</th>
-                            <th class="p-3 text-emerald-600">Complete Date</th>
+                            <th class="p-3 text-emerald-600 date-col">Complete Date</th>
                             <th class="p-3">M&A PIC</th>
                             <th class="p-3">Remark</th>
                             <th class="p-3">Action</th>
@@ -1669,7 +1752,16 @@
             if (imgEl && targetSrc) {
                 imgEl.style.display = 'none';
                 if (fallback) fallback.style.display = 'none';
+                imgEl.onload = function() {
+                    imgEl.style.display = 'block';
+                    if (fallback) fallback.style.display = 'none';
+                };
+                imgEl.onerror = function() {
+                    imgEl.style.display = 'none';
+                    if (fallback) { fallback.style.display = 'flex'; }
+                };
                 imgEl.src = targetSrc;
+                // If already cached, onload may not fire — check immediately
                 if (imgEl.complete && imgEl.naturalWidth > 0) {
                     imgEl.style.display = 'block';
                     if (fallback) fallback.style.display = 'none';
@@ -1682,7 +1774,7 @@
             if(!isSilent && st) st.classList.add('sync-active');
             try {
                 const _ctrl_t = new AbortController(); const _t_t = setTimeout(() => _ctrl_t.abort(), 25000);
-                const r_t = await fetch(templateFetchURL + "&cb=" + Date.now(), { method: 'POST', body: JSON.stringify({ '$top': 5000 }), signal: _ctrl_t.signal }); clearTimeout(_t_t);
+                const r_t = await fetch(templateFetchURL + "&cb=" + Date.now(), { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}), signal: _ctrl_t.signal }); clearTimeout(_t_t);
                 if (!r_t.ok) throw new Error(`HTTP ${r_t.status}`);
                 const rows = extractRows(await r_t.json());
                 allTemplates = rows.map(i => {
@@ -1719,13 +1811,22 @@
                         remark: getVal(i, ['Remark']), status: currentStatus, raw: getVal(i, ['Start time'])
                     };
                 })
-                // Filter out cancelled jobs — any date field filled with "-" means job is cancelled
-                .filter(t => {
+                // Tag cancelled jobs (date field = "-") but KEEP them for the data table
+                // Only the dashboard will skip them via status filter
+                .map(t => {
                     const cancelIndicators = [t.startTime, t.completeDateDisplay, t.requiredDate];
-                    return !cancelIndicators.some(v => String(v).trim() === '-');
+                    t.cancelled = cancelIndicators.some(v => String(v).trim() === '-');
+                    return t;
                 })
                 .sort((a,b)=>b.raw - a.raw);
-                generateMonthOptions(); updateDashboard(); applyTempFilters(false); renderUtilization(); populateTabMonthFilters();
+                generateMonthOptions(); updateDashboard(); 
+                // Don't re-render template table if user is actively typing in it
+                const _tActiveEl = document.activeElement;
+                const _tTable = document.getElementById('tempTable');
+                if (!(_tTable && _tActiveEl && _tTable.contains(_tActiveEl) && (_tActiveEl.tagName === 'INPUT' || _tActiveEl.tagName === 'SELECT' || _tActiveEl.tagName === 'TEXTAREA'))) {
+                    applyTempFilters(false);
+                }
+                renderUtilization(); populateTabMonthFilters();
                 if(st) { st.innerText = "LIVE: " + new Date().toLocaleTimeString() + ` (${allTemplates.length} rows)`; st.classList.remove('sync-active'); }
             } catch (e) { if(st) st.innerText = "Error"; }
         }
@@ -1733,7 +1834,9 @@
         function updateDashboard() {
             const selectedMonthStr = document.getElementById('monthFilter').value;
             const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
-            const filteredByMonth = allTemplates.filter(t => {
+            // Exclude cancelled ("-") rows from dashboard counts only — they still show in the data table
+            const activetemplates = allTemplates.filter(t => !t.cancelled);
+            const filteredByMonth = activetemplates.filter(t => {
                 if (selectedMonthStr === "ALL") return true;
                 const [selMon, selYr] = selectedMonthStr.split('-');
                 const selMonIdx = months.indexOf(selMon);
@@ -1780,7 +1883,7 @@
                 return false;
             }
             // KPI filter: completed OR delayed jobs in the selected month window
-            const kpiFiltered = allTemplates.filter(t => {
+            const kpiFiltered = activetemplates.filter(t => {
                 if (t.status !== 'COMPLETED' && t.status !== 'DELAYED') return false;
                 if (selectedMonthStr === 'ALL') return true;
                 const [selMon, selYr] = selectedMonthStr.split('-');
@@ -1874,7 +1977,14 @@
             });
             // Fix stat-delayed to match filteredByMonth count
             document.getElementById('stat-delayed').innerText = filteredByMonth.filter(t => t.status === 'DELAYED').length;
-            document.getElementById('pic-workload-table').innerHTML = Object.entries(picStats).map(([name, tasks]) => `
+            const isUnassigned = name => !name || name === '---' || name.toLowerCase() === 'unassigned' || name.toLowerCase() === 'n/a';
+            document.getElementById('pic-workload-table').innerHTML = Object.entries(picStats)
+                .sort(([a],[b]) => {
+                    if (isUnassigned(a) && !isUnassigned(b)) return 1;
+                    if (!isUnassigned(a) && isUnassigned(b)) return -1;
+                    return a.localeCompare(b);
+                })
+                .map(([name, tasks]) => `
                 <tr class="border-b hover:bg-blue-50 cursor-pointer transition-colors" onclick="drillDown('${name}')">
                     <td class="p-4 font-bold border-r bg-slate-50/50">${name}
                         <div class="text-[9px] font-normal text-slate-400 mt-0.5">${tasks.filter(t=>t.status==='DELAYED').length} delayed · ${tasks.filter(t=>t.status==='PENDING').length} pending</div>
@@ -1918,6 +2028,8 @@
             renderConsumptionDashboard();
             // Render PIC utilization
             renderUtilization();
+            // Render down filling dashboard
+            renderDownDashboard();
         }
 
         // Store laser rows in memory
@@ -2019,6 +2131,7 @@
                     && (!cs || cs === '---')
                     && consPicVal !== 'N/A'
                     && consCompleteStatusVal !== 'yes'
+                    && consCompleteStatusVal !== 'no'
                     && isTrackedProtoStage(proto)
                     && !doneJobKeys.has(jobKey(r))
                     && !naHiddenIds.has(rid)
@@ -2111,12 +2224,17 @@
             if (!isSilent && st) { st.innerText = 'Syncing...'; st.classList.add('sync-active'); }
             try {
                 const _ctrl_l = new AbortController(); const _t_l = setTimeout(() => _ctrl_l.abort(), 25000);
-                const r_l = await fetch(laserFetchURL + "&cb=" + Date.now(), { method: 'POST', body: JSON.stringify({ '$top': 5000 }), signal: _ctrl_l.signal }); clearTimeout(_t_l);
+                const r_l = await fetch(laserFetchURL + "&cb=" + Date.now(), { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}), signal: _ctrl_l.signal }); clearTimeout(_t_l);
                 if (!r_l.ok) throw new Error(`HTTP ${r_l.status}`);
                 const rows = extractRows(await r_l.json());
                 rows.sort((a, b) => (parseInt(b.Id||b.ID||0)) - (parseInt(a.Id||a.ID||0)));
                 allLaserRows = rows;
-                renderLaserTable();
+                // Don't re-render laser table if user is actively typing in it
+                const _lActiveEl = document.activeElement;
+                const _lTable = document.getElementById('laserTable');
+                if (!(_lTable && _lActiveEl && _lTable.contains(_lActiveEl) && (_lActiveEl.tagName === 'INPUT' || _lActiveEl.tagName === 'SELECT'))) {
+                    renderLaserTable();
+                }
                 renderLaserDashboard();
                 populateTabMonthFilters();
                 // Render SLA chart if dashboard is visible (canvas must be in DOM and visible)
@@ -2213,10 +2331,10 @@
                         <td class="p-2"><input id="le-laserParts-${rid}" class="manual-input qty-input" value="${laserParts==='---'?'':laserParts}" type="number"></td>
                         <td class="p-2"><input id="le-ironParts-${rid}" class="manual-input qty-input" value="${ironParts==='---'?'':ironParts}" type="number"></td>
                         <td class="p-2"><input id="le-trimParts-${rid}" class="manual-input qty-input" value="${trimParts==='---'?'':trimParts}" type="number"></td>
-                        <td class="p-2"><input id="le-completeDate-${rid}" class="manual-input admin-input" value="${completeDate==='---'?'':completeDate}" placeholder="m/d/yyyy hh:mm"></td>
+                        <td class="p-2 date-cell"><input id="le-completeDate-${rid}" class="manual-input admin-input" value="${completeDate==='---'?'':completeDate}" placeholder="m/d/yyyy hh:mm"></td>
                         <td class="p-2"><input id="le-maPic-${rid}" class="manual-input bg-slate-100" value="${maPic==='---'?'':maPic}" readonly title="M&A PIC is set when row is created"></td>
-                        <td class="p-2"><input id="le-consStart-${rid}" class="${consClass}" value="${consStart==='---'?'':consStart}" placeholder="m/d/yyyy"${consDisabled}></td>
-                        <td class="p-2"><input id="le-consEnd-${rid}" class="${consClass}" value="${consEnd==='---'?'':consEnd}" placeholder="m/d/yyyy"${consDisabled}></td>
+                        <td class="p-2 date-cell"><input id="le-consStart-${rid}" class="${consClass}" value="${consStart==='---'?'':consStart}" placeholder="m/d/yyyy"${consDisabled}></td>
+                        <td class="p-2 date-cell"><input id="le-consEnd-${rid}" class="${consClass}" value="${consEnd==='---'?'':consEnd}" placeholder="m/d/yyyy"${consDisabled}></td>
                         <td class="p-2"><input id="le-consPic-${rid}" class="${consClass}" value="${consPic==='---'?'':consPic}" placeholder="PIC"${consDisabled}></td>
                         <td class="p-2"><input id="le-remark-${rid}" class="manual-input" value="${remark==='---'?'':remark}" placeholder="Remark"></td>
                         <td class="p-2">
@@ -2236,7 +2354,7 @@
                     const canEditCons = !!currentUser;
                     return `<tr class="border-b hover:bg-slate-50">
                         <td class="p-3 font-mono text-slate-400">${id}</td>
-                        <td class="p-3 text-slate-500">${received}</td>
+                        <td class="p-3 text-slate-500 date-cell">${received}</td>
                         <td class="p-3 font-bold">${season}</td>
                         <td class="p-3 text-blue-700 font-bold">${style}</td>
                         <td class="p-3">${section}</td>
@@ -2246,7 +2364,7 @@
                         <td class="p-3 font-bold">${laserParts}</td>
                         <td class="p-3">${ironParts}</td>
                         <td class="p-3">${trimParts}</td>
-                        <td class="p-3 ${isComplete?'text-emerald-600 font-bold':'text-slate-400'}">${completeDate}</td>
+                        <td class="p-3 date-cell ${isComplete?'text-emerald-600 font-bold':'text-slate-400'}">${completeDate}</td>
                         <td class="p-3 font-medium">${maPic}</td>
                         <td class="p-3">${canEditCons
                             ? `<input id="le-consStart-${rid}" class="manual-input admin-input" value="${consStart==='---'?'':consStart}" placeholder="m/d/yyyy">`
@@ -2264,7 +2382,7 @@
                             : `<span class="italic text-slate-400 text-[10px]">${remark}</span>`}</td>
                         <td class="p-3">
                             <div class="flex flex-col gap-1">
-                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${consIsDone?'bg-emerald-100 text-emerald-700':'bg-slate-100 text-slate-500'}">${consIsDone?'Yes':'—'}</span>
+                                <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${consIsDone?'bg-emerald-100 text-emerald-700': String(consCompleteStatus).trim().toLowerCase()==='no'?'bg-red-100 text-red-600':'bg-slate-100 text-slate-500'}">${consIsDone?'Yes': String(consCompleteStatus).trim().toLowerCase()==='no'?'No':'—'}</span>
                                 ${canEditCons?`<button onclick="saveConsumption('${rid}', event)" class="bg-emerald-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-emerald-700 whitespace-nowrap">SAVE</button>`:''}
                             </div>
                         </td>
@@ -2568,7 +2686,7 @@
             if(!isSilent && st) st.classList.add('sync-active');
             try { 
                 const _ctrl_ll = new AbortController(); const _t_ll = setTimeout(() => _ctrl_ll.abort(), 20000);
-                const r = await fetch(fetchURL + "&cb=" + Date.now(), { method: 'POST', body: JSON.stringify({}), signal: _ctrl_ll.signal }); clearTimeout(_t_ll);
+                const r = await fetch(fetchURL + "&cb=" + Date.now(), { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}), signal: _ctrl_ll.signal }); clearTimeout(_t_ll);
                 const d = await r.json();
                 allRecords = d.map(i => ({ timestamp: convertExcelDate(getVal(i, ['Timestamp'])), machine: getVal(i, ['Machine']), pic: getVal(i, ['PIC']), type: getVal(i, ['Type']), file: getVal(i, ['FileName']), time: getVal(i, ['Time']), raw: getVal(i, ['Timestamp']) })).sort((a,b)=>b.raw - a.raw);
                 if(st) { st.innerText = "LIVE: " + new Date().toLocaleTimeString(); st.classList.remove('sync-active'); }
@@ -2672,7 +2790,7 @@
                 const webTime = formatWebDisplay(new Date()), dateInput = canEditPIC ? `<input type="text" id="date-${t.id}" class="manual-input" value="${done ? t.completeDateDisplay : webTime}">` : `<span>${done ? t.completeDateDisplay : '---'}</span>`, qtyInput = canEditPIC ? `<input type="number" id="qty-${t.id}" class="manual-input qty-input" placeholder="Qty" value="${done?t.qty:''}">` : `<span>${done ? t.qty : '---'}</span>`;
                 return `<tr class="border-b hover:bg-slate-50">
                     <td class="p-3 text-slate-400 font-mono text-[10px]">${t.id}</td>
-                    <td class="p-3 text-[10px] text-slate-500">${t.startTime}</td>
+                    <td class="p-3 text-[10px] text-slate-500 date-cell">${t.startTime}</td>
                     <td class="p-3">${isAdmin
                         ? `<input id="requestor-${t.id}" class="manual-input" style="width:110px" value="${t.requestor!=='---'?t.requestor:''}">`
                         : `<span class="text-[11px]">${t.requestor}</span>`}</td>
@@ -2697,7 +2815,7 @@
                     <td class="p-3">${isAdmin
                         ? `<input id="machine-${t.id}" class="manual-input" style="width:80px" value="${t.machine!=='---'?t.machine:''}">`
                         : `<span class="text-[11px]">${t.machine}</span>`}</td>
-                    <td class="p-3">${isAdmin
+                    <td class="p-3 date-cell">${isAdmin
                         ? `<input id="reqdate-${t.id}" class="manual-input" style="width:90px" value="${t.requiredDate!=='---'?t.requiredDate:''}" placeholder="d/m/yyyy">`
                         : `<span class="text-[11px]">${t.requiredDate}</span>`}</td>
                     <td class="p-3">${isAdmin
@@ -2709,7 +2827,7 @@
                     <td class="p-3">${isAdmin
                         ? `<input type="text" id="dfm-${t.id}" class="manual-input admin-input" style="width:70px" value="${t.dfm&&t.dfm!=='---'?t.dfm:''}" placeholder="Code/No">`
                         : `<span class="text-[10px] font-bold ${t.dfm&&t.dfm!=='---'?'text-teal-600':''}">${t.dfm&&t.dfm!=='---'?t.dfm:'—'}</span>`}</td>
-                    <td class="p-3">${canEdit
+                    <td class="p-3 date-cell">${canEdit
                         ? `<input type="text" id="date-${t.id}" class="manual-input${isAdmin?' admin-input':''}" value="${done?t.completeDateDisplay:''}" placeholder="m/d/yyyy">`
                         : `<span class="${done?'text-emerald-600 font-bold':'text-slate-400'} text-[10px]">${done?t.completeDateDisplay:'---'}</span>`}</td>
                     <td class="p-3">${canEdit
@@ -3054,6 +3172,75 @@
                 type:'bar', data:{labels:sortedProto.map(e=>e[0]), datasets:[{label:'Requests', data:sortedProto.map(e=>e[1]), backgroundColor:'#818cf8', borderRadius:4}]},
                 options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{stepSize:1}}}}
             });
+        }
+
+        let downVolumeChart = null, downSeasonChart = null;
+        function renderDownDashboard() {
+            if (!allDownRows.length) return;
+            const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            const sharedMonth = document.getElementById('monthFilter')?.value || 'ALL';
+            const filtered = allDownRows.filter(r => {
+                if (sharedMonth === 'ALL') return true;
+                const d = rawToLocalDate(getVal(r, ['Date Update','DateUpdate','Date']));
+                if (!d) return false;
+                return `${months[d.getMonth()]}-${d.getFullYear()}` === sharedMonth;
+            });
+            const total   = filtered.length;
+            const done    = filtered.filter(r => { const ct = getVal(r,['Complete Time','CompleteTime','Complete Time m/d/yyyy']); return ct&&ct!=='---'&&String(ct).trim()!==''; }).length;
+            const pending = total - done;
+            const styles  = new Set(filtered.map(r => getVal(r,['Style','Style Number','StyleNumber'])).filter(s=>s&&s!=='---'));
+            const el = id => document.getElementById(id);
+            if (el('dd-total'))   el('dd-total').innerText   = total;
+            if (el('dd-pending')) el('dd-pending').innerText = pending;
+            if (el('dd-done'))    el('dd-done').innerText    = done;
+            if (el('dd-styles'))  el('dd-styles').innerText  = styles.size;
+            // Volume trend
+            const dayMap = {};
+            filtered.forEach(r => {
+                const d = rawToLocalDate(getVal(r, ['Date Update','DateUpdate','Date']));
+                if (!d) return;
+                const k = `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}`;
+                dayMap[k] = (dayMap[k]||0)+1;
+            });
+            const sortedDays = Object.keys(dayMap).sort((a,b)=>{
+                const [ma,da,ya]=a.split('/'), [mb,db,yb]=b.split('/');
+                return new Date(+ya,+ma-1,+da)-new Date(+yb,+mb-1,+db);
+            });
+            if (downVolumeChart) downVolumeChart.destroy();
+            const dvc = document.getElementById('downVolumeChart');
+            if (dvc) downVolumeChart = new Chart(dvc, {
+                type:'line', data:{labels:sortedDays, datasets:[{label:'Records', data:sortedDays.map(d=>dayMap[d]), borderColor:'#0ea5e9', backgroundColor:'rgba(14,165,233,0.07)', tension:0.3, fill:true}]},
+                options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
+            });
+            // Season breakdown
+            const seasonMap = {};
+            filtered.forEach(r => { const s=getVal(r,['Season'])||'—'; seasonMap[s]=(seasonMap[s]||0)+1; });
+            const sortedSeasons = Object.entries(seasonMap).sort((a,b)=>b[1]-a[1]);
+            if (downSeasonChart) downSeasonChart.destroy();
+            const dsc = document.getElementById('downSeasonChart');
+            if (dsc) downSeasonChart = new Chart(dsc, {
+                type:'bar', data:{labels:sortedSeasons.map(e=>e[0]), datasets:[{label:'Records', data:sortedSeasons.map(e=>e[1]), backgroundColor:'#38bdf8', borderRadius:4}]},
+                options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{stepSize:1}}}}
+            });
+            // PIC pending table
+            const picPending = {};
+            filtered.forEach(r => {
+                const ct = getVal(r,['Complete Time','CompleteTime','Complete Time m/d/yyyy']);
+                if (ct && ct!=='---' && String(ct).trim()!=='') return;
+                const pic = getMAPic(r) || '---';
+                if (!picPending[pic]) picPending[pic] = [];
+                picPending[pic].push(getVal(r,['Style','Style Number','StyleNumber']));
+            });
+            const picTbody = document.getElementById('dd-pic-table');
+            if (picTbody) {
+                picTbody.innerHTML = Object.keys(picPending).length
+                    ? Object.entries(picPending).map(([name, items]) => `
+                        <tr class="border-b hover:bg-sky-50 cursor-pointer transition-colors" onclick="switchTab('downfilling')">
+                            <td class="p-3 font-bold border-r bg-slate-50/50">${name}<div class="text-[9px] font-normal text-slate-400 mt-0.5">${items.length} item(s)</div></td>
+                            <td class="p-3 flex flex-wrap gap-2">${items.map(s=>`<div class="flex items-center gap-1.5 border rounded-lg px-2.5 py-1.5 bg-white shadow-sm"><span class="w-2 h-2 rounded-full bg-sky-400"></span><span class="font-bold text-slate-800 text-[10px]">${s}</span></div>`).join('')}</td>
+                        </tr>`).join('')
+                    : '<tr><td colspan="2" class="p-6 text-center italic text-slate-400">All down filling jobs completed!</td></tr>';
+            }
         }
 
         function renderPatchDashboard() {
@@ -3515,6 +3702,7 @@
             if (t === 'dashboard' && allSupportRows.length) renderSupportDashboard();
             if (t === 'dashboard' && allPatchRows.length) renderPatchDashboard();
             if (t === 'dashboard' && allConsumptionRows.length) renderConsumptionDashboard();
+            if (t === 'dashboard' && allDownRows.length) renderDownDashboard();
             if (t === 'dashboard') {
                 fetchAttendanceFromCloud(); // refresh capacity on every dashboard visit
                 loadAttData(); renderUtilization();
@@ -3573,7 +3761,7 @@
             if (!isSilent && st) { st.innerText = 'Syncing...'; st.classList.add('sync-active'); }
             try {
                 const _ctrl_s = new AbortController(); const _t_s = setTimeout(() => _ctrl_s.abort(), 25000);
-                const r = await fetch(supportFetchURL + "&cb=" + Date.now(), { method: 'POST', body: JSON.stringify({ '$top': 5000 }), signal: _ctrl_s.signal }); clearTimeout(_t_s);
+                const r = await fetch(supportFetchURL + "&cb=" + Date.now(), { method: 'POST', body: JSON.stringify({}), signal: _ctrl_s.signal }); clearTimeout(_t_s);
                 const rawText = await r.text();
                 if (!r.ok) {
                     throw new Error(`HTTP ${r.status}: ${rawText.substring(0, 200)}`);
@@ -3604,7 +3792,11 @@
                     return (rb ? rb.getTime() : 0) - (ra ? ra.getTime() : 0);
                 });
                 allSupportRows = rows;
-                renderSupportTable();
+                const _sActiveEl = document.activeElement;
+                const _sContent = document.getElementById('content-support');
+                if (!(_sContent && _sActiveEl && _sContent.contains(_sActiveEl) && (_sActiveEl.tagName === 'INPUT' || _sActiveEl.tagName === 'SELECT' || _sActiveEl.tagName === 'TEXTAREA'))) {
+                    renderSupportTable();
+                }
                 renderSupportDashboard();
                 if (st) { st.innerText = 'LIVE: ' + new Date().toLocaleTimeString(); st.classList.remove('sync-active'); }
             } catch(e) {
@@ -3708,7 +3900,7 @@
                                     'bg-slate-100 text-slate-600';
                 const typeColor   = suppType.toLowerCase().includes('repair') ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600';
                 return `<tr class="border-b hover:bg-slate-50${!canEdit&&!!currentUser?' opacity-60':''}">
-                    <td class="p-3 text-slate-500 text-[10px]">${received}</td>
+                    <td class="p-3 text-slate-500 text-[10px] date-cell">${received}</td>
                     <td class="p-3 font-mono text-[10px] text-slate-400">${requestID}</td>
                     <td class="p-3 text-xs">${name}</td>
                     <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${typeColor}">${suppType}</span></td>
@@ -3822,14 +4014,14 @@
             if (!isSilent && st) { st.innerText = 'Syncing...'; st.classList.add('sync-active'); }
             try {
                 const _ctrl_p = new AbortController(); const _t_p = setTimeout(() => _ctrl_p.abort(), 25000);
-                const r_p = await fetch(patchFetchURL + "&cb=" + Date.now(), { method: 'POST', body: JSON.stringify({ '$top': 5000 }), signal: _ctrl_p.signal }); clearTimeout(_t_p);
+                const r_p = await fetch(patchFetchURL + "&cb=" + Date.now(), { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}), signal: _ctrl_p.signal }); clearTimeout(_t_p);
                 if (!r_p.ok) throw new Error(`HTTP ${r_p.status}`);
                 const rows = extractRows(await r_p.json());
                 allPatchRows = rows;
-                // Skip re-render if user is actively editing a patch input
+                // Skip re-render if user is actively editing any input (table row OR add form)
                 const _pActiveEl = document.activeElement;
-                const _pTable = document.getElementById('patchTable');
-                if (!(_pTable && _pActiveEl && _pTable.contains(_pActiveEl) && _pActiveEl.tagName === 'INPUT')) {
+                const _pContent = document.getElementById('content-patch');
+                if (!(_pContent && _pActiveEl && _pContent.contains(_pActiveEl) && (_pActiveEl.tagName === 'INPUT' || _pActiveEl.tagName === 'SELECT' || _pActiveEl.tagName === 'TEXTAREA'))) {
                     renderPatchTable();
                 }
                 renderPatchDashboard();
@@ -3943,11 +4135,11 @@
                     <td class="p-3">${isGavinP ? `<input id="patch-threadcolor-${sid}" class="manual-input" style="width:80px" value="${threadColor!=='---'?threadColor:''}" placeholder="Thread Color">` : `<span class="text-[10px]">${threadColor}</span>`}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-sampletype-${sid}" class="manual-input" style="width:90px" value="${sampleType!=='---'?sampleType:''}" placeholder="Sample Type">` : `<span class="text-[10px]">${sampleType}</span>`}</td>
                     <td class="p-3 text-center">${isGavinP ? `<input id="patch-qty-${sid}" class="manual-input qty-input" style="width:55px" value="${qty!=='---'?qty:''}" placeholder="Qty">` : `<span class="font-bold">${qty}</span>`}</td>
-                    <td class="p-3 text-amber-700 text-[10px]">${canEdit ? `<input id="patch-received-${sid}" class="manual-input admin-input" value="${received==='---'?'':received}" placeholder="m/d/yyyy hh:mm">` : received}</td>
+                    <td class="p-3 text-amber-700 text-[10px] date-cell">${canEdit ? `<input id="patch-received-${sid}" class="manual-input admin-input" value="${received==='---'?'':received}" placeholder="m/d/yyyy hh:mm">` : received}</td>
                     <td class="p-3 font-bold text-blue-700">${canEdit ? `<input id="patch-tmplno-${sid}" class="manual-input admin-input" value="${tmplNo==='---'?'':tmplNo}" placeholder="e.g. S0019C">` : tmplNo}</td>
                     <td class="p-3">${canEdit ? `<input id="patch-machine-${sid}" class="manual-input admin-input" value="${machine==='---'?'':machine}" placeholder="e.g. AQM0001">` : machine}</td>
                     <td class="p-3 text-[10px]">${month}</td>
-                    <td class="p-3 ${isDone?'text-emerald-600 font-bold':'text-slate-400'}">${canEdit ? `<input id="patch-complete-${sid}" class="manual-input admin-input" value="${isDone?complete:''}" placeholder="m/d/yyyy hh:mm">` : (isDone?complete:'---')}</td>
+                    <td class="p-3 date-cell ${isDone?'text-emerald-600 font-bold':'text-slate-400'}">${canEdit ? `<input id="patch-complete-${sid}" class="manual-input admin-input" value="${isDone?complete:''}" placeholder="m/d/yyyy hh:mm">` : (isDone?complete:'---')}</td>
                     <td class="p-3 font-bold ${(!pic||pic==='---')?'text-blue-600':''}">${picDisplay}</td>
                     <td class="p-3">${canEdit ? `<input id="patch-remark-${sid}" class="manual-input" value="${remark==='---'?'':remark}" placeholder="Remark">` : `<span class="italic text-slate-400 text-[10px]">${remark}</span>`}</td>
                     <td class="p-3">${canEdit ? `<button onclick="savePatchRow('${sid}',event)" class="bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-blue-700">SAVE</button>` : ''}</td>
@@ -4061,7 +4253,11 @@
                 const rows = extractRows(await r.json());
                 rows.sort((a,b) => (parseInt(getVal(b,['Id','ID','id']))||0) - (parseInt(getVal(a,['Id','ID','id']))||0));
                 allDownRows = rows;
-                renderDownTable();
+                const _dwActiveEl = document.activeElement;
+                const _dwContent = document.getElementById('content-downfilling');
+                if (!(_dwContent && _dwActiveEl && _dwContent.contains(_dwActiveEl) && (_dwActiveEl.tagName === 'INPUT' || _dwActiveEl.tagName === 'SELECT' || _dwActiveEl.tagName === 'TEXTAREA'))) {
+                    renderDownTable();
+                }
                 populateDownMonthFilter();
                 if (st) { st.innerText = 'LIVE: ' + new Date().toLocaleTimeString() + ` (${rows.length} rows)`; st.classList.remove('sync-active'); }
             } catch(e) {
@@ -4118,32 +4314,34 @@
                 const startTime = convertExcelDate(getVal(row, ['Start Time','StartTime','Start Time m/d/yyyy']));
                 const completeTime = convertExcelDate(getVal(row, ['Complete Time','CompleteTime','Complete Time m/d/yyyy']));
                 const remark = getVal(row, ['Remark','Remarks']);
+                const rid = String(row['__PowerAppsId__'] || id).replace(/['"]/g,'');
+                const isAdminDown = currentUser === 'Gavin';
                 return `<tr class="border-b hover:bg-slate-50">
                     <td class="p-3 font-mono text-[10px]">${id}</td>
-                    <td class="p-3">${dateUpdate}</td>
-                    <td class="p-3">${season}</td>
-                    <td class="p-3">${bddPic}</td>
-                    <td class="p-3">${category}</td>
-                    <td class="p-3">${style}</td>
-                    <td class="p-3">${job}</td>
-                    <td class="p-3">${layer}</td>
-                    <td class="p-3">${fabricItem}</td>
-                    <td class="p-3">${downBagItem}</td>
-                    <td class="p-3">${downItem}</td>
-                    <td class="p-3">${downDesc}</td>
-                    <td class="p-3">${liningItem}</td>
-                    <td class="p-3">${needle}</td>
-                    <td class="p-3">${thread}</td>
-                    <td class="p-3">${upperRpm}</td>
-                    <td class="p-3">${lowerRpm}</td>
-                    <td class="p-3">${inletPressure}</td>
-                    <td class="p-3">${outletPressure}</td>
-                    <td class="p-3">${humidity}</td>
-                    <td class="p-3">${relaxedTime}</td>
+                    <td class="p-3 date-cell">${isAdminDown ? `<input id="dw-dateUpdate-${rid}" class="manual-input admin-input" value="${dateUpdate==='---'?'':dateUpdate}" placeholder="m/d/yyyy hh:mm">` : dateUpdate}</td>
+                    <td class="p-3">${isAdminDown ? `<input id="dw-season-${rid}" class="manual-input admin-input" value="${season==='---'?'':season}">` : season}</td>
+                    <td class="p-3">${isAdminDown ? `<input id="dw-bddPic-${rid}" class="manual-input admin-input" value="${bddPic==='---'?'':bddPic}">` : bddPic}</td>
+                    <td class="p-3">${isAdminDown ? `<input id="dw-category-${rid}" class="manual-input admin-input" value="${category==='---'?'':category}">` : category}</td>
+                    <td class="p-3">${isAdminDown ? `<input id="dw-style-${rid}" class="manual-input admin-input" value="${style==='---'?'':style}">` : style}</td>
+                    <td class="p-3">${isAdminDown ? `<input id="dw-job-${rid}" class="manual-input admin-input" value="${job==='---'?'':job}">` : job}</td>
+                    <td class="p-3">${isAdminDown ? `<input id="dw-layer-${rid}" class="manual-input admin-input" value="${layer==='---'?'':layer}">` : layer}</td>
+                    <td class="p-3 font-bold text-emerald-600">${isAdminDown ? `<input id="dw-fabricItem-${rid}" class="manual-input admin-input" style="color:#059669;font-weight:bold" value="${fabricItem==='---'?'':fabricItem}">` : fabricItem}</td>
+                    <td class="p-3 font-bold text-purple-600">${isAdminDown ? `<input id="dw-downBagItem-${rid}" class="manual-input admin-input" style="color:#7c3aed;font-weight:bold" value="${downBagItem==='---'?'':downBagItem}">` : downBagItem}</td>
+                    <td class="p-3 font-bold text-amber-600">${isAdminDown ? `<input id="dw-downItem-${rid}" class="manual-input admin-input" style="color:#d97706;font-weight:bold" value="${downItem==='---'?'':downItem}">` : downItem}</td>
+                    <td class="p-3">${isAdminDown ? `<input id="dw-downDesc-${rid}" class="manual-input admin-input" value="${downDesc==='---'?'':downDesc}">` : downDesc}</td>
+                    <td class="p-3">${isAdminDown ? `<input id="dw-liningItem-${rid}" class="manual-input admin-input" value="${liningItem==='---'?'':liningItem}">` : liningItem}</td>
+                    <td class="p-3">${isAdminDown ? `<input id="dw-needle-${rid}" class="manual-input admin-input" value="${needle==='---'?'':needle}">` : needle}</td>
+                    <td class="p-3">${isAdminDown ? `<input id="dw-thread-${rid}" class="manual-input admin-input" value="${thread==='---'?'':thread}">` : thread}</td>
+                    <td class="p-3">${isAdminDown ? `<input id="dw-upperRpm-${rid}" class="manual-input admin-input" type="number" value="${upperRpm==='---'?'':upperRpm}">` : upperRpm}</td>
+                    <td class="p-3">${isAdminDown ? `<input id="dw-lowerRpm-${rid}" class="manual-input admin-input" type="number" value="${lowerRpm==='---'?'':lowerRpm}">` : lowerRpm}</td>
+                    <td class="p-3">${isAdminDown ? `<input id="dw-inletPressure-${rid}" class="manual-input admin-input" type="number" step="0.01" value="${inletPressure==='---'?'':inletPressure}">` : inletPressure}</td>
+                    <td class="p-3">${isAdminDown ? `<input id="dw-outletPressure-${rid}" class="manual-input admin-input" type="number" step="0.01" value="${outletPressure==='---'?'':outletPressure}">` : outletPressure}</td>
+                    <td class="p-3">${isAdminDown ? `<input id="dw-humidity-${rid}" class="manual-input admin-input" value="${humidity==='---'?'':humidity}">` : humidity}</td>
+                    <td class="p-3">${isAdminDown ? `<input id="dw-relaxedTime-${rid}" class="manual-input admin-input" value="${relaxedTime==='---'?'':relaxedTime}">` : relaxedTime}</td>
                     <td class="p-3">${maPic}</td>
-                    <td class="p-3">${startTime}</td>
-                    <td class="p-3">${completeTime}</td>
-                    <td class="p-3">${remark}</td>
+                    <td class="p-3 date-cell">${isAdminDown ? `<input id="dw-startTime-${rid}" class="manual-input admin-input" value="${startTime==='---'?'':startTime}" placeholder="m/d/yyyy hh:mm">` : startTime}</td>
+                    <td class="p-3 date-cell">${isAdminDown ? `<input id="dw-completeTime-${rid}" class="manual-input admin-input" value="${completeTime==='---'?'':completeTime}" placeholder="m/d/yyyy hh:mm">` : completeTime}</td>
+                    <td class="p-3">${isAdminDown ? `<div class="flex flex-col gap-1"><input id="dw-remark-${rid}" class="manual-input admin-input" value="${remark==='---'?'':remark}" placeholder="Remark"><button onclick="saveDownRow('${rid}',event)" class="bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-blue-700 whitespace-nowrap">SAVE</button></div>` : remark}</td>
                 </tr>`;
             }).join('');
         }
@@ -4236,6 +4434,53 @@
             }
         }
 
+        async function saveDownRow(rid, event) {
+            if (currentUser !== 'Gavin') return alert('Only Gavin can edit down filling records.');
+            const btn = event.target; btn.innerText = 'SAVING...'; btn.disabled = true;
+            const g = (field) => document.getElementById(`dw-${field}-${rid}`)?.value.trim() || '';
+            const payload = {
+                recordID:        rid,
+                id:              rid,
+                dateUpdate:      toExcelDateFormat(g('dateUpdate')),
+                season:          g('season'),
+                bddPic:          g('bddPic'),
+                category:        g('category'),
+                style:           g('style'),
+                job:             g('job'),
+                layer:           g('layer'),
+                fabricItem:      g('fabricItem'),
+                downBagItem:     g('downBagItem'),
+                downItem:        g('downItem'),
+                downDescription: g('downDesc'),
+                liningItem:      g('liningItem'),
+                needle:          g('needle'),
+                thread:          g('thread'),
+                upperRpm:        g('upperRpm') || '0',
+                lowerRpm:        g('lowerRpm') || '0',
+                inletPressure:   g('inletPressure') || '0',
+                outletPressure:  g('outletPressure') || '0',
+                humidity:        g('humidity'),
+                downRelaxedTime: g('relaxedTime'),
+                startTime:       toExcelDateFormat(g('startTime')),
+                completeTime:    toExcelDateFormat(g('completeTime')),
+                remark:          g('remark')
+            };
+            try {
+                const res = await fetch(downUpdateURL, {
+                    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+                });
+                if (res.ok) {
+                    btn.innerText = 'SAVED ✓';
+                    refreshDownData(true);
+                    setTimeout(() => { btn.innerText = 'SAVE'; btn.disabled = false; }, 2000);
+                } else {
+                    const txt = await res.text();
+                    btn.innerText = 'ERROR'; btn.disabled = false;
+                    alert(`Save failed HTTP ${res.status}: ${txt.substring(0,200)}`);
+                }
+            } catch(e) { btn.innerText = 'ERROR'; btn.disabled = false; alert(e.message); }
+        }
+
         // ══════════════════════════════════════════════════════════════
         // CONSUMPTION PAGE
         // ══════════════════════════════════════════════════════════════
@@ -4267,16 +4512,16 @@
             if (!isSilent && st) { st.innerText = 'Syncing...'; st.classList.add('sync-active'); }
             try {
                 const _ctrl = new AbortController(); const _t = setTimeout(() => _ctrl.abort(), 25000);
-                const r_c = await fetch(consumptionFetchURL + '&cb=' + Date.now(), { method: 'POST', body: JSON.stringify({ '$top': 5000 }), signal: _ctrl.signal }); clearTimeout(_t);
+                const r_c = await fetch(consumptionFetchURL + '&cb=' + Date.now(), { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}), signal: _ctrl.signal }); clearTimeout(_t);
                 if (!r_c.ok) throw new Error(`HTTP ${r_c.status}`);
                 const rows = extractRows(await r_c.json());
                 rows.sort((a,b) => (parseInt(getVal(b,['Id','ID','id']))||0) - (parseInt(getVal(a,['Id','ID','id']))||0));
                 const _dbg = `allConsumptionRows.length = ${rows.length} | Open browser console (F12) for [CON] debug log`;
                 allConsumptionRows = rows;
-                // Skip re-render if user is actively editing a consumption input
+                // Skip re-render if user is actively editing anywhere in the consumption tab (table OR add form)
                 const _cActiveEl = document.activeElement;
-                const _cTable = document.getElementById('consumptionTable');
-                if (!(_cTable && _cActiveEl && _cTable.contains(_cActiveEl) && _cActiveEl.tagName === 'INPUT')) {
+                const _cContent = document.getElementById('content-consumption');
+                if (!(_cContent && _cActiveEl && _cContent.contains(_cActiveEl) && (_cActiveEl.tagName === 'INPUT' || _cActiveEl.tagName === 'SELECT' || _cActiveEl.tagName === 'TEXTAREA'))) {
                     renderConsumptionTable();
                 }
                 populateConsumptionMonthFilter();
