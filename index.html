@@ -151,12 +151,13 @@
             font-size: 10px !important;
         }
         .down-layer-col {
-            min-width: 240px !important;
-            white-space: nowrap;
+            min-width: 280px !important;
         }
         .down-layer-cell {
-            min-width: 240px;
-            white-space: nowrap;
+            min-width: 280px;
+            max-width: 320px;
+            white-space: normal;
+            word-break: break-word;
         }
 
         /* Section dividers */
@@ -4568,7 +4569,7 @@
                     <td class="p-3">${isAdminDown ? `<input id="dw-category-${rid}" class="manual-input admin-input" value="${category==='---'?'':category}">` : category}</td>
                     <td class="p-3">${isAdminDown ? `<input id="dw-style-${rid}" class="manual-input admin-input" value="${style==='---'?'':style}">` : style}</td>
                     <td class="p-3">${isAdminDown ? `<input id="dw-job-${rid}" class="manual-input admin-input" value="${job==='---'?'':job}">` : job}</td>
-                    <td class="p-3 down-layer-cell">${isAdminDown ? `<input id="dw-layer-${rid}" class="manual-input admin-input" style="width:220px" value="${layer==='---'?'':layer}">` : layer}</td>
+                    <td class="p-3 down-layer-cell">${isAdminDown ? `<input id="dw-layer-${rid}" class="manual-input admin-input" style="width:260px" value="${layer==='---'?'':layer}">` : layer}</td>
                     <td class="p-3 font-bold text-emerald-600">${isAdminDown ? `<input id="dw-fabricItem-${rid}" class="manual-input admin-input" style="color:#059669;font-weight:bold" value="${fabricItem==='---'?'':fabricItem}">` : fabricItem}</td>
                     <td class="p-3 font-bold text-purple-600">${isAdminDown ? `<input id="dw-downBagItem-${rid}" class="manual-input admin-input" style="color:#7c3aed;font-weight:bold" value="${downBagItem==='---'?'':downBagItem}">` : downBagItem}</td>
                     <td class="p-3 font-bold text-amber-600">${isAdminDown ? `<input id="dw-downItem-${rid}" class="manual-input admin-input" style="color:#d97706;font-weight:bold" value="${downItem==='---'?'':downItem}">` : downItem}</td>
