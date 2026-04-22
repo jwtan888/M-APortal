@@ -120,6 +120,18 @@
       .filter((record) => !isBlankRecord(record));
   }
 
+  function nextRowId() {
+    let maxId = 0;
+    state.records.forEach((record) => {
+      const match = cleanText(record.rowId || record.id).match(/^dfm-(\d+)$/i);
+      if (!match) {
+        return;
+      }
+      maxId = Math.max(maxId, Number(match[1]));
+    });
+    return `dfm-${maxId + 1}`;
+  }
+
   function reconcileStoredRecords(storedRecords, latestSeedRecords) {
     const seedBySourceRow = new Map();
     const seedByShape = new Map();
@@ -198,7 +210,7 @@
     const typeCode = cleanText(record.typeCode || record.constructionCode);
     const normalizedNo = normalizeExcelNo(record.no || record["No."] || record.id, record.sourceRow);
     const normalizedRowId =
-      cleanText(record.rowId || record.RowId || record.id) || "manual-" + (Date.now() + index);
+      cleanText(record.rowId || record.RowId || record.id) || `dfm-${Date.now() + index}`;
     const detail = defectMap.get(typeCode) || {};
     const defects = Array.isArray(record.defects)
       ? record.defects
@@ -213,7 +225,7 @@
     return {
       id: normalizedRowId,
       rowId: normalizedRowId,
-      no: normalizedNo || "manual-" + (Date.now() + index),
+      no: normalizedNo || "",
       sourceRow: record.sourceRow || null,
       season,
       category: cleanText(record.category),
@@ -1012,7 +1024,7 @@
     const constructionCode = cleanText(formData.get("constructionCode"));
     const draft = normalizeRecord(
       {
-        id: state.editingId || `manual-${Date.now()}`,
+        id: state.editingId || nextRowId(),
         no: currentRecord?.no || "",
         sourceRow: currentRecord?.sourceRow || null,
         season: formData.get("season"),
