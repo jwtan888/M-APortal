@@ -665,9 +665,19 @@
     if (!elements.seasonFilter || !elements.categoryFilter || !elements.modificationFilter) {
       return;
     }
-    setSelectOptions(elements.seasonFilter, ["all"].concat(uniqueValues(state.records, "season")), state.filters.season, "All seasons");
-    setSelectOptions(elements.categoryFilter, ["all"].concat(uniqueValues(state.records, "category")), state.filters.category, "All categories");
-    setSelectOptions(
+    state.filters.season = setSelectOptions(
+      elements.seasonFilter,
+      ["all"].concat(uniqueValues(state.records, "season")),
+      state.filters.season,
+      "All seasons",
+    );
+    state.filters.category = setSelectOptions(
+      elements.categoryFilter,
+      ["all"].concat(uniqueValues(state.records, "category")),
+      state.filters.category,
+      "All categories",
+    );
+    state.filters.modification = setSelectOptions(
       elements.modificationFilter,
       ["all"].concat(uniqueValues(state.records, "modification")),
       state.filters.modification,
@@ -688,6 +698,7 @@
         return `<option value="${escapeHtml(value)}"${selected}>${escapeHtml(label)}</option>`;
       })
       .join("");
+    return current;
   }
 
   function renderKpis(kpis) {
@@ -1044,35 +1055,65 @@
     return "";
   }
 
+  function normalizeFieldName(value) {
+    return String(value || "")
+      .replace(/_x[0-9a-f]{4}_/gi, " ")
+      .replace(/[^a-z0-9]+/gi, "")
+      .toLowerCase();
+  }
+
+  function valueFromRowFuzzy(row, aliases) {
+    if (!row || typeof row !== "object") {
+      return "";
+    }
+    const aliasSet = new Set(aliases.map(normalizeFieldName));
+    for (const [key, value] of Object.entries(row)) {
+      if (aliasSet.has(normalizeFieldName(key))) {
+        return value;
+      }
+    }
+    return "";
+  }
+
   function normalizeRemoteRecord(row) {
     return {
-      rowId: valueFromRow(row, ["RowId", "rowId", "ROWID", "ROWID", "Row_x0020_Id"]),
-      id: valueFromRow(row, ["RowId", "rowId", "ROWID", "ROWID", "Row_x0020_Id"]),
-      no: valueFromRow(row, ["No.", "No", "NO", "no", "No_x002e_"]),
-      season: valueFromRow(row, ["SEASON", "season"]),
-      category: valueFromRow(row, ["CATEGORY", "category"]),
-      protoStage: valueFromRow(
-        row,
-        ["PROTO STAGE", "PROTO\n STAGE", "protoStage", "PROTO_x0020_STAGE", "PROTO_x000a__x0020_STAGE"],
-      ),
-      style: valueFromRow(row, ["STYLE", "style"]),
-      constructionCode: valueFromRow(
-        row,
-        ["CONSTRUCTION CODE", "CONSTRUCTION\n CODE", "constructionCode", "CONSTRUCTION_x0020_CODE"],
-      ),
-      typeCode: valueFromRow(row, ["TYPE", "typeCode"]),
-      modification: valueFromRow(
-        row,
-        [
-          "Construction Modification",
-          "Construction \nModification",
-          "constructionModification",
-          "modification",
-          "Construction_x0020_Modification",
-        ],
-      ),
-      remark: valueFromRow(row, ["REMARK", "remark"]),
-      fgQty: valueFromRow(row, ["FG Qty", "fgQty", "FG_x0020_Qty"]),
+      rowId:
+        valueFromRow(row, ["RowId", "rowId", "ROWID", "ROWID", "Row_x0020_Id"]) ||
+        valueFromRowFuzzy(row, ["RowId", "rowId", "record id", "recordid"]),
+      id:
+        valueFromRow(row, ["RowId", "rowId", "ROWID", "ROWID", "Row_x0020_Id"]) ||
+        valueFromRowFuzzy(row, ["RowId", "rowId", "record id", "recordid"]),
+      no:
+        valueFromRow(row, ["No.", "No", "NO", "no", "No_x002e_"]) ||
+        valueFromRowFuzzy(row, ["No.", "No"]),
+      season: valueFromRow(row, ["SEASON", "season"]) || valueFromRowFuzzy(row, ["SEASON", "season"]),
+      category:
+        valueFromRow(row, ["CATEGORY", "category"]) || valueFromRowFuzzy(row, ["CATEGORY", "category"]),
+      protoStage:
+        valueFromRow(
+          row,
+          ["PROTO STAGE", "PROTO\n STAGE", "protoStage", "PROTO_x0020_STAGE", "PROTO_x000a__x0020_STAGE"],
+        ) || valueFromRowFuzzy(row, ["PROTO STAGE", "protoStage", "protostage"]),
+      style: valueFromRow(row, ["STYLE", "style"]) || valueFromRowFuzzy(row, ["STYLE", "style"]),
+      constructionCode:
+        valueFromRow(
+          row,
+          ["CONSTRUCTION CODE", "CONSTRUCTION\n CODE", "constructionCode", "CONSTRUCTION_x0020_CODE"],
+        ) || valueFromRowFuzzy(row, ["CONSTRUCTION CODE", "constructionCode", "constructioncode"]),
+      typeCode: valueFromRow(row, ["TYPE", "typeCode"]) || valueFromRowFuzzy(row, ["TYPE", "typeCode"]),
+      modification:
+        valueFromRow(
+          row,
+          [
+            "Construction Modification",
+            "Construction \nModification",
+            "constructionModification",
+            "modification",
+            "Construction_x0020_Modification",
+          ],
+        ) || valueFromRowFuzzy(row, ["Construction Modification", "constructionModification", "modification"]),
+      remark: valueFromRow(row, ["REMARK", "remark"]) || valueFromRowFuzzy(row, ["REMARK", "remark"]),
+      fgQty: valueFromRow(row, ["FG Qty", "fgQty", "FG_x0020_Qty"]) || valueFromRowFuzzy(row, ["FG Qty", "fgQty"]),
     };
   }
 
@@ -1107,6 +1148,14 @@
     }
     if (payload && payload.result) {
       return extractRemoteRows(payload.result);
+    }
+    if (payload && typeof payload === "object") {
+      for (const value of Object.values(payload)) {
+        const rows = extractRemoteRows(value);
+        if (rows.length) {
+          return rows;
+        }
+      }
     }
     return [];
   }
@@ -1156,7 +1205,13 @@
         cache: "no-store",
       });
       if (remoteResponse.ok) {
-        const remotePayload = await remoteResponse.json().catch(() => null);
+        const remoteText = await remoteResponse.text();
+        let remotePayload = null;
+        try {
+          remotePayload = remoteText ? JSON.parse(remoteText) : null;
+        } catch (error) {
+          remotePayload = remoteText;
+        }
         const remoteRows = extractRemoteRows(remotePayload);
         const normalizedRemoteRecords = normalizeRecords(remoteRows.map(normalizeRemoteRecord));
         if (normalizedRemoteRecords.length) {
