@@ -35,6 +35,7 @@
     modificationFilter: document.getElementById("modification-filter"),
     defectFilter: document.getElementById("defect-filter"),
     addRecordBtn: document.getElementById("add-record-btn"),
+    refreshDataBtn: document.getElementById("refresh-data-btn"),
     resetDataBtn: document.getElementById("reset-data-btn"),
     dialog: document.getElementById("record-dialog"),
     dialogTitle: document.getElementById("dialog-title"),
@@ -99,6 +100,9 @@
     state.isSaving = isBusy;
     if (elements.addRecordBtn) {
       elements.addRecordBtn.disabled = isBusy;
+    }
+    if (elements.refreshDataBtn) {
+      elements.refreshDataBtn.disabled = isBusy;
     }
     if (elements.resetDataBtn) {
       elements.resetDataBtn.disabled = isBusy;
@@ -1087,6 +1091,23 @@
     }
   }
 
+  async function hardRefreshFromLatestSeed(options = {}) {
+    try {
+      setFormBusy(true);
+      const latestSeed = await fetchLatestSeedData();
+      state.records = normalizeRecords(latestSeed.records || []);
+      persistRecords();
+      render();
+    } catch (error) {
+      console.error("Failed to replace records from latest Excel-backed source", error);
+      if (!options.silent) {
+        window.alert(`Unable to refresh the latest Excel data.\n${error.message}`);
+      }
+    } finally {
+      setFormBusy(false);
+    }
+  }
+
   async function saveRecord(event) {
     if (!elements.form) {
       return;
@@ -1241,6 +1262,11 @@
 
     if (elements.addRecordBtn) {
       elements.addRecordBtn.addEventListener("click", () => openDialog());
+    }
+    if (elements.refreshDataBtn) {
+      elements.refreshDataBtn.addEventListener("click", () => {
+        hardRefreshFromLatestSeed();
+      });
     }
     if (elements.resetDataBtn) {
       elements.resetDataBtn.addEventListener("click", resetData);
