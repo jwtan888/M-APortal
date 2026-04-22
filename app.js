@@ -1,9 +1,17 @@
 (function () {
   const seedData = window.DFM_SEED_DATA || { records: [], warnings: [], defectCatalog: [] };
-  const seedVersion =
-    seedData.meta?.generatedAt ||
-    `${seedData.meta?.recordCount || 0}-${seedData.meta?.styleSeasonCount || 0}`;
-  const STORAGE_KEY = `dfm-dashboard-records-${seedVersion}`;
+  const STORAGE_KEY = "dfm-dashboard-records";
+  const LEGACY_STORAGE_PREFIX = "dfm-dashboard-records-";
+  const FLOW_ENDPOINTS = {
+    add: "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/d714eb96fab644dcbfd6c83f28d817b1/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=3MUeOaSxcE-uRBtPqIe2-_KlK8BZ96hU1e2tivu0HOQ",
+    update:
+      "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/bf99bd66b5064455a0fef384e50953e2/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=1TzaVpi7HoqovWJL1iKsVlkk2QoX0x6pYuwNWUtMKwA",
+    delete:
+      "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/52a76b61c7e84e09a8df6eee0ad2a029/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=QslAg0t1-QLN3UvBy_7jBzUaY7YxcfADrJIjm15i-rw",
+  };
+  const FETCH_DFM_CHART_URL =
+    "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/777a0c72d4684db68a350132def5fb37/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=4SIb_3sXxhX4jOUhTA6L8-kcgrr37CcmJwDkloVPDv4";
+  const SEED_REFRESH_MS = 15000;
   const defectMap = new Map((seedData.defectCatalog || []).map((item) => [item.code, item]));
   const page = document.body.dataset.page || "dashboard";
 
@@ -27,6 +35,7 @@
     modificationFilter: document.getElementById("modification-filter"),
     defectFilter: document.getElementById("defect-filter"),
     addRecordBtn: document.getElementById("add-record-btn"),
+    refreshDataBtn: document.getElementById("refresh-data-btn"),
     resetDataBtn: document.getElementById("reset-data-btn"),
     dialog: document.getElementById("record-dialog"),
     dialogTitle: document.getElementById("dialog-title"),
@@ -43,6 +52,8 @@
       timerId: null,
       tick: 0,
     },
+    seedRefreshTimerId: null,
+    isSaving: false,
     filters: {
       search: "",
       season: "all",
@@ -53,13 +64,13 @@
   };
 
   function loadRecords() {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(STORAGE_KEY) || loadLegacyStoredRecords();
     if (!raw) {
       return normalizeRecords(seedData.records || []);
     }
 
     try {
-      return normalizeRecords(JSON.parse(raw));
+      return normalizeRecords(reconcileStoredRecords(JSON.parse(raw), seedData.records || []));
     } catch (error) {
       console.error("Failed to parse saved data", error);
       return normalizeRecords(seedData.records || []);
@@ -70,16 +81,142 @@
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state.records));
   }
 
+  function loadLegacyStoredRecords() {
+    const keys = Object.keys(window.localStorage)
+      .filter((key) => key.startsWith(LEGACY_STORAGE_PREFIX))
+      .sort()
+      .reverse();
+
+    for (const key of keys) {
+      const value = window.localStorage.getItem(key);
+      if (value) {
+        return value;
+      }
+    }
+    return null;
+  }
+
+  function setFormBusy(isBusy) {
+    state.isSaving = isBusy;
+    if (elements.addRecordBtn) {
+      elements.addRecordBtn.disabled = isBusy;
+    }
+    if (elements.refreshDataBtn) {
+      elements.refreshDataBtn.disabled = isBusy;
+    }
+    if (elements.resetDataBtn) {
+      elements.resetDataBtn.disabled = isBusy;
+    }
+    if (elements.closeDialogBtn) {
+      elements.closeDialogBtn.disabled = isBusy;
+    }
+    if (elements.cancelDialogBtn) {
+      elements.cancelDialogBtn.disabled = isBusy;
+    }
+    if (elements.form) {
+      Array.from(elements.form.elements).forEach((field) => {
+        field.disabled = isBusy;
+      });
+    }
+  }
+
   function normalizeRecords(records) {
     return records
       .map((record, index) => normalizeRecord(record, index))
       .filter((record) => !isBlankRecord(record));
   }
 
+  function nextRowId() {
+    let maxId = 0;
+    state.records.forEach((record) => {
+      const match = cleanText(record.rowId || record.id).match(/^dfm-(\d+)$/i);
+      if (!match) {
+        return;
+      }
+      maxId = Math.max(maxId, Number(match[1]));
+    });
+    return `dfm-${maxId + 1}`;
+  }
+
+  function reconcileStoredRecords(storedRecords, latestSeedRecords) {
+    const seedBySourceRow = new Map();
+    const seedByShape = new Map();
+
+    latestSeedRecords.forEach((record) => {
+      if (record.sourceRow !== null && record.sourceRow !== undefined) {
+        seedBySourceRow.set(String(record.sourceRow), record);
+      }
+      seedByShape.set(recordShapeKey(record), record);
+    });
+
+    return storedRecords.map((record) => {
+      const sourceRowKey =
+        record && record.sourceRow !== null && record.sourceRow !== undefined
+          ? String(record.sourceRow)
+          : "";
+      const seedMatch =
+        seedBySourceRow.get(sourceRowKey) ||
+        seedByShape.get(recordShapeKey(record)) ||
+        null;
+
+      if (!seedMatch) {
+        return record;
+      }
+
+      const currentId = cleanText(record.id || record.no || record["No."]);
+      const shouldRefreshKey = !currentId || /^row-\d+$/i.test(currentId);
+
+      if (!shouldRefreshKey) {
+        return {
+          ...record,
+          typeCode: seedMatch.typeCode || record.typeCode,
+          modification: seedMatch.modification || record.modification,
+          feature: seedMatch.feature || record.feature,
+          description: seedMatch.description || record.description,
+          productClass: seedMatch.productClass || record.productClass,
+          defects: seedMatch.defects || record.defects,
+          defectCount:
+            typeof seedMatch.defectCount === "number" ? seedMatch.defectCount : record.defectCount,
+          totalIntensity:
+            typeof seedMatch.totalIntensity === "number" ? seedMatch.totalIntensity : record.totalIntensity,
+          fgQty:
+            record.fgQty === null || record.fgQty === undefined
+              ? (seedMatch.fgQty ?? record.fgQty)
+              : record.fgQty,
+          sourceRow: record.sourceRow ?? seedMatch.sourceRow,
+        };
+      }
+
+      return {
+        ...record,
+        id: seedMatch.id || record.id,
+        no: seedMatch.no || seedMatch["No."] || record.no,
+        typeCode: seedMatch.typeCode || record.typeCode,
+        modification: seedMatch.modification || record.modification,
+        feature: seedMatch.feature || record.feature,
+        description: seedMatch.description || record.description,
+        productClass: seedMatch.productClass || record.productClass,
+        defects: seedMatch.defects || record.defects,
+        defectCount:
+          typeof seedMatch.defectCount === "number" ? seedMatch.defectCount : record.defectCount,
+        totalIntensity:
+          typeof seedMatch.totalIntensity === "number" ? seedMatch.totalIntensity : record.totalIntensity,
+        fgQty:
+          record.fgQty === null || record.fgQty === undefined
+            ? (seedMatch.fgQty ?? record.fgQty)
+            : record.fgQty,
+        sourceRow: seedMatch.sourceRow ?? record.sourceRow,
+      };
+    });
+  }
+
   function normalizeRecord(record, index) {
     const season = cleanText(record.season);
     const style = cleanText(record.style);
     const typeCode = cleanText(record.typeCode || record.constructionCode);
+    const normalizedNo = normalizeExcelNo(record.no || record["No."], record.sourceRow);
+    const normalizedRowId =
+      cleanText(record.rowId || record.RowId || record.id) || `dfm-${Date.now() + index}`;
     const detail = defectMap.get(typeCode) || {};
     const defects = Array.isArray(record.defects)
       ? record.defects
@@ -92,7 +229,9 @@
         : sum(defects.map((defect) => defect.intensity || 0));
 
     return {
-      id: cleanText(record.id) || "manual-" + (Date.now() + index),
+      id: normalizedRowId,
+      rowId: normalizedRowId,
+      no: normalizedNo || "",
       sourceRow: record.sourceRow || null,
       season,
       category: cleanText(record.category),
@@ -131,8 +270,36 @@
     return String(value || "").replace(/\s+/g, " ").trim();
   }
 
+  function normalizeExcelNo(value, sourceRow) {
+    const text = cleanText(value);
+    if (/^\d+$/.test(text)) {
+      return text;
+    }
+    const rowMatch = text.match(/^row-(\d+)$/i);
+    if (rowMatch) {
+      return String(Math.max(1, Number(rowMatch[1]) - 1));
+    }
+    if (sourceRow !== null && sourceRow !== undefined && String(sourceRow).trim() !== "") {
+      const sourceNumber = Number(sourceRow);
+      if (Number.isFinite(sourceNumber)) {
+        return String(Math.max(1, sourceNumber - 1));
+      }
+    }
+    return text;
+  }
+
   function buildStyleKey(season, style) {
     return cleanText(season) + "__" + cleanText(style);
+  }
+
+  function recordShapeKey(record) {
+    return [
+      cleanText(record?.season),
+      cleanText(record?.style),
+      cleanText(record?.constructionCode),
+      cleanText(record?.typeCode),
+      cleanText(record?.category),
+    ].join("__");
   }
 
   function numberOrNull(value) {
@@ -269,7 +436,7 @@
           season: record.season,
           style: record.style,
           category: record.category,
-          fgQty: record.fgQty || 0,
+          fgQty: record.fgQty,
           constructionRows: 0,
           modifiedRows: 0,
           codes: new Set(),
@@ -279,7 +446,7 @@
       const style = styles.get(record.styleKey);
       style.constructionRows += 1;
       style.modifiedRows += record.modification === "M" ? 1 : 0;
-      if (style.fgQty === 0 && record.fgQty) {
+      if ((style.fgQty === null || style.fgQty === undefined) && record.fgQty !== null && record.fgQty !== undefined) {
         style.fgQty = record.fgQty;
       }
       if (record.category && !style.category) {
@@ -601,7 +768,7 @@
                 <div class="style-name">${escapeHtml(style.style)}</div>
                 <div class="style-meta">${escapeHtml(style.season)} · ${escapeHtml(style.category || "No category")}</div>
               </div>
-              <span class="tag">${escapeHtml(formatNumber(style.fgQty))} FG</span>
+              <span class="tag">${escapeHtml(style.fgQty === null || style.fgQty === undefined ? "Pending FG" : `${formatNumber(style.fgQty)} FG`)}</span>
             </div>
             <div class="style-stats">
               <div class="mini-stat">
@@ -663,7 +830,7 @@
             </div>
             <div class="record-meta">Construction Code: <strong>${escapeHtml(record.constructionCode || "-")}</strong></div>
             <div class="record-meta">Type Code: <strong>${escapeHtml(record.typeCode || "-")}</strong></div>
-            <div class="record-meta">FG Qty: <strong>${escapeHtml(formatNumber(record.fgQty))}</strong></div>
+            <div class="record-meta">FG Qty: <strong>${escapeHtml(record.fgQty === null || record.fgQty === undefined ? "Pending update" : formatNumber(record.fgQty))}</strong></div>
             <div class="record-meta">${escapeHtml(record.remark || "No remark")}</div>
             <div class="row-actions">
               <button class="row-btn" data-action="edit" data-id="${escapeHtml(record.id)}">Edit</button>
@@ -701,8 +868,6 @@
       protoStage: "",
       style: "",
       constructionCode: "",
-      typeCode: "",
-      modification: "",
       fgQty: "",
       remark: "",
     };
@@ -740,33 +905,134 @@
     };
   }
 
-  function saveRecord(event) {
-    if (!elements.form) {
-      return;
+  function buildFlowPayload(record, action) {
+    const noValue = cleanText(record.no);
+    const rowIdValue = cleanText(record.rowId || record.id || record.no);
+    return {
+      "No.": cleanText(noValue),
+      RowId: rowIdValue,
+      rowId: rowIdValue,
+      id: rowIdValue,
+      no: cleanText(noValue),
+      sourceRow: record.sourceRow ?? "",
+      season: cleanText(record.season),
+      category: cleanText(record.category),
+      protoStage: cleanText(record.protoStage),
+      style: cleanText(record.style),
+      constructionCode: cleanText(record.constructionCode),
+      typeCode: cleanText(record.typeCode),
+      modification: cleanText(record.modification),
+      styleKey: cleanText(record.styleKey),
+      remark: cleanText(record.remark),
+      fgQty: record.fgQty ?? "",
+      fgAnchor: record.fgAnchor ?? "",
+      action,
+    };
+  }
+
+  async function callFlow(action, payload) {
+    const url = FLOW_ENDPOINTS[action];
+    if (!url) {
+      throw new Error(`Missing Power Automate URL for ${action}.`);
     }
-    event.preventDefault();
-    const formData = new FormData(elements.form);
-    const draft = normalizeRecord(
-      {
-        id: state.editingId || `manual-${Date.now()}`,
-        sourceRow: null,
-        season: formData.get("season"),
-        category: formData.get("category"),
-        protoStage: formData.get("protoStage"),
-        style: formData.get("style"),
-        constructionCode: formData.get("constructionCode"),
-        typeCode: formData.get("typeCode"),
-        modification: formData.get("modification"),
-        remark: formData.get("remark"),
-        fgQty: formData.get("fgQty"),
+
+    const response = await window.fetch(url, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
       },
-      0,
-    );
+      body: JSON.stringify(payload),
+    });
 
-    const enriched = enrichRecordFromCatalog(draft);
-    const nextRecords = state.records.slice();
-    const recordIndex = nextRecords.findIndex((record) => record.id === enriched.id);
+    if (!response.ok) {
+      const text = await response.text().catch(() => "");
+      throw new Error(text || `Power Automate ${action} failed with ${response.status}.`);
+    }
 
+    return response;
+  }
+
+  function isNoResponseError(error) {
+    return /NoResponse/i.test(String(error && error.message ? error.message : error));
+  }
+
+  function valueFromRow(row, keys) {
+    for (const key of keys) {
+      if (row && Object.prototype.hasOwnProperty.call(row, key)) {
+        return row[key];
+      }
+    }
+    return "";
+  }
+
+  function normalizeRemoteRecord(row) {
+    return {
+      rowId: valueFromRow(row, ["RowId", "rowId", "ROWID", "ROWID", "Row_x0020_Id"]),
+      id: valueFromRow(row, ["RowId", "rowId", "ROWID", "ROWID", "Row_x0020_Id"]),
+      no: valueFromRow(row, ["No.", "No", "NO", "no", "No_x002e_"]),
+      season: valueFromRow(row, ["SEASON", "season"]),
+      category: valueFromRow(row, ["CATEGORY", "category"]),
+      protoStage: valueFromRow(
+        row,
+        ["PROTO STAGE", "PROTO\n STAGE", "protoStage", "PROTO_x0020_STAGE", "PROTO_x000a__x0020_STAGE"],
+      ),
+      style: valueFromRow(row, ["STYLE", "style"]),
+      constructionCode: valueFromRow(
+        row,
+        ["CONSTRUCTION CODE", "CONSTRUCTION\n CODE", "constructionCode", "CONSTRUCTION_x0020_CODE"],
+      ),
+      typeCode: valueFromRow(row, ["TYPE", "typeCode"]),
+      modification: valueFromRow(
+        row,
+        [
+          "Construction Modification",
+          "Construction \nModification",
+          "constructionModification",
+          "modification",
+          "Construction_x0020_Modification",
+        ],
+      ),
+      remark: valueFromRow(row, ["REMARK", "remark"]),
+      fgQty: valueFromRow(row, ["FG Qty", "fgQty", "FG_x0020_Qty"]),
+    };
+  }
+
+  function extractRemoteRows(payload) {
+    if (typeof payload === "string") {
+      try {
+        return extractRemoteRows(JSON.parse(payload));
+      } catch (error) {
+        return [];
+      }
+    }
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+    if (payload && Array.isArray(payload.value)) {
+      return payload.value;
+    }
+    if (payload && Array.isArray(payload.rows)) {
+      return payload.rows;
+    }
+    if (payload && payload.body && Array.isArray(payload.body.value)) {
+      return payload.body.value;
+    }
+    if (payload && payload.body && Array.isArray(payload.body.rows)) {
+      return payload.body.rows;
+    }
+    if (payload && payload.body && typeof payload.body === "string") {
+      return extractRemoteRows(payload.body);
+    }
+    if (payload && payload.data) {
+      return extractRemoteRows(payload.data);
+    }
+    if (payload && payload.result) {
+      return extractRemoteRows(payload.result);
+    }
+    return [];
+  }
+
+  function applySavedRecord(nextRecords, enriched, recordIndex) {
     if (recordIndex >= 0) {
       nextRecords[recordIndex] = enriched;
     } else {
@@ -783,20 +1049,199 @@
     persistRecords();
     closeDialog();
     render();
+    window.setTimeout(() => {
+      refreshFromLatestSeed({ silent: true });
+    }, 1500);
   }
 
-  function deleteRecord(recordId) {
+  function applyDeletedRecord(recordId) {
+    state.records = state.records.filter((item) => item.id !== recordId);
+    persistRecords();
+    render();
+    window.setTimeout(() => {
+      refreshFromLatestSeed({ silent: true });
+    }, 1500);
+  }
+
+  async function fetchLatestSeedData(options = {}) {
+    const allowSeedFallback = options.allowSeedFallback !== false;
+    try {
+      const remoteResponse = await window.fetch(FETCH_DFM_CHART_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: "{}",
+        cache: "no-store",
+      });
+      if (remoteResponse.ok) {
+        const remotePayload = await remoteResponse.json().catch(() => null);
+        const remoteRows = extractRemoteRows(remotePayload);
+        if (remoteRows.length || !allowSeedFallback) {
+          return {
+            meta: {
+              sourceFile: "Power Automate Fetch DFM chart",
+              recordCount: remoteRows.length,
+            },
+            records: remoteRows.map(normalizeRemoteRecord),
+          };
+        }
+      }
+    } catch (error) {
+      console.error("Power Automate fetch failed, falling back to seed file", error);
+    }
+
+    if (!allowSeedFallback) {
+      throw new Error("Live Excel fetch returned no records.");
+    }
+
+    const response = await window.fetch(`./seed-data.js?t=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`Latest seed fetch failed with ${response.status}.`);
+    }
+
+    const scriptText = await response.text();
+    const match = scriptText.match(/window\.DFM_SEED_DATA\s*=\s*(.*);\s*$/s);
+    if (!match) {
+      throw new Error("Latest seed payload could not be parsed.");
+    }
+
+    return JSON.parse(match[1]);
+  }
+
+  async function refreshFromLatestSeed(options = {}) {
+    try {
+      const latestSeed = await fetchLatestSeedData();
+      state.records = normalizeRecords(reconcileStoredRecords(state.records, latestSeed.records || []));
+      persistRecords();
+      if (options.render !== false) {
+        render();
+      }
+    } catch (error) {
+      if (!options.silent) {
+        console.error("Failed to refresh latest seed data", error);
+      }
+    }
+  }
+
+  async function hardRefreshFromLatestSeed(options = {}) {
+    try {
+      setFormBusy(true);
+      const latestSeed = await fetchLatestSeedData({ allowSeedFallback: false });
+      state.records = normalizeRecords(latestSeed.records || []);
+      persistRecords();
+      render();
+    } catch (error) {
+      console.error("Failed to replace records from latest Excel-backed source", error);
+      if (!options.silent) {
+        window.alert(`Unable to refresh the latest Excel data.\n${error.message}`);
+      }
+    } finally {
+      setFormBusy(false);
+    }
+  }
+
+  async function saveRecord(event) {
+    if (!elements.form) {
+      return;
+    }
+    event.preventDefault();
+    if (state.isSaving) {
+      return;
+    }
+    const formData = new FormData(elements.form);
+    const currentRecord = state.records.find((record) => record.id === state.editingId) || null;
+    const constructionCode = cleanText(formData.get("constructionCode"));
+    const draft = normalizeRecord(
+      {
+        id: state.editingId || nextRowId(),
+        no: currentRecord?.no || "",
+        sourceRow: currentRecord?.sourceRow || null,
+        season: formData.get("season"),
+        category: formData.get("category"),
+        protoStage: formData.get("protoStage"),
+        style: formData.get("style"),
+        constructionCode,
+        typeCode: currentRecord?.typeCode || constructionCode,
+        modification: currentRecord?.modification || "",
+        remark: formData.get("remark"),
+        fgQty: formData.get("fgQty"),
+      },
+      0,
+    );
+
+    const enriched = enrichRecordFromCatalog(draft);
+    const nextRecords = state.records.slice();
+    const recordIndex = nextRecords.findIndex((record) => record.id === enriched.id);
+    const existingRecord = recordIndex >= 0 ? nextRecords[recordIndex] : null;
+    const flowAction = recordIndex >= 0 ? "update" : "add";
+
+    try {
+      setFormBusy(true);
+      await callFlow(flowAction, buildFlowPayload(enriched, flowAction));
+      applySavedRecord(nextRecords, enriched, recordIndex);
+    } catch (error) {
+      const allowRetryAsAdd =
+        flowAction === "update" &&
+        existingRecord &&
+        (!existingRecord.sourceRow || /^row-\d+$/i.test(cleanText(existingRecord.id)));
+
+      if (allowRetryAsAdd && /No row was found|NotFound/i.test(error.message || "")) {
+        try {
+          await callFlow("add", buildFlowPayload(enriched, "add"));
+          applySavedRecord(nextRecords, enriched, recordIndex);
+          return;
+        } catch (retryError) {
+          if (isNoResponseError(retryError)) {
+            applySavedRecord(nextRecords, enriched, recordIndex);
+            return;
+          }
+          console.error(retryError);
+          window.alert(`Unable to save record to OneDrive Excel.\n${retryError.message}`);
+          return;
+        }
+      }
+
+      if (isNoResponseError(error)) {
+        applySavedRecord(nextRecords, enriched, recordIndex);
+        return;
+      }
+
+      console.error(error);
+      window.alert(`Unable to save record to OneDrive Excel.\n${error.message}`);
+    } finally {
+      setFormBusy(false);
+    }
+  }
+
+  async function deleteRecord(recordId) {
     const record = state.records.find((item) => item.id === recordId);
     if (!record) {
+      return;
+    }
+    if (state.isSaving) {
       return;
     }
     const confirmed = window.confirm(`Delete ${record.season} / ${record.style} / ${record.constructionCode}?`);
     if (!confirmed) {
       return;
     }
-    state.records = state.records.filter((item) => item.id !== recordId);
-    persistRecords();
-    render();
+
+    try {
+      setFormBusy(true);
+      const deletePayload = buildFlowPayload(record, "delete");
+      await callFlow("delete", deletePayload);
+      applyDeletedRecord(recordId);
+    } catch (error) {
+      if (isNoResponseError(error)) {
+        applyDeletedRecord(recordId);
+        return;
+      }
+      console.error(error);
+      window.alert(`Unable to delete record from OneDrive Excel.\n${error.message}`);
+    } finally {
+      setFormBusy(false);
+    }
   }
 
   function resetData() {
@@ -805,6 +1250,9 @@
       return;
     }
     window.localStorage.removeItem(STORAGE_KEY);
+    Object.keys(window.localStorage)
+      .filter((key) => key.startsWith(LEGACY_STORAGE_PREFIX))
+      .forEach((key) => window.localStorage.removeItem(key));
     state.records = normalizeRecords(seedData.records || []);
     render();
   }
@@ -848,6 +1296,11 @@
     if (elements.addRecordBtn) {
       elements.addRecordBtn.addEventListener("click", () => openDialog());
     }
+    if (elements.refreshDataBtn) {
+      elements.refreshDataBtn.addEventListener("click", () => {
+        hardRefreshFromLatestSeed();
+      });
+    }
     if (elements.resetDataBtn) {
       elements.resetDataBtn.addEventListener("click", resetData);
     }
@@ -885,5 +1338,8 @@
       render();
     }, state.rotation.seconds * 1000);
   }
+  state.seedRefreshTimerId = window.setInterval(() => {
+    refreshFromLatestSeed({ silent: true });
+  }, SEED_REFRESH_MS);
   render();
 })();
