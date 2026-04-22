@@ -166,6 +166,7 @@ def build_seed_data():
     style_fg_values = defaultdict(list)
     records = []
     for index, row in enumerate(collection_rows[1:], start=2):
+        excel_no = clean_text(row.get("A", ""))
         season = clean_text(row.get("B", ""))
         style = clean_text(row.get("E", ""))
         style_key = "{}__{}".format(season, style)
@@ -183,7 +184,8 @@ def build_seed_data():
 
         records.append(
             {
-                "id": "row-{}".format(index),
+                "id": excel_no or "row-{}".format(index),
+                "no": excel_no or "row-{}".format(index),
                 "sourceRow": index,
                 "season": season,
                 "category": clean_text(row.get("C", "")),
