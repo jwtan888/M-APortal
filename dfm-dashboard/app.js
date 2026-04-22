@@ -1,9 +1,7 @@
 (function () {
   const seedData = window.DFM_SEED_DATA || { records: [], warnings: [], defectCatalog: [] };
-  const seedVersion =
-    seedData.meta?.generatedAt ||
-    `${seedData.meta?.recordCount || 0}-${seedData.meta?.styleSeasonCount || 0}`;
-  const STORAGE_KEY = `dfm-dashboard-records-${seedVersion}`;
+  const STORAGE_KEY = "dfm-dashboard-records";
+  const LEGACY_STORAGE_PREFIX = "dfm-dashboard-records-";
   const FLOW_ENDPOINTS = {
     add: "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/d714eb96fab644dcbfd6c83f28d817b1/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=3MUeOaSxcE-uRBtPqIe2-_KlK8BZ96hU1e2tivu0HOQ",
     update:
@@ -61,7 +59,7 @@
   };
 
   function loadRecords() {
-    const raw = window.localStorage.getItem(STORAGE_KEY);
+    const raw = window.localStorage.getItem(STORAGE_KEY) || loadLegacyStoredRecords();
     if (!raw) {
       return normalizeRecords(seedData.records || []);
     }
@@ -76,6 +74,21 @@
 
   function persistRecords() {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state.records));
+  }
+
+  function loadLegacyStoredRecords() {
+    const keys = Object.keys(window.localStorage)
+      .filter((key) => key.startsWith(LEGACY_STORAGE_PREFIX))
+      .sort()
+      .reverse();
+
+    for (const key of keys) {
+      const value = window.localStorage.getItem(key);
+      if (value) {
+        return value;
+      }
+    }
+    return null;
   }
 
   function setFormBusy(isBusy) {
@@ -1000,6 +1013,9 @@
       return;
     }
     window.localStorage.removeItem(STORAGE_KEY);
+    Object.keys(window.localStorage)
+      .filter((key) => key.startsWith(LEGACY_STORAGE_PREFIX))
+      .forEach((key) => window.localStorage.removeItem(key));
     state.records = normalizeRecords(seedData.records || []);
     render();
   }
