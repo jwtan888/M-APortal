@@ -121,7 +121,8 @@
         : sum(defects.map((defect) => defect.intensity || 0));
 
     return {
-      id: cleanText(record.id) || "manual-" + (Date.now() + index),
+      id: cleanText(record.id || record.no || record["No."]) || "manual-" + (Date.now() + index),
+      no: cleanText(record.no || record["No."] || record.id) || "manual-" + (Date.now() + index),
       sourceRow: record.sourceRow || null,
       season,
       category: cleanText(record.category),
@@ -771,9 +772,10 @@
 
   function buildFlowPayload(record) {
     return {
-      "No.": record.id,
+      "No.": record.no || record.id,
       rowId: record.id,
       id: record.id,
+      no: record.no || record.id,
       sourceRow: record.sourceRow,
       season: record.season,
       category: record.category,
