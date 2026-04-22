@@ -67,7 +67,7 @@
     }
 
     try {
-      return normalizeRecords(JSON.parse(raw));
+      return normalizeRecords(reconcileStoredRecords(JSON.parse(raw), seedData.records || []));
     } catch (error) {
       console.error("Failed to parse saved data", error);
       return normalizeRecords(seedData.records || []);
@@ -105,10 +105,55 @@
       .filter((record) => !isBlankRecord(record));
   }
 
+  function reconcileStoredRecords(storedRecords, latestSeedRecords) {
+    const seedBySourceRow = new Map();
+    const seedByShape = new Map();
+
+    latestSeedRecords.forEach((record) => {
+      if (record.sourceRow !== null && record.sourceRow !== undefined) {
+        seedBySourceRow.set(String(record.sourceRow), record);
+      }
+      seedByShape.set(recordShapeKey(record), record);
+    });
+
+    return storedRecords.map((record) => {
+      const sourceRowKey =
+        record && record.sourceRow !== null && record.sourceRow !== undefined
+          ? String(record.sourceRow)
+          : "";
+      const seedMatch =
+        seedBySourceRow.get(sourceRowKey) ||
+        seedByShape.get(recordShapeKey(record)) ||
+        null;
+
+      if (!seedMatch) {
+        return record;
+      }
+
+      const currentId = cleanText(record.id || record.no || record["No."]);
+      const shouldRefreshKey = !currentId || /^row-\d+$/i.test(currentId);
+
+      if (!shouldRefreshKey) {
+        return {
+          ...record,
+          sourceRow: record.sourceRow ?? seedMatch.sourceRow,
+        };
+      }
+
+      return {
+        ...record,
+        id: seedMatch.id || record.id,
+        no: seedMatch.no || seedMatch["No."] || record.no,
+        sourceRow: seedMatch.sourceRow ?? record.sourceRow,
+      };
+    });
+  }
+
   function normalizeRecord(record, index) {
     const season = cleanText(record.season);
     const style = cleanText(record.style);
     const typeCode = cleanText(record.typeCode || record.constructionCode);
+    const normalizedNo = normalizeExcelNo(record.no || record["No."] || record.id, record.sourceRow);
     const detail = defectMap.get(typeCode) || {};
     const defects = Array.isArray(record.defects)
       ? record.defects
@@ -121,8 +166,8 @@
         : sum(defects.map((defect) => defect.intensity || 0));
 
     return {
-      id: cleanText(record.id || record.no || record["No."]) || "manual-" + (Date.now() + index),
-      no: cleanText(record.no || record["No."] || record.id) || "manual-" + (Date.now() + index),
+      id: cleanText(record.id || normalizedNo) || "manual-" + (Date.now() + index),
+      no: normalizedNo || "manual-" + (Date.now() + index),
       sourceRow: record.sourceRow || null,
       season,
       category: cleanText(record.category),
@@ -161,8 +206,36 @@
     return String(value || "").replace(/\s+/g, " ").trim();
   }
 
+  function normalizeExcelNo(value, sourceRow) {
+    const text = cleanText(value);
+    if (/^\d+$/.test(text)) {
+      return text;
+    }
+    const rowMatch = text.match(/^row-(\d+)$/i);
+    if (rowMatch) {
+      return String(Math.max(1, Number(rowMatch[1]) - 1));
+    }
+    if (sourceRow !== null && sourceRow !== undefined && String(sourceRow).trim() !== "") {
+      const sourceNumber = Number(sourceRow);
+      if (Number.isFinite(sourceNumber)) {
+        return String(Math.max(1, sourceNumber - 1));
+      }
+    }
+    return text;
+  }
+
   function buildStyleKey(season, style) {
     return cleanText(season) + "__" + cleanText(style);
+  }
+
+  function recordShapeKey(record) {
+    return [
+      cleanText(record?.season),
+      cleanText(record?.style),
+      cleanText(record?.constructionCode),
+      cleanText(record?.typeCode),
+      cleanText(record?.category),
+    ].join("__");
   }
 
   function numberOrNull(value) {
@@ -842,6 +915,7 @@
     const enriched = enrichRecordFromCatalog(draft);
     const nextRecords = state.records.slice();
     const recordIndex = nextRecords.findIndex((record) => record.id === enriched.id);
+    const existingRecord = recordIndex >= 0 ? nextRecords[recordIndex] : null;
     const flowAction = recordIndex >= 0 ? "update" : "add";
 
     try {
@@ -865,6 +939,27 @@
       closeDialog();
       render();
     } catch (error) {
+      const allowRetryAsAdd =
+        flowAction === "update" &&
+        existingRecord &&
+        (!existingRecord.sourceRow || /^row-\d+$/i.test(cleanText(existingRecord.id)));
+
+      if (allowRetryAsAdd && /No row was found|NotFound/i.test(error.message || "")) {
+        try {
+          await callFlow("add", buildFlowPayload(enriched));
+          nextRecords[recordIndex] = enriched;
+          state.records = normalizeRecords(nextRecords);
+          persistRecords();
+          closeDialog();
+          render();
+          return;
+        } catch (retryError) {
+          console.error(retryError);
+          window.alert(`Unable to save record to OneDrive Excel.\n${retryError.message}`);
+          return;
+        }
+      }
+
       console.error(error);
       window.alert(`Unable to save record to OneDrive Excel.\n${error.message}`);
     } finally {
