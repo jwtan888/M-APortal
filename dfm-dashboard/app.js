@@ -149,6 +149,20 @@
       if (!shouldRefreshKey) {
         return {
           ...record,
+          typeCode: seedMatch.typeCode || record.typeCode,
+          modification: seedMatch.modification || record.modification,
+          feature: seedMatch.feature || record.feature,
+          description: seedMatch.description || record.description,
+          productClass: seedMatch.productClass || record.productClass,
+          defects: seedMatch.defects || record.defects,
+          defectCount:
+            typeof seedMatch.defectCount === "number" ? seedMatch.defectCount : record.defectCount,
+          totalIntensity:
+            typeof seedMatch.totalIntensity === "number" ? seedMatch.totalIntensity : record.totalIntensity,
+          fgQty:
+            record.fgQty === null || record.fgQty === undefined
+              ? (seedMatch.fgQty ?? record.fgQty)
+              : record.fgQty,
           sourceRow: record.sourceRow ?? seedMatch.sourceRow,
         };
       }
@@ -157,6 +171,20 @@
         ...record,
         id: seedMatch.id || record.id,
         no: seedMatch.no || seedMatch["No."] || record.no,
+        typeCode: seedMatch.typeCode || record.typeCode,
+        modification: seedMatch.modification || record.modification,
+        feature: seedMatch.feature || record.feature,
+        description: seedMatch.description || record.description,
+        productClass: seedMatch.productClass || record.productClass,
+        defects: seedMatch.defects || record.defects,
+        defectCount:
+          typeof seedMatch.defectCount === "number" ? seedMatch.defectCount : record.defectCount,
+        totalIntensity:
+          typeof seedMatch.totalIntensity === "number" ? seedMatch.totalIntensity : record.totalIntensity,
+        fgQty:
+          record.fgQty === null || record.fgQty === undefined
+            ? (seedMatch.fgQty ?? record.fgQty)
+            : record.fgQty,
         sourceRow: seedMatch.sourceRow ?? record.sourceRow,
       };
     });

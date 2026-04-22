@@ -795,6 +795,10 @@ textarea {
     padding: 0.7rem;
   }
 
+  .dashboard {
+    gap: 0.8rem;
+  }
+
   .panel,
   .hero,
   .kpi-card {
@@ -809,12 +813,14 @@ textarea {
     width: 100%;
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.3rem;
+    padding: 0.25rem;
   }
 
   .nav-tab {
     text-align: center;
-    padding: 0.75rem 0.6rem;
-    font-size: 0.92rem;
+    padding: 0.72rem 0.45rem;
+    font-size: 0.86rem;
   }
 
   .hero {
@@ -862,6 +868,67 @@ textarea {
     padding: 0.9rem;
   }
 
+  .kpi-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.7rem;
+  }
+
+  .kpi-card {
+    padding: 0.9rem;
+  }
+
+  .kpi-value {
+    font-size: 1.9rem;
+  }
+
+  .panel-heading {
+    gap: 0.35rem;
+    margin-bottom: 0.75rem;
+  }
+
+  .panel-note {
+    font-size: 0.82rem;
+  }
+
+  .donut-layout {
+    gap: 0.8rem;
+  }
+
+  .donut-card {
+    width: 210px;
+    height: 210px;
+  }
+
+  .donut-total {
+    font-size: 1.55rem;
+  }
+
+  .legend-row {
+    padding: 0.5rem 0.6rem;
+    gap: 0.45rem;
+  }
+
+  .legend-label,
+  .legend-value,
+  .record-meta,
+  .style-meta,
+  .code-meta {
+    font-size: 0.86rem;
+  }
+
+  .metric-tile {
+    padding: 0.7rem 0.75rem;
+  }
+
+  .metric-tile-value,
+  .stack-value {
+    font-size: 1.45rem;
+  }
+
+  .bar-track {
+    height: 0.78rem;
+  }
+
   .row-actions {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -896,5 +963,29 @@ textarea {
   .record-form select,
   .record-form textarea {
     min-height: 2.9rem;
+  }
+}
+
+@media (max-width: 520px) {
+  .topbar-title {
+    font-size: 1.9rem;
+  }
+
+  .kpi-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-title {
+    font-size: 1.95rem;
+  }
+
+  .donut-card {
+    width: 186px;
+    height: 186px;
+  }
+
+  .dialog {
+    width: calc(100vw - 0.6rem);
+    margin: auto 0.3rem;
   }
 }
