@@ -127,12 +127,12 @@
         <header class="mb-4 rounded-[var(--radius-lg)] border overflow-hidden" style="box-shadow:var(--shadow-md)">
             <!-- Top row: logo + title -->
             <div class="flex items-center gap-4 px-5 pt-4 pb-3" style="background:rgba(255,255,255,0.92);backdrop-filter:blur(20px)">
-                <div class="flex-shrink-0 flex items-center justify-center" style="height:48px;min-width:48px">
+                <div class="flex-shrink-0 flex items-center justify-center" style="height:38px;min-width:38px">
                     <img src="logo.png" alt="M&A Logo" id="headerLogo"
-                        style="height:48px;width:auto;object-fit:contain;display:block"
+                        style="height:38px;width:auto;object-fit:contain;display:block"
                         onerror="this.style.display='none';document.getElementById('logoFallback').style.display='flex'">
-                    <div id="logoFallback" style="display:none;height:48px;width:48px;background:var(--accent);border-radius:12px;align-items:center;justify-content:center">
-                        <span style="color:#fff;font-size:18px;font-weight:900;letter-spacing:-1px">M&A</span>
+                    <div id="logoFallback" style="display:none;height:38px;width:38px;background:var(--accent);border-radius:10px;align-items:center;justify-content:center">
+                        <span style="color:#fff;font-size:13px;font-weight:900;letter-spacing:-1px">M&A</span>
                     </div>
                 </div>
                 <div class="min-w-0">
@@ -784,8 +784,10 @@
                     </select>
                     <p id="machineModelLabel" class="text-[11px] text-slate-500 font-mono mt-1 mb-1 col-span-full"></p>
                     <input type="text" id="fName" placeholder="File Name / Style" class="p-2 border rounded text-sm">
-                    <input type="number" id="sTime" placeholder="Time (min)" class="p-2 border rounded text-sm">
-                    <button onclick="addEntry()" id="submitBtn" class="bg-blue-600 text-white font-bold py-2 rounded hover:bg-blue-700 shadow-md active:scale-95 transition-all">SAVE LOG</button>
+                    <input type="text" id="fSize" placeholder="Size (e.g. XL, 10)" class="p-2 border rounded text-sm">
+                    <input type="text" id="sTime" placeholder="Start Date m/d/yyyy hh:mm" class="p-2 border rounded text-sm">
+                    <input type="text" id="eTime" placeholder="Complete Date m/d/yyyy hh:mm" class="p-2 border rounded text-sm">
+                    <button onclick="addEntry()" id="submitBtn" class="bg-blue-600 text-white font-bold py-2 rounded hover:bg-blue-700 shadow-md active:scale-95 transition-all col-span-full md:col-span-1">+ ADD ROW</button>
                 </div>
                 <!-- FIX 3: Removed opacity:0 from CSS. Image is visible by default. onerror/onload handlers updated to be safe. -->
                 <div class="mt-4 flex flex-col justify-center items-center bg-slate-50 border rounded-lg p-4 h-48 relative overflow-hidden">
@@ -823,7 +825,7 @@
                 <div class="mt-4 overflow-x-auto border rounded-lg">
                     <table class="w-full text-left">
                         <thead class="bg-slate-100 border-b text-[11px] uppercase tracking-wider text-slate-500 font-bold">
-                            <tr><th class="p-3">Timestamp</th><th class="p-3">Machine</th><th class="p-3">PIC</th><th class="p-3">Type</th><th class="p-3">File Name</th><th class="p-3">Time</th></tr>
+                            <tr><th class="p-3">Id</th><th class="p-3">Machine ID</th><th class="p-3">PIC</th><th class="p-3">Type</th><th class="p-3">File Name</th><th class="p-3">Size</th><th class="p-3 date-col">Start Date</th><th class="p-3 date-col">Complete Date</th></tr>
                         </thead>
                         <tbody id="logTable" class="text-slate-700"></tbody>
                     </table>
@@ -1186,6 +1188,7 @@
                             <th class="p-3 text-blue-600">Template No.</th>
                             <th class="p-3">Machine No.</th>
                             <th class="p-3">Month</th>
+                            <th class="p-3 date-col">Start Date</th>
                             <th class="p-3 text-emerald-600 date-col">Complete Date</th>
                             <th class="p-3">M&A PIC</th>
                             <th class="p-3">Remark</th>
@@ -1543,7 +1546,7 @@
         const laserAddURL    = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/2a02949cf9a843cc820034dbbb755a78/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=N6f1qPIEpKL-Kyns7-9t1l2KTKpCD90gM--hO5AojvU";
         const laserUpdateURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/b95ddd4d695844b296c4917272ae318e/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=dp4tjbo8kArWt-sSfRcj3nmBCxL_o42g1mAtqIcTE_c";
         // Patch Update Flow — Key Column: No., Key Value: triggerBody()?['No.']
-        const patchUpdateURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/e1bf8a45c8894344bc743b822de40c56/triggers/manual/paths/invoke?api-version=1";
+        const patchUpdateURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/e1bf8a45c8894344bc743b822de40c56/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=ATz8Xs7oGW1wvccItJQLzH-bAB04jiHi9GgTN9Ld0Kg";
         // Attendance Fetch Flow URL
         // Consumption: use fetch URL for listing, same URL handles add if flow is configured for both
         const consumptionFetchURL  = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/aee706c4629744f5b5aa3a756eec00f2/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=tU6CI-qPTZJIJgVViryVC6t9oxk4_gL8xvDgB4e_jwE";
@@ -1655,15 +1658,19 @@
         // Exact-match first, fuzzy fallback. Never use this for M&A PIC — use getMAPic() instead.
         function getVal(item, keys) {
             if (!item) return "---";
-            // Pass 1: exact match (case-insensitive, trimmed)
+            // Decode PA-encoded column names: _x002e_ → . , _x0026_ → &, _x002f_ → /
+            const decode = s => s.replace(/_x002e_/gi,'.').replace(/_x0026_/gi,'&').replace(/_x002f_/gi,'/').replace(/\n/g,' ').trim();
+            // Pass 1: exact match (case-insensitive, trimmed) — also try decoded key
             for (let k of Object.keys(item)) {
+                const kd = decode(k);
                 for (let target of keys) {
+                    if (kd.toLowerCase() === target.trim().toLowerCase()) return item[k];
                     if (k.trim().toLowerCase() === target.trim().toLowerCase()) return item[k];
                 }
             }
             // Pass 2: fuzzy contains match (original behaviour fallback)
             for (let k of Object.keys(item)) {
-                let cleanK = k.toLowerCase().replace(/[^a-z0-9]/g, '');
+                let cleanK = decode(k).toLowerCase().replace(/[^a-z0-9]/g, '');
                 for (let target of keys) {
                     if (cleanK.includes(target.toLowerCase().replace(/[^a-z0-9]/g, ''))) return item[k];
                 }
@@ -1677,16 +1684,19 @@
         // "M&A PIC" only, and never falls through to a bare "PIC" match.
         function getMAPic(item) {
             if (!item) return "---";
+            const decode = s => s.replace(/_x002e_/gi,'.').replace(/_x0026_/gi,'&').replace(/_x002f_/gi,'/').replace(/\n/g,' ').trim();
             const candidates = ['M&A PIC', 'MA PIC', 'M & A PIC', 'M&APIC', 'MAPIC'];
-            // Pass 1: exact match
+            // Pass 1: exact match (also try decoded key)
             for (let k of Object.keys(item)) {
+                const kd = decode(k);
                 for (let c of candidates) {
+                    if (kd.toLowerCase() === c.toLowerCase()) return item[k];
                     if (k.trim().toLowerCase() === c.toLowerCase()) return item[k];
                 }
             }
             // Pass 2: key must START WITH "m" and contain "pic" but NOT contain "consumption"
             for (let k of Object.keys(item)) {
-                const kl = k.trim().toLowerCase();
+                const kl = decode(k).toLowerCase();
                 if (kl.includes('pic') && !kl.includes('consumption') && (kl.startsWith('m&a') || kl.startsWith('ma') || kl.startsWith('m &'))) {
                     return item[k];
                 }
@@ -2688,7 +2698,7 @@
                 const _ctrl_ll = new AbortController(); const _t_ll = setTimeout(() => _ctrl_ll.abort(), 20000);
                 const r = await fetch(fetchURL + "&cb=" + Date.now(), { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}), signal: _ctrl_ll.signal }); clearTimeout(_t_ll);
                 const d = await r.json();
-                allRecords = d.map(i => ({ timestamp: convertExcelDate(getVal(i, ['Timestamp'])), machine: getVal(i, ['Machine']), pic: getVal(i, ['PIC']), type: getVal(i, ['Type']), file: getVal(i, ['FileName']), time: getVal(i, ['Time']), raw: getVal(i, ['Timestamp']) })).sort((a,b)=>b.raw - a.raw);
+                allRecords = d.map(i => ({ id: getVal(i, ['Id','ID','id']), machine: getVal(i, ['Machine ID','MachineID','Machine']), pic: getVal(i, ['PIC']), type: getVal(i, ['Type']), file: getVal(i, ['File Name','FileName']), size: getVal(i, ['Size']), startDate: convertExcelDate(getVal(i, ['Start Date m/d/yyyy','Start Date','StartDate'])), completeDate: convertExcelDate(getVal(i, ['Complete Date m/d/yyyy','Complete Date','CompleteDate'])), raw: getVal(i, ['Id','ID','id']) })).sort((a,b)=> Number(b.raw||0) - Number(a.raw||0));
                 if(st) { st.innerText = "LIVE: " + new Date().toLocaleTimeString(); st.classList.remove('sync-active'); }
                 applyFilters();
             } catch (e) {}
@@ -2696,25 +2706,48 @@
 
         async function addEntry() {
             if(!currentUser) return alert("Authentication Required:\nPlease login first.");
-            const m = document.getElementById('mID').value, p = currentUser, f = document.getElementById('fName').value, t = document.getElementById('sTime').value, isN = document.getElementById('requestToggle').checked;
-            if(!f || !t) return alert("Missing Info: Please enter File Name and Time.");
+            const machineVal = document.getElementById('mID').value;
+            const fileVal    = document.getElementById('fName').value.trim();
+            const sizeVal    = document.getElementById('fSize').value.trim();
+            const startVal   = document.getElementById('sTime').value.trim();
+            const endVal     = document.getElementById('eTime').value.trim();
+            const isNewReq   = document.getElementById('requestToggle').checked;
+            if(!fileVal) return alert("Missing Info: Please enter a File Name.");
             const b = document.getElementById('submitBtn'); b.innerText = "Saving..."; b.disabled = true;
             try {
-                const now = new Date();
-                const localStr = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-${String(now.getDate()).padStart(2,'0')} ${String(now.getHours()).padStart(2,'0')}:${String(now.getMinutes()).padStart(2,'0')}`;
                 const res = await fetch(postURL, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({timestamp: localStr, machine: m, pic: p, type: isN ? "NEW REQUEST" : "SETTING", file: f, time: t})
+                    body: JSON.stringify({
+                        'Machine ID': machineVal,
+                        machine:      machineVal,
+                        pic:          currentUser,
+                        PIC:          currentUser,
+                        type:         isNewReq ? "NEW REQUEST" : "SETTING",
+                        Type:         isNewReq ? "NEW REQUEST" : "SETTING",
+                        'File Name':  fileVal,
+                        file:         fileVal,
+                        'Size':       sizeVal,
+                        size:         sizeVal,
+                        'Start Date m/d/yyyy':    startVal,
+                        startDate:                startVal,
+                        'Complete Date m/d/yyyy': endVal,
+                        completeDate:             endVal
+                    })
                 });
-                if(res.ok) { document.getElementById('fName').value = ''; document.getElementById('sTime').value = ''; refreshLiveLogs(); }
-                else {
+                if(res.ok) {
+                    document.getElementById('fName').value = '';
+                    document.getElementById('fSize').value = '';
+                    document.getElementById('sTime').value = '';
+                    document.getElementById('eTime').value = '';
+                    refreshLiveLogs();
+                } else {
                     const errText = await res.text();
                     alert(`Save failed (HTTP ${res.status}): ${errText.substring(0,300)}`);
                 }
             } catch(e) {
                 alert(`Network error: ${e.message}`);
-            } finally { b.innerText = "SAVE LOG"; b.disabled = false; }
+            } finally { b.innerText = "+ ADD ROW"; b.disabled = false; }
         }
 
         let curF = 'ALL';
@@ -2736,8 +2769,8 @@
 
         function applyFilters() {
             const s = document.getElementById('fileSearch').value.toLowerCase();
-            const filtered = allRecords.filter(r => (curF==='ALL' || r.machine===curF) && (String(r.file).toLowerCase().includes(s) || String(r.pic).toLowerCase().includes(s)));
-            document.getElementById('logTable').innerHTML = filtered.map(r => `<tr class="border-b"><td class="p-3 text-slate-400 font-mono">${r.timestamp}</td><td class="p-3 font-bold text-blue-700">${r.machine}</td><td class="p-3">${r.pic}</td><td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${r.type === 'NEW REQUEST' ? 'bg-orange-100 text-orange-600' : 'bg-blue-100 text-blue-600'}">${r.type}</span></td><td class="p-3">${r.file}</td><td class="p-3 font-bold">${r.time} min</td></tr>`).join('');
+            const filtered = allRecords.filter(r => (curF==='ALL' || r.machine===curF) && (String(r.file).toLowerCase().includes(s) || String(r.pic).toLowerCase().includes(s) || String(r.size||'').toLowerCase().includes(s)));
+            document.getElementById('logTable').innerHTML = filtered.map(r => `<tr class="border-b hover:bg-slate-50"><td class="p-3 text-slate-400 font-mono text-[10px]">${r.id||'—'}</td><td class="p-3 font-bold text-blue-700">${r.machine}</td><td class="p-3">${r.pic}</td><td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${r.type==='NEW REQUEST'?'bg-orange-100 text-orange-600':'bg-blue-100 text-blue-600'}">${r.type}</span></td><td class="p-3">${r.file}</td><td class="p-3">${r.size||'—'}</td><td class="p-3 date-cell text-slate-500">${r.startDate||'—'}</td><td class="p-3 date-cell ${r.completeDate&&r.completeDate!=='---'?'text-emerald-600 font-bold':'text-slate-400'}">${r.completeDate&&r.completeDate!=='---'?r.completeDate:'—'}</td></tr>`).join('');
         }
 
         function drillDown(query) { switchTab('template'); document.getElementById('tempSearch').value = query; applyTempFilters(true); }
@@ -4059,7 +4092,7 @@
                 }
                 if (!patchSearchQuery) return true;;
                 const vals = [
-                    getVal(r,['No.','No']), getVal(r,['Season']),
+                    getVal(r,['No_x002e_','No.','No']), getVal(r,['Season']),
                     getVal(r,['Style Number','StyleNumber']), getVal(r,['Category']),
                     getVal(r,['Job Number','JobNo']), getVal(r,['BDD PIC','BDDPIC']),
                     getVal(r,['Patch Item','PatchItem']), getVal(r,['Patch Description','PatchDescription']),
@@ -4070,8 +4103,8 @@
                 return vals.some(v => String(v).toLowerCase().includes(patchSearchQuery));
             }).sort((a, b) => {
                 // Higher No. on top (latest entries first)
-                const na = parseInt(getVal(a,['No.','No'])) || 0;
-                const nb = parseInt(getVal(b,['No.','No'])) || 0;
+                const na = parseInt(a['No_x002e_'] || a['No.'] || getVal(a,['No.','No'])) || 0;
+                const nb = parseInt(b['No_x002e_'] || b['No.'] || getVal(b,['No.','No'])) || 0;
                 return nb - na;
             });
 
@@ -4093,7 +4126,7 @@
             tbody.innerHTML = rows.map(i => {
                 const rawID     = i['__PowerAppsId__'] || i['Id'] || i['ID'];
                 const sid       = String(rawID).replace(/['"]/g,'');
-                const noKey     = getVal(i,['No.','No']);
+                const noKey     = i['No_x002e_'] || i['No.'] || getVal(i,['No.','No']);
                 const season    = getVal(i,['Season']);
                 const style     = getVal(i,['Style Number','StyleNumber']);
                 const category  = getVal(i,['Category']);
@@ -4111,6 +4144,7 @@
                 const tmplNo    = getVal(i,['Template No.','TemplateNo','Template No']);
                 const machine   = getVal(i,['Machine No.','Machine No','MachineNo','Machine']);
                 const month     = getVal(i,['Month']);
+                const startDate = convertExcelDate(getVal(i,['Start Date m/d/yyyy','Start Date','StartDate']));
                 const complete  = convertExcelDate(getVal(i,['Complete Date m/d/yyyy','Complete Date','CompleteDate']));
                 const pic       = getMAPic(i);
                 const remark    = getVal(i,['Remark','Remarks']);
@@ -4128,9 +4162,9 @@
                     <td class="p-3">${isGavinP ? `<input id="patch-jobno-${sid}" class="manual-input" style="width:80px" value="${jobNo!=='---'?jobNo:''}" placeholder="Job No.">` : `<span class="text-[10px]">${jobNo}</span>`}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-bddpic-${sid}" class="manual-input" style="width:70px" value="${bddPic!=='---'?bddPic:''}" placeholder="BDD PIC">` : `<span class="text-[10px]">${bddPic}</span>`}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-patchitem-${sid}" class="manual-input" style="width:100px" value="${patchItem!=='---'?patchItem:''}" placeholder="Patch Item">` : `<span class="text-[10px]">${patchItem}</span>`}</td>
-                    <td class="p-3" style="min-width:200px">${isGavinP ? `<input id="patch-patchdesc-${sid}" class="manual-input" style="width:180px" value="${patchDesc!=='---'?patchDesc:''}" placeholder="Patch Description">` : `<span class="text-[10px] whitespace-normal break-words">${patchDesc}</span>`}</td>
+                    <td class="p-3" style="min-width:280px;max-width:320px">${isGavinP ? `<input id="patch-patchdesc-${sid}" class="manual-input" style="width:260px" value="${patchDesc!=='---'?patchDesc:''}" placeholder="Patch Description">` : `<span class="text-[10px]">${patchDesc}</span>`}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-fabitem-${sid}" class="manual-input" style="width:100px" value="${fabItem!=='---'?fabItem:''}" placeholder="Fabric Item">` : `<span class="text-[10px]">${fabItem}</span>`}</td>
-                    <td class="p-3" style="min-width:180px">${isGavinP ? `<input id="patch-fabdesc-${sid}" class="manual-input" style="width:160px" value="${fabDesc!=='---'?fabDesc:''}" placeholder="Fabric Desc">` : `<span class="text-[10px] whitespace-normal break-words">${fabDesc}</span>`}</td>
+                    <td class="p-3" style="min-width:260px;max-width:300px">${isGavinP ? `<input id="patch-fabdesc-${sid}" class="manual-input" style="width:240px" value="${fabDesc!=='---'?fabDesc:''}" placeholder="Fabric Desc">` : `<span class="text-[10px]">${fabDesc}</span>`}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-threadtype-${sid}" class="manual-input" style="width:80px" value="${threadType!=='---'?threadType:''}" placeholder="Thread Type">` : `<span class="text-[10px]">${threadType}</span>`}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-threadcolor-${sid}" class="manual-input" style="width:80px" value="${threadColor!=='---'?threadColor:''}" placeholder="Thread Color">` : `<span class="text-[10px]">${threadColor}</span>`}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-sampletype-${sid}" class="manual-input" style="width:90px" value="${sampleType!=='---'?sampleType:''}" placeholder="Sample Type">` : `<span class="text-[10px]">${sampleType}</span>`}</td>
@@ -4139,6 +4173,7 @@
                     <td class="p-3 font-bold text-blue-700">${canEdit ? `<input id="patch-tmplno-${sid}" class="manual-input admin-input" value="${tmplNo==='---'?'':tmplNo}" placeholder="e.g. S0019C">` : tmplNo}</td>
                     <td class="p-3">${canEdit ? `<input id="patch-machine-${sid}" class="manual-input admin-input" value="${machine==='---'?'':machine}" placeholder="e.g. AQM0001">` : machine}</td>
                     <td class="p-3 text-[10px]">${month}</td>
+                    <td class="p-3 date-cell">${canEdit ? `<input id="patch-startdate-${sid}" class="manual-input admin-input" value="${startDate!=='---'?startDate:''}" placeholder="m/d/yyyy hh:mm">` : (startDate!=='---'?startDate:'---')}</td>
                     <td class="p-3 date-cell ${isDone?'text-emerald-600 font-bold':'text-slate-400'}">${canEdit ? `<input id="patch-complete-${sid}" class="manual-input admin-input" value="${isDone?complete:''}" placeholder="m/d/yyyy hh:mm">` : (isDone?complete:'---')}</td>
                     <td class="p-3 font-bold ${(!pic||pic==='---')?'text-blue-600':''}">${picDisplay}</td>
                     <td class="p-3">${canEdit ? `<input id="patch-remark-${sid}" class="manual-input" value="${remark==='---'?'':remark}" placeholder="Remark">` : `<span class="italic text-slate-400 text-[10px]">${remark}</span>`}</td>
@@ -4150,67 +4185,66 @@
         async function savePatchRow(sid, event) {
             if (!currentUser) return alert('Please login first.');
             const btn = event.target; btn.innerText = 'SAVING...'; btn.disabled = true;
-            const completeVal  = document.getElementById(`patch-complete-${sid}`)?.value.trim() || '';
-            const remarkVal    = document.getElementById(`patch-remark-${sid}`)?.value.trim() || '';
-            const receivedVal  = document.getElementById(`patch-received-${sid}`)?.value.trim() || '';
-            const tmplNoVal    = document.getElementById(`patch-tmplno-${sid}`)?.value.trim() || '';
-            const machineVal   = document.getElementById(`patch-machine-${sid}`)?.value.trim() || '';
-            // Gavin-only editable fields
-            const seasonVal    = document.getElementById(`patch-season-${sid}`)?.value.trim() || '';
-            const styleVal     = document.getElementById(`patch-style-${sid}`)?.value.trim() || '';
-            const categoryVal  = document.getElementById(`patch-category-${sid}`)?.value.trim() || '';
-            const jobNoVal     = document.getElementById(`patch-jobno-${sid}`)?.value.trim() || '';
-            const bddPicVal    = document.getElementById(`patch-bddpic-${sid}`)?.value.trim() || '';
-            const patchItemVal = document.getElementById(`patch-patchitem-${sid}`)?.value.trim() || '';
-            const patchDescVal = document.getElementById(`patch-patchdesc-${sid}`)?.value.trim() || '';
-            const fabItemVal   = document.getElementById(`patch-fabitem-${sid}`)?.value.trim() || '';
-            const fabDescVal   = document.getElementById(`patch-fabdesc-${sid}`)?.value.trim() || '';
-            const threadTypeV  = document.getElementById(`patch-threadtype-${sid}`)?.value.trim() || '';
-            const threadColorV = document.getElementById(`patch-threadcolor-${sid}`)?.value.trim() || '';
-            const sampleTypeV  = document.getElementById(`patch-sampletype-${sid}`)?.value.trim() || '';
-            const qtyVal       = document.getElementById(`patch-qty-${sid}`)?.value.trim() || '';
-            // Find existing row to preserve PIC and No. key
+
             const existingRow = allPatchRows.find(r => String(r['__PowerAppsId__']||r['Id']||r['ID']) === String(sid));
-            const existingPic = existingRow ? getMAPic(existingRow) : '---';
-            const picToSave   = (!existingPic || existingPic === '---') ? currentUser : existingPic;
-            // Key field: "No." — read from existing row data (integer row key in Excel table)
-            const noKey = existingRow ? String(getVal(existingRow, ['No.','No','NUMBER']) || '').trim() : '';
-            if (!noKey) {
-                btn.innerText = 'ERROR'; btn.disabled = false;
-                alert('Could not find the row key (No.) — try refreshing the page.');
-                return;
-            }
-            const payload = {
-                'No.':        noKey,
-                recordID:     noKey,
-                // Gavin-only: editable master data fields
-                'Season':                    seasonVal    || getVal(existingRow, ['Season'])    || '',
-                'Style Number':              styleVal     || getVal(existingRow, ['Style Number','StyleNumber']) || '',
-                'Category':                  categoryVal  || getVal(existingRow, ['Category'])  || '',
-                'Job Number':                jobNoVal     || getVal(existingRow, ['Job Number','JobNo']) || '',
-                'BDD PIC':                   bddPicVal    || getVal(existingRow, ['BDD PIC','BDDPIC']) || '',
-                'Patch Item':                patchItemVal || getVal(existingRow, ['Patch Item','PatchItem']) || '',
-                'Patch Description':         patchDescVal || getVal(existingRow, ['Patch Description','PatchDescription']) || '',
-                'Fabric Item':               fabItemVal   || getVal(existingRow, ['Fabric Item','FabricItem']) || '',
-                'Fabric Description':        fabDescVal   || getVal(existingRow, ['Fabric Description','FabricDescription']) || '',
-                'Thread Type':               threadTypeV  || getVal(existingRow, ['Thread Type','ThreadType']) || '',
-                'Thread Color':              threadColorV || getVal(existingRow, ['Thread Color','ThreadColor']) || '',
-                'Type Of Sample':            sampleTypeV  || getVal(existingRow, ['Type Of Sample','TypeOfSample']) || '',
-                'Quantity':                  qtyVal       || getVal(existingRow, ['Quantity','Qty']) || '',
-                // Operational fields (editable by PIC)
-                'Patch & Fabric Receive Date & Time m/d/yyyy': toExcelDateFormat(receivedVal),
-                'Template No.': tmplNoVal,
-                'Machine No.':  machineVal,
-                'Complete Date m/d/yyyy': toExcelDateFormat(completeVal),
-                completeDate: toExcelDateFormat(completeVal),
-                'M&A PIC':    picToSave,
-                pic:          picToSave,
-                'Remark':     remarkVal,
-                remark:       remarkVal
+            if (!existingRow) { btn.innerText = 'ERROR'; btn.disabled = false; alert('Row not found — try refreshing.'); return; }
+
+            // Key field: PA encodes "No." as "No_x002e_" in JSON responses — check both
+            const noKey = String(
+                existingRow['No_x002e_'] ||
+                existingRow['No.'] ||
+                existingRow['No'] ||
+                getVal(existingRow, ['No.','No','NUMBER','No_x002e_']) ||
+                ''
+            ).trim();
+            if (!noKey) { btn.innerText = 'ERROR'; btn.disabled = false; alert('Could not find row key (No.) — try refreshing.'); return; }
+
+            // Read input value — returns null if element doesn't exist (field not editable for this user)
+            const inp = id => { const el = document.getElementById(id); return el ? el.value.trim() : null; };
+
+            // Collect only fields where an input EXISTS and value differs from stored value
+            const payload = { 'No.': noKey };
+
+            const addIfChanged = (inputId, excelColName, existingKeys) => {
+                const inputVal = inp(inputId);
+                if (inputVal === null) return; // field not rendered for this user, skip
+                const existingRaw = getVal(existingRow, existingKeys);
+                const existingClean = (existingRaw && existingRaw !== '---') ? existingRaw.toString().trim() : '';
+                // Always include if user has the input (even unchanged) so PA updates correctly
+                payload[excelColName] = inputVal;
             };
+
+            // Gavin-only fields
+            addIfChanged(`patch-season-${sid}`,      'Season',            ['Season']);
+            addIfChanged(`patch-style-${sid}`,       'Style Number',      ['Style Number','StyleNumber']);
+            addIfChanged(`patch-category-${sid}`,    'Category',          ['Category']);
+            addIfChanged(`patch-jobno-${sid}`,       'Job Number',        ['Job Number','JobNo','Job No']);
+            addIfChanged(`patch-bddpic-${sid}`,      'BDD PIC',           ['BDD PIC','BDDPIC','BDD']);
+            addIfChanged(`patch-patchitem-${sid}`,   'Patch Item',        ['Patch Item','PatchItem']);
+            addIfChanged(`patch-patchdesc-${sid}`,   'Patch Description', ['Patch Description','PatchDescription']);
+            addIfChanged(`patch-fabitem-${sid}`,     'Fabric Item',       ['Fabric Item','FabricItem']);
+            addIfChanged(`patch-fabdesc-${sid}`,     'Fabric Description',['Fabric Description','FabricDescription']);
+            addIfChanged(`patch-threadtype-${sid}`,  'Thread Type',       ['Thread Type','ThreadType']);
+            addIfChanged(`patch-threadcolor-${sid}`, 'Thread Color',      ['Thread Color','ThreadColor']);
+            addIfChanged(`patch-sampletype-${sid}`,  'Type Of Sample',    ['Type Of Sample','TypeOfSample']);
+            addIfChanged(`patch-qty-${sid}`,         'Quantity',          ['Quantity','Qty']);
+            // Editable by all PIC
+            addIfChanged(`patch-received-${sid}`,    'Patch & Fabric Receive Date & Time m/d/yyyy', ['Patch & Fabric Receive Date & Time m/d/yyyy','Patch & Fabric Receive Date']);
+            addIfChanged(`patch-tmplno-${sid}`,      'Template No.',      ['Template No.','TemplateNo','Template No']);
+            addIfChanged(`patch-machine-${sid}`,     'Machine No.',       ['Machine No.','Machine No','MachineNo','Machine']);
+            addIfChanged(`patch-startdate-${sid}`,   'Start Date m/d/yyyy',    ['Start Date m/d/yyyy','Start Date','StartDate']);
+            addIfChanged(`patch-complete-${sid}`,    'Complete Date m/d/yyyy', ['Complete Date m/d/yyyy','Complete Date','CompleteDate']);
+            addIfChanged(`patch-remark-${sid}`,      'Remark',            ['Remark','Remarks']);
+
+            // Always include M&A PIC
+            const existingPic = getMAPic(existingRow);
+            payload['M&A PIC'] = (!existingPic || existingPic === '---') ? currentUser : existingPic;
+
+            console.log('[PatchSave] Sending to PA:', JSON.stringify(payload, null, 2));
+
             try {
                 const ctrl = new AbortController();
-                const t = setTimeout(() => ctrl.abort(), 20000);
+                const t = setTimeout(() => ctrl.abort(), 25000);
                 const res = await fetch(patchUpdateURL, {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
@@ -4220,16 +4254,21 @@
                 clearTimeout(t);
                 if (res.ok) {
                     btn.innerText = 'SAVED ✓';
-                    refreshPatchData(true);
-                    setTimeout(() => { btn.innerText = 'SAVE'; btn.disabled = false; }, 2000);
+                    // Immediately patch local cache with what was saved
+                    Object.keys(payload).forEach(k => { if (k !== 'No.') existingRow[k] = payload[k]; });
+                    renderPatchTable();
+                    setTimeout(() => {
+                        refreshPatchData(true);
+                        btn.innerText = 'SAVE'; btn.disabled = false;
+                    }, 3000);
                 } else {
                     const txt = await res.text();
                     btn.innerText = 'ERROR'; btn.disabled = false;
-                    alert(`Save failed HTTP ${res.status}: ${txt.substring(0,200)}`);
+                    alert(`Save failed HTTP ${res.status}: ${txt.substring(0,300)}`);
                 }
             } catch(e) {
                 btn.innerText = 'ERROR'; btn.disabled = false;
-                alert(e.name === 'AbortError' ? 'Timed out — check Power Automate flow.' : e.message);
+                alert(e.name === 'AbortError' ? 'Timed out — check PA flow.' : e.message);
             }
         }
 
