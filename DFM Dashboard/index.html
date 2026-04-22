@@ -1,1 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DFM Dashboard</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body data-page="dashboard">
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1 class="topbar-title">DFM Dashboard</h1>
+        </div>
+        <nav class="nav-tabs">
+          <a class="nav-tab is-active" href="./index.html">Dashboard</a>
+          <a class="nav-tab" href="./data.html">Data Management</a>
+        </nav>
+      </header>
 
+      <main class="dashboard">
+        <section class="kpi-grid" id="kpi-grid"></section>
+
+        <section class="spotlight-grid">
+          <article class="panel panel--feature">
+            <div class="panel-heading">
+              <h2>Season</h2>
+              <span class="panel-note">Construction code share by season</span>
+            </div>
+            <div class="donut-layout">
+              <div class="donut-card">
+                <div id="season-donut" class="donut-chart"></div>
+                <div class="donut-center">
+                  <div class="mini-label">Total Code</div>
+                  <div id="season-donut-total" class="donut-total">0</div>
+                </div>
+              </div>
+              <div id="season-donut-legend" class="donut-legend"></div>
+            </div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-heading">
+              <h2>Category</h2>
+              <span class="panel-note">FG share by category</span>
+            </div>
+            <div id="category-bars" class="bar-list"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-heading">
+              <h2>Season Style Density</h2>
+              <span class="panel-note">How many styles each season carries</span>
+            </div>
+            <div id="season-tiles" class="metric-tiles"></div>
+          </article>
+        </section>
+
+        <section class="analytics-grid analytics-grid--dashboard">
+          <article class="panel">
+            <div class="panel-heading">
+              <h2>FG by Season</h2>
+              <span class="panel-note">Unique FG per season + style</span>
+            </div>
+            <div id="season-bars" class="bar-list"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-heading">
+              <h2>Construction Code Volume</h2>
+              <span class="panel-note">Most-used construction codes</span>
+            </div>
+            <div id="code-bars" class="bar-list"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-heading">
+              <h2>Modification Mix</h2>
+              <span class="panel-note">M versus Non-M rows</span>
+            </div>
+            <div id="mod-summary" class="stack-list"></div>
+          </article>
+        </section>
+
+        <section class="dual-grid">
+          <article class="panel">
+            <div class="panel-heading">
+              <h2>Modernization Highlights</h2>
+              <span class="panel-note">Top season + style groups by FG</span>
+            </div>
+            <div id="style-cards" class="style-cards"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-heading">
+              <h2>Construction Code Directory</h2>
+              <span class="panel-note">Included in the imported workbook</span>
+            </div>
+            <div id="code-directory" class="code-directory"></div>
+          </article>
+        </section>
+      </main>
+    </div>
+
+    <script src="./seed-data.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>

@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DFM Data Management</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body data-page="data">
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Garment Manufacturing</p>
+          <h1 class="topbar-title">DFM Data Management</h1>
+        </div>
+        <nav class="nav-tabs">
+          <a class="nav-tab" href="./index.html">Dashboard</a>
+          <a class="nav-tab is-active" href="./data.html">Data Management</a>
+        </nav>
+      </header>
+
+      <main class="dashboard">
+        <section class="hero hero--simple">
+          <div class="hero-copy-block">
+            <p class="eyebrow">Editable Source View</p>
+            <h2 class="hero-title">Manage DFM records and construction codes.</h2>
+          </div>
+          <div class="hero-actions">
+            <button id="add-record-btn" class="primary-btn">Add Record</button>
+            <button id="reset-data-btn" class="ghost-btn">Reset to Excel Seed</button>
+          </div>
+        </section>
+
+        <section class="panel filters-panel">
+          <div class="panel-heading">
+            <h2>Filters</h2>
+            <span id="filtered-summary" class="panel-note"></span>
+          </div>
+          <div class="filters">
+            <label>
+              Search
+              <input id="search-input" type="search" placeholder="Style, category, code, remark" />
+            </label>
+            <label>
+              Season
+              <select id="season-filter"></select>
+            </label>
+            <label>
+              Category
+              <select id="category-filter"></select>
+            </label>
+            <label>
+              Modification
+              <select id="modification-filter"></select>
+            </label>
+            <label class="checkbox">
+              <input id="defect-filter" type="checkbox" />
+              Show rows with mapped metadata only
+            </label>
+          </div>
+        </section>
+
+        <section class="panel">
+          <div class="panel-heading">
+            <h2>Editable Records</h2>
+            <span class="panel-note">Construction code must remain included</span>
+          </div>
+          <div id="record-cards" class="record-cards"></div>
+        </section>
+      </main>
+    </div>
+
+    <dialog id="record-dialog" class="dialog">
+      <form id="record-form" class="record-form" method="dialog">
+        <div class="dialog-heading">
+          <div>
+            <p class="eyebrow">Record Editor</p>
+            <h2 id="dialog-title">Add Record</h2>
+          </div>
+          <button id="close-dialog-btn" type="button" class="icon-btn" aria-label="Close">×</button>
+        </div>
+
+        <div class="form-grid">
+          <label>Season <input name="season" required /></label>
+          <label>Category <input name="category" required /></label>
+          <label>Proto Stage <input name="protoStage" /></label>
+          <label>Style <input name="style" required /></label>
+          <label>Construction Code <input name="constructionCode" required /></label>
+          <label>Type Code <input name="typeCode" required /></label>
+          <label>
+            Modification
+            <select name="modification">
+              <option value="">Select</option>
+              <option value="M">M</option>
+              <option value="Non-M">Non-M</option>
+            </select>
+          </label>
+          <label>FG Qty <input name="fgQty" type="number" min="0" step="1" required /></label>
+        </div>
+
+        <label class="textarea-label">
+          Remark
+          <textarea name="remark" rows="3" placeholder="Optional note"></textarea>
+        </label>
+
+        <p class="form-note">
+          Saving a row updates FG for all rows that share the same season + style key.
+        </p>
+
+        <div class="dialog-actions">
+          <button type="button" id="cancel-dialog-btn" class="ghost-btn">Cancel</button>
+          <button type="submit" class="primary-btn">Save Record</button>
+        </div>
+      </form>
+    </dialog>
+
+    <script src="./seed-data.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
