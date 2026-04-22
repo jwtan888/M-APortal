@@ -30,6 +30,9 @@
     modSummary: document.getElementById("mod-summary"),
     styleCards: document.getElementById("style-cards"),
     codeDirectory: document.getElementById("code-directory"),
+    syncSource: document.getElementById("sync-source"),
+    syncStatus: document.getElementById("sync-status"),
+    syncTime: document.getElementById("sync-time"),
     recordCards: document.getElementById("record-cards"),
     searchInput: document.getElementById("search-input"),
     seasonFilter: document.getElementById("season-filter"),
@@ -56,6 +59,9 @@
       tick: 0,
     },
     seedRefreshTimerId: null,
+    latestSource: "Seed file",
+    lastRefreshAt: null,
+    syncStatus: "Waiting for refresh",
     isSaving: false,
     filters: {
       search: "",
@@ -437,6 +443,18 @@
     return `${formatNumber(count)} ${count === 1 ? singular : plural}`;
   }
 
+  function formatRefreshTime(value) {
+    if (!value) {
+      return "Not yet";
+    }
+    return new Intl.DateTimeFormat("en-MY", {
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+      hour12: true,
+    }).format(new Date(value));
+  }
+
   function escapeHtml(value) {
     return String(value || "")
       .replace(/&/g, "&amp;")
@@ -657,6 +675,15 @@
       renderRecordCards(filteredRecords);
       if (elements.filteredSummary) {
         elements.filteredSummary.textContent = `${labelCount(filteredRecords.length, "construction row", "construction rows")} shown`;
+      }
+      if (elements.syncSource) {
+        elements.syncSource.textContent = `Data source: ${state.latestSource}`;
+      }
+      if (elements.syncStatus) {
+        elements.syncStatus.textContent = `Sync status: ${state.syncStatus}`;
+      }
+      if (elements.syncTime) {
+        elements.syncTime.textContent = `Last refreshed: ${formatRefreshTime(state.lastRefreshAt)}`;
       }
     }
   }
@@ -1251,11 +1278,15 @@
       const latestSeed = await fetchLatestSeedData();
       state.records = normalizeRecords(reconcileStoredRecords(state.records, latestSeed.records || []));
       state.records = normalizeRecords(mergeRemoteWithPending(state.records, state.records));
+      state.latestSource = latestSeed?.meta?.sourceFile || "Seed file";
+      state.lastRefreshAt = Date.now();
+      state.syncStatus = "Synced";
       persistRecords();
       if (options.render !== false) {
         render();
       }
     } catch (error) {
+      state.syncStatus = "Refresh failed";
       if (!options.silent) {
         console.error("Failed to refresh latest seed data", error);
       }
@@ -1265,6 +1296,8 @@
   async function hardRefreshFromLatestSeed(options = {}) {
     try {
       setFormBusy(true);
+      state.syncStatus = "Refreshing";
+      render();
       let latestSeed;
       try {
         latestSeed = await fetchLatestSeedData({ allowSeedFallback: false });
@@ -1277,6 +1310,9 @@
         const fallbackRecords = normalizeRecords(seedData.records || []);
         if (fallbackRecords.length) {
           state.records = fallbackRecords;
+          state.latestSource = "Seed file";
+          state.lastRefreshAt = Date.now();
+          state.syncStatus = "Seed fallback";
           persistRecords();
           render();
           return;
@@ -1284,10 +1320,14 @@
         throw new Error("No usable records were returned from live or seed data.");
       }
       state.records = mergedRecords;
+      state.latestSource = latestSeed?.meta?.sourceFile || "Live Excel fetch";
+      state.lastRefreshAt = Date.now();
+      state.syncStatus = "Synced";
       persistRecords();
       render();
     } catch (error) {
       console.error("Failed to replace records from latest Excel-backed source", error);
+      state.syncStatus = "Refresh failed";
       if (!options.silent) {
         window.alert(`Unable to refresh the latest Excel data.\n${error.message}`);
       }
