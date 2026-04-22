@@ -9,6 +9,7 @@
     delete:
       "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/52a76b61c7e84e09a8df6eee0ad2a029/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=QslAg0t1-QLN3UvBy_7jBzUaY7YxcfADrJIjm15i-rw",
   };
+  const SEED_REFRESH_MS = 15000;
   const defectMap = new Map((seedData.defectCatalog || []).map((item) => [item.code, item]));
   const page = document.body.dataset.page || "dashboard";
 
@@ -48,6 +49,7 @@
       timerId: null,
       tick: 0,
     },
+    seedRefreshTimerId: null,
     isSaving: false,
     filters: {
       search: "",
@@ -882,24 +884,23 @@
     };
   }
 
-  function buildFlowPayload(record) {
+  function buildFlowPayload(record, action) {
+    const noValue = record.no || record.id;
+    if (action === "delete") {
+      return {
+        "No.": noValue,
+      };
+    }
+
     return {
-      "No.": record.no || record.id,
-      rowId: record.id,
-      id: record.id,
-      no: record.no || record.id,
-      sourceRow: record.sourceRow,
+      "No.": noValue,
       season: record.season,
       category: record.category,
       protoStage: record.protoStage,
       style: record.style,
-      styleKey: record.styleKey,
       constructionCode: record.constructionCode,
-      typeCode: record.typeCode,
-      modification: record.modification,
       remark: record.remark,
       fgQty: record.fgQty,
-      fgAnchor: record.fgAnchor,
     };
   }
 
@@ -923,6 +924,36 @@
     }
 
     return response;
+  }
+
+  async function fetchLatestSeedData() {
+    const response = await window.fetch(`./seed-data.js?t=${Date.now()}`, { cache: "no-store" });
+    if (!response.ok) {
+      throw new Error(`Latest seed fetch failed with ${response.status}.`);
+    }
+
+    const scriptText = await response.text();
+    const match = scriptText.match(/window\.DFM_SEED_DATA\s*=\s*(.*);\s*$/s);
+    if (!match) {
+      throw new Error("Latest seed payload could not be parsed.");
+    }
+
+    return JSON.parse(match[1]);
+  }
+
+  async function refreshFromLatestSeed(options = {}) {
+    try {
+      const latestSeed = await fetchLatestSeedData();
+      state.records = normalizeRecords(reconcileStoredRecords(state.records, latestSeed.records || []));
+      persistRecords();
+      if (options.render !== false) {
+        render();
+      }
+    } catch (error) {
+      if (!options.silent) {
+        console.error("Failed to refresh latest seed data", error);
+      }
+    }
   }
 
   async function saveRecord(event) {
@@ -962,7 +993,7 @@
 
     try {
       setFormBusy(true);
-      await callFlow(flowAction, buildFlowPayload(enriched));
+      await callFlow(flowAction, buildFlowPayload(enriched, flowAction));
 
       if (recordIndex >= 0) {
         nextRecords[recordIndex] = enriched;
@@ -980,6 +1011,9 @@
       persistRecords();
       closeDialog();
       render();
+      window.setTimeout(() => {
+        refreshFromLatestSeed({ silent: true });
+      }, 1500);
     } catch (error) {
       const allowRetryAsAdd =
         flowAction === "update" &&
@@ -988,12 +1022,15 @@
 
       if (allowRetryAsAdd && /No row was found|NotFound/i.test(error.message || "")) {
         try {
-          await callFlow("add", buildFlowPayload(enriched));
+          await callFlow("add", buildFlowPayload(enriched, "add"));
           nextRecords[recordIndex] = enriched;
           state.records = normalizeRecords(nextRecords);
           persistRecords();
           closeDialog();
           render();
+          window.setTimeout(() => {
+            refreshFromLatestSeed({ silent: true });
+          }, 1500);
           return;
         } catch (retryError) {
           console.error(retryError);
@@ -1024,10 +1061,13 @@
 
     try {
       setFormBusy(true);
-      await callFlow("delete", buildFlowPayload(record));
+      await callFlow("delete", buildFlowPayload(record, "delete"));
       state.records = state.records.filter((item) => item.id !== recordId);
       persistRecords();
       render();
+      window.setTimeout(() => {
+        refreshFromLatestSeed({ silent: true });
+      }, 1500);
     } catch (error) {
       console.error(error);
       window.alert(`Unable to delete record from OneDrive Excel.\n${error.message}`);
@@ -1125,5 +1165,8 @@
       render();
     }, state.rotation.seconds * 1000);
   }
+  state.seedRefreshTimerId = window.setInterval(() => {
+    refreshFromLatestSeed({ silent: true });
+  }, SEED_REFRESH_MS);
   render();
 })();
