@@ -930,6 +930,41 @@
     return response;
   }
 
+  function isNoResponseError(error) {
+    return /NoResponse/i.test(String(error && error.message ? error.message : error));
+  }
+
+  function applySavedRecord(nextRecords, enriched, recordIndex) {
+    if (recordIndex >= 0) {
+      nextRecords[recordIndex] = enriched;
+    } else {
+      nextRecords.unshift(enriched);
+    }
+
+    nextRecords.forEach((record) => {
+      if (record.styleKey === enriched.styleKey) {
+        record.fgQty = enriched.fgQty;
+      }
+    });
+
+    state.records = normalizeRecords(nextRecords);
+    persistRecords();
+    closeDialog();
+    render();
+    window.setTimeout(() => {
+      refreshFromLatestSeed({ silent: true });
+    }, 1500);
+  }
+
+  function applyDeletedRecord(recordId) {
+    state.records = state.records.filter((item) => item.id !== recordId);
+    persistRecords();
+    render();
+    window.setTimeout(() => {
+      refreshFromLatestSeed({ silent: true });
+    }, 1500);
+  }
+
   async function fetchLatestSeedData() {
     const response = await window.fetch(`./seed-data.js?t=${Date.now()}`, { cache: "no-store" });
     if (!response.ok) {
@@ -998,26 +1033,7 @@
     try {
       setFormBusy(true);
       await callFlow(flowAction, buildFlowPayload(enriched, flowAction));
-
-      if (recordIndex >= 0) {
-        nextRecords[recordIndex] = enriched;
-      } else {
-        nextRecords.unshift(enriched);
-      }
-
-      nextRecords.forEach((record) => {
-        if (record.styleKey === enriched.styleKey) {
-          record.fgQty = enriched.fgQty;
-        }
-      });
-
-      state.records = normalizeRecords(nextRecords);
-      persistRecords();
-      closeDialog();
-      render();
-      window.setTimeout(() => {
-        refreshFromLatestSeed({ silent: true });
-      }, 1500);
+      applySavedRecord(nextRecords, enriched, recordIndex);
     } catch (error) {
       const allowRetryAsAdd =
         flowAction === "update" &&
@@ -1027,20 +1043,22 @@
       if (allowRetryAsAdd && /No row was found|NotFound/i.test(error.message || "")) {
         try {
           await callFlow("add", buildFlowPayload(enriched, "add"));
-          nextRecords[recordIndex] = enriched;
-          state.records = normalizeRecords(nextRecords);
-          persistRecords();
-          closeDialog();
-          render();
-          window.setTimeout(() => {
-            refreshFromLatestSeed({ silent: true });
-          }, 1500);
+          applySavedRecord(nextRecords, enriched, recordIndex);
           return;
         } catch (retryError) {
+          if (isNoResponseError(retryError)) {
+            applySavedRecord(nextRecords, enriched, recordIndex);
+            return;
+          }
           console.error(retryError);
           window.alert(`Unable to save record to OneDrive Excel.\n${retryError.message}`);
           return;
         }
+      }
+
+      if (isNoResponseError(error)) {
+        applySavedRecord(nextRecords, enriched, recordIndex);
+        return;
       }
 
       console.error(error);
@@ -1067,13 +1085,12 @@
       setFormBusy(true);
       const deletePayload = buildFlowPayload(record, "delete");
       await callFlow("delete", deletePayload);
-      state.records = state.records.filter((item) => item.id !== recordId);
-      persistRecords();
-      render();
-      window.setTimeout(() => {
-        refreshFromLatestSeed({ silent: true });
-      }, 1500);
+      applyDeletedRecord(recordId);
     } catch (error) {
+      if (isNoResponseError(error)) {
+        applyDeletedRecord(recordId);
+        return;
+      }
       console.error(error);
       window.alert(`Unable to delete record from OneDrive Excel.\n${error.message}`);
     } finally {
