@@ -1,1 +1,37 @@
+name: Sync DFM From OneDrive
 
+on:
+  repository_dispatch:
+    types: [sync_onedrive]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Download latest Excel from OneDrive
+        run: curl -L "${{ secrets.ONEDRIVE_XLSX_URL }}" -o "DFM 2026.xlsx"
+
+      - name: Rebuild dashboard seed data
+        run: python3 scripts/build_seed_data.py
+
+      - name: Commit updated dashboard data
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add "DFM 2026.xlsx" seed-data.js
+          git diff --cached --quiet && exit 0
+          git commit -m "Sync DFM data from OneDrive"
+          git push
