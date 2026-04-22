@@ -9,6 +9,8 @@
     delete:
       "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/52a76b61c7e84e09a8df6eee0ad2a029/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=QslAg0t1-QLN3UvBy_7jBzUaY7YxcfADrJIjm15i-rw",
   };
+  const FETCH_DFM_CHART_URL =
+    "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/777a0c72d4684db68a350132def5fb37/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=4SIb_3sXxhX4jOUhTA6L8-kcgrr37CcmJwDkloVPDv4";
   const SEED_REFRESH_MS = 15000;
   const defectMap = new Map((seedData.defectCatalog || []).map((item) => [item.code, item]));
   const page = document.body.dataset.page || "dashboard";
@@ -208,7 +210,7 @@
     const season = cleanText(record.season);
     const style = cleanText(record.style);
     const typeCode = cleanText(record.typeCode || record.constructionCode);
-    const normalizedNo = normalizeExcelNo(record.no || record["No."] || record.id, record.sourceRow);
+    const normalizedNo = normalizeExcelNo(record.no || record["No."], record.sourceRow);
     const normalizedRowId =
       cleanText(record.rowId || record.RowId || record.id) || `dfm-${Date.now() + index}`;
     const detail = defectMap.get(typeCode) || {};
@@ -950,6 +952,54 @@
     return /NoResponse/i.test(String(error && error.message ? error.message : error));
   }
 
+  function valueFromRow(row, keys) {
+    for (const key of keys) {
+      if (row && Object.prototype.hasOwnProperty.call(row, key)) {
+        return row[key];
+      }
+    }
+    return "";
+  }
+
+  function normalizeRemoteRecord(row) {
+    return {
+      rowId: valueFromRow(row, ["RowId", "rowId", "ROWID"]),
+      id: valueFromRow(row, ["RowId", "rowId", "ROWID"]),
+      no: valueFromRow(row, ["No.", "No", "NO", "no"]),
+      season: valueFromRow(row, ["SEASON", "season"]),
+      category: valueFromRow(row, ["CATEGORY", "category"]),
+      protoStage: valueFromRow(row, ["PROTO STAGE", "PROTO\n STAGE", "protoStage"]),
+      style: valueFromRow(row, ["STYLE", "style"]),
+      constructionCode: valueFromRow(row, ["CONSTRUCTION CODE", "CONSTRUCTION\n CODE", "constructionCode"]),
+      typeCode: valueFromRow(row, ["TYPE", "typeCode"]),
+      modification: valueFromRow(
+        row,
+        ["Construction Modification", "Construction \nModification", "constructionModification", "modification"],
+      ),
+      remark: valueFromRow(row, ["REMARK", "remark"]),
+      fgQty: valueFromRow(row, ["FG Qty", "fgQty"]),
+    };
+  }
+
+  function extractRemoteRows(payload) {
+    if (Array.isArray(payload)) {
+      return payload;
+    }
+    if (payload && Array.isArray(payload.value)) {
+      return payload.value;
+    }
+    if (payload && Array.isArray(payload.rows)) {
+      return payload.rows;
+    }
+    if (payload && payload.body && Array.isArray(payload.body.value)) {
+      return payload.body.value;
+    }
+    if (payload && payload.body && Array.isArray(payload.body.rows)) {
+      return payload.body.rows;
+    }
+    return [];
+  }
+
   function applySavedRecord(nextRecords, enriched, recordIndex) {
     if (recordIndex >= 0) {
       nextRecords[recordIndex] = enriched;
@@ -982,6 +1032,32 @@
   }
 
   async function fetchLatestSeedData() {
+    try {
+      const remoteResponse = await window.fetch(FETCH_DFM_CHART_URL, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: "{}",
+        cache: "no-store",
+      });
+      if (remoteResponse.ok) {
+        const remotePayload = await remoteResponse.json().catch(() => null);
+        const remoteRows = extractRemoteRows(remotePayload);
+        if (remoteRows.length) {
+          return {
+            meta: {
+              sourceFile: "Power Automate Fetch DFM chart",
+              recordCount: remoteRows.length,
+            },
+            records: remoteRows.map(normalizeRemoteRecord),
+          };
+        }
+      }
+    } catch (error) {
+      console.error("Power Automate fetch failed, falling back to seed file", error);
+    }
+
     const response = await window.fetch(`./seed-data.js?t=${Date.now()}`, { cache: "no-store" });
     if (!response.ok) {
       throw new Error(`Latest seed fetch failed with ${response.status}.`);
