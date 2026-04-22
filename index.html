@@ -111,6 +111,54 @@
         .scrollbar-none::-webkit-scrollbar { display: none; }
         .scrollbar-none { -ms-overflow-style: none; scrollbar-width: none; }
 
+        /* Shared search/table shells for Template/Patch/Consumption/Support/Down Filling */
+        .portal-filter-shell {
+            width: 100%;
+        }
+        .portal-filter-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+        }
+        .portal-filter-controls {
+            flex: 1 1 auto;
+            display: flex;
+            gap: 0.5rem;
+            min-width: 0;
+        }
+        .portal-filter-controls > input {
+            min-width: 0;
+        }
+        .portal-table-shell {
+            width: 100%;
+            overflow-x: auto;
+        }
+        .portal-wide-table {
+            width: 100%;
+            min-width: 1400px;
+            table-layout: auto;
+        }
+        .portal-data-table tbody td,
+        .portal-data-table tbody td span,
+        .portal-data-table tbody td div,
+        .portal-data-table tbody td p {
+            font-size: 12px !important;
+            line-height: 1.45 !important;
+        }
+        .portal-data-table tbody td .manual-input,
+        .portal-data-table tbody td .qty-input {
+            font-size: 10px !important;
+        }
+        .down-layer-col {
+            min-width: 240px !important;
+            white-space: nowrap;
+        }
+        .down-layer-cell {
+            min-width: 240px;
+            white-space: nowrap;
+        }
+
         /* Section dividers */
         .section-divider span { background: var(--bg); }
 
@@ -119,6 +167,13 @@
             .manual-input { width: 80px !important; font-size: 9px !important; }
             .qty-input { width: 48px !important; }
             nav button { padding: 7px 10px !important; font-size: 9px !important; }
+            .portal-filter-row {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            .portal-filter-controls {
+                flex-wrap: wrap;
+            }
         }
     </style>
 </head>
@@ -274,7 +329,7 @@
 
             <!-- Laser Table -->
             <div id="laserTableWrapper" class="bg-white rounded-xl shadow-sm border overflow-x-auto">
-                <table class="w-full text-left min-w-[1400px]">
+                <table class="w-full portal-data-table text-left min-w-[1400px]">
                     <thead class="bg-slate-100 border-b text-[11px] uppercase tracking-wider text-slate-500 font-bold">
                         <tr>
                             <th class="p-3">ID</th>
@@ -724,9 +779,9 @@
         </div>
 
         <div id="content-template" class="tab-content">
-            <div class="bg-white p-6 rounded-xl border shadow-sm mb-4">
-                <div class="flex justify-between items-center gap-4">
-                    <div class="flex-1 flex gap-2">
+            <div class="portal-filter-shell bg-white p-6 rounded-xl border shadow-sm mb-4">
+                <div class="portal-filter-row">
+                    <div class="portal-filter-controls">
                         <input type="text" id="tempSearch" oninput="applyTempFilters(false)" placeholder="Search Style, PIC, Section, Month..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                         <select id="tempMonthFilter" onchange="applyTempFilters(false)" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 shrink-0"><option value="">All Months</option></select>
                         <button onclick="clearTempSearch()" class="bg-slate-200 text-slate-600 px-4 rounded-lg text-xs font-bold hover:bg-slate-300 shrink-0">CLEAR</button>
@@ -734,8 +789,8 @@
                     <div id="tempSyncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Syncing...</div>
                 </div>
             </div>
-            <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
-                <table class="w-full text-left min-w-[1400px]">
+            <div class="portal-table-shell bg-white rounded-xl shadow-sm border">
+                <table class="portal-wide-table portal-data-table text-left">
                     <thead class="bg-slate-100 border-b text-[11px] uppercase tracking-wider text-slate-500 font-bold">
                         <tr>
                             <th class="p-3">ID</th>
@@ -829,7 +884,7 @@
                 </div>
                 <input type="text" id="fileSearch" oninput="applyFilters()" placeholder="Search logs..." class="w-full p-2.5 border rounded-lg bg-slate-50 text-sm outline-none focus:ring-2 focus:ring-blue-500">
                 <div class="mt-4 overflow-x-auto border rounded-lg">
-                    <table class="w-full text-left">
+                    <table class="w-full portal-data-table text-left">
                         <thead class="bg-slate-100 border-b text-[11px] uppercase tracking-wider text-slate-500 font-bold">
                             <tr><th class="p-3">Id</th><th class="p-3">Machine ID</th><th class="p-3">PIC</th><th class="p-3">Type</th><th class="p-3">File Name</th><th class="p-3">Size</th><th class="p-3 date-col">Start Date</th><th class="p-3 date-col">Complete Date</th></tr>
                         </thead>
@@ -838,7 +893,6 @@
                 </div>
             </div>
         </div>
-    </div>
 
         <!-- Consumption Tab -->
         <div id="content-consumption" class="tab-content hidden">
@@ -897,9 +951,9 @@
             </div>
 
             <!-- Search + Filter -->
-            <div class="bg-white p-6 rounded-xl border shadow-sm mb-4">
-                <div class="flex justify-between items-center gap-4">
-                    <div class="flex-1 flex gap-2">
+            <div class="portal-filter-shell bg-white p-6 rounded-xl border shadow-sm mb-4">
+                <div class="portal-filter-row">
+                    <div class="portal-filter-controls">
                         <input type="text" id="consumptionSearch" oninput="applyConsumptionFilter()" placeholder="Search Style, Season, PIC, Request Type..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                         <select id="consumptionMonthFilter" onchange="applyConsumptionFilter()" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 shrink-0"><option value="">All Months</option></select>
                         <button onclick="clearConsumptionSearch()" class="bg-slate-200 text-slate-600 px-4 rounded-lg text-xs font-bold hover:bg-slate-300 shrink-0">CLEAR</button>
@@ -909,8 +963,8 @@
             </div>
 
             <!-- Table -->
-            <div id="consumptionTableWrapper" class="bg-white rounded-xl shadow-sm border overflow-x-auto">
-                <table class="w-full text-left min-w-[1400px]">
+            <div id="consumptionTableWrapper" class="portal-table-shell bg-white rounded-xl shadow-sm border">
+                <table class="portal-wide-table portal-data-table text-left">
                     <thead class="bg-slate-100 border-b text-[11px] uppercase tracking-wider text-slate-500 font-bold">
                         <tr>
                             <th class="p-3">ID</th>
@@ -938,9 +992,9 @@
         <!-- M&A Support Tab -->
         <div id="content-support" class="tab-content hidden">
             <!-- Search bar -->
-            <div class="bg-white p-6 rounded-xl border shadow-sm mb-4">
-                <div class="flex justify-between items-center gap-4">
-                    <div class="flex-1 flex gap-2">
+            <div class="portal-filter-shell bg-white p-6 rounded-xl border shadow-sm mb-4">
+                <div class="portal-filter-row">
+                    <div class="portal-filter-controls">
                         <input type="text" id="supportSearch" oninput="applySupport()" placeholder="Search Name, Machine, Type, PIC, Month..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                         <select id="supportMonthFilter" onchange="applySupport()" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 shrink-0"><option value="">All Months</option></select>
                         <button onclick="clearSupportSearch()" class="bg-slate-200 text-slate-600 px-4 rounded-lg text-xs font-bold hover:bg-slate-300 shrink-0">CLEAR</button>
@@ -948,28 +1002,9 @@
                     <span id="supportSyncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest shrink-0">Syncing...</span>
                 </div>
             </div>
-            <!-- Stats -->
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-4">
-                <div class="bg-white p-5 rounded-xl border shadow-sm">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Requests</p>
-                    <h2 id="sup-total" class="text-3xl font-bold text-slate-800">0</h2>
-                </div>
-                <div class="bg-white p-5 rounded-xl border shadow-sm">
-                    <p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Repair & Support</p>
-                    <h2 id="sup-repair" class="text-3xl font-bold text-blue-600">0</h2>
-                </div>
-                <div class="bg-white p-5 rounded-xl border shadow-sm">
-                    <p class="text-[10px] font-bold text-amber-400 uppercase tracking-widest mb-1">Avg Elapsed (hrs)</p>
-                    <h2 id="sup-avg" class="text-3xl font-bold text-amber-600">0</h2>
-                </div>
-                <div class="bg-white p-5 rounded-xl border shadow-sm">
-                    <p class="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-1">Completed</p>
-                    <h2 id="sup-done" class="text-3xl font-bold text-emerald-600">0</h2>
-                </div>
-            </div>
             <!-- Table -->
-            <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
-                <table class="w-full text-left min-w-[1400px]">
+            <div class="portal-table-shell bg-white rounded-xl shadow-sm border">
+                <table class="portal-wide-table portal-data-table text-left">
                     <thead class="bg-slate-100 border-b text-[11px] uppercase tracking-wider text-slate-500 font-bold">
                         <tr>
                             <th class="p-3 date-col">Received Time</th>
@@ -1108,9 +1143,9 @@
             </div>
 
             <!-- Search Bar -->
-            <div class="bg-white p-6 rounded-xl border shadow-sm mb-4">
-                <div class="flex justify-between items-center gap-4">
-                    <div class="flex-1 flex gap-2">
+            <div class="portal-filter-shell bg-white p-6 rounded-xl border shadow-sm mb-4">
+                <div class="portal-filter-row">
+                    <div class="portal-filter-controls">
                         <input type="text" id="downSearch" oninput="applyDownFilter()" placeholder="Search Style, Season, Job, PIC, Category..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                         <select id="downMonthFilter" onchange="applyDownFilter()" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 shrink-0"><option value="">All Months</option></select>
                         <button onclick="clearDownSearch()" class="bg-slate-200 text-slate-600 px-4 rounded-lg text-xs font-bold hover:bg-slate-300 shrink-0">CLEAR</button>
@@ -1119,8 +1154,8 @@
             </div>
 
             <!-- Table -->
-            <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
-                <table class="w-full text-left min-w-[1400px]">
+            <div class="portal-table-shell bg-white rounded-xl shadow-sm border">
+                <table class="portal-wide-table portal-data-table text-left">
                     <thead class="bg-slate-100 border-b text-[11px] uppercase tracking-wider text-slate-500 font-bold">
                         <tr>
                             <th class="p-3">ID</th>
@@ -1130,7 +1165,7 @@
                             <th class="p-3">Category</th>
                             <th class="p-3">Style</th>
                             <th class="p-3">Job</th>
-                            <th class="p-3" style="min-width:160px">Layer</th>
+                            <th class="p-3 down-layer-col">Layer</th>
                             <th class="p-3 text-emerald-600">Fabric Item</th>
                             <th class="p-3 text-purple-600">Down Bag Item</th>
                             <th class="p-3 text-amber-600">Down Item</th>
@@ -1160,9 +1195,9 @@
         <!-- ═══════ PATCH PAGE ════════════════════════════════════ -->
         <div id="content-patch" class="tab-content hidden">
             <!-- Search + Sync -->
-            <div class="bg-white p-6 rounded-xl border shadow-sm mb-4">
-                <div class="flex justify-between items-center gap-4">
-                    <div class="flex-1 flex gap-2">
+            <div class="portal-filter-shell bg-white p-6 rounded-xl border shadow-sm mb-4">
+                <div class="portal-filter-row">
+                    <div class="portal-filter-controls">
                         <input type="text" id="patchSearch" oninput="applyPatchFilter()" placeholder="Search Style, Season, Template No, Machine, PIC, Month..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                         <select id="patchMonthFilter" onchange="applyPatchFilter()" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 shrink-0"><option value="">All Months</option></select>
                         <button onclick="clearPatchSearch()" class="bg-slate-200 text-slate-600 px-4 rounded-lg text-xs font-bold hover:bg-slate-300 shrink-0">CLEAR</button>
@@ -1172,8 +1207,8 @@
             </div>
 
             <!-- Table -->
-            <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
-                <table class="w-full text-left min-w-[1400px]">
+            <div class="portal-table-shell bg-white rounded-xl shadow-sm border">
+                <table class="portal-wide-table portal-data-table text-left">
                     <thead class="bg-slate-100 border-b text-[11px] uppercase tracking-wider text-slate-500 font-bold">
                         <tr>
                             <th class="p-3">No.</th>
@@ -1611,8 +1646,73 @@
         // picList MUST exactly match the Data Validation list in Excel column Q (M&A PIC).
         // If you add/remove names here, also update the Excel Data Validation list to match.
         const picList = ["Keat", "Viki", "Ram", "James", "Mark"];
+        const TEMPLATE_PENDING_KEY = 'ma_template_pending_updates';
+        const TEMPLATE_PENDING_TTL = 10 * 60 * 1000;
+        const TEMPLATE_PENDING_MERGE_MS = 45 * 1000;
         let allRecords = [], allTemplates = [], currentUser = sessionStorage.getItem('ma_session_user') || null;
         let sectionChart = null, volumeChart = null;
+
+        function loadTemplatePendingUpdates() {
+            try {
+                return JSON.parse(localStorage.getItem(TEMPLATE_PENDING_KEY) || '{}');
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function persistTemplatePendingUpdates(map) {
+            localStorage.setItem(TEMPLATE_PENDING_KEY, JSON.stringify(map));
+        }
+
+        function pruneTemplatePendingUpdates(map) {
+            const now = Date.now();
+            Object.keys(map).forEach(id => {
+                const ts = Number(map[id]?.updatedAt || 0);
+                if (!ts || now - ts > TEMPLATE_PENDING_TTL) delete map[id];
+            });
+            return map;
+        }
+
+        function stageTemplatePendingUpdate(id, patch) {
+            const pending = pruneTemplatePendingUpdates(loadTemplatePendingUpdates());
+            pending[String(id)] = { ...patch, updatedAt: Date.now() };
+            persistTemplatePendingUpdates(pending);
+        }
+
+        function templatePatchMatchesRow(row, patch) {
+            if (!row || !patch) return false;
+            const keys = [
+                'requestor', 'section', 'style', 'jobNo', 'protoStage', 'templateType',
+                'description', 'machine', 'requiredDate', 'templateNo', 'pic',
+                'completeDateDisplay', 'qty', 'complexity', 'dfm', 'remark', 'status'
+            ];
+            return keys.every(key => {
+                if (!(key in patch)) return true;
+                return String(row[key] ?? '').trim() === String(patch[key] ?? '').trim();
+            });
+        }
+
+        function mergeTemplatePendingUpdates(rows) {
+            const pending = pruneTemplatePendingUpdates(loadTemplatePendingUpdates());
+            const now = Date.now();
+            const merged = rows.map(row => {
+                const key = String(row.id);
+                const patch = pending[key];
+                if (!patch) return row;
+                if (templatePatchMatchesRow(row, patch)) {
+                    delete pending[key];
+                    return row;
+                }
+                const age = now - Number(patch.updatedAt || 0);
+                if (age > TEMPLATE_PENDING_MERGE_MS) {
+                    delete pending[key];
+                    return row;
+                }
+                return { ...row, ...patch };
+            });
+            persistTemplatePendingUpdates(pending);
+            return merged;
+        }
 
         // FIX 3: Removed prefetchMachineImages entirely — it caused the img onload to fire on the
         // prefetch object instead of the #machineImg element, leaving opacity stuck at 0 forever.
@@ -1835,6 +1935,7 @@
                     return t;
                 })
                 .sort((a,b)=>b.raw - a.raw);
+                allTemplates = mergeTemplatePendingUpdates(allTemplates);
                 generateMonthOptions(); updateDashboard(); 
                 // Don't re-render template table if user is actively typing in it
                 const _tActiveEl = document.activeElement;
@@ -2786,6 +2887,35 @@
             if (search) { search.value = picName; applyPatchFilter(); }
         }
 
+        function sanitizeTemplateValue(value) {
+            const text = String(value ?? '').trim();
+            if (!text || text === '---' || text.toLowerCase() === 'null' || text.toLowerCase() === 'undefined') {
+                return '';
+            }
+            return text;
+        }
+
+        function preserveTextValue(value, fallback) {
+            const text = sanitizeTemplateValue(value);
+            if (text) return text;
+            return sanitizeTemplateValue(fallback);
+        }
+
+        function preserveDateValue(value, fallback) {
+            const text = sanitizeTemplateValue(value);
+            if (text) return formatExcelPayload(text);
+            const safeFallback = sanitizeTemplateValue(fallback);
+            return safeFallback ? formatExcelPayload(safeFallback) : '';
+        }
+
+        function assignIfPresent(target, entries) {
+            entries.forEach(([key, value]) => {
+                const text = sanitizeTemplateValue(value);
+                if (text) target[key] = text;
+            });
+            return target;
+        }
+
         function applyTempFilters(prioritySort = false) {
             const sv = document.getElementById('tempSearch').value.toLowerCase(), isAdmin = (currentUser === "Gavin");
             const selMonth = document.getElementById('tempMonthFilter')?.value || '';
@@ -2895,7 +3025,8 @@
             const tQty = document.getElementById(`qty-${simpleId}`)?.value || "";
             const tDateRaw = document.getElementById(`date-${simpleId}`)?.value || "";
             const tRem = document.getElementById(`remark-${simpleId}`)?.value.trim() || "";
-            const tDateExcel = formatExcelPayload(tDateRaw);
+            const isAdminUser = currentUser === 'Gavin';
+            const tDateExcel = preserveDateValue(tDateRaw, record.completeDateDisplay);
 
             let tPic = "";
             if (picDropdown) {
@@ -2915,30 +3046,57 @@
 
             const btn = event.target; btn.innerText = "SAVING..."; btn.disabled = true;
 
-            // Key Column = Id (integer) — send ALL editable fields for Gavin
-            const g = (id, fb) => document.getElementById(`${id}-${simpleId}`)?.value.trim() || fb || '';
-            const tComplexity  = document.getElementById(`complexity-${simpleId}`)?.value || record.complexity || '';
-            const tDFM         = document.getElementById(`dfm-${simpleId}`)?.value.trim() || record.dfm || '';
-            const tDesc        = document.getElementById(`desc-${simpleId}`)?.value.trim() || record.description || '';
+            const tComplexity  = preserveTextValue(document.getElementById(`complexity-${simpleId}`)?.value, record.complexity);
+            const tDFM         = preserveTextValue(document.getElementById(`dfm-${simpleId}`)?.value, record.dfm);
+            const recordIdValue = String(record.id);
+            const picValue = String(tPic);
+            const completionDateValue = String(isAdminUser ? preserveDateValue(record.completeDateDisplay, record.completeDateDisplay) : tDateExcel);
+            const completeQtyValue = String(isAdminUser ? preserveTextValue(record.qty, record.qty) : preserveTextValue(tQty, record.qty));
+            const remarkValue = String(preserveTextValue(tRem, record.remark));
             const payload = {
-                recordID:           String(record.id),
-                requestor:          g('requestor',   record.requestor),
-                section:            g('section',     record.section),
-                styleNumber:        g('style',       record.style),
-                jobNumber:          g('jobno',       record.jobNo),
-                protoStage:         g('proto',       record.protoStage),
-                templateRequestType:g('templatetype',record.templateType),
-                description:        tDesc,
-                machineType:        g('machine',     record.machine),
-                requiredDate:       g('reqdate',     record.requiredDate),
-                templateNo:         String(tNo),
-                pic:                String(tPic),
-                completionDate:     String(tDateExcel),
-                completeQty:        String(tQty),
-                complexity:         String(tComplexity),
-                dfm:                String(tDFM),
-                remark:             String(tRem)
+                recordID: recordIdValue,
+                recordId: recordIdValue,
+                id: recordIdValue,
+                Id: recordIdValue,
+                ID: recordIdValue,
+                pic: picValue,
+                PIC: picValue,
+                "M&A PIC": picValue
             };
+            assignIfPresent(payload, [
+                ['remark', remarkValue],
+                ['remarks', remarkValue],
+                ['Remark', remarkValue],
+                ['Remarks', remarkValue]
+            ]);
+
+            if (isAdminUser) {
+                const tmplNoVal = preserveTextValue(tNo, record.templateNo);
+                assignIfPresent(payload, [
+                    ['templateNo', tmplNoVal],
+                    ['Template No.', tmplNoVal],
+                    ['Template No', tmplNoVal],
+                    ['TemplateNo', tmplNoVal],
+                    ['complexity', tComplexity],
+                    ['Complexity Level', tComplexity],
+                    ['Complexity', tComplexity],
+                    ['dfm', tDFM],
+                    ['DFM', tDFM]
+                ]);
+            } else {
+                assignIfPresent(payload, [
+                    ['completionDate', completionDateValue],
+                    ['completeDate', completionDateValue],
+                    ['CompleteDate', completionDateValue],
+                    ['Complete Date', completionDateValue],
+                    ['Complete Date m/d/yyyy', completionDateValue],
+                    ['completeQty', completeQtyValue],
+                    ['quantity', completeQtyValue],
+                    ['Quantity', completeQtyValue],
+                    ['Complete Quantity', completeQtyValue],
+                    ['Complete Qty', completeQtyValue]
+                ]);
+            }
 
             try {
                 const res = await fetch(updateURL, {
@@ -2946,16 +3104,53 @@
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(payload)
                 });
-                if (res.ok) {
+                const rawBody = await res.text().catch(() => '');
+                let parsedBody = null;
+                try { parsedBody = rawBody ? JSON.parse(rawBody) : null; } catch (e) {}
+                const bodyText = String(rawBody || JSON.stringify(parsedBody || '')).toLowerCase();
+                const flowReportedError =
+                    bodyText.includes('notfound') ||
+                    bodyText.includes('no row was found') ||
+                    bodyText.includes('triggerinputschemamismatch') ||
+                    bodyText.includes('noreponse') ||
+                    bodyText.includes('noresponse') ||
+                    (parsedBody && parsedBody.ok === false) ||
+                    (parsedBody && parsedBody.error) ||
+                    (parsedBody && Number(parsedBody.statusCode || 0) >= 400);
+                if (res.ok && !flowReportedError) {
                     record.pic = tPic;
-                    record.templateNo = tNo || record.templateNo;
-                    record.remark = tRem || record.remark;
+                    if (isAdminUser) {
+                        record.templateNo = payload.templateNo || record.templateNo;
+                        record.complexity = tComplexity || record.complexity;
+                        record.dfm = tDFM || record.dfm;
+                    } else {
+                        record.completeDateDisplay = tDateRaw || record.completeDateDisplay;
+                        record.qty = preserveTextValue(tQty, record.qty);
+                    }
+                    record.remark = preserveTextValue(tRem, record.remark);
+                    record.status = record.completeDateDisplay && record.completeDateDisplay !== '---' ? 'COMPLETED' : record.status;
+                    stageTemplatePendingUpdate(record.id, {
+                        templateNo: record.templateNo,
+                        pic: record.pic,
+                        completeDateDisplay: record.completeDateDisplay,
+                        qty: record.qty,
+                        complexity: record.complexity,
+                        dfm: record.dfm,
+                        remark: record.remark,
+                        status: record.status
+                    });
                     btn.innerText = "UPDATED ✓";
+                    updateDashboard();
+                    renderUtilization();
                     applyTempFilters(false);
-                    refreshTemplateLogs(true);
+                    setTimeout(() => refreshTemplateLogs(true), 5000);
+                    setTimeout(() => refreshTemplateLogs(true), 15000);
                     setTimeout(() => { btn.innerText = "SAVE"; btn.disabled = false; }, 2000);
                 } else {
                     btn.innerText = "ERROR - RETRY";
+                    if (rawBody) {
+                        alert(`Template update failed.\n\n${rawBody.substring(0, 300)}`);
+                    }
                     setTimeout(() => { btn.innerText = "SAVE"; btn.disabled = false; }, 2000);
                 }
             } catch(e) {
@@ -4373,7 +4568,7 @@
                     <td class="p-3">${isAdminDown ? `<input id="dw-category-${rid}" class="manual-input admin-input" value="${category==='---'?'':category}">` : category}</td>
                     <td class="p-3">${isAdminDown ? `<input id="dw-style-${rid}" class="manual-input admin-input" value="${style==='---'?'':style}">` : style}</td>
                     <td class="p-3">${isAdminDown ? `<input id="dw-job-${rid}" class="manual-input admin-input" value="${job==='---'?'':job}">` : job}</td>
-                    <td class="p-3">${isAdminDown ? `<input id="dw-layer-${rid}" class="manual-input admin-input" value="${layer==='---'?'':layer}">` : layer}</td>
+                    <td class="p-3 down-layer-cell">${isAdminDown ? `<input id="dw-layer-${rid}" class="manual-input admin-input" style="width:220px" value="${layer==='---'?'':layer}">` : layer}</td>
                     <td class="p-3 font-bold text-emerald-600">${isAdminDown ? `<input id="dw-fabricItem-${rid}" class="manual-input admin-input" style="color:#059669;font-weight:bold" value="${fabricItem==='---'?'':fabricItem}">` : fabricItem}</td>
                     <td class="p-3 font-bold text-purple-600">${isAdminDown ? `<input id="dw-downBagItem-${rid}" class="manual-input admin-input" style="color:#7c3aed;font-weight:bold" value="${downBagItem==='---'?'':downBagItem}">` : downBagItem}</td>
                     <td class="p-3 font-bold text-amber-600">${isAdminDown ? `<input id="dw-downItem-${rid}" class="manual-input admin-input" style="color:#d97706;font-weight:bold" value="${downItem==='---'?'':downItem}">` : downItem}</td>
