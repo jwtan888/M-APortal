@@ -226,7 +226,7 @@
                     </a>
                     <a href="dfm-dashboard/index.html" target="_self"
                        class="inline-flex items-center justify-center text-[10px] font-bold rounded-[10px] px-3 py-2 border transition-all whitespace-nowrap" style="color:#2563eb;border-color:rgba(37,99,235,0.28);background:rgba(37,99,235,0.06)">
-                        DFM Dashboard
+                        DFM
                     </a>
                 </div>
             </div>
@@ -747,6 +747,27 @@
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
                     <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Requests by Proto Stage</h3>
                     <div class="h-[240px]"><canvas id="conProtoChart"></canvas></div>
+                </div>
+            </div>
+
+            <!-- Pending Consumption Styles -->
+            <div class="bg-white p-6 rounded-xl border shadow-sm mb-6">
+                <h3 class="text-xs font-bold text-amber-500 uppercase tracking-widest mb-4">Pending Consumption Styles</h3>
+                <div class="overflow-y-auto max-h-[300px] rounded-lg border">
+                    <table class="w-full text-left text-[11px]">
+                        <thead class="bg-slate-50 border-b font-bold text-slate-500 sticky top-0">
+                            <tr>
+                                <th class="p-2">Style</th>
+                                <th class="p-2">Proto Stage</th>
+                                <th class="p-2">Season</th>
+                                <th class="p-2">Request By</th>
+                                <th class="p-2">M&A PIC</th>
+                                <th class="p-2">Start Date</th>
+                                <th class="p-2">Complete Date</th>
+                            </tr>
+                        </thead>
+                        <tbody id="cd-pending-table"></tbody>
+                    </table>
                 </div>
             </div>
 
@@ -3450,8 +3471,21 @@
                 return `${months[d.getMonth()]}-${d.getFullYear()}` === sharedMonth;
             });
             const total   = filtered.length;
-            const done    = filtered.filter(r => { const cd = getVal(r,['Complete Date m/d/yyyy','Complete Date','CompleteDate']); return cd&&cd!=='---'&&String(cd).trim()!==''; }).length;
-            const pending = total - done;
+            const isConsumptionDone = (r) => {
+                const cd = getVal(r,['Complete Date m/d/yyyy','Complete Date','CompleteDate']);
+                return cd && cd !== '---' && String(cd).trim() !== '';
+            };
+            const isConsumptionPending = (r) => {
+                if (isConsumptionDone(r)) return false;
+                const sd = getVal(r,['Start Date m/d/yyyy','Start Date','StartDate']);
+                const hasStart = sd && sd !== '---' && String(sd).trim() !== '';
+                const cd = getVal(r,['Complete Date m/d/yyyy','Complete Date','CompleteDate']);
+                const hasEnd = cd && cd !== '---' && String(cd).trim() !== '';
+                return !hasEnd || (!hasStart && !hasEnd);
+            };
+            const done    = filtered.filter(isConsumptionDone).length;
+            const pendingRows = filtered.filter(isConsumptionPending);
+            const pending = pendingRows.length;
             const turnarounds = filtered.map(r => {
                 const s = rawToLocalDate(getVal(r,['Start Date m/d/yyyy','Start Date','StartDate']));
                 const e = rawToLocalDate(getVal(r,['Complete Date m/d/yyyy','Complete Date','CompleteDate']));
@@ -3490,18 +3524,43 @@
                 type:'bar', data:{labels:sortedProto.map(e=>e[0]), datasets:[{label:'Requests', data:sortedProto.map(e=>e[1]), backgroundColor:'#818cf8', borderRadius:4}]},
                 options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}, scales:{y:{beginAtZero:true, ticks:{stepSize:1}}}}
             });
+
+            const pendingTbody = document.getElementById('cd-pending-table');
+            if (pendingTbody) {
+                pendingTbody.innerHTML = pendingRows.length
+                    ? pendingRows.map(r => {
+                        const style = getVal(r,['Style Number','StyleNumber']);
+                        const proto = getVal(r,['Proto Stage','ProtoStage']);
+                        const season = getVal(r,['Season']);
+                        const reqBy = getVal(r,['Request By','RequestBy','Requestor']);
+                        const pic = getMAPic(r);
+                        const start = convertExcelDate(getVal(r,['Start Date m/d/yyyy','Start Date','StartDate']));
+                        const complete = convertExcelDate(getVal(r,['Complete Date m/d/yyyy','Complete Date','CompleteDate']));
+                        return `
+                            <tr class="border-b hover:bg-amber-50/40 transition-colors">
+                                <td class="p-2 font-bold text-slate-800">${style}</td>
+                                <td class="p-2">${proto}</td>
+                                <td class="p-2">${season}</td>
+                                <td class="p-2">${reqBy}</td>
+                                <td class="p-2 font-semibold ${(!pic || pic==='---') ? 'text-blue-600' : ''}">${pic}</td>
+                                <td class="p-2">${start}</td>
+                                <td class="p-2 ${complete !== '---' ? 'text-emerald-600 font-bold' : 'text-amber-600 font-semibold'}">${complete}</td>
+                            </tr>`;
+                    }).join('')
+                    : '<tr><td colspan="7" class="p-6 text-center italic text-slate-400">No pending consumption styles.</td></tr>';
+            }
         }
 
         let downVolumeChart = null, downSeasonChart = null;
         function renderDownDashboard() {
             if (!allDownRows.length) return;
             const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-            const sharedMonth = document.getElementById('monthFilter')?.value || 'ALL';
+            const selectedMonth = document.getElementById('downMonthFilter')?.value || downMonthQuery || '';
             const filtered = allDownRows.filter(r => {
-                if (sharedMonth === 'ALL') return true;
+                if (!selectedMonth) return true;
                 const d = rawToLocalDate(getVal(r, ['Date Update','DateUpdate','Date']));
                 if (!d) return false;
-                return `${months[d.getMonth()]}-${d.getFullYear()}` === sharedMonth;
+                return `${months[d.getMonth()]}-${d.getFullYear()}` === selectedMonth;
             });
             const total   = filtered.length;
             const done    = filtered.filter(r => { const ct = getVal(r,['Complete Time','CompleteTime','Complete Time m/d/yyyy']); return ct&&ct!=='---'&&String(ct).trim()!==''; }).length;
@@ -4587,6 +4646,7 @@
                     renderDownTable();
                 }
                 populateDownMonthFilter();
+                renderDownDashboard();
                 if (st) { st.innerText = 'LIVE: ' + new Date().toLocaleTimeString() + ` (${rows.length} rows)`; st.classList.remove('sync-active'); }
             } catch(e) {
                 const tbody = document.getElementById('downTable');
@@ -4689,12 +4749,17 @@
                 opts.push(`<option value="${m}" ${m===cur?'selected':''}>${m}</option>`);
             });
             sel.innerHTML = opts.join('');
+            if (cur && !monthSet.has(cur)) {
+                sel.value = '';
+                downMonthQuery = '';
+            }
         }
 
         function applyDownFilter() {
             downSearchQuery = document.getElementById('downSearch')?.value.toLowerCase() || '';
             downMonthQuery = document.getElementById('downMonthFilter')?.value || '';
             renderDownTable();
+            renderDownDashboard();
         }
 
         function clearDownSearch() {
@@ -4705,6 +4770,7 @@
             const mf = document.getElementById('downMonthFilter');
             if (mf) mf.value = '';
             renderDownTable();
+            renderDownDashboard();
         }
 
         async function addDownRow() {
