@@ -650,12 +650,16 @@
     if (!parsed) {
       return "Not yet";
     }
-    return new Intl.DateTimeFormat("en-MY", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      hour12: true,
-    }).format(parsed);
+    try {
+      return new Intl.DateTimeFormat("en-MY", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: true,
+      }).format(parsed);
+    } catch (error) {
+      return "Not yet";
+    }
   }
 
   function escapeHtml(value) {
