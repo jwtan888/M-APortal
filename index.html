@@ -505,18 +505,12 @@
                     <div class="h-[300px]"><canvas id="volumeChart"></canvas></div>
                 </div>
             </div>
-            <!-- Delivery KPI Section Divider -->
-            <div class="mt-2 mb-4 flex items-center gap-3">
-                <div class="flex-1 border-t border-slate-200"></div>
-                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">Delivery KPI</span>
-                <div class="flex-1 border-t border-slate-200"></div>
-            </div>
             <div class="bg-white p-6 rounded-xl border shadow-sm">
                 <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">PIC Unfinished Work</h3>
                 <div class="overflow-x-auto rounded-lg border">
                     <table class="w-full text-left text-[11px]">
                         <thead class="bg-slate-50 border-b font-bold text-slate-500">
-                            <tr><th class="p-3 w-32">M&A PIC</th><th class="p-3">Unfinished Styles</th></tr>
+                            <tr><th class="p-3 w-32">M&A PIC</th><th class="p-3">Pending Styles</th></tr>
                         </thead>
                         <tbody id="pic-workload-table"></tbody>
                     </table>
@@ -1847,6 +1841,23 @@
             return timePart ? `${normalized} ${timePart}` : normalized;
         }
 
+        function isNormalizedPortalDate(str) {
+            return /^\d{1,2}\/\d{1,2}\/\d{4}(?: \d{2}:\d{2})?$/.test(String(str || '').trim());
+        }
+
+        function preparePortalDatePayload(inputValue, existingValue = '', options = {}) {
+            const typed = String(inputValue ?? '').trim();
+            const existing = String(existingValue ?? '').trim();
+            if (!typed) {
+                if (!existing || existing === '---') return '';
+                const preserved = toExcelDateFormat(existing);
+                return isNormalizedPortalDate(preserved) ? (options.dateOnly ? preserved.split(' ')[0] : preserved) : '';
+            }
+            const normalized = toExcelDateFormat(typed);
+            if (!isNormalizedPortalDate(normalized)) return null;
+            return options.dateOnly ? normalized.split(' ')[0] : normalized;
+        }
+
         function formatExcelPayload(dateStr) {
             if (!dateStr || !dateStr.includes('/')) return dateStr;
             const [datePart, timePart] = dateStr.split(' ');
@@ -2200,7 +2211,7 @@
                         <div class="text-[9px] font-normal text-slate-400 mt-0.5">${tasks.filter(t=>t.status==='DELAYED').length} delayed · ${tasks.filter(t=>t.status==='PENDING').length} pending</div>
                     </td>
                     <td class="p-3 flex flex-wrap gap-2">
-                        ${tasks.map(task => `<div class="flex items-center gap-1.5 border rounded-lg px-2.5 py-1.5 bg-white shadow-sm"><span class="w-2 h-2 rounded-full ${task.status === 'DELAYED' ? 'bg-red-500 animate-pulse' : 'bg-amber-400'}"></span><span class="font-bold text-slate-800">${task.style}</span><span class="text-slate-500 text-[10px]">${task.job}</span></div>`).join('')}
+                        ${tasks.map(task => `<div class="flex items-center gap-1.5 border rounded-lg px-2.5 py-1.5 bg-white shadow-sm"><span class="w-2 h-2 rounded-full ${task.status === 'DELAYED' ? 'bg-red-500 animate-pulse' : 'bg-amber-400'}"></span><span class="font-bold text-[11px] text-slate-800 leading-none">${task.style}</span><span class="font-bold text-[11px] text-slate-800 leading-none">${task.job}</span></div>`).join('')}
                     </td>
                 </tr>`).join('') || '<tr><td colspan="2" class="p-10 text-center italic">All clear!</td></tr>';
             
@@ -2811,12 +2822,21 @@
             } catch(e) { btn.innerText = '✗'; btn.disabled = false; }
         }
 
-                async function saveLaserRow(rid, event) {
+        async function saveLaserRow(rid, event) {
             const btn = event.target; btn.innerText = 'SAVING...'; btn.disabled = true;
             const g = id => document.getElementById(`le-${id}-${rid}`)?.value.trim() || '';
+            const row = allLaserRows.find(r => String(getVal(r, ['Id','ID','id'])) === String(rid));
+            const receivedNorm = preparePortalDatePayload(g('received'), convertExcelDate(getVal(row, ['Received Time','ReceivedTime','Received'])));
+            const completeNorm = preparePortalDatePayload(g('completeDate'), convertExcelDate(getVal(row, ['Complete Date','CompleteDate'])));
+            const consStartNorm = preparePortalDatePayload(g('consStart'), convertExcelDate(getVal(row, ['Consumption Start Date','ConsumptionStartDate','Cons Start'])));
+            const consEndNorm = preparePortalDatePayload(g('consEnd'), convertExcelDate(getVal(row, ['Consumption Complete Date','ConsumptionCompleteDate','Cons End'])));
+            if ([receivedNorm, completeNorm, consStartNorm, consEndNorm].some(v => v === null)) {
+                alert('Invalid date format. Use m/d/yyyy or m/d/yyyy hh:mm.');
+                btn.innerText = 'SAVE'; btn.disabled = false; return;
+            }
             const payload = {
                 recordID:       rid,
-                receivedTime:   toExcelDateFormat(g('received')),
+                receivedTime:   receivedNorm,
                 season:         g('season'),
                 styleNumber:    g('style'),
                 section:        document.getElementById(`le-section-${rid}`)?.value || '',
@@ -2826,10 +2846,10 @@
                 laserParts:     g('laserParts'),
                 ironParts:      g('ironParts'),
                 trimParts:      g('trimParts'),
-                completeDate:   toExcelDateFormat(g('completeDate')),
+                completeDate:   completeNorm,
                 maPic:          g('maPic'),
-                consStart:      toExcelDateFormat(g('consStart')),
-                consEnd:        toExcelDateFormat(g('consEnd')),
+                consStart:      consStartNorm,
+                consEnd:        consEndNorm,
                 consumptionPic: g('consPic'),
                 consumptionCompleteStatus: document.getElementById(`le-consStatus-${rid}`)?.value || '',
                 'consumption complete status': document.getElementById(`le-consStatus-${rid}`)?.value || '',
@@ -2858,9 +2878,12 @@
             const btn = event.target; btn.innerText = 'SAVING...'; btn.disabled = true;
             const consStart = document.getElementById(`le-consStart-${rid}`)?.value.trim() || '';
             const consEnd   = document.getElementById(`le-consEnd-${rid}`)?.value.trim() || '';
-            if (!consStart) { alert('Please fill Consumption Start Date.'); btn.innerText = 'SAVE'; btn.disabled = false; return; }
             // Send full row payload but only consumption fields are changed; others kept as-is from allLaserRows
             const row = allLaserRows.find(r => String(getVal(r, ['Id','ID','id'])) === String(rid));
+            const consStartNorm = preparePortalDatePayload(consStart, convertExcelDate(getVal(row, ['Consumption Start Date','ConsumptionStartDate','Cons Start'])));
+            const consEndNorm = preparePortalDatePayload(consEnd, convertExcelDate(getVal(row, ['Consumption Complete Date','ConsumptionCompleteDate','Cons End'])));
+            if (!consStartNorm) { alert('Please fill Consumption Start Date.'); btn.innerText = 'SAVE'; btn.disabled = false; return; }
+            if ([consStartNorm, consEndNorm].some(v => v === null)) { alert('Invalid date format. Use m/d/yyyy or m/d/yyyy hh:mm.'); btn.innerText = 'SAVE'; btn.disabled = false; return; }
             const payload = {
                 recordID:       rid,
                 receivedTime:   convertExcelDate(getVal(row, ['Received Time','ReceivedTime','Received'])),
@@ -2875,13 +2898,17 @@
                 trimParts:      getVal(row, ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']),
                 completeDate:   convertExcelDate(getVal(row, ['Complete Date','CompleteDate'])),
                 maPic:          getMAPic(row),
-                consStart:      toExcelDateFormat(consStart),
-                consEnd:        toExcelDateFormat(consEnd),
+                consStart:      consStartNorm,
+                consEnd:        consEndNorm,
                 consumptionPic: currentUser,
                 remark:         document.getElementById(`le-remark-${rid}`)?.value.trim() || getVal(row, ['Remark','Remarks'])
             };
             try {
-                const res = await fetch(laserUpdateURL, { method: 'POST', body: JSON.stringify(payload) });
+                const res = await fetch(laserUpdateURL, {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(payload)
+                });
                 if (res.ok) {
                     btn.innerText = 'SAVED ✓';
                     refreshLaserData(true);
@@ -4340,15 +4367,21 @@
             });
             const existingPic = existingRow ? getMAPic(existingRow) : '---';
             const picToSave   = (!existingPic || existingPic === '---') ? currentUser : existingPic;
+            const startNorm = preparePortalDatePayload(startVal, convertExcelDate(getVal(existingRow, ['Start Time','StartTime'])));
+            const endNorm = preparePortalDatePayload(endVal, convertExcelDate(getVal(existingRow, ['Complete Time','CompleteTime'])));
+            if ([startNorm, endNorm].some(v => v === null)) {
+                alert('Invalid date format. Use m/d/yyyy or m/d/yyyy hh:mm.');
+                btn.innerText = 'SAVE'; btn.disabled = false; return;
+            }
             const complexityVal = document.getElementById(`sup-complexity-${sid}`)?.value || '';
             const dfmVal        = document.getElementById(`sup-dfm-${sid}`)?.value || '';
             const payload = {
                 'Request ID':              sid,
                 recordID:                  sid,
-                'Start Time':              toExcelDateFormat(startVal),
-                startTime:                 toExcelDateFormat(startVal),
-                'Complete Time':           toExcelDateFormat(endVal),
-                completeTime:              toExcelDateFormat(endVal),
+                'Start Time':              startNorm,
+                startTime:                 startNorm,
+                'Complete Time':           endNorm,
+                completeTime:              endNorm,
                 'Job Elapsed Calendar Hrs': elapsed,
                 elapsedHrs:                elapsed,
                 'M&A PIC':                 picToSave,
@@ -4549,6 +4582,14 @@
             // Helper: read input by id, null if not in DOM
             const g = id => { const el = document.getElementById(`${id}-${sid}`); return el ? el.value.trim() : null; };
 
+            const patchReceived = preparePortalDatePayload(g('patch-received'), convertExcelDate(getVal(existingRow,['Patch & Fabric Receive Date & Time m/d/yyyy','Patch & Fabric Receive Date'])));
+            const patchStart = preparePortalDatePayload(g('patch-startdate'), convertExcelDate(getVal(existingRow,['Start Date m/d/yyyy','Start Date','StartDate'])));
+            const patchComplete = preparePortalDatePayload(g('patch-complete'), convertExcelDate(getVal(existingRow,['Complete Date m/d/yyyy','Complete Date','CompleteDate'])));
+            if ([patchReceived, patchStart, patchComplete].some(v => v === null)) {
+                btn.innerText = 'ERROR'; btn.disabled = false;
+                alert('Invalid date format. Use m/d/yyyy or m/d/yyyy hh:mm.');
+                return;
+            }
             // Build payload with exact keys matching PA trigger body (triggerBody()?['key'])
             // Key field sent as 'No.' — PA uses idColumn: No_x002e_ and id: triggerBody()?['No.']
             const payload = {
@@ -4566,13 +4607,11 @@
                 'Thread Color':        g('patch-threadcolor')         ?? getVal(existingRow,['Thread Color','ThreadColor']),
                 'Type Of Sample':      g('patch-sampletype')         ?? getVal(existingRow,['Type Of Sample','TypeOfSample']),
                 'Quantity':            g('patch-qty')                 ?? getVal(existingRow,['Quantity','Qty']),
-                'Patch & Fabric Receive Date & Time m/d/yyyy':
-                                       g('patch-received')            ?? convertExcelDate(getVal(existingRow,['Patch & Fabric Receive Date & Time m/d/yyyy','Patch & Fabric Receive Date'])),
+                'Patch & Fabric Receive Date & Time m/d/yyyy': patchReceived,
                 'Template No.':        g('patch-tmplno')              ?? getVal(existingRow,['Template No.','TemplateNo','Template No']),
                 'Machine No.':         g('patch-machine')             ?? getVal(existingRow,['Machine No.','Machine No','MachineNo','Machine']),
-                'Start Date m/d/yyyy': g('patch-startdate')           ?? convertExcelDate(getVal(existingRow,['Start Date m/d/yyyy','Start Date','StartDate'])),
-                'Complete Date m/d/yyyy':
-                                       g('patch-complete')            ?? convertExcelDate(getVal(existingRow,['Complete Date m/d/yyyy','Complete Date','CompleteDate'])),
+                'Start Date m/d/yyyy': patchStart,
+                'Complete Date m/d/yyyy': patchComplete,
                 'M&A PIC':             (() => { const p = getMAPic(existingRow); return (!p||p==='---') ? currentUser : p; })(),
                 'Remark':              g('patch-remark')              ?? getVal(existingRow,['Remark','Remarks'])
             };
@@ -4832,10 +4871,19 @@
             if (currentUser !== 'Gavin') return alert('Only Gavin can edit down filling records.');
             const btn = event.target; btn.innerText = 'SAVING...'; btn.disabled = true;
             const g = (field) => document.getElementById(`dw-${field}-${rid}`)?.value.trim() || '';
+            const existingRow = allDownRows.find(r => String(getVal(r, ['ID','Id','id'])) === String(rid));
+            const dateUpdateNorm = preparePortalDatePayload(g('dateUpdate'), convertExcelDate(getVal(existingRow, ['Date Update','DateUpdate'])));
+            const startNorm = preparePortalDatePayload(g('startTime'), convertExcelDate(getVal(existingRow, ['Start Time','StartTime'])));
+            const completeNorm = preparePortalDatePayload(g('completeTime'), convertExcelDate(getVal(existingRow, ['Complete Time','CompleteTime'])));
+            if ([dateUpdateNorm, startNorm, completeNorm].some(v => v === null)) {
+                btn.innerText = 'ERROR'; btn.disabled = false;
+                alert('Invalid date format. Use m/d/yyyy or m/d/yyyy hh:mm.');
+                return;
+            }
             const payload = {
                 recordID:        rid,
                 id:              rid,
-                dateUpdate:      toExcelDateFormat(g('dateUpdate')),
+                dateUpdate:      dateUpdateNorm,
                 season:          g('season'),
                 bddPic:          g('bddPic'),
                 category:        g('category'),
@@ -4855,8 +4903,8 @@
                 outletPressure:  g('outletPressure') || '0',
                 humidity:        g('humidity'),
                 downRelaxedTime: g('relaxedTime'),
-                startTime:       toExcelDateFormat(g('startTime')),
-                completeTime:    toExcelDateFormat(g('completeTime')),
+                startTime:       startNorm,
+                completeTime:    completeNorm,
                 remark:          g('remark')
             };
             try {
@@ -5084,11 +5132,18 @@
             });
             const existingPic = existing ? getMAPic(existing) : '---';
             const picToSave = (!existingPic || existingPic === '---') ? currentUser : existingPic;
+            const startNorm = preparePortalDatePayload(startVal, convertExcelDate(getVal(existing, ['Start Date m/d/yyyy','Start Date','StartDate'])));
+            const completeNorm = preparePortalDatePayload(completeVal, convertExcelDate(getVal(existing, ['Complete Date m/d/yyyy','Complete Date','CompleteDate'])));
+            if ([startNorm, completeNorm].some(v => v === null)) {
+                btn.innerText = 'ERROR'; btn.disabled = false;
+                alert('Invalid date format. Use m/d/yyyy or m/d/yyyy hh:mm.');
+                return;
+            }
             const payload = {
                 id:           sid,
                 recordID:     sid,
-                startDate:    toExcelDateFormat(startVal),
-                completeDate: toExcelDateFormat(completeVal),
+                startDate:    startNorm,
+                completeDate: completeNorm,
                 pic:          picToSave,
                 remark:       remarkVal
             };
