@@ -22,6 +22,40 @@
       <main class="dashboard">
         <section class="kpi-grid" id="kpi-grid"></section>
 
+        <section class="panel benchmark-panel">
+          <div class="panel-heading">
+            <h2>Nike Construction Code Utilization</h2>
+          </div>
+          <div id="benchmark-chart" class="benchmark-chart"></div>
+        </section>
+
+        <section class="panel panel--feature investment-panel">
+          <div class="panel-heading panel-heading--stack">
+            <div>
+              <h2>DFM Summary Board</h2>
+            </div>
+          </div>
+          <div id="investment-board" class="investment-board"></div>
+        </section>
+
+        <section class="analytics-grid analytics-grid--dashboard">
+          <article class="panel">
+            <div class="panel-heading">
+              <h2>FG by Season</h2>
+              <span class="panel-note">Unique FG per season + style</span>
+            </div>
+            <div id="season-bars" class="bar-list"></div>
+          </article>
+
+          <article class="panel">
+            <div class="panel-heading">
+              <h2>Modification Mix</h2>
+              <span class="panel-note">M versus Non-M type codes</span>
+            </div>
+            <div id="mod-summary" class="stack-list"></div>
+          </article>
+        </section>
+
         <section class="spotlight-grid">
           <article class="panel panel--feature">
             <div class="panel-heading">
@@ -57,33 +91,7 @@
           </article>
         </section>
 
-        <section class="analytics-grid analytics-grid--dashboard">
-          <article class="panel">
-            <div class="panel-heading">
-              <h2>FG by Season</h2>
-              <span class="panel-note">Unique FG per season + style</span>
-            </div>
-            <div id="season-bars" class="bar-list"></div>
-          </article>
-
-          <article class="panel">
-            <div class="panel-heading">
-              <h2>Construction Code Volume</h2>
-              <span class="panel-note">Most-used construction codes</span>
-            </div>
-            <div id="code-bars" class="bar-list"></div>
-          </article>
-
-          <article class="panel">
-            <div class="panel-heading">
-              <h2>Modification Mix</h2>
-              <span class="panel-note">M versus Non-M rows</span>
-            </div>
-            <div id="mod-summary" class="stack-list"></div>
-          </article>
-        </section>
-
-        <section class="dual-grid">
+        <section class="dual-grid" id="dashboard-detail-grid">
           <article class="panel">
             <div class="panel-heading">
               <h2>Modernization Highlights</h2>
