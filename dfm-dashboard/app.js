@@ -15,6 +15,8 @@
   };
   const FETCH_DFM_CHART_URL =
     "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/777a0c72d4684db68a350132def5fb37/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=4SIb_3sXxhX4jOUhTA6L8-kcgrr37CcmJwDkloVPDv4";
+  const FETCH_DFM_SUMMARY_URL =
+    "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/ebef663b8a79414cb89579a4b4edf9d6/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=JSZZaLOTkfxWcoDSdb3J7w1rhRQ400g2exl7yrBdKbg";
   const DFM_SUMMARY_UPDATE_URL =
     "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/8a1ee6b32b44477ab947ff85d3c38881/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=-cqYV3Ac1tBeoECt_zje-s9Yk1B0RZYvDxqV-fP24N8";
   const SEED_REFRESH_MS = 15000;
@@ -1822,6 +1824,57 @@
     };
   }
 
+  function normalizeSummaryRow(row) {
+    return {
+      constructionCode:
+        valueFromRow(row, ["Construction Code", "constructionCode"]) ||
+        valueFromRowFuzzy(row, ["Construction Code", "constructionCode"]),
+      samImprovement:
+        valueFromRow(row, ["SAM Improvement", "samImprovement"]) ||
+        valueFromRowFuzzy(row, ["SAM Improvement", "samImprovement"]),
+      improvementType:
+        valueFromRow(row, ["Improvement Type", "improvementType"]) ||
+        valueFromRowFuzzy(row, ["Improvement Type", "improvementType"]),
+      improvementValue:
+        valueFromRow(row, ["Improvement Value", "improvementValue", "Improvement_x0020_Value"]) ||
+        valueFromRowFuzzy(row, ["Improvement Value", "improvementValue"]),
+      investmentDecision:
+        valueFromRow(row, ["Investment Decision", "investmentDecision"]) ||
+        valueFromRowFuzzy(row, ["Investment Decision", "investmentDecision"]),
+      updatedBy:
+        valueFromRow(row, ["Updated By", "updatedBy"]) ||
+        valueFromRowFuzzy(row, ["Updated By", "updatedBy"]),
+      updatedAt:
+        valueFromRow(row, ["Updated At", "updatedAt"]) ||
+        valueFromRowFuzzy(row, ["Updated At", "updatedAt"]),
+      activeTop20:
+        valueFromRow(row, ["Active Top 20", "activeTop20"]) ||
+        valueFromRowFuzzy(row, ["Active Top 20", "activeTop20"]),
+    };
+  }
+
+  function buildInvestmentNotesFromSummaryRows(rows) {
+    const nextNotes = {};
+    rows
+      .map(normalizeSummaryRow)
+      .forEach((row) => {
+        const code = cleanText(row.constructionCode);
+        if (!code) {
+          return;
+        }
+        nextNotes[code] = {
+          samImprovement: cleanText(row.samImprovement),
+          improvementType: cleanText(row.improvementType),
+          improvementValue: cleanText(row.improvementValue),
+          investmentDecision: cleanText(row.investmentDecision),
+          updatedBy: cleanText(row.updatedBy),
+          updatedAt: cleanText(row.updatedAt),
+          activeTop20: cleanText(row.activeTop20),
+        };
+      });
+    return nextNotes;
+  }
+
   function extractRemoteRows(payload) {
     if (typeof payload === "string") {
       try {
@@ -1900,15 +1953,37 @@
 
   async function fetchLatestSeedData(options = {}) {
     const allowSeedFallback = options.allowSeedFallback !== false;
+    let summaryRows = [];
     try {
-      const remoteResponse = await window.fetch(FETCH_DFM_CHART_URL, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: "{}",
-        cache: "no-store",
-      });
+      const [remoteResponse, summaryResponse] = await Promise.all([
+        window.fetch(FETCH_DFM_CHART_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: "{}",
+          cache: "no-store",
+        }),
+        window.fetch(FETCH_DFM_SUMMARY_URL, {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: "{}",
+          cache: "no-store",
+        }).catch(() => null),
+      ]);
+      if (summaryResponse && summaryResponse.ok) {
+        const summaryText = await summaryResponse.text();
+        let summaryPayload = null;
+        try {
+          summaryPayload = summaryText ? JSON.parse(summaryText) : null;
+        } catch (error) {
+          summaryPayload = summaryText;
+        }
+        summaryRows = extractRemoteRows(summaryPayload);
+      }
+
       if (remoteResponse.ok) {
         const remoteText = await remoteResponse.text();
         let remotePayload = null;
@@ -1926,6 +2001,7 @@
               recordCount: normalizedRemoteRecords.length,
             },
             records: normalizedRemoteRecords,
+            summaryRows,
           };
         }
       }
@@ -1948,7 +2024,10 @@
       throw new Error("Latest seed payload could not be parsed.");
     }
 
-    return JSON.parse(match[1]);
+    return {
+      ...JSON.parse(match[1]),
+      summaryRows,
+    };
   }
 
   async function refreshFromLatestSeed(options = {}) {
@@ -1956,6 +2035,10 @@
       const latestSeed = await fetchLatestSeedData();
       state.records = normalizeRecords(reconcileStoredRecords(state.records, latestSeed.records || []));
       state.records = normalizeRecords(mergeRemoteWithPending(state.records, state.records));
+      if ((latestSeed.summaryRows || []).length) {
+        state.investmentNotes = buildInvestmentNotesFromSummaryRows(latestSeed.summaryRows || []);
+        persistInvestmentNotes();
+      }
       state.latestSource = latestSeed?.meta?.sourceFile || "Seed file";
       state.lastRefreshAt = Date.now();
       state.syncStatus = "Synced";
@@ -1998,6 +2081,10 @@
         throw new Error("No usable records were returned from live or seed data.");
       }
       state.records = mergedRecords;
+      if ((latestSeed.summaryRows || []).length) {
+        state.investmentNotes = buildInvestmentNotesFromSummaryRows(latestSeed.summaryRows || []);
+        persistInvestmentNotes();
+      }
       state.latestSource = latestSeed?.meta?.sourceFile || "Live Excel fetch";
       state.lastRefreshAt = Date.now();
       state.syncStatus = "Synced";
@@ -2261,4 +2348,5 @@
     refreshFromLatestSeed({ silent: true });
   }, SEED_REFRESH_MS);
   render();
+  refreshFromLatestSeed({ silent: true });
 })();
