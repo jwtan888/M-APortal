@@ -656,6 +656,7 @@
         minute: "2-digit",
         second: "2-digit",
         hour12: true,
+        timeZone: "Asia/Kuala_Lumpur",
       }).format(parsed);
     } catch (error) {
       return "Not yet";
@@ -1951,8 +1952,8 @@
     };
   }
 
-  function buildInvestmentNotesFromSummaryRows(rows) {
-    const nextNotes = {};
+  function buildInvestmentNotesFromSummaryRows(rows, existingNotes = {}) {
+    const nextNotes = { ...existingNotes };
     rows
       .map(normalizeSummaryRow)
       .forEach((row) => {
@@ -1960,16 +1961,21 @@
         if (!code) {
           return;
         }
+        const existing = nextNotes[code] || {};
+        const mergeValue = (nextValue, fallbackValue) => {
+          const cleaned = cleanText(nextValue);
+          return cleaned === "" ? fallbackValue || "" : cleaned;
+        };
         nextNotes[code] = {
-          currentTotalFgQty: cleanText(row.currentTotalFgQty),
-          currentRank: cleanText(row.currentRank),
-          samImprovement: cleanText(row.samImprovement),
-          improvementType: cleanText(row.improvementType),
-          improvementValue: cleanText(row.improvementValue),
-          investmentDecision: cleanText(row.investmentDecision),
-          updatedBy: cleanText(row.updatedBy),
-          updatedAt: cleanText(row.updatedAt),
-          activeTop20: cleanText(row.activeTop20),
+          currentTotalFgQty: mergeValue(row.currentTotalFgQty, existing.currentTotalFgQty),
+          currentRank: mergeValue(row.currentRank, existing.currentRank),
+          samImprovement: mergeValue(row.samImprovement, existing.samImprovement),
+          improvementType: mergeValue(row.improvementType, existing.improvementType),
+          improvementValue: mergeValue(row.improvementValue, existing.improvementValue),
+          investmentDecision: mergeValue(row.investmentDecision, existing.investmentDecision),
+          updatedBy: mergeValue(row.updatedBy, existing.updatedBy),
+          updatedAt: mergeValue(row.updatedAt, existing.updatedAt),
+          activeTop20: mergeValue(row.activeTop20, existing.activeTop20),
         };
       });
     return nextNotes;
