@@ -74,7 +74,7 @@
     dashboardFrameId: null,
     dashboardDeferredTimeout: null,
     lastDashboardAnalytics: null,
-    latestSource: "Seed file",
+    latestSource: "DFM 2026.xlsx",
     lastRefreshAt: null,
     syncStatus: "Waiting for refresh",
     isSaving: false,
@@ -624,6 +624,15 @@
     return `${formatNumber(count)} ${count === 1 ? singular : plural}`;
   }
 
+  function formatSourceLabel(value) {
+    const text = cleanText(value);
+    if (!text) {
+      return "DFM 2026.xlsx";
+    }
+    const parts = text.split(/[\\/]/).filter(Boolean);
+    return parts[parts.length - 1] || "DFM 2026.xlsx";
+  }
+
   function parseExcelLikeDate(value) {
     if (value === null || value === undefined || value === "") {
       return null;
@@ -631,12 +640,36 @@
     if (value instanceof Date) {
       return Number.isNaN(value.getTime()) ? null : value;
     }
+    const malaysiaOffsetMs = 8 * 60 * 60 * 1000;
+    const buildMalaysiaDate = (year, month, day, hour = 0, minute = 0, second = 0) =>
+      new Date(Date.UTC(year, month - 1, day, hour, minute, second) - malaysiaOffsetMs);
+    const dateTimeMatch =
+      typeof value === "string"
+        ? value
+            .trim()
+            .match(
+              /^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2})(?::(\d{2}))?\s*(AM|PM)?)?$/i,
+            )
+        : null;
+    if (dateTimeMatch) {
+      const [, monthText, dayText, yearText, hourText, minuteText, secondText, meridiemText] = dateTimeMatch;
+      let hour = Number(hourText || 0);
+      const minute = Number(minuteText || 0);
+      const second = Number(secondText || 0);
+      const meridiem = cleanText(meridiemText).toUpperCase();
+      if (meridiem === "PM" && hour < 12) {
+        hour += 12;
+      } else if (meridiem === "AM" && hour === 12) {
+        hour = 0;
+      }
+      return buildMalaysiaDate(Number(yearText), Number(monthText), Number(dayText), hour, minute, second);
+    }
     if (typeof value === "number" && Number.isFinite(value) && value > 30000) {
-      return new Date(Date.UTC(1899, 11, 30) + value * 24 * 60 * 60 * 1000);
+      return new Date(Date.UTC(1899, 11, 30) + value * 24 * 60 * 60 * 1000 - malaysiaOffsetMs);
     }
     const numeric = Number(value);
     if (typeof value === "string" && Number.isFinite(numeric) && numeric > 30000) {
-      return new Date(Date.UTC(1899, 11, 30) + numeric * 24 * 60 * 60 * 1000);
+      return new Date(Date.UTC(1899, 11, 30) + numeric * 24 * 60 * 60 * 1000 - malaysiaOffsetMs);
     }
     const parsed = new Date(value);
     return Number.isNaN(parsed.getTime()) ? null : parsed;
@@ -2145,7 +2178,7 @@
         state.investmentNotes = buildInvestmentNotesFromSummaryRows(latestSeed.summaryRows || []);
         persistInvestmentNotes();
       }
-      state.latestSource = latestSeed?.meta?.sourceFile || "Seed file";
+      state.latestSource = formatSourceLabel(latestSeed?.meta?.sourceFile);
       state.lastRefreshAt = Date.now();
       state.syncStatus = "Synced";
       persistRecords();
@@ -2177,7 +2210,7 @@
         const fallbackRecords = normalizeRecords(seedData.records || []);
         if (fallbackRecords.length) {
           state.records = fallbackRecords;
-          state.latestSource = "Seed file";
+          state.latestSource = "DFM 2026.xlsx";
           state.lastRefreshAt = Date.now();
           state.syncStatus = "Seed fallback";
           persistRecords();
@@ -2191,7 +2224,7 @@
         state.investmentNotes = buildInvestmentNotesFromSummaryRows(latestSeed.summaryRows || []);
         persistInvestmentNotes();
       }
-      state.latestSource = latestSeed?.meta?.sourceFile || "Live Excel fetch";
+      state.latestSource = formatSourceLabel(latestSeed?.meta?.sourceFile);
       state.lastRefreshAt = Date.now();
       state.syncStatus = "Synced";
       persistRecords();
