@@ -624,8 +624,30 @@
     return `${formatNumber(count)} ${count === 1 ? singular : plural}`;
   }
 
+  function parseExcelLikeDate(value) {
+    if (value === null || value === undefined || value === "") {
+      return null;
+    }
+    if (value instanceof Date) {
+      return Number.isNaN(value.getTime()) ? null : value;
+    }
+    if (typeof value === "number" && Number.isFinite(value) && value > 30000) {
+      return new Date(Date.UTC(1899, 11, 30) + value * 24 * 60 * 60 * 1000);
+    }
+    const numeric = Number(value);
+    if (typeof value === "string" && Number.isFinite(numeric) && numeric > 30000) {
+      return new Date(Date.UTC(1899, 11, 30) + numeric * 24 * 60 * 60 * 1000);
+    }
+    const parsed = new Date(value);
+    return Number.isNaN(parsed.getTime()) ? null : parsed;
+  }
+
   function formatRefreshTime(value) {
     if (!value) {
+      return "Not yet";
+    }
+    const parsed = parseExcelLikeDate(value);
+    if (!parsed) {
       return "Not yet";
     }
     return new Intl.DateTimeFormat("en-MY", {
@@ -633,7 +655,7 @@
       minute: "2-digit",
       second: "2-digit",
       hour12: true,
-    }).format(new Date(value));
+    }).format(parsed);
   }
 
   function escapeHtml(value) {
