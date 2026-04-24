@@ -802,15 +802,24 @@
     });
     const totalModTypes = mTypeCodes.size + nonMTypeCodes.size + otherTypeCodes.size;
 
-    const investmentBoardRows = Array.from(nonMCodeMap.entries())
-      .map(([label]) => {
+    const summaryDrivenRows = Object.entries(state.investmentNotes)
+      .map(([label, manual]) => ({
+        label,
+        manual,
+        rank: Number(manual.currentRank || 0),
+        active: cleanText(manual.activeTop20).toLowerCase() === "yes",
+      }))
+      .filter((item) => item.active && item.rank > 0)
+      .sort((a, b) => a.rank - b.rank || a.label.localeCompare(b.label))
+      .slice(0, 20)
+      .map(({ label, manual }) => {
         const seasonCounts = nonMCodeSeasonMap.get(label) || new Map();
-        const manual = state.investmentNotes[label] || {};
         const seasonVolumes = investmentSeasonLabels.map((season) => ({
           season,
           value: seasonCounts.get(season) || 0,
         }));
-        const totalVolume = sum(seasonVolumes.map((item) => item.value));
+        const fallbackTotalVolume = sum(seasonVolumes.map((item) => item.value));
+        const totalVolume = Number(manual.currentTotalFgQty || 0) || fallbackTotalVolume;
         const factor = parseImprovementFactor(manual.improvementType);
         return {
           label,
@@ -827,9 +836,38 @@
           investmentDecision: cleanText(manual.investmentDecision),
           updatedAt: manual.updatedAt || null,
         };
-      })
-      .sort((a, b) => b.totalVolume - a.totalVolume || a.label.localeCompare(b.label))
-      .slice(0, 20);
+      });
+
+    const investmentBoardRows = (summaryDrivenRows.length
+      ? summaryDrivenRows
+      : Array.from(nonMCodeMap.entries())
+          .map(([label]) => {
+            const seasonCounts = nonMCodeSeasonMap.get(label) || new Map();
+            const manual = state.investmentNotes[label] || {};
+            const seasonVolumes = investmentSeasonLabels.map((season) => ({
+              season,
+              value: seasonCounts.get(season) || 0,
+            }));
+            const totalVolume = sum(seasonVolumes.map((item) => item.value));
+            const factor = parseImprovementFactor(manual.improvementType);
+            return {
+              label,
+              totalVolume,
+              seasonVolumes,
+              samImprovement: cleanText(manual.samImprovement),
+              improvementType: cleanText(manual.improvementType),
+              improvementValue: calculateImprovementValue(
+                manual.samImprovement,
+                totalVolume,
+                factor,
+                manual.improvementValue,
+              ),
+              investmentDecision: cleanText(manual.investmentDecision),
+              updatedAt: manual.updatedAt || null,
+            };
+          })
+          .sort((a, b) => b.totalVolume - a.totalVolume || a.label.localeCompare(b.label))
+          .slice(0, 20));
 
     return {
       styleSummary: styleSummary.sort((a, b) => b.fgQty - a.fgQty),
@@ -1533,7 +1571,9 @@
     if (!nextSam && !nextImprovementType && !nextImprovementValue && !nextDecision) {
       delete state.investmentNotes[code];
     } else {
+      const existing = state.investmentNotes[code] || {};
       state.investmentNotes[code] = {
+        ...existing,
         samImprovement: nextSam,
         improvementType: nextImprovementType,
         improvementValue: nextImprovementValue,
@@ -1829,6 +1869,12 @@
       constructionCode:
         valueFromRow(row, ["Construction Code", "constructionCode"]) ||
         valueFromRowFuzzy(row, ["Construction Code", "constructionCode"]),
+      currentTotalFgQty:
+        valueFromRow(row, ["Current Total FG QTY", "currentTotalFgQty"]) ||
+        valueFromRowFuzzy(row, ["Current Total FG QTY", "currentTotalFgQty"]),
+      currentRank:
+        valueFromRow(row, ["Current Rank", "currentRank"]) ||
+        valueFromRowFuzzy(row, ["Current Rank", "currentRank"]),
       samImprovement:
         valueFromRow(row, ["SAM Improvement", "samImprovement"]) ||
         valueFromRowFuzzy(row, ["SAM Improvement", "samImprovement"]),
@@ -1863,6 +1909,8 @@
           return;
         }
         nextNotes[code] = {
+          currentTotalFgQty: cleanText(row.currentTotalFgQty),
+          currentRank: cleanText(row.currentRank),
           samImprovement: cleanText(row.samImprovement),
           improvementType: cleanText(row.improvementType),
           improvementValue: cleanText(row.improvementValue),
