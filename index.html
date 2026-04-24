@@ -960,6 +960,10 @@
                         <input type="text" id="c_jobNo" placeholder="Job No." class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Request By</label>
+                        <input type="text" id="c_requestBy" placeholder="Requester name" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Proto Stage</label>
                         <input type="text" id="c_protoStage" placeholder="e.g. P2" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
@@ -2473,6 +2477,8 @@
             const tbody = document.getElementById('laserTable');
             if (!tbody) return;
             const isAdmin = (currentUser === 'Gavin');
+            const laserSearchEl = document.getElementById('laserSearch');
+            if (laserSearchEl) laserSearchQuery = laserSearchEl.value.toLowerCase();
             if (!allLaserRows.length) {
                 tbody.innerHTML = '<tr><td colspan="19" class="p-6 text-center text-slate-400 italic text-xs">No laser records found.</td></tr>';
                 return;
@@ -4226,6 +4232,8 @@
         function renderSupportTable() {
             const tbody = document.getElementById('supportTable');
             if (!tbody) return;
+            const supportSearchEl = document.getElementById('supportSearch');
+            if (supportSearchEl) supportSearchQuery = supportSearchEl.value.toLowerCase();
 
             const supMF = getSupportMonthFilter();
             const rows = allSupportRows.filter(r => {
@@ -4459,6 +4467,8 @@
         function renderPatchTable() {
             const tbody = document.getElementById('patchTable');
             if (!tbody) return;
+            const patchSearchEl = document.getElementById('patchSearch');
+            if (patchSearchEl) patchSearchQuery = patchSearchEl.value.toLowerCase();
             const patchMF = getPatchMonthFilter();
             const months_p = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             const rows = allPatchRows.filter(r => {
@@ -4697,6 +4707,10 @@
         function renderDownTable() {
             const tbody = document.getElementById('downTable');
             if (!tbody) return;
+            const downSearchEl = document.getElementById('downSearch');
+            if (downSearchEl) downSearchQuery = downSearchEl.value.toLowerCase();
+            const downMonthEl = document.getElementById('downMonthFilter');
+            if (downMonthEl) downMonthQuery = downMonthEl.value || '';
             if (!allDownRows.length) {
                 tbody.innerHTML = '<tr><td colspan="25" class="p-6 text-center text-slate-400 italic text-xs">No down filling records found.</td></tr>';
                 return;
@@ -4931,6 +4945,8 @@
         function updateConsumptionPicDisplay() {
             const el = document.getElementById('c_picDisplay');
             if (el) el.innerText = currentUser ? `PIC: ${currentUser}` : 'Not logged in';
+            const reqByEl = document.getElementById('c_requestBy');
+            if (reqByEl && !reqByEl.value.trim()) reqByEl.value = currentUser || '';
         }
 
         function applyConsumptionFilter() {
@@ -4996,6 +5012,10 @@
         function renderConsumptionTable() {
             const tbody = document.getElementById('consumptionTable');
             if (!tbody) return;
+            const consumptionSearchEl = document.getElementById('consumptionSearch');
+            if (consumptionSearchEl) consumptionSearchQuery = consumptionSearchEl.value.toLowerCase();
+            const consumptionMonthEl = document.getElementById('consumptionMonthFilter');
+            if (consumptionMonthEl) consumptionMonthQuery = consumptionMonthEl.value || '';
             const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             const isAdmin = currentUser === 'Gavin';
 
@@ -5085,7 +5105,7 @@
                 season:        document.getElementById('c_season').value.trim(),
                 styleNumber:   document.getElementById('c_style').value.trim(),
                 jobNo:         document.getElementById('c_jobNo').value.trim(),
-                requestBy:     currentUser,
+                requestBy:     document.getElementById('c_requestBy').value.trim() || currentUser,
                 protoStage:    document.getElementById('c_protoStage').value.trim(),
                 requestType:   document.getElementById('c_requestType').value.trim(),
                 startDate:     toExcelDateFormat(document.getElementById('c_startDate').value.trim()),
@@ -5107,6 +5127,8 @@
                      'c_requestType','c_startDate','c_completeDate','c_remark'].forEach(id => {
                         const el = document.getElementById(id); if (el) el.value = '';
                     });
+                    const reqByEl = document.getElementById('c_requestBy');
+                    if (reqByEl) reqByEl.value = currentUser || '';
                     refreshConsumptionData();
                     setTimeout(() => { btn.innerText = '+ ADD ROW'; btn.disabled = false; }, 2000);
                 } else {
