@@ -505,11 +505,15 @@
 
   function calculateImprovementValue(samImprovement, totalVolume, factor, fallbackValue = "") {
     const sam = Number(samImprovement);
+    const fallbackText = cleanText(fallbackValue);
+    if (fallbackText === "0" || fallbackText === "0.00") {
+      return "";
+    }
     if (!Number.isFinite(sam) || sam === 0) {
-      return cleanText(fallbackValue);
+      return fallbackText;
     }
     if (!Number.isFinite(factor)) {
-      return cleanText(fallbackValue);
+      return fallbackText;
     }
     return formatCurrency(sam * Number(totalVolume || 0) * factor);
   }
@@ -558,6 +562,21 @@
     const analytics = computeAnalytics(filterRecords(state.records));
     const row = analytics.investmentBoard.find((item) => item.label === code);
     return row ? Number(row.totalVolume || 0) : 0;
+  }
+
+  function codeMatchesSummaryLabel(recordCode, label) {
+    const normalizedRecord = cleanText(recordCode).toUpperCase();
+    const normalizedLabel = cleanText(label).toUpperCase();
+    if (!normalizedRecord || !normalizedLabel) {
+      return false;
+    }
+    if (normalizedRecord === normalizedLabel) {
+      return true;
+    }
+    return normalizedRecord
+      .split("/")
+      .map((part) => cleanText(part).toUpperCase())
+      .includes(normalizedLabel);
   }
 
   function formatInvestmentFieldValue(columnKey, value) {
@@ -813,7 +832,14 @@
       .sort((a, b) => a.rank - b.rank || a.label.localeCompare(b.label))
       .slice(0, 20)
       .map(({ label, manual }) => {
-        const seasonCounts = nonMCodeSeasonMap.get(label) || new Map();
+        const seasonCounts = Array.from(nonMCodeSeasonMap.entries())
+          .filter(([code]) => codeMatchesSummaryLabel(code, label))
+          .reduce((acc, [, counts]) => {
+            counts.forEach((value, season) => {
+              acc.set(season, (acc.get(season) || 0) + value);
+            });
+            return acc;
+          }, new Map());
         const seasonVolumes = investmentSeasonLabels.map((season) => ({
           season,
           value: seasonCounts.get(season) || 0,
