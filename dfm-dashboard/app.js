@@ -19,9 +19,9 @@
     "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/ebef663b8a79414cb89579a4b4edf9d6/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=JSZZaLOTkfxWcoDSdb3J7w1rhRQ400g2exl7yrBdKbg";
   const DFM_SUMMARY_UPDATE_URL =
     "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/8a1ee6b32b44477ab947ff85d3c38881/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=-cqYV3Ac1tBeoECt_zje-s9Yk1B0RZYvDxqV-fP24N8";
-  const SEED_REFRESH_MS = 15000;
   const defectMap = new Map((seedData.defectCatalog || []).map((item) => [item.code, item]));
   const page = document.body.dataset.page || "dashboard";
+  const AUTO_REFRESH_MS = page === "dashboard" ? 60000 : 0;
 
   const elements = {
     seasonDonut: document.getElementById("season-donut"),
@@ -2440,9 +2440,11 @@
       render();
     }, state.rotation.seconds * 1000);
   }
-  state.seedRefreshTimerId = window.setInterval(() => {
-    refreshFromLatestSeed({ silent: true });
-  }, SEED_REFRESH_MS);
+  if (AUTO_REFRESH_MS > 0) {
+    state.seedRefreshTimerId = window.setInterval(() => {
+      refreshFromLatestSeed({ silent: true });
+    }, AUTO_REFRESH_MS);
+  }
   render();
   refreshFromLatestSeed({ silent: true });
 })();
