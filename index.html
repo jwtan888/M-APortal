@@ -201,7 +201,7 @@
     </style>
 </head>
 <body class="p-3 md:p-5 font-sans" style="background:var(--bg);min-height:100vh">
-    <div class="max-w-[1600px] mx-auto">
+    <div id="portal-shell" class="max-w-[1600px] mx-auto">
         <header class="mb-4 rounded-[var(--radius-lg)] border overflow-hidden" style="box-shadow:var(--shadow-md)">
             <!-- Top row: logo + title -->
             <div class="flex items-center justify-between gap-4 px-5 pt-4 pb-3" style="background:rgba(255,255,255,0.92);backdrop-filter:blur(20px)">
@@ -220,6 +220,10 @@
                 </div>
                 </div>
                 <div class="flex items-center gap-2 flex-shrink-0">
+                    <a href="attendance.html" target="_self"
+                       class="inline-flex items-center justify-center text-[10px] font-bold rounded-[10px] px-3 py-2 border transition-all whitespace-nowrap" style="color:#0f766e;border-color:rgba(15,118,110,0.28);background:rgba(15,118,110,0.06)">
+                        Attendance
+                    </a>
                     <a href="MASkills.html" target="_self"
                        class="inline-flex items-center justify-center text-[10px] font-bold rounded-[10px] px-3 py-2 border transition-all whitespace-nowrap" style="color:#6366f1;border-color:rgba(99,102,241,0.3);background:rgba(99,102,241,0.06)">
                         Skills
@@ -241,10 +245,6 @@
                 </div>
                 <div id="activeUserView" class="hidden flex items-center justify-between gap-3">
                     <span class="text-sm font-semibold uppercase tracking-tight" style="color:var(--text-2)">Active: <span id="displayUserName" class="ml-1 font-bold" style="color:var(--accent)">---</span></span>
-                    <a id="att-link" href="#attendance" onclick="setTimeout(openAttendance,50)"
-                           class="hidden items-center gap-1 text-[10px] font-bold hover:underline rounded-full px-2.5 py-1 border transition-all" style="color:var(--text-2);border-color:var(--border2)">
-                            📋 Attendance
-                        </a>
                     <button onclick="logout()" class="text-xs font-bold px-3 py-2 rounded-[10px] border transition-all" style="color:#ef4444;border-color:rgba(239,68,68,0.25)">Logout</button>
                 </div>
             </div>
@@ -1288,334 +1288,86 @@
         </div>
     </div><!-- end max-w-[1600px] wrapper -->
 
-    <!-- ═══════════════════════════════════════════════════════
-         ATTENDANCE PAGE — hidden from nav, accessible via ?page=attendance
-         Editable only by Gavin and Joe
-    ════════════════════════════════════════════════════════════ -->
-    <div id="attendance-page" class="hidden max-w-[1400px] mx-auto">
-        <header class="mb-4 bg-white p-4 rounded-xl border shadow-sm flex items-center justify-between">
-            <div class="flex items-center gap-3">
-                <button onclick="closeAttendance()" class="text-slate-400 hover:text-slate-700 text-xl font-bold leading-none">←</button>
-                <div>
-                    <h1 class="text-lg font-bold text-slate-800">M&A Attendance</h1>
-                    <p class="text-slate-400 text-[10px] uppercase tracking-widest">Working Hours Tracker</p>
-                </div>
-            </div>
-            <div class="flex items-center gap-2">
-                <button onclick="prevAttendanceMonth()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-3 py-1.5 rounded text-xs">◀</button>
-                <span id="att-month-label" class="text-sm font-bold text-slate-700 min-w-[120px] text-center">—</span>
-                <button onclick="nextAttendanceMonth()" class="bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold px-3 py-1.5 rounded text-xs">▶</button>
-                <button onclick="saveAttendance()" id="att-save-btn" class="bg-blue-600 text-white text-xs font-bold px-4 py-1.5 rounded hover:bg-blue-700 ml-2">SAVE</button>
-            </div>
-        </header>
-
-
-
-        <!-- Quick-fill row -->
-        <div class="bg-white p-3 rounded-xl border shadow-sm mb-4 flex flex-wrap gap-2 items-center text-xs">
-            <span class="font-bold text-slate-500 uppercase tracking-wider text-[10px]">Quick Fill Selected Column:</span>
-            <button onclick="quickFill(9)"    class="bg-blue-100 text-blue-700 font-bold px-3 py-1 rounded hover:bg-blue-200">9h Normal</button>
-            <button onclick="quickFill(11)"   class="bg-amber-100 text-amber-700 font-bold px-3 py-1 rounded hover:bg-amber-200">11h OT</button>
-            <button onclick="quickFill(8.5)"  class="bg-purple-100 text-purple-700 font-bold px-3 py-1 rounded hover:bg-purple-200">8.5h Sat</button>
-            <button onclick="quickFill(0)"    class="bg-slate-100 text-slate-600 font-bold px-3 py-1 rounded hover:bg-slate-200">0 Off</button>
-            <span class="text-slate-300">|</span>
-            <span class="font-bold text-slate-500 text-[10px]">Custom:</span>
-            <input type="number" id="att-custom-val" step="0.5" min="0" max="24" value="" placeholder="hrs" class="w-16 border rounded p-1 text-center text-xs outline-none focus:ring-2 focus:ring-blue-400">
-            <button onclick="quickFill(parseFloat(document.getElementById('att-custom-val').value)||0)" class="bg-slate-700 text-white font-bold px-3 py-1 rounded hover:bg-slate-600">Fill</button>
-        </div>
-
-        <!-- Attendance Grid -->
-        <div class="bg-white rounded-xl shadow-sm border overflow-x-auto">
-            <table id="att-table" class="w-full text-left min-w-[800px]">
-                <thead id="att-thead" class="bg-slate-100 border-b text-[10px] uppercase tracking-wider text-slate-500 font-bold"></thead>
-                <tbody id="att-tbody"></tbody>
-            </table>
-        </div>
-
-        <div class="mt-4 text-[10px] text-slate-400 text-center">
-            Attendance data is stored locally in your browser. Changes saved with SAVE button persist across sessions.
-        </div>
-    </div>
-
     <script>
-    // ── Attendance Page ──────────────────────────────────────────────────────
     const ATT_MEMBERS = ['Phone','James','Ram','Keat','Viki','Mark','Joe','Gavin'];
     const ATT_EDITORS = ['Gavin','Joe'];
-    let attYear  = new Date().getFullYear();
-    let attMonth = new Date().getMonth(); // 0-indexed
-    let attSelectedCol = null; // for quick-fill
-    let attData  = {}; // { 'YYYY-MM': { name: { day: hrs } } }
-
-    function attKey() { return `${attYear}-${String(attMonth+1).padStart(2,'0')}`; }
-
-    function openAttendance() {
-        document.getElementById('attendance-page').classList.remove('hidden');
-        document.querySelector('.max-w-\[1600px\]').classList.add('hidden');
-        loadAttData();
-        renderAttendance();
-        fetchAttendanceFromCloud(); // sync from cloud in background
-    }
-
-    function closeAttendance() {
-        document.getElementById('attendance-page').classList.add('hidden');
-        document.querySelector('.max-w-\[1600px\]').classList.remove('hidden');
-    }
+    let attData = {};
 
     function loadAttData() {
         try {
             const saved = localStorage.getItem('ma_attendance');
             attData = saved ? JSON.parse(saved) : {};
-        } catch(e) { attData = {}; }
+        } catch (e) {
+            attData = {};
+        }
     }
 
     async function fetchAttendanceFromCloud() {
         try {
-            const _ctrl_a = new AbortController(); const _t_a = setTimeout(() => _ctrl_a.abort(), 20000);
-            const res = await fetch(attendanceFetchURL + "&cb=" + Date.now(), { method: 'POST', body: JSON.stringify({}), signal: _ctrl_a.signal }); clearTimeout(_t_a);
+            const ctrl = new AbortController();
+            const timer = setTimeout(() => ctrl.abort(), 20000);
+            const res = await fetch(attendanceFetchURL + "&cb=" + Date.now(), { method: 'POST', body: JSON.stringify({}), signal: ctrl.signal });
+            clearTimeout(timer);
             if (!res.ok) return;
             const raw = await res.text();
-            let d; try { d = JSON.parse(raw); } catch(e) { return; }
-            let rows = [];
-            if (Array.isArray(d)) rows = d;
-            else if (d?.value && Array.isArray(d.value)) rows = d.value;
-            else if (d?.body?.value && Array.isArray(d.body.value)) rows = d.body.value;
-            else if (d?.body && Array.isArray(d.body)) rows = d.body;
-            else { for (const k of Object.keys(d||{})) { if (Array.isArray(d[k])) { rows = d[k]; break; } } }
-            if (!rows.length) { console.log('[ATT] No rows returned from attendance fetch'); return; }
-            console.log('[ATT] Processing', rows.length, 'attendance rows from cloud');
+            let parsed;
+            try { parsed = JSON.parse(raw); } catch (e) { return; }
+            const rows = extractRows(parsed);
+            if (!rows.length) return;
             const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             rows.forEach(row => {
-                // Support multiple formats:
-                // Format A (summary): { Month:"Mar-26", Name:"Phone", Day_1:9, ..., Total:176 }
-                // Format B (daily):   { Month:"Mar-26", Name:"Phone", Day:5, Hours:9 }
                 let rawMonth = row.Month || row.month || '';
-                let mIdx = -1, fullYear = 0;
-                // Handle Excel serial date number (e.g. 46107 = 2026-03-26)
+                let monthIndex = -1;
+                let fullYear = 0;
                 if (typeof rawMonth === 'number' || (!isNaN(rawMonth) && String(rawMonth).length > 4 && !String(rawMonth).includes('-'))) {
                     const serial = parseFloat(rawMonth);
                     if (serial > 40000 && serial < 60000) {
-                        // Convert Excel serial to Date (UTC)
-                        const d = new Date((serial - 25569) * 86400 * 1000);
-                        mIdx = d.getUTCMonth();
-                        fullYear = d.getUTCFullYear();
+                        const date = new Date((serial - 25569) * 86400 * 1000);
+                        monthIndex = date.getUTCMonth();
+                        fullYear = date.getUTCFullYear();
                     }
                 }
                 const monthLabel = String(rawMonth).trim();
-                if (mIdx < 0 && monthLabel) {
+                if (monthIndex < 0 && monthLabel) {
                     const parts = monthLabel.split('-');
                     if (parts.length >= 3 && parts[0].length === 4) {
-                        // ISO format: 2026-03-26
-                        fullYear = parseInt(parts[0]);
-                        mIdx = parseInt(parts[1]) - 1;
+                        fullYear = parseInt(parts[0], 10);
+                        monthIndex = parseInt(parts[1], 10) - 1;
                     } else if (parts.length === 2 && isNaN(parts[0])) {
-                        // Short format: Mar-26
-                        mIdx = months.indexOf(parts[0]);
-                        fullYear = 2000 + parseInt(parts[1]);
+                        monthIndex = months.indexOf(parts[0]);
+                        fullYear = 2000 + parseInt(parts[1], 10);
                     }
                 }
-                if (!monthLabel && mIdx < 0) return;
-                if (mIdx < 0 || mIdx > 11 || !fullYear) return;
-                const key = `${fullYear}-${String(mIdx+1).padStart(2,'0')}`;
+                if (monthIndex < 0 || monthIndex > 11 || !fullYear) return;
+                const key = `${fullYear}-${String(monthIndex + 1).padStart(2, '0')}`;
                 const name = String(row.Name || row.name || '').trim();
                 if (!name) return;
                 if (!attData[key]) attData[key] = {};
                 if (!attData[key][name]) attData[key][name] = {};
-                const daysInM = new Date(fullYear, mIdx+1, 0).getDate();
-                // Format B: single day row
+                const daysInMonth = new Date(fullYear, monthIndex + 1, 0).getDate();
                 if (row.Day !== undefined && row.Hours !== undefined) {
-                    const d = parseInt(row.Day || row.day);
-                    if (d >= 1 && d <= 31) attData[key][name][d] = parseFloat(row.Hours || row.hours) || 0;
+                    const day = parseInt(row.Day || row.day, 10);
+                    if (day >= 1 && day <= 31) attData[key][name][day] = parseFloat(row.Hours || row.hours) || 0;
                     return;
                 }
-                // Format A: summary row with Day_1..Day_N
                 let hasDayCols = false;
-                for (let d = 1; d <= daysInM; d++) {
-                    const v = row[`Day_${d}`];
-                    if (v !== undefined && v !== null) { attData[key][name][d] = parseFloat(v) || 0; hasDayCols = true; }
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const value = row[`Day_${day}`];
+                    if (value !== undefined && value !== null) {
+                        attData[key][name][day] = parseFloat(value) || 0;
+                        hasDayCols = true;
+                    }
                 }
-                // If no Day_ columns but has Total, distribute evenly across working days as estimate
                 if (!hasDayCols && (row.Total || row.total)) {
-                    const total = parseFloat(row.Total || row.total) || 0;
-                    // Store total in day 1 as sentinel — renderUtilization sums all days anyway
-                    // Better: store total directly in a special key so we can use it
-                    attData[key][name]['__total__'] = total;
+                    attData[key][name].__total__ = parseFloat(row.Total || row.total) || 0;
                 }
             });
-            console.log('[ATT] attData after cloud fetch:', JSON.stringify(Object.keys(attData)));
             localStorage.setItem('ma_attendance', JSON.stringify(attData));
-            renderAttendance();
-            renderUtilization(); // refresh capacity now that cloud data is loaded
-            updateDashboard();   // refresh KPI charts too
-        } catch(e) { /* silent fail — localStorage data still usable */ }
-    }
-
-    async function saveAttendance() {
-        if (!ATT_EDITORS.includes(currentUser)) return alert('Only Gavin or Joe can save attendance.');
-        const key = attKey();
-        if (!attData[key]) attData[key] = {};
-        const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-        const dows   = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
-        const daysInMonth = new Date(attYear, attMonth+1, 0).getDate();
-        const monthLabel  = `${months[attMonth]}-${String(attYear).slice(2)}`;
-
-        // Build ONE row per person (not per day) — reduces Excel API calls from ~240 → 8
-        // Each person row has Day_1..Day_N columns + Total
-        // Power Automate loop does 8 "Add a row" calls instead of 240 — stays well within timeout
-        const rows = [];
-        ATT_MEMBERS.forEach(name => {
-            if (!attData[key][name]) attData[key][name] = {};
-            let total = 0;
-            const rowObj = { month: monthLabel, name };
-            for (let d = 1; d <= daysInMonth; d++) {
-                const el  = document.getElementById(`att-${name}-${d}`);
-                const val = el ? (el.value === '' ? 0 : parseFloat(el.value) || 0) : 0;
-                attData[key][name][d] = val;
-                total += val;
-                rowObj[`Day_${d}`] = val;
-            }
-            rowObj.total = parseFloat(total.toFixed(1));
-            rows.push(rowObj);
-        });
-
-        // Save to localStorage as backup
-        localStorage.setItem('ma_attendance', JSON.stringify(attData));
-
-        const btn = document.getElementById('att-save-btn');
-        btn.innerText = 'SAVING...'; btn.disabled = true;
-
-        // Fire-and-forget pattern: send request then don't wait for slow Excel loop
-        // Power Automate will still complete in background; portal shows SAVED immediately
-        // after confirming trigger was received (202 Accepted is enough)
-        const controller = new AbortController();
-        const timer = setTimeout(() => controller.abort(), 30000);
-        try {
-            const res = await fetch(attendanceUpdateURL, {
-                method: 'POST',
-                headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ month: monthLabel, rows }),
-                signal: controller.signal
-            });
-            clearTimeout(timer);
-            // Power Automate returns 202 Accepted immediately when async, or 200 when sync
-            if (res.ok || res.status === 202) {
-                btn.innerText = 'SAVED ✓'; btn.classList.add('bg-emerald-600');
-                setTimeout(() => { btn.innerText = 'SAVE'; btn.disabled = false; btn.classList.remove('bg-emerald-600'); }, 3000);
-            } else {
-                const txt = await res.text();
-                btn.innerText = 'LOCAL ONLY'; btn.disabled = false;
-                alert(`Saved locally but Flow failed (HTTP ${res.status}).\nCheck: Flow trigger is HTTP, Apply to each input = triggerBody()?['rows'], field mapping uses items() expressions.\n${txt.substring(0,200)}`);
-            }
-        } catch(e) {
-            clearTimeout(timer);
-            if (e.name === 'AbortError') {
-                // Timeout — but data was sent. Power Automate is still running in background.
-                // This is normal for large months — data is safe in localStorage.
-                btn.innerText = 'SENT ✓'; btn.classList.add('bg-amber-500');
-                setTimeout(() => { btn.innerText = 'SAVE'; btn.disabled = false; btn.classList.remove('bg-amber-500'); }, 3000);
-            } else {
-                btn.innerText = 'LOCAL ONLY'; btn.disabled = false;
-                alert('Network error — saved locally only. ' + e.message);
-            }
+            updateDashboard();
+            renderUtilization();
+        } catch (e) {
         }
     }
-
-    function prevAttendanceMonth() {
-        attMonth--;
-        if (attMonth < 0) { attMonth = 11; attYear--; }
-        renderAttendance();
-    }
-    function nextAttendanceMonth() {
-        attMonth++;
-        if (attMonth > 11) { attMonth = 0; attYear++; }
-        renderAttendance();
-    }
-
-    function quickFill(val) {
-        if (!ATT_EDITORS.includes(currentUser)) return alert('Only Gavin or Joe can edit attendance.');
-        if (attSelectedCol === null) return alert('Click a column header (day) first to select it.');
-        ATT_MEMBERS.forEach(name => {
-            const el = document.getElementById(`att-${name}-${attSelectedCol}`);
-            if (el && !el.disabled) el.value = val;
-        });
-    }
-
-    function renderAttendance() {
-        const months = ["January","February","March","April","May","June","July","August","September","October","November","December"];
-        const dows   = ["SUN","MON","TUE","WED","THU","FRI","SAT"];
-        const key    = attKey();
-        const data   = attData[key] || {};
-        const daysInMonth = new Date(attYear, attMonth+1, 0).getDate();
-        const canEdit = ATT_EDITORS.includes(currentUser);
-
-        document.getElementById('att-month-label').innerText = `${months[attMonth]} ${attYear}`;
-
-        // Build header
-        const thead = document.getElementById('att-thead');
-        let hRow = '<tr><th class="p-2 sticky left-0 bg-slate-100 z-10 min-w-[80px]">Name</th>';
-        for (let d = 1; d <= daysInMonth; d++) {
-            const dow = new Date(attYear, attMonth, d).getDay();
-            const isWeekend = dow === 0 || dow === 6;
-            const isSat = dow === 6;
-            const colClass = isWeekend ? (isSat ? 'bg-purple-50' : 'bg-slate-50') : '';
-            hRow += `<th class="p-1 text-center cursor-pointer hover:bg-blue-100 transition-all ${colClass} ${attSelectedCol===d?'bg-blue-200 text-blue-800':''}"
-                onclick="attSelectedCol=${d}; renderAttendance()">
-                <div class="text-[9px]">${dows[dow]}</div>
-                <div class="text-[11px] font-black">${d}</div>
-            </th>`;
-        }
-        hRow += '<th class="p-2 text-right bg-slate-100">Total</th></tr>';
-        thead.innerHTML = hRow;
-
-        // Build body
-        const tbody = document.getElementById('att-tbody');
-        let rows = '';
-        ATT_MEMBERS.forEach(name => {
-            const memberData = data[name] || {};
-            let total = 0;
-            let cells = '';
-            for (let d = 1; d <= daysInMonth; d++) {
-                const dow  = new Date(attYear, attMonth, d).getDay();
-                const isSat = dow === 6;
-                const isSun = dow === 0;
-                const val  = memberData[d] !== undefined ? memberData[d] : (isSun ? 0 : '');
-                const numVal = parseFloat(val) || 0;
-                total += numVal;
-                // Cell colour
-                let cellBg = '';
-                if (isSun)        cellBg = 'bg-slate-50';
-                else if (isSat)   cellBg = 'bg-purple-50';
-                else if (numVal === 0 && val !== '') cellBg = 'bg-slate-100';
-                else if (numVal >= 11) cellBg = 'bg-amber-50';
-                else if (numVal === 9) cellBg = 'bg-blue-50';
-                const inputClass = `w-10 text-center text-[11px] font-bold border-0 outline-none bg-transparent ${numVal>=11?'text-amber-700':numVal===9?'text-blue-700':numVal===0&&val!==''?'text-slate-400':'text-purple-700'} ${!canEdit?'cursor-default':''}`;
-                cells += `<td class="p-0.5 text-center ${cellBg} ${attSelectedCol===d?'ring-1 ring-blue-400':''}">
-                    <input id="att-${name}-${d}" type="number" step="0.5" min="0" max="24"
-                        value="${val}" ${canEdit?'':'disabled readonly'}
-                        class="${inputClass}"
-                        oninput="this.parentElement.className='p-0.5 text-center '+(parseFloat(this.value)>=11?'bg-amber-50':parseFloat(this.value)===9?'bg-blue-50':parseFloat(this.value)===0?'bg-slate-100':'bg-purple-50')+(${attSelectedCol===d}?' ring-1 ring-blue-400':'')" >
-                </td>`;
-            }
-            // Total
-            rows += `<tr class="border-b hover:bg-slate-50">
-                <td class="p-2 font-bold sticky left-0 bg-white z-10 text-sm">${name}</td>
-                ${cells}
-                <td class="p-2 font-black text-right text-blue-700">${total.toFixed(1)}</td>
-            </tr>`;
-        });
-        tbody.innerHTML = rows;
-    }
-
-    // Expose attendance via URL hash
-    function checkAttendanceRoute() {
-        if (window.location.hash === '#attendance') {
-            if (currentUser && ATT_EDITORS.includes(currentUser)) {
-                openAttendance();
-            } else {
-                alert('Please login first.');
-            }
-        }
-    }
-    window.addEventListener('hashchange', checkAttendanceRoute);
     </script>
 
     <script>
@@ -2946,6 +2698,8 @@
             const sizeVal    = document.getElementById('fSize').value.trim();
             const startVal   = document.getElementById('sTime').value.trim();
             const endVal     = document.getElementById('eTime').value.trim();
+            const startNorm  = toExcelDateFormat(startVal);
+            const endNorm    = toExcelDateFormat(endVal);
             const isNewReq   = document.getElementById('requestToggle').checked;
             if(!fileVal) return alert("Missing Info: Please enter a File Name.");
             const b = document.getElementById('submitBtn'); b.innerText = "Saving..."; b.disabled = true;
@@ -2964,10 +2718,10 @@
                         file:         fileVal,
                         'Size':       sizeVal,
                         size:         sizeVal,
-                        'Start Date m/d/yyyy':    startVal,
-                        startDate:                startVal,
-                        'Complete Date m/d/yyyy': endVal,
-                        completeDate:             endVal
+                        'Start Date m/d/yyyy':    startNorm,
+                        startDate:                startNorm,
+                        'Complete Date m/d/yyyy': endNorm,
+                        completeDate:             endNorm
                     })
                 });
                 if(res.ok) {
@@ -3794,9 +3548,9 @@
         }
         let utilChart = null;
 
-        function renderUtilization() {
+        function renderUtilization(monthOverride = null) {
             const months  = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-            const sharedMonth = document.getElementById('monthFilter')?.value || 'ALL';
+            const sharedMonth = monthOverride || document.getElementById('monthFilter')?.value || 'ALL';
 
             // ── Capacity from Attendance data ────────────────────────────────
             // Build a per-PIC capacity map from attData for the selected month
@@ -3807,10 +3561,13 @@
             // Determine which month key to read from attData
             let attKeyStr = null;
             if (sharedMonth !== 'ALL') {
-                // Convert "Mar-26" → attKey format "2026-03"
+                // Convert "Apr-2026" or "Apr-26" → attKey format "2026-04"
                 const [mStr, yStr] = sharedMonth.split('-');
                 const mIdx = months.indexOf(mStr);
-                const fullYear = mIdx >= 0 ? (parseInt(yStr) + 2000) : null;
+                const parsedYear = parseInt(yStr, 10);
+                const fullYear = mIdx >= 0 && !isNaN(parsedYear)
+                    ? (String(yStr).length === 2 ? parsedYear + 2000 : parsedYear)
+                    : null;
                 if (fullYear !== null) attKeyStr = `${fullYear}-${String(mIdx+1).padStart(2,'0')}`;
             } else {
                 // ALL selected — use the most recent available month in attData
@@ -4172,15 +3929,11 @@
             if (currentUser) {
                 lv.classList.add('hidden'); av.classList.remove('hidden');
                 document.getElementById('displayUserName').innerText = currentUser;
-                const attLink = document.getElementById('att-link');
-                if (attLink) { if (['Gavin','Joe'].includes(currentUser)) attLink.classList.remove('hidden'); else attLink.classList.add('hidden'); }
                 // Show Reset N/A button only for Gavin
                 const naBtn = document.getElementById('clearNA-btn');
                 if (naBtn) naBtn.classList.toggle('hidden', currentUser !== 'Gavin');
             } else {
                 lv.classList.remove('hidden'); av.classList.add('hidden');
-                const attLink = document.getElementById('att-link');
-                if (attLink) attLink.classList.add('hidden');
                 const naBtn = document.getElementById('clearNA-btn');
                 if (naBtn) naBtn.classList.add('hidden');
             }
