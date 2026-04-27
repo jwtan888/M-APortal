@@ -1,0 +1,984 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>M&A Attendance</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        :root {
+            --bg: #dfe1ea;
+            --surface: rgba(255, 255, 255, 0.9);
+            --surface-strong: #ffffff;
+            --surface-soft: #f8fafc;
+            --border: rgba(91, 104, 138, 0.12);
+            --text: #1a1d25;
+            --muted: #7d8598;
+            --accent: #1e57d8;
+            --accent-2: #0f766e;
+            --warning: #d65a3a;
+            --danger: #dc2626;
+            --radius: 22px;
+            --shadow: 0 20px 50px rgba(48, 59, 86, 0.08);
+        }
+
+        * { box-sizing: border-box; }
+        html { font-size: 16px; }
+        body {
+            margin: 0;
+            min-height: 100vh;
+            background:
+                radial-gradient(circle at top left, rgba(255, 255, 255, 0.55), transparent 26rem),
+                linear-gradient(180deg, #dfe1ea 0%, #d9dbe6 100%);
+            color: var(--text);
+            font-family: "Inter", "Aptos", "Segoe UI Variable", "Segoe UI", "Helvetica Neue", Arial, sans-serif;
+        }
+
+        .shell {
+            max-width: 1440px;
+            margin: 0 auto;
+            padding: 1rem;
+        }
+
+        .panel {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: 1.35rem;
+            box-shadow: var(--shadow);
+        }
+
+        .topbar {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: end;
+            margin-bottom: 1rem;
+        }
+
+        .topbar-title {
+            margin: 0.2rem 0 0;
+            font-size: clamp(1.6rem, 3vw, 2.5rem);
+            letter-spacing: -0.03em;
+            font-weight: 700;
+        }
+
+        .nav-tabs {
+            display: inline-flex;
+            gap: 0.45rem;
+            padding: 0.35rem;
+            border-radius: 999px;
+            background: rgba(255, 255, 255, 0.7);
+            border: 1px solid var(--border);
+        }
+
+        .nav-tab {
+            color: var(--muted);
+            text-decoration: none;
+            padding: 0.8rem 1rem;
+            border-radius: 999px;
+            font-weight: 700;
+            font-size: 0.95rem;
+        }
+
+        .nav-tab.is-active {
+            background: #ffffff;
+            color: var(--text);
+            box-shadow: 0 8px 20px rgba(48, 59, 86, 0.08);
+        }
+
+        input, select {
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            background: var(--surface-soft);
+            color: var(--text);
+        }
+
+        input:focus, select:focus {
+            outline: none;
+            border-color: rgba(37, 99, 235, 0.45);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.12);
+            background: #fff;
+        }
+
+        .day-input::-webkit-outer-spin-button,
+        .day-input::-webkit-inner-spin-button {
+            -webkit-appearance: none;
+            margin: 0;
+        }
+
+        .day-input[type=number] {
+            -moz-appearance: textfield;
+        }
+
+        @media (max-width: 768px) {
+            .shell {
+                padding: 0.75rem;
+            }
+
+            .topbar {
+                flex-direction: column;
+                align-items: stretch;
+                gap: 0.85rem;
+            }
+
+            .topbar-title {
+                margin-top: 0;
+                font-size: 2rem;
+            }
+
+            .nav-tabs {
+                display: flex;
+                width: 100%;
+                flex-wrap: wrap;
+            }
+
+            .nav-tab {
+                flex: 1 1 calc(33.333% - 0.45rem);
+                min-width: 0;
+                padding: 0.75rem 0.8rem;
+                text-align: center;
+                font-size: 0.82rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <header class="topbar">
+            <div>
+                <h1 class="topbar-title">Attendance</h1>
+            </div>
+            <nav class="nav-tabs">
+                <a href="./index%20(3).html" class="nav-tab">M&amp;A Portal</a>
+                <a href="./dfm-dashboard/index.html" class="nav-tab">DFM Dashboard</a>
+                <a href="./attendance.html" class="nav-tab is-active">Attendance</a>
+            </nav>
+        </header>
+
+        <section class="panel px-4 py-4 sm:px-5 mb-5">
+            <div class="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                <div>
+                    <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Session</p>
+                    <h2 class="mt-1 text-xl font-bold tracking-tight text-slate-900">Attendance Admin</h2>
+                </div>
+                <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3">
+                    <select id="userSelect" class="min-w-0 w-full sm:min-w-[180px] sm:w-auto px-3 py-2 text-sm font-semibold">
+                        <option value="">Select Editor...</option>
+                        <option>Gavin</option>
+                        <option>Joe</option>
+                    </select>
+                    <button id="loginBtn" onclick="login()" class="w-full sm:w-auto rounded-full bg-slate-900 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white transition hover:bg-slate-700">Login</button>
+                    <button id="logoutBtn" onclick="logout()" class="hidden w-full sm:w-auto rounded-full border border-rose-200 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-rose-600 transition hover:border-rose-300 hover:bg-rose-50">Logout</button>
+                </div>
+                <div class="flex flex-col gap-2 sm:flex-row sm:flex-wrap sm:items-center sm:gap-3 text-sm">
+                    <div id="activeUser" class="rounded-full bg-slate-100 px-4 py-2 font-semibold text-slate-600">Not logged in</div>
+                    <div id="sourceStatus" class="text-xs font-bold uppercase tracking-[0.14em] text-slate-400">Waiting for sync</div>
+                </div>
+            </div>
+        </section>
+
+        <section class="grid grid-cols-1 gap-4 md:grid-cols-3 mb-5">
+            <article class="panel px-5 py-5">
+                <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Month Total Hours</p>
+                <h2 id="att-total-hours" class="mt-2 text-4xl font-bold text-slate-900">0</h2>
+            </article>
+            <article class="panel px-5 py-5">
+                <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-sky-500">Avg Hours per PIC</p>
+                <h2 id="att-avg-hours" class="mt-2 text-4xl font-bold text-sky-700">0</h2>
+            </article>
+            <article class="panel px-5 py-5">
+                <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-emerald-500">Utilization %</p>
+                <h2 id="att-utilization-pct" class="mt-2 text-4xl font-bold text-emerald-700">0%</h2>
+                <p id="att-utilization-meta" class="mt-2 text-sm font-semibold text-slate-500">0.0h workload / 0.0h capacity</p>
+            </article>
+        </section>
+
+        <section class="panel px-4 py-4 sm:px-5 sm:py-5 mb-5">
+            <div class="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between">
+                <div class="flex flex-wrap items-center gap-2">
+                    <button onclick="prevAttendanceMonth()" class="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100">PREV</button>
+                    <div id="att-month-label" class="min-w-[140px] flex-1 text-center text-base sm:text-lg font-bold text-slate-800">-</div>
+                    <button onclick="nextAttendanceMonth()" class="rounded-full border border-slate-200 bg-slate-50 px-3 py-2 text-xs font-bold text-slate-600 hover:bg-slate-100">NEXT</button>
+                    <button id="att-save-btn" onclick="saveAttendance()" class="w-full sm:w-auto sm:ml-2 rounded-full bg-teal-700 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white transition hover:bg-teal-600">Save</button>
+                </div>
+                <div class="flex flex-wrap items-center gap-2 text-xs">
+                    <span class="font-bold uppercase tracking-[0.14em] text-slate-400">Quick Fill Selected Day</span>
+                    <button onclick="quickFill(9)" class="rounded-full bg-sky-100 px-3 py-1.5 font-bold text-sky-700">9h</button>
+                    <button onclick="quickFill(11)" class="rounded-full bg-amber-100 px-3 py-1.5 font-bold text-amber-700">11h</button>
+                    <button onclick="quickFill(8.5)" class="rounded-full bg-violet-100 px-3 py-1.5 font-bold text-violet-700">8.5h</button>
+                    <button onclick="quickFill(0)" class="rounded-full bg-slate-100 px-3 py-1.5 font-bold text-slate-600">0h</button>
+                    <input id="att-custom-val" type="number" step="0.5" min="0" max="24" placeholder="hrs" class="w-20 px-2 py-1.5 text-center text-xs font-semibold">
+                    <button onclick="quickFill(parseFloat(document.getElementById('att-custom-val').value) || 0)" class="rounded-full bg-slate-800 px-3 py-1.5 font-bold text-white">Fill</button>
+                </div>
+            </div>
+        </section>
+
+        <section class="panel overflow-hidden mb-5">
+            <div class="overflow-x-auto">
+                <table class="w-full min-w-[980px] text-left">
+                    <thead id="att-thead" class="bg-slate-100 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500"></thead>
+                    <tbody id="att-tbody" class="text-sm"></tbody>
+                </table>
+            </div>
+        </section>
+
+        <section class="panel px-4 py-4 sm:px-5 sm:py-5">
+            <div class="flex flex-col gap-2 pb-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                    <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Utilization</p>
+                    <h2 class="text-2xl font-bold tracking-tight">PIC Capacity vs Workload</h2>
+                    <p class="mt-1 text-sm text-slate-500">Attendance hours are used as monthly PIC capacity. Workload is pulled from Laser, Support, and Consumption.</p>
+                </div>
+                <div class="text-right">
+                    <div id="util-capacity" class="text-sm font-bold text-slate-800">-</div>
+                    <div id="util-att-status" class="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">no data</div>
+                </div>
+            </div>
+            <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(430px,1fr)]">
+                <div class="h-[340px]">
+                    <canvas id="utilChart"></canvas>
+                </div>
+                <div class="overflow-x-auto rounded-2xl border border-slate-200">
+                    <table class="w-full text-left text-[11px]">
+                        <thead class="bg-slate-50 text-slate-500">
+                            <tr>
+                                <th class="p-3 font-bold uppercase tracking-[0.14em]">PIC</th>
+                                <th class="p-3 font-bold uppercase tracking-[0.14em]">Setting</th>
+                                <th class="p-3 font-bold uppercase tracking-[0.14em]">Laser</th>
+                                <th class="p-3 font-bold uppercase tracking-[0.14em]">Support</th>
+                                <th class="p-3 font-bold uppercase tracking-[0.14em]">Consumption</th>
+                                <th class="p-3 font-bold uppercase tracking-[0.14em]">Total</th>
+                                <th class="p-3 font-bold uppercase tracking-[0.14em]">Utilization</th>
+                            </tr>
+                        </thead>
+                        <tbody id="util-table"></tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+    </div>
+
+    <script>
+        const ATT_MEMBERS = ['Phone', 'James', 'Ram', 'Keat', 'Viki', 'Mark', 'Joe', 'Gavin'];
+        const ATT_EDITORS = ['Gavin', 'Joe'];
+        const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+        const SESSION_KEY = 'ma_session_user';
+        const ATT_STORAGE_KEY = 'ma_attendance';
+
+        const attendanceUpdateURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/b0bdaebbf2104b669de00b09a78add75/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=5rXFrjS1WABIzdnSZrqhqsxfZqp0G1c7E-GzkSnkqBk";
+        const attendanceFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/9f7d2b43fe80443ea830ec0ef1631183/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=0geeH4paQU60TyHlrF0_6_CGqXBmke3BEmk5IiwTxZ0";
+        const settingFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/47006a48f8764a49ab01dbb665617acf/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=2eqeoBWF-80BETYDfV2HdHZeqJW7-fDYjd3GXri1wNo";
+        const laserFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/f7fd69d7c4114bd2af5d8fffe467982a/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=hAWB_aTnAgdah1KM8cUx2fbYcjNNLN67GGAMOT3jeLI";
+        const supportFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/cc862bcb25864cf3821934bb3954e426/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=sd0SSGGkna3TT74vR7V1jTT6E8qPxp-a4O1w0AlrqCY";
+        const consumptionFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/aee706c4629744f5b5aa3a756eec00f2/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=tU6CI-qPTZJIJgVViryVC6t9oxk4_gL8xvDgB4e_jwE";
+
+        let currentUser = sessionStorage.getItem(SESSION_KEY) || '';
+        let attYear = new Date().getFullYear();
+        let attMonth = new Date().getMonth();
+        let attSelectedCol = null;
+        let attData = {};
+        let allSettingRows = [];
+        let allLaserRows = [];
+        let allSupportRows = [];
+        let allConsumptionRows = [];
+        let utilChart = null;
+
+        function attKey() {
+            return `${attYear}-${String(attMonth + 1).padStart(2, '0')}`;
+        }
+
+        function attendanceMonthLabel() {
+            return `${SHORT_MONTHS[attMonth]}-${attYear}`;
+        }
+
+        function extractRows(data) {
+            if (typeof data === 'string') {
+                try {
+                    return extractRows(JSON.parse(data));
+                } catch (e) {
+                    return [];
+                }
+            }
+            if (Array.isArray(data)) return data;
+            if (data?.value && Array.isArray(data.value)) return data.value;
+            if (data?.body?.value && Array.isArray(data.body.value)) return data.body.value;
+            if (typeof data?.body === 'string') {
+                try {
+                    const parsedBody = JSON.parse(data.body);
+                    return extractRows(parsedBody);
+                } catch (e) {
+                }
+            }
+            if (data?.body?.body) return extractRows(data.body.body);
+            if (data?.data) return extractRows(data.data);
+            if (data?.result) return extractRows(data.result);
+            if (data?.body && Array.isArray(data.body)) return data.body;
+            for (const key of Object.keys(data || {})) {
+                if (Array.isArray(data[key]) && data[key].length) return data[key];
+                if (data[key] && typeof data[key] === 'object') {
+                    const nested = extractRows(data[key]);
+                    if (nested.length) return nested;
+                }
+            }
+            return [];
+        }
+
+        function getVal(obj, keys) {
+            for (const key of keys) {
+                if (Object.prototype.hasOwnProperty.call(obj, key)) {
+                    const value = obj[key];
+                    if (value !== undefined && value !== null && String(value).trim() !== '') return value;
+                }
+            }
+            const lookup = Object.keys(obj || {});
+            for (const target of keys) {
+                const exact = lookup.find(key => key.toLowerCase().trim() === String(target).toLowerCase().trim());
+                if (exact) {
+                    const value = obj[exact];
+                    if (value !== undefined && value !== null && String(value).trim() !== '') return value;
+                }
+            }
+            for (const target of keys) {
+                const fuzzy = lookup.find(key => key.toLowerCase().includes(String(target).toLowerCase()));
+                if (fuzzy) {
+                    const value = obj[fuzzy];
+                    if (value !== undefined && value !== null && String(value).trim() !== '') return value;
+                }
+            }
+            return '---';
+        }
+
+        function getMAPic(row) {
+            const candidates = ['M&A PIC', 'MA PIC', 'M & A PIC', 'M&APIC', 'MAPIC'];
+            for (const candidate of candidates) {
+                const key = Object.keys(row || {}).find(item => item.toLowerCase().trim() === candidate.toLowerCase());
+                if (key) {
+                    const value = row[key];
+                    if (value !== undefined && value !== null && String(value).trim() !== '') return String(value).trim();
+                }
+            }
+            return '---';
+        }
+
+        function rawToLocalDate(value) {
+            if (!value || value === '---' || String(value).trim() === '') return null;
+            let date;
+            if (typeof value === 'number' || (!isNaN(value) && !isNaN(parseFloat(value)))) {
+                const ms = (parseFloat(value) - 25569) * 86400 * 1000;
+                date = new Date(ms);
+                date = new Date(date.getTime() + date.getTimezoneOffset() * 60000);
+            } else {
+                date = new Date(String(value).replace('Z', '').trim());
+            }
+            return isNaN(date.getTime()) ? null : date;
+        }
+
+        function loadAttData() {
+            try {
+                const saved = localStorage.getItem(ATT_STORAGE_KEY);
+                attData = saved ? JSON.parse(saved) : {};
+            } catch (e) {
+                attData = {};
+            }
+        }
+
+        function saveAttData() {
+            localStorage.setItem(ATT_STORAGE_KEY, JSON.stringify(attData));
+        }
+
+        function updateUserUI() {
+            const activeUser = document.getElementById('activeUser');
+            const loginBtn = document.getElementById('loginBtn');
+            const logoutBtn = document.getElementById('logoutBtn');
+            const saveBtn = document.getElementById('att-save-btn');
+            const canEdit = ATT_EDITORS.includes(currentUser);
+
+            document.getElementById('userSelect').value = currentUser || '';
+            activeUser.innerText = currentUser ? `PIC: ${currentUser}` : 'Not logged in';
+            activeUser.className = currentUser
+                ? 'rounded-full bg-emerald-50 px-4 py-2 font-semibold text-emerald-700'
+                : 'rounded-full bg-slate-100 px-4 py-2 font-semibold text-slate-600';
+            loginBtn.classList.toggle('hidden', !!currentUser);
+            logoutBtn.classList.toggle('hidden', !currentUser);
+
+            saveBtn.disabled = !canEdit;
+            saveBtn.innerText = canEdit ? 'Save' : 'View Only';
+            saveBtn.className = canEdit
+                ? 'ml-2 rounded-xl bg-teal-700 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-white transition hover:bg-teal-600'
+                : 'ml-2 rounded-xl bg-slate-300 px-4 py-2 text-xs font-bold uppercase tracking-[0.12em] text-slate-600 cursor-not-allowed';
+        }
+
+        function setSourceStatus(message) {
+            document.getElementById('sourceStatus').innerText = message;
+        }
+
+        function login() {
+            const selected = document.getElementById('userSelect').value;
+            if (!selected) return;
+            currentUser = selected;
+            sessionStorage.setItem(SESSION_KEY, currentUser);
+            updateUserUI();
+            renderAttendance();
+        }
+
+        function logout() {
+            currentUser = '';
+            sessionStorage.removeItem(SESSION_KEY);
+            updateUserUI();
+            renderAttendance();
+        }
+
+        function getNextLink(data) {
+            return data?.['@odata.nextLink'] || data?.body?.['@odata.nextLink'] || data?.nextLink || data?.body?.nextLink || '';
+        }
+
+        async function fetchJsonRows(url) {
+            const rows = [];
+            let nextUrl = url + '&cb=' + Date.now();
+            let method = 'POST';
+            let pageCount = 0;
+            while (nextUrl && pageCount < 10) {
+                const controller = new AbortController();
+                const timer = setTimeout(() => controller.abort(), 25000);
+                try {
+                    const res = await fetch(nextUrl, {
+                        method,
+                        body: method === 'POST' ? JSON.stringify({}) : undefined,
+                        signal: controller.signal
+                    });
+                    clearTimeout(timer);
+                    const text = await res.text();
+                    if (!res.ok) break;
+                    let parsed;
+                    try { parsed = JSON.parse(text); } catch (e) { break; }
+                    rows.push(...extractRows(parsed));
+                    nextUrl = getNextLink(parsed);
+                    method = 'GET';
+                    pageCount += 1;
+                } catch (e) {
+                    clearTimeout(timer);
+                    break;
+                }
+            }
+            return rows;
+        }
+
+        async function fetchAttendanceFromCloud() {
+            const rows = await fetchJsonRows(attendanceFetchURL);
+            if (!rows.length) return 0;
+            const touchedKeys = new Set();
+            rows.forEach(row => {
+                let rawMonth = row.Month || row.month || '';
+                let monthIndex = -1;
+                let fullYear = 0;
+                if (typeof rawMonth === 'number' || (!isNaN(rawMonth) && String(rawMonth).length > 4 && !String(rawMonth).includes('-'))) {
+                    const serial = parseFloat(rawMonth);
+                    if (serial > 40000 && serial < 60000) {
+                        const date = new Date((serial - 25569) * 86400 * 1000);
+                        monthIndex = date.getUTCMonth();
+                        fullYear = date.getUTCFullYear();
+                    }
+                }
+                const monthLabel = String(rawMonth).trim();
+                if (monthIndex < 0 && monthLabel) {
+                    const parts = monthLabel.split('-');
+                    if (parts.length >= 3 && parts[0].length === 4) {
+                        fullYear = parseInt(parts[0], 10);
+                        monthIndex = parseInt(parts[1], 10) - 1;
+                    } else if (parts.length === 2 && isNaN(parts[0])) {
+                        monthIndex = SHORT_MONTHS.indexOf(parts[0]);
+                        fullYear = 2000 + parseInt(parts[1], 10);
+                    }
+                }
+                if (monthIndex < 0 || monthIndex > 11 || !fullYear) return;
+                const key = `${fullYear}-${String(monthIndex + 1).padStart(2, '0')}`;
+                touchedKeys.add(key);
+                const name = String(row.Name || row.name || '').trim();
+                if (!name) return;
+                if (!attData[key]) attData[key] = {};
+                if (!attData[key][name]) attData[key][name] = {};
+                const daysInMonth = new Date(fullYear, monthIndex + 1, 0).getDate();
+                if (row.Day !== undefined && row.Hours !== undefined) {
+                    const day = parseInt(row.Day || row.day, 10);
+                    if (day >= 1 && day <= 31) attData[key][name][day] = parseFloat(row.Hours || row.hours) || 0;
+                    return;
+                }
+                let hasDayCols = false;
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const value = row[`Day_${day}`];
+                    if (value !== undefined && value !== null) {
+                        attData[key][name][day] = parseFloat(value) || 0;
+                        hasDayCols = true;
+                    }
+                }
+                if (!hasDayCols && (row.Total || row.total)) {
+                    attData[key][name].__total__ = parseFloat(row.Total || row.total) || 0;
+                }
+            });
+            saveAttData();
+            return rows.length;
+        }
+
+        async function loadAllSources() {
+            setSourceStatus('Syncing attendance and workload');
+            const [settingRows, laserRows, supportRows, consumptionRows, attendanceCount] = await Promise.all([
+                fetchJsonRows(settingFetchURL),
+                fetchJsonRows(laserFetchURL),
+                fetchJsonRows(supportFetchURL),
+                fetchJsonRows(consumptionFetchURL),
+                fetchAttendanceFromCloud()
+            ]);
+            allSettingRows = settingRows;
+            allLaserRows = laserRows;
+            allSupportRows = supportRows;
+            allConsumptionRows = consumptionRows;
+            renderAttendance();
+            renderUtilization();
+            setSourceStatus(`Synced ${new Date().toLocaleTimeString()} · attendance rows ${attendanceCount || 0}`);
+        }
+
+        function renderAttendance() {
+            const monthNames = ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December'];
+            const dayNames = ['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'];
+            const key = attKey();
+            const data = attData[key] || {};
+            const daysInMonth = new Date(attYear, attMonth + 1, 0).getDate();
+            const canEdit = ATT_EDITORS.includes(currentUser);
+
+            document.getElementById('att-month-label').innerText = `${monthNames[attMonth]} ${attYear}`;
+
+            let head = '<tr><th class="sticky left-0 z-10 min-w-[96px] bg-slate-100 p-3">PIC</th>';
+            for (let day = 1; day <= daysInMonth; day++) {
+                const weekday = new Date(attYear, attMonth, day).getDay();
+                const isWeekend = weekday === 0 || weekday === 6;
+                const classes = `${isWeekend ? (weekday === 6 ? 'bg-violet-50' : 'bg-slate-50') : ''} ${attSelectedCol === day ? 'bg-sky-100 text-sky-700' : ''}`;
+                head += `<th class="cursor-pointer p-2 text-center ${classes}" onclick="selectDay(${day})"><div class="text-[9px]">${dayNames[weekday]}</div><div class="text-[11px] font-black">${day}</div></th>`;
+            }
+            head += '<th class="bg-slate-100 p-3 text-right">Total</th></tr>';
+            document.getElementById('att-thead').innerHTML = head;
+
+            let body = '';
+            ATT_MEMBERS.forEach(name => {
+                const member = data[name] || {};
+                let total = 0;
+                let cells = '';
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const weekday = new Date(attYear, attMonth, day).getDay();
+                    const isSat = weekday === 6;
+                    const isSun = weekday === 0;
+                    const value = member[day] !== undefined ? member[day] : (isSun ? 0 : '');
+                    const numberValue = parseFloat(value) || 0;
+                    total += numberValue;
+                    let cellBg = '';
+                    if (isSun) cellBg = 'bg-slate-50';
+                    else if (isSat) cellBg = 'bg-violet-50';
+                    else if (numberValue >= 11) cellBg = 'bg-amber-50';
+                    else if (numberValue === 9) cellBg = 'bg-sky-50';
+                    else if (numberValue === 0 && value !== '') cellBg = 'bg-slate-100';
+                    const ring = attSelectedCol === day ? 'ring-1 ring-sky-400' : '';
+                    const textColor = numberValue >= 11 ? 'text-amber-700' : numberValue === 9 ? 'text-sky-700' : numberValue === 0 && value !== '' ? 'text-slate-400' : 'text-violet-700';
+                    cells += `<td class="p-1 text-center ${cellBg} ${ring}">
+                        <input id="att-${name}-${day}" type="number" step="0.5" min="0" max="24" value="${value}" ${canEdit ? '' : 'disabled readonly'}
+                            class="day-input w-11 rounded-lg border-0 bg-transparent text-center text-[11px] font-bold ${textColor} ${canEdit ? '' : 'cursor-default'}"
+                            oninput="handleAttendanceInput('${name}', ${day}, this.value)">
+                    </td>`;
+                }
+                body += `<tr class="border-b border-slate-100 hover:bg-slate-50">
+                    <td class="sticky left-0 z-10 bg-white p-3 text-sm font-bold">${name}</td>
+                    ${cells}
+                    <td class="p-3 text-right text-sm font-black text-teal-700">${total.toFixed(1)}</td>
+                </tr>`;
+            });
+            document.getElementById('att-tbody').innerHTML = body;
+            renderAttendanceSummary();
+        }
+
+        function handleAttendanceInput(name, day, rawValue) {
+            const key = attKey();
+            if (!attData[key]) attData[key] = {};
+            if (!attData[key][name]) attData[key][name] = {};
+            attData[key][name][day] = rawValue === '' ? '' : (parseFloat(rawValue) || 0);
+            saveAttData();
+            renderAttendanceSummary();
+            renderUtilization();
+        }
+
+        function selectDay(day) {
+            attSelectedCol = day;
+            renderAttendance();
+        }
+
+        function renderAttendanceSummary() {
+            const key = attKey();
+            const daysInMonth = new Date(attYear, attMonth + 1, 0).getDate();
+            const monthData = attData[key] || {};
+            const totals = ATT_MEMBERS.map(name => {
+                const member = monthData[name] || {};
+                let total = 0;
+                if (member.__total__ !== undefined) {
+                    total = parseFloat(member.__total__) || 0;
+                } else {
+                    for (let day = 1; day <= daysInMonth; day++) total += parseFloat(member[day] || 0);
+                }
+                return { name, total: parseFloat(total.toFixed(1)) };
+            });
+            const active = totals.filter(item => item.total > 0);
+            const totalHours = totals.reduce((sum, item) => sum + item.total, 0);
+            const avgHours = active.length ? totalHours / active.length : 0;
+
+            document.getElementById('att-total-hours').innerText = totalHours.toFixed(1);
+            document.getElementById('att-avg-hours').innerText = avgHours.toFixed(1);
+        }
+
+        function prevAttendanceMonth() {
+            attMonth -= 1;
+            if (attMonth < 0) {
+                attMonth = 11;
+                attYear -= 1;
+            }
+            renderAttendance();
+            renderUtilization();
+        }
+
+        function nextAttendanceMonth() {
+            attMonth += 1;
+            if (attMonth > 11) {
+                attMonth = 0;
+                attYear += 1;
+            }
+            renderAttendance();
+            renderUtilization();
+        }
+
+        function quickFill(hours) {
+            if (!ATT_EDITORS.includes(currentUser)) {
+                alert('Only Gavin or Joe can edit attendance.');
+                return;
+            }
+            if (attSelectedCol === null) {
+                alert('Select a day column first.');
+                return;
+            }
+            const key = attKey();
+            if (!attData[key]) attData[key] = {};
+            ATT_MEMBERS.forEach(name => {
+                if (!attData[key][name]) attData[key][name] = {};
+                attData[key][name][attSelectedCol] = hours;
+            });
+            saveAttData();
+            renderAttendance();
+            renderUtilization();
+        }
+
+        async function saveAttendance() {
+            if (!ATT_EDITORS.includes(currentUser)) {
+                alert('Only Gavin or Joe can save attendance.');
+                return;
+            }
+            const key = attKey();
+            if (!attData[key]) attData[key] = {};
+            const daysInMonth = new Date(attYear, attMonth + 1, 0).getDate();
+            const monthLabel = `${SHORT_MONTHS[attMonth]}-${String(attYear).slice(2)}`;
+            const rows = [];
+
+            ATT_MEMBERS.forEach(name => {
+                if (!attData[key][name]) attData[key][name] = {};
+                let total = 0;
+                const row = { month: monthLabel, name };
+                for (let day = 1; day <= daysInMonth; day++) {
+                    const element = document.getElementById(`att-${name}-${day}`);
+                    const value = element ? (element.value === '' ? 0 : parseFloat(element.value) || 0) : 0;
+                    attData[key][name][day] = value;
+                    row[`Day_${day}`] = value;
+                    total += value;
+                }
+                row.total = parseFloat(total.toFixed(1));
+                rows.push(row);
+            });
+
+            saveAttData();
+            renderAttendanceSummary();
+            renderUtilization();
+
+            const button = document.getElementById('att-save-btn');
+            const originalLabel = button.innerText;
+            button.innerText = 'Saving...';
+            button.disabled = true;
+
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), 30000);
+            try {
+                const res = await fetch(attendanceUpdateURL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ month: monthLabel, rows }),
+                    signal: controller.signal
+                });
+                clearTimeout(timer);
+                button.innerText = res.ok || res.status === 202 ? 'Saved' : 'Local Only';
+            } catch (e) {
+                clearTimeout(timer);
+                button.innerText = e.name === 'AbortError' ? 'Sent' : 'Local Only';
+            }
+
+            setTimeout(() => {
+                updateUserUI();
+                button.innerText = originalLabel;
+            }, 1800);
+        }
+
+        function renderUtilization() {
+            const key = attKey();
+            const monthLabel = attendanceMonthLabel();
+            const attCapMap = {};
+            let avgCapacity = 0;
+            const monthData = attData[key] || {};
+            const daysInMonth = new Date(attYear, attMonth + 1, 0).getDate();
+
+            ATT_MEMBERS.forEach(name => {
+                const member = monthData[name] || {};
+                let total = 0;
+                if (member.__total__ !== undefined) {
+                    total = parseFloat(member.__total__) || 0;
+                } else {
+                    for (let day = 1; day <= daysInMonth; day++) total += parseFloat(member[day] || 0);
+                }
+                if (total > 0) attCapMap[name] = parseFloat(total.toFixed(1));
+            });
+
+            const capacities = Object.values(attCapMap);
+            if (capacities.length) {
+                avgCapacity = Math.round(capacities.reduce((sum, value) => sum + value, 0) / capacities.length);
+            }
+
+            document.getElementById('util-capacity').innerText = avgCapacity ? `${avgCapacity} hrs average capacity / PIC` : '-';
+            document.getElementById('util-att-status').innerText = capacities.length ? `attendance ${monthLabel}` : 'no attendance data';
+
+            const inMonth = dateValue => {
+                const date = rawToLocalDate(dateValue);
+                if (!date) return false;
+                return `${SHORT_MONTHS[date.getMonth()]}-${date.getFullYear()}` === monthLabel;
+            };
+
+            const allPICs = new Set([...ATT_MEMBERS]);
+            const settingHrs = {};
+            const laserHrs = {};
+            const supportHrs = {};
+            const consumptionHrs = {};
+
+            allSettingRows.forEach(row => {
+                const completeRaw = getVal(row, ['Complete Date m/d/yyyy', 'Complete Date', 'CompleteDate']);
+                if (!inMonth(completeRaw)) return;
+                const pic = getVal(row, ['PIC']);
+                if (!pic || pic === '---') return;
+                const startDate = rawToLocalDate(getVal(row, ['Start Date m/d/yyyy', 'Start Date', 'StartDate']));
+                const endDate = rawToLocalDate(completeRaw);
+                if (!startDate || !endDate || endDate <= startDate) return;
+                const hours = (endDate - startDate) / 3600000;
+                if (!hours) return;
+                allPICs.add(pic);
+                settingHrs[pic] = (settingHrs[pic] || 0) + hours;
+            });
+
+            allLaserRows.forEach(row => {
+                const completeDate = getVal(row, ['Complete Date', 'CompleteDate']);
+                if (!inMonth(completeDate)) return;
+                const received = rawToLocalDate(getVal(row, ['Received Time', 'ReceivedTime', 'Received']));
+                const completed = rawToLocalDate(completeDate);
+                const pic = getMAPic(row);
+                if (!received || !completed || !pic || pic === '---') return;
+                const consumptionStart = rawToLocalDate(getVal(row, [
+                    'Consumption Start Date',
+                    'ConsumptionStartDate',
+                    'Cons Start',
+                    'Cons. Start',
+                    'Consumption Start',
+                    'Cons. Start Date'
+                ]));
+                const consumptionEnd = rawToLocalDate(getVal(row, [
+                    'Consumption Complete Date',
+                    'ConsumptionCompleteDate',
+                    'Cons End',
+                    'ConsEnd',
+                    'Cons. End',
+                    'Consumption End',
+                    'Consumption End Date',
+                    'Cons. End Date'
+                ]));
+                let hours = Math.max(0, (completed - received) / 3600000);
+                if (consumptionStart && consumptionEnd && consumptionEnd > consumptionStart) {
+                    const overlapStart = Math.max(received.getTime(), consumptionStart.getTime());
+                    const overlapEnd = Math.min(completed.getTime(), consumptionEnd.getTime());
+                    if (overlapEnd > overlapStart) {
+                        hours -= (overlapEnd - overlapStart) / 3600000;
+                    }
+                }
+                if (!hours) return;
+                allPICs.add(pic);
+                laserHrs[pic] = (laserHrs[pic] || 0) + hours;
+            });
+
+            // Laser rows can also carry separate consumption work spans.
+            allLaserRows.forEach(row => {
+                const consumptionEndRaw = getVal(row, [
+                    'Consumption Complete Date',
+                    'ConsumptionCompleteDate',
+                    'Cons End',
+                    'ConsEnd',
+                    'Cons. End',
+                    'Consumption End',
+                    'Consumption End Date',
+                    'Cons. End Date'
+                ]);
+                const consumptionStartRaw = getVal(row, [
+                    'Consumption Start Date',
+                    'ConsumptionStartDate',
+                    'Cons Start',
+                    'Cons. Start',
+                    'Consumption Start',
+                    'Cons. Start Date'
+                ]);
+                const monthAnchor = consumptionEndRaw !== '---' ? consumptionEndRaw : consumptionStartRaw;
+                if (!inMonth(monthAnchor)) return;
+                const pic = getMAPic(row);
+                if (!pic || pic === '---') return;
+                const consumptionStart = rawToLocalDate(consumptionStartRaw);
+                const consumptionEnd = rawToLocalDate(consumptionEndRaw);
+                if (!consumptionStart || !consumptionEnd || consumptionEnd <= consumptionStart) return;
+                const hours = (consumptionEnd - consumptionStart) / 3600000;
+                if (!hours) return;
+                allPICs.add(pic);
+                consumptionHrs[pic] = (consumptionHrs[pic] || 0) + hours;
+            });
+
+            allSupportRows.forEach(row => {
+                const receivedDate = getVal(row, ['Received Time', 'ReceivedTime']);
+                if (!inMonth(receivedDate)) return;
+                const pic = getMAPic(row);
+                if (!pic || pic === '---') return;
+                let hours = 0;
+                const startDate = rawToLocalDate(getVal(row, ['Start Time', 'StartTime']));
+                const endDate = rawToLocalDate(getVal(row, ['Complete Time', 'CompleteTime']));
+                if (startDate && endDate && endDate > startDate) {
+                    hours = (endDate - startDate) / 3600000;
+                } else {
+                    const fallback = parseFloat(getVal(row, ['Job Elapsed Calendar Hrs', 'ElapsedHrs', 'Elapsed', 'Job Elapsed']));
+                    if (!isNaN(fallback) && fallback > 0) hours = fallback;
+                }
+                if (!hours) return;
+                allPICs.add(pic);
+                supportHrs[pic] = (supportHrs[pic] || 0) + hours;
+            });
+
+            allConsumptionRows.forEach(row => {
+                const receivedDate = getVal(row, ['Received Time m/d/yyyy', 'Received Time', 'ReceivedTime']);
+                if (!inMonth(receivedDate)) return;
+                const pic = getMAPic(row);
+                if (!pic || pic === '---') return;
+                const startDate = rawToLocalDate(getVal(row, ['Start Date m/d/yyyy', 'Start Date', 'StartDate']));
+                const endDate = rawToLocalDate(getVal(row, ['Complete Date m/d/yyyy', 'Complete Date', 'CompleteDate']));
+                if (!startDate || !endDate || endDate <= startDate) return;
+                const hours = (endDate - startDate) / 3600000;
+                if (!hours) return;
+                allPICs.add(pic);
+                consumptionHrs[pic] = (consumptionHrs[pic] || 0) + hours;
+            });
+
+            const picList = Array.from(allPICs)
+                .filter(Boolean)
+                .filter(pic => pic !== '---')
+                .sort((a, b) => {
+                    const totalA = (settingHrs[a] || 0) + (laserHrs[a] || 0) + (supportHrs[a] || 0) + (consumptionHrs[a] || 0);
+                    const totalB = (settingHrs[b] || 0) + (laserHrs[b] || 0) + (supportHrs[b] || 0) + (consumptionHrs[b] || 0);
+                    return totalB - totalA;
+                });
+
+            const totalCapacity = picList.reduce((sum, pic) => sum + (attCapMap[pic] || 0), 0);
+            const totalWorkload = picList.reduce((sum, pic) => sum + (settingHrs[pic] || 0) + (laserHrs[pic] || 0) + (supportHrs[pic] || 0) + (consumptionHrs[pic] || 0), 0);
+            const overallUtilization = totalCapacity ? Math.round((totalWorkload / totalCapacity) * 100) : 0;
+            document.getElementById('att-utilization-pct').innerText = `${overallUtilization}%`;
+            document.getElementById('att-utilization-meta').innerText = `${totalWorkload.toFixed(1)}h workload / ${totalCapacity.toFixed(1)}h capacity`;
+
+            const ctx = document.getElementById('utilChart');
+            if (utilChart) utilChart.destroy();
+            utilChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: picList,
+                    datasets: [
+                        { label: 'Setting', data: picList.map(pic => parseFloat((settingHrs[pic] || 0).toFixed(1))), backgroundColor: '#6366f1' },
+                        { label: 'Laser', data: picList.map(pic => parseFloat((laserHrs[pic] || 0).toFixed(1))), backgroundColor: '#10b981' },
+                        { label: 'Support', data: picList.map(pic => parseFloat((supportHrs[pic] || 0).toFixed(1))), backgroundColor: '#3b82f6' },
+                        { label: 'Consumption', data: picList.map(pic => parseFloat((consumptionHrs[pic] || 0).toFixed(1))), backgroundColor: '#8b5cf6' }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' },
+                        tooltip: {
+                            mode: 'index',
+                            intersect: false,
+                            callbacks: {
+                                footer(items) {
+                                    const total = items.reduce((sum, item) => sum + (item.raw || 0), 0);
+                                    const cap = attCapMap[items[0]?.label] || avgCapacity || 0;
+                                    const pct = cap ? Math.round((total / cap) * 100) : 0;
+                                    return `Total ${total.toFixed(1)} hrs / ${cap} hrs (${pct}%)`;
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { stacked: true },
+                        y: { stacked: true, beginAtZero: true }
+                    }
+                }
+            });
+
+            const table = document.getElementById('util-table');
+            if (!picList.length) {
+                table.innerHTML = '<tr><td colspan="7" class="p-6 text-center italic text-slate-400">No utilization data for this month.</td></tr>';
+                return;
+            }
+
+            table.innerHTML = picList.map(pic => {
+                const setting = settingHrs[pic] || 0;
+                const laser = laserHrs[pic] || 0;
+                const support = supportHrs[pic] || 0;
+                const consumption = consumptionHrs[pic] || 0;
+                const total = setting + laser + support + consumption;
+                const cap = attCapMap[pic] || avgCapacity || 0;
+                const pct = cap ? Math.round((total / cap) * 100) : 0;
+                const color = pct >= 90 ? 'bg-rose-500' : pct >= 70 ? 'bg-amber-400' : 'bg-emerald-500';
+                const textColor = pct >= 90 ? 'text-rose-600' : pct >= 70 ? 'text-amber-600' : 'text-emerald-600';
+                return `<tr class="border-b border-slate-100 hover:bg-slate-50">
+                    <td class="p-3 font-bold text-slate-800">${pic}</td>
+                    <td class="p-3 font-bold text-indigo-600">${setting.toFixed(1)}</td>
+                    <td class="p-3 font-bold text-emerald-600">${laser.toFixed(1)}</td>
+                    <td class="p-3 font-bold text-sky-600">${support.toFixed(1)}</td>
+                    <td class="p-3 font-bold text-violet-600">${consumption.toFixed(1)}</td>
+                    <td class="p-3 font-bold text-slate-900">${total.toFixed(1)}</td>
+                    <td class="p-3">
+                        <div class="flex items-center gap-2">
+                            <div class="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
+                                <div class="h-2 rounded-full ${color}" style="width:${Math.min(pct, 100)}%"></div>
+                            </div>
+                            <span class="w-12 text-right text-[10px] font-bold ${textColor}">${pct}%</span>
+                        </div>
+                        <div class="mt-1 text-[9px] text-slate-400">${cap} hrs capacity${attCapMap[pic] ? '' : ' (avg)'}</div>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        updateUserUI();
+        loadAttData();
+        renderAttendance();
+        renderUtilization();
+        loadAllSources();
+    </script>
+</body>
+</html>
