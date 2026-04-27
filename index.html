@@ -1692,7 +1692,7 @@
         const picList = ["Keat", "Viki", "Ram", "James", "Mark"];
         const TEMPLATE_PENDING_KEY = 'ma_template_pending_updates';
         const TEMPLATE_PENDING_TTL = 10 * 60 * 1000;
-        const TEMPLATE_PENDING_MERGE_MS = 45 * 1000;
+        const TEMPLATE_PENDING_MERGE_MS = 3 * 60 * 1000;
         let allRecords = [], allTemplates = [], currentUser = sessionStorage.getItem('ma_session_user') || null;
         let sectionChart = null, volumeChart = null;
 
@@ -3130,10 +3130,10 @@
                     <td class="p-3">${isAdmin
                         ? `<input type="text" id="dfm-${t.id}" class="manual-input admin-input" style="width:70px" value="${t.dfm&&t.dfm!=='---'?t.dfm:''}" placeholder="Code/No">`
                         : `<span class="text-[10px] font-bold ${t.dfm&&t.dfm!=='---'?'text-teal-600':''}">${t.dfm&&t.dfm!=='---'?t.dfm:'—'}</span>`}</td>
-                    <td class="p-3 date-cell">${canEdit
+                    <td class="p-3 date-cell">${canEditPIC
                         ? `<input type="text" id="date-${t.id}" class="manual-input${isAdmin?' admin-input':''}" value="${done?t.completeDateDisplay:''}" placeholder="m/d/yyyy">`
                         : `<span class="${done?'text-emerald-600 font-bold':'text-slate-400'} text-[10px]">${done?t.completeDateDisplay:'---'}</span>`}</td>
-                    <td class="p-3">${canEdit
+                    <td class="p-3">${canEditPIC
                         ? `<input type="number" id="qty-${t.id}" class="manual-input qty-input" placeholder="Qty" value="${done?t.qty:''}">`
                         : `<span>${done?t.qty:'---'}</span>`}</td>
                     <td class="p-3 text-blue-700">${canEdit
@@ -3141,17 +3141,17 @@
                         : `<span class="font-bold">${t.templateNo}</span>`}</td>
                     <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${done?'bg-emerald-100 text-emerald-600':t.status==='DELAYED'?'bg-red-100 text-red-600':'bg-amber-100 text-amber-600'}">${t.status}</span></td>
                     <td class="p-3 font-medium">${picCell}</td>
-                    <td class="p-3">${canEdit
+                    <td class="p-3">${canEditPIC
                         ? `<input type="text" id="remark-${t.id}" class="manual-input" value="${t.remark!=='---'?t.remark:''}" placeholder="Add remark...">`
                         : `<span class="text-[10px]">${t.remark}</span>`}</td>
-                    <td class="p-3">${canEdit
-                        ? `<button onclick="adminUpdate('${t.id}', event)" class="bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-blue-700 whitespace-nowrap">SAVE</button>`
+                    <td class="p-3">${canEditPIC
+                        ? `<button onclick="adminUpdate('${t.id}', this)" class="bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-blue-700 whitespace-nowrap">SAVE</button>`
                         : ''}</td>
                 </tr>`;
             }).join('');;;
         }
 
-        async function adminUpdate(simpleId, event) {
+        async function adminUpdate(simpleId, triggerEl) {
             const record = allTemplates.find(t => String(t.id) === String(simpleId));
             if (!record) return;
             const tNo = document.getElementById(`edit-tno-${simpleId}`)?.value.trim() || "";
@@ -3178,7 +3178,7 @@
                 return alert(`"${tPic}" is not in the Excel Data Validation list.\nValid PICs are: ${picList.join(", ")}\nPlease update the Excel validation list to include this name.`);
             }
 
-            const btn = event.target; btn.innerText = "SAVING..."; btn.disabled = true;
+            const btn = triggerEl; btn.innerText = "SAVING..."; btn.disabled = true;
 
             const tComplexity  = preserveTextValue(document.getElementById(`complexity-${simpleId}`)?.value, record.complexity);
             const tDFM         = preserveTextValue(document.getElementById(`dfm-${simpleId}`)?.value, record.dfm);
@@ -3187,6 +3187,7 @@
             const hasEditedDate = !!sanitizeTemplateValue(tDateRaw);
             const hasEditedQty = !!sanitizeTemplateValue(tQty);
             const completionDateValue = String(hasEditedDate ? tDateExcel : '');
+            const completionDateDisplayValue = completionDateValue ? convertExcelDate(completionDateValue, false) : '';
             const completeQtyValue = String(hasEditedQty ? preserveTextValue(tQty, '') : '');
             const remarkValue = String(preserveTextValue(tRem, record.remark));
             const payload = {
@@ -3261,9 +3262,15 @@
                         record.templateNo = payload.templateNo || record.templateNo;
                         record.complexity = tComplexity || record.complexity;
                         record.dfm = tDFM || record.dfm;
-                    } else {
-                        record.completeDateDisplay = tDateRaw || record.completeDateDisplay;
+                    }
+                    if (hasEditedDate) {
+                        record.completeDateDisplay = completionDateDisplayValue || record.completeDateDisplay;
+                    }
+                    if (hasEditedQty) {
                         record.qty = preserveTextValue(tQty, record.qty);
+                    }
+                    if (!isAdminUser) {
+                        record.completeDateDisplay = completionDateDisplayValue || record.completeDateDisplay;
                     }
                     record.remark = preserveTextValue(tRem, record.remark);
                     record.status = record.completeDateDisplay && record.completeDateDisplay !== '---' ? 'COMPLETED' : record.status;
@@ -5219,6 +5226,17 @@
             });
         }
 
+        function safeRun(task) {
+            try {
+                return Promise.resolve(task()).catch(err => {
+                    console.error(err);
+                });
+            } catch (err) {
+                console.error(err);
+                return Promise.resolve();
+            }
+        }
+
         window.onload = () => {
             updateSessionUI();
             updateLaserPicDisplay();
@@ -5240,28 +5258,26 @@
             loadAttData(); // load localStorage attendance so utilization works on first render
             switchTab('dashboard'); // always start on dashboard
 
-            // Fire only the two primary data sources on load — these power the dashboard
-            Promise.all([
-                refreshTemplateLogs(),
-                refreshLaserData()
-            ]).catch(() => {});
+            // Fire only the two primary data sources on load — isolate failures so one bad fetch cannot block boot
+            safeRun(() => refreshTemplateLogs());
+            safeRun(() => refreshLaserData());
 
             // Defer secondary fetches — staggered so Power Automate isn't hit all at once
-            setTimeout(() => refreshSupportData(),      2000);
-            setTimeout(() => refreshPatchData(),        4000);
-            setTimeout(() => refreshConsumptionData(),  6000);
-            setTimeout(() => refreshDownData(),         8000);
-            setTimeout(() => refreshLiveLogs(),         10000);
-            setTimeout(() => fetchAttendanceFromCloud(), 12000);
+            setTimeout(() => safeRun(() => refreshSupportData()),       2000);
+            setTimeout(() => safeRun(() => refreshPatchData()),         4000);
+            setTimeout(() => safeRun(() => refreshConsumptionData()),   6000);
+            setTimeout(() => safeRun(() => refreshDownData()),          8000);
+            setTimeout(() => safeRun(() => refreshLiveLogs()),         10000);
+            setTimeout(() => safeRun(() => fetchAttendanceFromCloud()), 12000);
 
             // Stagger auto-refresh intervals so not all hit Power Automate at once
-            setInterval(() => refreshTemplateLogs(true), 60000);
-            setInterval(() => refreshLaserData(true),    63000);
-            setInterval(() => refreshSupportData(true),  66000);
-            setInterval(() => refreshPatchData(true),       69000);
-            setInterval(() => refreshConsumptionData(true),  72000);
-            setInterval(() => refreshDownData(true),     75000);
-            setInterval(() => refreshLiveLogs(true),     78000);
+            setInterval(() => safeRun(() => refreshTemplateLogs(true)),    60000);
+            setInterval(() => safeRun(() => refreshLaserData(true)),       63000);
+            setInterval(() => safeRun(() => refreshSupportData(true)),     66000);
+            setInterval(() => safeRun(() => refreshPatchData(true)),       69000);
+            setInterval(() => safeRun(() => refreshConsumptionData(true)), 72000);
+            setInterval(() => safeRun(() => refreshDownData(true)),        75000);
+            setInterval(() => safeRun(() => refreshLiveLogs(true)),        78000);
             enableTableScrollControls();
             setTimeout(enableTableScrollControls, 1500);
             setTimeout(enableTableScrollControls, 5000);
