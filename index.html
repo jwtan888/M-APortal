@@ -3050,6 +3050,39 @@
             return target;
         }
 
+        function getTemplateSortDate(value) {
+            if (!value || value === '---') return null;
+            return rawToLocalDate(toExcelDateFormat(String(value).trim()));
+        }
+
+        function sortTemplateRows(rows, prioritySort = false) {
+            const weights = { 'DELAYED': 0, 'PENDING': 1, 'COMPLETED': 2 };
+            return rows.sort((a, b) => {
+                const statusDiff = (weights[a.status] ?? 99) - (weights[b.status] ?? 99);
+                if (statusDiff !== 0) return statusDiff;
+
+                if (a.status === 'COMPLETED' && b.status === 'COMPLETED') {
+                    const aDone = getTemplateSortDate(a.completeDateDisplay);
+                    const bDone = getTemplateSortDate(b.completeDateDisplay);
+                    if (aDone && bDone && aDone.getTime() !== bDone.getTime()) {
+                        return bDone - aDone;
+                    }
+                } else {
+                    const aReq = getTemplateSortDate(a.requiredDate);
+                    const bReq = getTemplateSortDate(b.requiredDate);
+                    if (aReq && bReq && aReq.getTime() !== bReq.getTime()) {
+                        return aReq - bReq;
+                    }
+                }
+
+                if (prioritySort) {
+                    return (Number(b.raw) || 0) - (Number(a.raw) || 0);
+                }
+
+                return (Number(b.raw) || 0) - (Number(a.raw) || 0);
+            });
+        }
+
         function applyTempFilters(prioritySort = false) {
             const sv = document.getElementById('tempSearch').value.toLowerCase(), isAdmin = (currentUser === "Gavin");
             const selMonth = document.getElementById('tempMonthFilter')?.value || '';
@@ -3080,10 +3113,7 @@
                 String(t.requestor).toLowerCase().includes(sv) ||
                 String(t.protoStage).toLowerCase().includes(sv)
             );
-            if (prioritySort) {
-                const weights = { 'DELAYED': 0, 'PENDING': 1, 'COMPLETED': 2 };
-                filtered.sort((a, b) => weights[a.status] - weights[b.status]);
-            }
+            sortTemplateRows(filtered, prioritySort);
             document.getElementById('tempTable').innerHTML = filtered.map(t => {
                 const done = t.status === 'COMPLETED', isMine = (currentUser === t.pic);
                 const canEdit    = isAdmin || (isMine && !done); // structural edits (Gavin always, PIC only when pending)
