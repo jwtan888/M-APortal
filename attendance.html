@@ -252,8 +252,8 @@
                     <div id="util-att-status" class="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">no data</div>
                 </div>
             </div>
-            <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.1fr)_minmax(430px,1fr)]">
-                <div class="h-[340px]">
+            <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.22fr)_minmax(400px,0.98fr)]">
+                <div class="h-[370px]">
                     <canvas id="utilChart"></canvas>
                 </div>
                 <div class="overflow-x-auto rounded-2xl border border-slate-200">
@@ -1133,8 +1133,8 @@
                     plugins: {
                         legend: { position: 'bottom' },
                         tooltip: {
-                            mode: 'index',
-                            intersect: false,
+                            mode: 'nearest',
+                            intersect: true,
                             callbacks: {
                                 footer(items) {
                                     const total = items.reduce((sum, item) => sum + (item.raw || 0), 0);
