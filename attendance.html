@@ -878,6 +878,9 @@
                     row[`Day_${day}`] = value;
                     total += value;
                 }
+                for (let day = daysInMonth + 1; day <= 31; day++) {
+                    row[`Day_${day}`] = '';
+                }
                 row.total = parseFloat(total.toFixed(1));
                 rows.push(row);
             });
