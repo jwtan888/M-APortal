@@ -95,7 +95,7 @@
   }
 
   function canEditDfmSummary() {
-    return DFM_LOGIN_USERS.includes(getSharedSessionUser());
+    return page === "data" && DFM_LOGIN_USERS.includes(getSharedSessionUser());
   }
 
   function loadRecords() {
