@@ -1106,7 +1106,7 @@
       renderKpis(analytics.kpis);
       renderBenchmarkChart(analytics.benchmark);
       renderInvestmentControls();
-      renderInvestmentBoard(analytics.investmentBoard, analytics.investmentSeasonLabels, false);
+      renderInvestmentBoard(analytics.investmentBoard, analytics.investmentSeasonLabels, canEditDfmSummary());
       renderBars(elements.seasonBars, analytics.seasonBars, formatNumber);
       renderBars(elements.categoryBars, analytics.categoryBars, formatNumber);
       renderModSummary(analytics.modSummary);
@@ -2547,7 +2547,7 @@
     }
 
     window.addEventListener("storage", (event) => {
-      if (event.key === SHARED_SESSION_KEY && page === "data") {
+      if (event.key === SHARED_SESSION_KEY && (page === "data" || page === "dashboard")) {
         state.investmentEditingCode = null;
         render();
       }
