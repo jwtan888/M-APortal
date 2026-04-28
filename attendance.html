@@ -245,7 +245,7 @@
                 <div>
                     <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Utilization</p>
                     <h2 class="text-2xl font-bold tracking-tight">PIC Capacity vs Workload</h2>
-                    <p class="mt-1 text-sm text-slate-500">Attendance hours are used as monthly PIC capacity. Workload is pulled from Laser, Support, and Consumption.</p>
+                    <p class="mt-1 text-sm text-slate-500">Attendance hours are used as monthly PIC capacity. Workload is pulled from Laser, Support, Consumption, and Manual.</p>
                 </div>
                 <div class="text-right">
                     <div id="util-capacity" class="text-sm font-bold text-slate-800">-</div>
@@ -265,6 +265,7 @@
                                 <th class="p-3 font-bold uppercase tracking-[0.14em]">Laser</th>
                                 <th class="p-3 font-bold uppercase tracking-[0.14em]">Support</th>
                                 <th class="p-3 font-bold uppercase tracking-[0.14em]">Consumption</th>
+                                <th class="p-3 font-bold uppercase tracking-[0.14em]">Manual</th>
                                 <th class="p-3 font-bold uppercase tracking-[0.14em]">Total</th>
                                 <th class="p-3 font-bold uppercase tracking-[0.14em]">Utilization</th>
                             </tr>
@@ -293,6 +294,7 @@
         const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
         const SESSION_KEY = 'ma_admin_session_user';
         const ATT_STORAGE_KEY = 'ma_attendance';
+        const ATT_UTIL_MANUAL_KEY = 'ma_attendance_util_manual';
         const ATT_EDITOR_PASSWORD = 'Modernization@888';
 
         const attendanceUpdateURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/b0bdaebbf2104b669de00b09a78add75/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=5rXFrjS1WABIzdnSZrqhqsxfZqp0G1c7E-GzkSnkqBk";
@@ -301,6 +303,8 @@
         const laserFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/f7fd69d7c4114bd2af5d8fffe467982a/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=hAWB_aTnAgdah1KM8cUx2fbYcjNNLN67GGAMOT3jeLI";
         const supportFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/cc862bcb25864cf3821934bb3954e426/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=sd0SSGGkna3TT74vR7V1jTT6E8qPxp-a4O1w0AlrqCY";
         const consumptionFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/aee706c4629744f5b5aa3a756eec00f2/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=tU6CI-qPTZJIJgVViryVC6t9oxk4_gL8xvDgB4e_jwE";
+        const manualUtilFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/d6fa694c31e94752b66fa1d6ae26af74/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=iwcuo1sQo_vgE1rywE98w5pPTUzu1jkWQUWcV0yh6mc";
+        const manualUtilSaveURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/d65c6392288c47ff9ef408cb370b47d2/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=J7oajV0dr747d2FLF56T8oMzyg8x93OAkHQpHr4DzQM";
 
         let currentUser = ATT_EDITORS.includes(sessionStorage.getItem(SESSION_KEY) || '')
             ? (sessionStorage.getItem(SESSION_KEY) || '')
@@ -315,6 +319,7 @@
         let allConsumptionRows = [];
         let utilChart = null;
         let pendingLoginUser = '';
+        let utilManualData = {};
 
         function attKey() {
             return `${attYear}-${String(attMonth + 1).padStart(2, '0')}`;
@@ -322,6 +327,53 @@
 
         function attendanceMonthLabel() {
             return `${SHORT_MONTHS[attMonth]}-${attYear}`;
+        }
+
+        function monthKeyToExcelLabel(monthKey) {
+            const [yearRaw, monthRaw] = String(monthKey || '').split('-');
+            const fullYear = parseInt(yearRaw, 10);
+            const monthIndex = parseInt(monthRaw, 10) - 1;
+            if (!fullYear || monthIndex < 0 || monthIndex > 11) return '';
+            return `${String(fullYear).slice(-2)}-${SHORT_MONTHS[monthIndex]}`;
+        }
+
+        function monthLabelToKey(rawMonth) {
+            let monthIndex = -1;
+            let fullYear = 0;
+            if (typeof rawMonth === 'number' || (!isNaN(rawMonth) && String(rawMonth).length > 4 && !String(rawMonth).includes('-'))) {
+                const serial = parseFloat(rawMonth);
+                if (serial > 40000 && serial < 60000) {
+                    const date = new Date((serial - 25569) * 86400 * 1000);
+                    monthIndex = date.getUTCMonth();
+                    fullYear = date.getUTCFullYear();
+                }
+            }
+            const monthLabel = String(rawMonth || '').trim();
+            if (monthIndex < 0 && monthLabel) {
+                const parts = monthLabel.split('-');
+                if (parts.length >= 3 && parts[0].length === 4) {
+                    fullYear = parseInt(parts[0], 10);
+                    monthIndex = parseInt(parts[1], 10) - 1;
+                } else if (parts.length === 2 && isNaN(parts[0])) {
+                    monthIndex = SHORT_MONTHS.indexOf(parts[0]);
+                    fullYear = 2000 + parseInt(parts[1], 10);
+                } else if (parts.length === 2 && !isNaN(parts[0])) {
+                    monthIndex = SHORT_MONTHS.indexOf(parts[1]);
+                    fullYear = 2000 + parseInt(parts[0], 10);
+                }
+            }
+            if (monthIndex < 0 || monthIndex > 11 || !fullYear) return '';
+            return `${fullYear}-${String(monthIndex + 1).padStart(2, '0')}`;
+        }
+
+        function formatManualUpdatedAt(date = new Date()) {
+            const year = date.getFullYear();
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            const day = String(date.getDate()).padStart(2, '0');
+            const hours = String(date.getHours()).padStart(2, '0');
+            const minutes = String(date.getMinutes()).padStart(2, '0');
+            const seconds = String(date.getSeconds()).padStart(2, '0');
+            return `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`;
         }
 
         function extractRows(data) {
@@ -417,6 +469,84 @@
 
         function saveAttData() {
             localStorage.setItem(ATT_STORAGE_KEY, JSON.stringify(attData));
+        }
+
+        function loadUtilManualData() {
+            try {
+                const saved = localStorage.getItem(ATT_UTIL_MANUAL_KEY);
+                utilManualData = saved ? JSON.parse(saved) : {};
+            } catch (e) {
+                utilManualData = {};
+            }
+        }
+
+        function saveUtilManualData() {
+            localStorage.setItem(ATT_UTIL_MANUAL_KEY, JSON.stringify(utilManualData));
+        }
+
+        async function fetchManualUtilFromCloud() {
+            const rows = await fetchJsonRows(manualUtilFetchURL);
+            const nextData = {};
+            rows.forEach(row => {
+                const monthKey = monthLabelToKey(row.Month || row.month || '');
+                const pic = String(row.PIC || row.Pic || row.pic || '').trim();
+                if (!monthKey || !pic) return;
+                const hours = parseFloat(row['Manual Hours'] || row.manualHours || row.hours || 0) || 0;
+                if (!nextData[monthKey]) nextData[monthKey] = {};
+                nextData[monthKey][pic] = {
+                    hours,
+                    updatedBy: String(row['Updated By'] || row.updatedBy || '').trim(),
+                    updatedAt: String(row['Updated At'] || row.updatedAt || '').trim()
+                };
+            });
+            utilManualData = nextData;
+            saveUtilManualData();
+            return rows.length;
+        }
+
+        function getManualHoursForPic(monthKey, pic) {
+            return parseFloat(utilManualData?.[monthKey]?.[pic]?.hours || 0) || 0;
+        }
+
+        async function saveManualUtilHours(pic, rawValue) {
+            if (!ATT_EDITORS.includes(currentUser)) {
+                alert('Only Gavin or Joe can edit manual workload.');
+                return;
+            }
+            const monthKey = attKey();
+            const value = rawValue === '' ? 0 : parseFloat(rawValue);
+            const safeValue = Number.isFinite(value) ? parseFloat(value.toFixed(1)) : 0;
+            if (!utilManualData[monthKey]) utilManualData[monthKey] = {};
+            const updatedAt = formatManualUpdatedAt();
+            utilManualData[monthKey][pic] = {
+                hours: safeValue,
+                updatedBy: currentUser,
+                updatedAt
+            };
+            saveUtilManualData();
+            renderUtilization();
+            try {
+                const month = monthKeyToExcelLabel(monthKey);
+                const payload = {
+                    month,
+                    pic,
+                    manualHours: safeValue,
+                    updatedBy: currentUser,
+                    updatedAt
+                };
+                const res = await fetch(manualUtilSaveURL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+                if (!res.ok) {
+                    throw new Error(`Save failed (${res.status})`);
+                }
+                await fetchManualUtilFromCloud();
+                renderUtilization();
+            } catch (e) {
+                alert('Manual utilization save failed.');
+            }
         }
 
         function updateUserUI() {
@@ -531,38 +661,16 @@
             if (!rows.length) return 0;
             const touchedKeys = new Set();
             rows.forEach(row => {
-                let rawMonth = row.Month || row.month || '';
-                let monthIndex = -1;
-                let fullYear = 0;
-                if (typeof rawMonth === 'number' || (!isNaN(rawMonth) && String(rawMonth).length > 4 && !String(rawMonth).includes('-'))) {
-                    const serial = parseFloat(rawMonth);
-                    if (serial > 40000 && serial < 60000) {
-                        const date = new Date((serial - 25569) * 86400 * 1000);
-                        monthIndex = date.getUTCMonth();
-                        fullYear = date.getUTCFullYear();
-                    }
-                }
-                const monthLabel = String(rawMonth).trim();
-                if (monthIndex < 0 && monthLabel) {
-                    const parts = monthLabel.split('-');
-                    if (parts.length >= 3 && parts[0].length === 4) {
-                        fullYear = parseInt(parts[0], 10);
-                        monthIndex = parseInt(parts[1], 10) - 1;
-                    } else if (parts.length === 2 && isNaN(parts[0])) {
-                        monthIndex = SHORT_MONTHS.indexOf(parts[0]);
-                        fullYear = 2000 + parseInt(parts[1], 10);
-                    } else if (parts.length === 2 && !isNaN(parts[0])) {
-                        monthIndex = SHORT_MONTHS.indexOf(parts[1]);
-                        fullYear = 2000 + parseInt(parts[0], 10);
-                    }
-                }
-                if (monthIndex < 0 || monthIndex > 11 || !fullYear) return;
-                const key = `${fullYear}-${String(monthIndex + 1).padStart(2, '0')}`;
+                const key = monthLabelToKey(row.Month || row.month || '');
+                if (!key) return;
                 touchedKeys.add(key);
                 const name = String(row.Name || row.name || '').trim();
                 if (!name) return;
                 if (!attData[key]) attData[key] = {};
                 if (!attData[key][name]) attData[key][name] = {};
+                const [yearRaw, monthRaw] = key.split('-');
+                const fullYear = parseInt(yearRaw, 10);
+                const monthIndex = parseInt(monthRaw, 10) - 1;
                 const daysInMonth = new Date(fullYear, monthIndex + 1, 0).getDate();
                 if (row.Day !== undefined && row.Hours !== undefined) {
                     const day = parseInt(row.Day || row.day, 10);
@@ -587,12 +695,13 @@
 
         async function loadAllSources() {
             setSourceStatus('Syncing attendance and workload');
-            const [settingRows, laserRows, supportRows, consumptionRows, attendanceCount] = await Promise.all([
+            const [settingRows, laserRows, supportRows, consumptionRows, attendanceCount, manualCount] = await Promise.all([
                 fetchJsonRows(settingFetchURL),
                 fetchJsonRows(laserFetchURL),
                 fetchJsonRows(supportFetchURL),
                 fetchJsonRows(consumptionFetchURL),
-                fetchAttendanceFromCloud()
+                fetchAttendanceFromCloud(),
+                fetchManualUtilFromCloud()
             ]);
             allSettingRows = settingRows;
             allLaserRows = laserRows;
@@ -600,7 +709,7 @@
             allConsumptionRows = consumptionRows;
             renderAttendance();
             renderUtilization();
-            setSourceStatus(`Synced ${new Date().toLocaleTimeString()} · attendance rows ${attendanceCount || 0}`);
+            setSourceStatus(`Synced ${new Date().toLocaleTimeString()} · attendance rows ${attendanceCount || 0} · manual rows ${manualCount || 0}`);
         }
 
         function renderAttendance() {
@@ -831,6 +940,14 @@
             const laserHrs = {};
             const supportHrs = {};
             const consumptionHrs = {};
+            const manualHrs = {};
+
+            Object.entries(utilManualData[key] || {}).forEach(([pic, row]) => {
+                const hours = parseFloat(row?.hours || 0) || 0;
+                if (!pic || !hours) return;
+                allPICs.add(pic);
+                manualHrs[pic] = hours;
+            });
 
             allSettingRows.forEach(row => {
                 const completeRaw = getVal(row, ['Complete Date m/d/yyyy', 'Complete Date', 'CompleteDate']);
@@ -954,13 +1071,13 @@
                 .filter(Boolean)
                 .filter(pic => pic !== '---')
                 .sort((a, b) => {
-                    const totalA = (settingHrs[a] || 0) + (laserHrs[a] || 0) + (supportHrs[a] || 0) + (consumptionHrs[a] || 0);
-                    const totalB = (settingHrs[b] || 0) + (laserHrs[b] || 0) + (supportHrs[b] || 0) + (consumptionHrs[b] || 0);
+                    const totalA = (settingHrs[a] || 0) + (laserHrs[a] || 0) + (supportHrs[a] || 0) + (consumptionHrs[a] || 0) + (manualHrs[a] || 0);
+                    const totalB = (settingHrs[b] || 0) + (laserHrs[b] || 0) + (supportHrs[b] || 0) + (consumptionHrs[b] || 0) + (manualHrs[b] || 0);
                     return totalB - totalA;
                 });
 
             const totalCapacity = picList.reduce((sum, pic) => sum + (attCapMap[pic] || 0), 0);
-            const totalWorkload = picList.reduce((sum, pic) => sum + (settingHrs[pic] || 0) + (laserHrs[pic] || 0) + (supportHrs[pic] || 0) + (consumptionHrs[pic] || 0), 0);
+            const totalWorkload = picList.reduce((sum, pic) => sum + (settingHrs[pic] || 0) + (laserHrs[pic] || 0) + (supportHrs[pic] || 0) + (consumptionHrs[pic] || 0) + (manualHrs[pic] || 0), 0);
             const overallUtilization = totalCapacity ? Math.round((totalWorkload / totalCapacity) * 100) : 0;
             document.getElementById('att-utilization-pct').innerText = `${overallUtilization}%`;
             document.getElementById('att-utilization-meta').innerText = `${totalWorkload.toFixed(1)}h workload / ${totalCapacity.toFixed(1)}h capacity`;
@@ -975,7 +1092,8 @@
                         { label: 'Setting', data: picList.map(pic => parseFloat((settingHrs[pic] || 0).toFixed(1))), backgroundColor: '#6366f1' },
                         { label: 'Laser', data: picList.map(pic => parseFloat((laserHrs[pic] || 0).toFixed(1))), backgroundColor: '#10b981' },
                         { label: 'Support', data: picList.map(pic => parseFloat((supportHrs[pic] || 0).toFixed(1))), backgroundColor: '#3b82f6' },
-                        { label: 'Consumption', data: picList.map(pic => parseFloat((consumptionHrs[pic] || 0).toFixed(1))), backgroundColor: '#8b5cf6' }
+                        { label: 'Consumption', data: picList.map(pic => parseFloat((consumptionHrs[pic] || 0).toFixed(1))), backgroundColor: '#8b5cf6' },
+                        { label: 'Manual', data: picList.map(pic => parseFloat((manualHrs[pic] || 0).toFixed(1))), backgroundColor: '#f59e0b' }
                     ]
                 },
                 options: {
@@ -1005,7 +1123,7 @@
 
             const table = document.getElementById('util-table');
             if (!picList.length) {
-                table.innerHTML = '<tr><td colspan="7" class="p-6 text-center italic text-slate-400">No utilization data for this month.</td></tr>';
+                table.innerHTML = '<tr><td colspan="8" class="p-6 text-center italic text-slate-400">No utilization data for this month.</td></tr>';
                 return;
             }
 
@@ -1014,17 +1132,22 @@
                 const laser = laserHrs[pic] || 0;
                 const support = supportHrs[pic] || 0;
                 const consumption = consumptionHrs[pic] || 0;
-                const total = setting + laser + support + consumption;
+                const manual = manualHrs[pic] || 0;
+                const total = setting + laser + support + consumption + manual;
                 const cap = attCapMap[pic] || avgCapacity || 0;
                 const pct = cap ? Math.round((total / cap) * 100) : 0;
                 const color = pct >= 90 ? 'bg-rose-500' : pct >= 70 ? 'bg-amber-400' : 'bg-emerald-500';
                 const textColor = pct >= 90 ? 'text-rose-600' : pct >= 70 ? 'text-amber-600' : 'text-emerald-600';
+                const manualCell = ATT_EDITORS.includes(currentUser)
+                    ? `<input type="number" step="0.1" min="0" value="${manual.toFixed(1)}" onchange="saveManualUtilHours('${pic.replace(/'/g, "\\'")}', this.value)" class="w-20 rounded-lg border border-slate-200 px-2 py-1 text-right text-xs font-bold text-amber-700 outline-none">`
+                    : `<span class="font-bold text-amber-600">${manual.toFixed(1)}</span>`;
                 return `<tr class="border-b border-slate-100 hover:bg-slate-50">
                     <td class="p-3 font-bold text-slate-800">${pic}</td>
                     <td class="p-3 font-bold text-indigo-600">${setting.toFixed(1)}</td>
                     <td class="p-3 font-bold text-emerald-600">${laser.toFixed(1)}</td>
                     <td class="p-3 font-bold text-sky-600">${support.toFixed(1)}</td>
                     <td class="p-3 font-bold text-violet-600">${consumption.toFixed(1)}</td>
+                    <td class="p-3">${manualCell}</td>
                     <td class="p-3 font-bold text-slate-900">${total.toFixed(1)}</td>
                     <td class="p-3">
                         <div class="flex items-center gap-2">
@@ -1041,6 +1164,7 @@
 
         updateUserUI();
         loadAttData();
+        loadUtilManualData();
         renderAttendance();
         renderUtilization();
         loadAllSources();
