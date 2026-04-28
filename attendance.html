@@ -551,6 +551,9 @@
                     } else if (parts.length === 2 && isNaN(parts[0])) {
                         monthIndex = SHORT_MONTHS.indexOf(parts[0]);
                         fullYear = 2000 + parseInt(parts[1], 10);
+                    } else if (parts.length === 2 && !isNaN(parts[0])) {
+                        monthIndex = SHORT_MONTHS.indexOf(parts[1]);
+                        fullYear = 2000 + parseInt(parts[0], 10);
                     }
                 }
                 if (monthIndex < 0 || monthIndex > 11 || !fullYear) return;
@@ -741,7 +744,7 @@
             const key = attKey();
             if (!attData[key]) attData[key] = {};
             const daysInMonth = new Date(attYear, attMonth + 1, 0).getDate();
-            const monthLabel = `${SHORT_MONTHS[attMonth]}-${String(attYear).slice(2)}`;
+            const monthLabel = `${String(attYear).slice(2)}-${SHORT_MONTHS[attMonth]}`;
             const rows = [];
 
             ATT_MEMBERS.forEach(name => {
