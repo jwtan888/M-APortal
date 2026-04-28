@@ -2069,10 +2069,13 @@
         const preserveSummaryRefreshImprovementValue = (remoteValue, localValue) => {
           const cleanedRemote = cleanText(remoteValue);
           const cleanedLocal = cleanText(localValue);
-          if (cleanedLocal) {
-            return cleanedLocal;
+          if (hasPending && !expectedMatched) {
+            return cleanedLocal || cleanedRemote;
           }
-          return isFormulaText(cleanedRemote) ? cleanedRemote : "";
+          if (cleanedRemote) {
+            return cleanedRemote;
+          }
+          return cleanedLocal;
         };
         nextNotes[code] = {
           currentTotalFgQty: mergeValue(row.currentTotalFgQty, existing.currentTotalFgQty),
