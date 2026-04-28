@@ -291,7 +291,7 @@
         const ATT_MEMBERS = ['Phone', 'James', 'Ram', 'Keat', 'Viki', 'Mark', 'Joe', 'Gavin'];
         const ATT_EDITORS = ['Gavin', 'Joe'];
         const SHORT_MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-        const SESSION_KEY = 'ma_session_user';
+        const SESSION_KEY = 'ma_admin_session_user';
         const ATT_STORAGE_KEY = 'ma_attendance';
         const ATT_EDITOR_PASSWORD = 'Modernization@888';
 
@@ -302,7 +302,9 @@
         const supportFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/cc862bcb25864cf3821934bb3954e426/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=sd0SSGGkna3TT74vR7V1jTT6E8qPxp-a4O1w0AlrqCY";
         const consumptionFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/aee706c4629744f5b5aa3a756eec00f2/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=tU6CI-qPTZJIJgVViryVC6t9oxk4_gL8xvDgB4e_jwE";
 
-        let currentUser = sessionStorage.getItem(SESSION_KEY) || '';
+        let currentUser = ATT_EDITORS.includes(sessionStorage.getItem(SESSION_KEY) || '')
+            ? (sessionStorage.getItem(SESSION_KEY) || '')
+            : '';
         let attYear = new Date().getFullYear();
         let attMonth = new Date().getMonth();
         let attSelectedCol = null;
@@ -477,6 +479,7 @@
             sessionStorage.setItem(SESSION_KEY, currentUser);
             closePasswordModal();
             updateUserUI();
+            window.dispatchEvent(new Event('ma-admin-session-changed'));
             renderAttendance();
         }
 
@@ -484,6 +487,7 @@
             currentUser = '';
             sessionStorage.removeItem(SESSION_KEY);
             updateUserUI();
+            window.dispatchEvent(new Event('ma-admin-session-changed'));
             renderAttendance();
         }
 
