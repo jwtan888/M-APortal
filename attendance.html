@@ -264,7 +264,7 @@
                                 <th class="p-3 font-bold uppercase tracking-[0.14em]">Setting</th>
                                 <th class="p-3 font-bold uppercase tracking-[0.14em]">Laser</th>
                                 <th class="p-3 font-bold uppercase tracking-[0.14em]">Support</th>
-                                <th class="p-3 font-bold uppercase tracking-[0.14em]">Consumption</th>
+                                <th class="w-20 p-3 font-bold uppercase tracking-[0.14em]">Consumption</th>
                                 <th class="p-3 font-bold uppercase tracking-[0.14em]">Manual</th>
                                 <th class="p-3 font-bold uppercase tracking-[0.14em]">Total</th>
                                 <th class="p-3 font-bold uppercase tracking-[0.14em]">Utilization</th>
@@ -547,6 +547,12 @@
             } catch (e) {
                 alert('Manual utilization save failed.');
             }
+        }
+
+        async function saveManualUtilHoursFromInput(pic) {
+            const input = document.getElementById(`manual-util-${pic}`);
+            if (!input) return;
+            await saveManualUtilHours(pic, input.value);
         }
 
         function updateUserUI() {
@@ -1138,15 +1144,19 @@
                 const pct = cap ? Math.round((total / cap) * 100) : 0;
                 const color = pct >= 90 ? 'bg-rose-500' : pct >= 70 ? 'bg-amber-400' : 'bg-emerald-500';
                 const textColor = pct >= 90 ? 'text-rose-600' : pct >= 70 ? 'text-amber-600' : 'text-emerald-600';
+                const safePic = pic.replace(/'/g, "\\'");
                 const manualCell = ATT_EDITORS.includes(currentUser)
-                    ? `<input type="number" step="0.1" min="0" value="${manual.toFixed(1)}" onchange="saveManualUtilHours('${pic.replace(/'/g, "\\'")}', this.value)" class="w-20 rounded-lg border border-slate-200 px-2 py-1 text-right text-xs font-bold text-amber-700 outline-none">`
+                    ? `<div class="flex items-center gap-2">
+                            <input id="manual-util-${pic}" type="number" step="0.1" min="0" value="${manual.toFixed(1)}" class="w-16 rounded-lg border border-slate-200 px-2 py-1 text-right text-xs font-bold text-amber-700 outline-none">
+                            <button onclick="saveManualUtilHoursFromInput('${safePic}')" class="rounded-full bg-amber-500 px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.08em] text-white transition hover:bg-amber-400">Save</button>
+                        </div>`
                     : `<span class="font-bold text-amber-600">${manual.toFixed(1)}</span>`;
                 return `<tr class="border-b border-slate-100 hover:bg-slate-50">
                     <td class="p-3 font-bold text-slate-800">${pic}</td>
                     <td class="p-3 font-bold text-indigo-600">${setting.toFixed(1)}</td>
                     <td class="p-3 font-bold text-emerald-600">${laser.toFixed(1)}</td>
                     <td class="p-3 font-bold text-sky-600">${support.toFixed(1)}</td>
-                    <td class="p-3 font-bold text-violet-600">${consumption.toFixed(1)}</td>
+                    <td class="w-20 p-3 font-bold text-violet-600">${consumption.toFixed(1)}</td>
                     <td class="p-3">${manualCell}</td>
                     <td class="p-3 font-bold text-slate-900">${total.toFixed(1)}</td>
                     <td class="p-3">
