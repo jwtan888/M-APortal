@@ -1732,6 +1732,7 @@
     const nextSam = cleanText(samImprovement);
     const nextImprovementType = cleanText(improvementType);
     const nextDecision = cleanText(investmentDecision);
+    const existingImprovementValue = cleanText(state.investmentNotes[code]?.improvementValue);
     const updatedAt = Date.now();
     markPendingSummaryUpsert(code);
     persistInvestmentNote(
@@ -2254,7 +2255,10 @@
       state.records = normalizeRecords(reconcileStoredRecords(state.records, latestSeed.records || []));
       state.records = normalizeRecords(mergeRemoteWithPending(state.records, state.records));
       if ((latestSeed.summaryRows || []).length) {
-        state.investmentNotes = buildInvestmentNotesFromSummaryRows(latestSeed.summaryRows || []);
+        state.investmentNotes = buildInvestmentNotesFromSummaryRows(
+          latestSeed.summaryRows || [],
+          state.investmentNotes,
+        );
         persistInvestmentNotes();
       }
       state.latestSource = formatSourceLabel(latestSeed?.meta?.sourceFile);
@@ -2300,7 +2304,10 @@
       }
       state.records = mergedRecords;
       if ((latestSeed.summaryRows || []).length) {
-        state.investmentNotes = buildInvestmentNotesFromSummaryRows(latestSeed.summaryRows || []);
+        state.investmentNotes = buildInvestmentNotesFromSummaryRows(
+          latestSeed.summaryRows || [],
+          state.investmentNotes,
+        );
         persistInvestmentNotes();
       }
       state.latestSource = formatSourceLabel(latestSeed?.meta?.sourceFile);
