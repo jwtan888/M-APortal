@@ -2056,16 +2056,13 @@
         }
         const preservePendingField = (remoteValue, localValue) =>
           hasPending && !expectedMatched ? cleanText(localValue) : cleanText(remoteValue);
-        const preservePendingFormulaValue = (remoteValue, localValue) => {
+        const preserveSummaryRefreshImprovementValue = (remoteValue, localValue) => {
           const cleanedRemote = cleanText(remoteValue);
           const cleanedLocal = cleanText(localValue);
-          if (isFormulaText(cleanedLocal) && !isFormulaText(cleanedRemote)) {
+          if (cleanedLocal) {
             return cleanedLocal;
           }
-          if (!hasPending || expectedMatched) {
-            return cleanedRemote;
-          }
-          return cleanedRemote === "" || /^0(?:\.0+)?$/.test(cleanedRemote) ? cleanedLocal : cleanedRemote;
+          return isFormulaText(cleanedRemote) ? cleanedRemote : "";
         };
         nextNotes[code] = {
           currentTotalFgQty: mergeValue(row.currentTotalFgQty, existing.currentTotalFgQty),
@@ -2076,7 +2073,7 @@
             existing.improvementType,
           ),
           improvementValue: mergeValue(
-            preservePendingFormulaValue(remoteImprovementValue, existing.improvementValue),
+            preserveSummaryRefreshImprovementValue(remoteImprovementValue, existing.improvementValue),
             existing.improvementValue,
           ),
           investmentDecision: mergeValue(
