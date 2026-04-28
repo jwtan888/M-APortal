@@ -264,6 +264,7 @@
                                 <th class="p-3 font-bold uppercase tracking-[0.14em]">Setting</th>
                                 <th class="p-3 font-bold uppercase tracking-[0.14em]">Laser</th>
                                 <th class="p-3 font-bold uppercase tracking-[0.14em]">Support</th>
+                                <th class="p-3 font-bold uppercase tracking-[0.14em]">Down Filling</th>
                                 <th class="w-20 p-3 font-bold uppercase tracking-[0.14em]">Consumption</th>
                                 <th class="p-3 font-bold uppercase tracking-[0.14em]">Manual</th>
                                 <th class="p-3 font-bold uppercase tracking-[0.14em]">Total</th>
@@ -303,6 +304,7 @@
         const laserFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/f7fd69d7c4114bd2af5d8fffe467982a/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=hAWB_aTnAgdah1KM8cUx2fbYcjNNLN67GGAMOT3jeLI";
         const supportFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/cc862bcb25864cf3821934bb3954e426/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=sd0SSGGkna3TT74vR7V1jTT6E8qPxp-a4O1w0AlrqCY";
         const consumptionFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/aee706c4629744f5b5aa3a756eec00f2/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=tU6CI-qPTZJIJgVViryVC6t9oxk4_gL8xvDgB4e_jwE";
+        const downFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/925d86d436044eda8ba9dc7b0d628f8d/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=WW4a2zXKZfD-IDWzdX_8XYcGa0Qgh1lGxnbz5WHcE3k";
         const manualUtilFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/d6fa694c31e94752b66fa1d6ae26af74/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=iwcuo1sQo_vgE1rywE98w5pPTUzu1jkWQUWcV0yh6mc";
         const manualUtilSaveURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/d65c6392288c47ff9ef408cb370b47d2/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=J7oajV0dr747d2FLF56T8oMzyg8x93OAkHQpHr4DzQM";
 
@@ -317,6 +319,7 @@
         let allLaserRows = [];
         let allSupportRows = [];
         let allConsumptionRows = [];
+        let allDownRows = [];
         let utilChart = null;
         let pendingLoginUser = '';
         let utilManualData = {};
@@ -701,11 +704,12 @@
 
         async function loadAllSources() {
             setSourceStatus('Syncing attendance and workload');
-            const [settingRows, laserRows, supportRows, consumptionRows, attendanceCount, manualCount] = await Promise.all([
+            const [settingRows, laserRows, supportRows, consumptionRows, downRows, attendanceCount, manualCount] = await Promise.all([
                 fetchJsonRows(settingFetchURL),
                 fetchJsonRows(laserFetchURL),
                 fetchJsonRows(supportFetchURL),
                 fetchJsonRows(consumptionFetchURL),
+                fetchJsonRows(downFetchURL),
                 fetchAttendanceFromCloud(),
                 fetchManualUtilFromCloud()
             ]);
@@ -713,6 +717,7 @@
             allLaserRows = laserRows;
             allSupportRows = supportRows;
             allConsumptionRows = consumptionRows;
+            allDownRows = downRows;
             renderAttendance();
             renderUtilization();
             setSourceStatus(`Synced ${new Date().toLocaleTimeString()} · attendance rows ${attendanceCount || 0} · manual rows ${manualCount || 0}`);
@@ -916,7 +921,7 @@
             const monthData = attData[key] || {};
             const daysInMonth = new Date(attYear, attMonth + 1, 0).getDate();
 
-            ATT_MEMBERS.forEach(name => {
+            ATT_MEMBERS.filter(name => name !== 'Gavin').forEach(name => {
                 const member = monthData[name] || {};
                 let total = 0;
                 if (member.__total__ !== undefined) {
@@ -941,16 +946,17 @@
                 return `${SHORT_MONTHS[date.getMonth()]}-${date.getFullYear()}` === monthLabel;
             };
 
-            const allPICs = new Set([...ATT_MEMBERS]);
+            const allPICs = new Set(ATT_MEMBERS.filter(pic => pic !== 'Gavin'));
             const settingHrs = {};
             const laserHrs = {};
             const supportHrs = {};
+            const downHrs = {};
             const consumptionHrs = {};
             const manualHrs = {};
 
             Object.entries(utilManualData[key] || {}).forEach(([pic, row]) => {
                 const hours = parseFloat(row?.hours || 0) || 0;
-                if (!pic || !hours) return;
+                if (!pic || pic === 'Gavin' || !hours) return;
                 allPICs.add(pic);
                 manualHrs[pic] = hours;
             });
@@ -959,7 +965,7 @@
                 const completeRaw = getVal(row, ['Complete Date m/d/yyyy', 'Complete Date', 'CompleteDate']);
                 if (!inMonth(completeRaw)) return;
                 const pic = getVal(row, ['PIC']);
-                if (!pic || pic === '---') return;
+                if (!pic || pic === '---' || pic === 'Gavin') return;
                 const startDate = rawToLocalDate(getVal(row, ['Start Date m/d/yyyy', 'Start Date', 'StartDate']));
                 const endDate = rawToLocalDate(completeRaw);
                 if (!startDate || !endDate || endDate <= startDate) return;
@@ -975,7 +981,7 @@
                 const received = rawToLocalDate(getVal(row, ['Received Time', 'ReceivedTime', 'Received']));
                 const completed = rawToLocalDate(completeDate);
                 const pic = getMAPic(row);
-                if (!received || !completed || !pic || pic === '---') return;
+                if (!received || !completed || !pic || pic === '---' || pic === 'Gavin') return;
                 const consumptionStart = rawToLocalDate(getVal(row, [
                     'Consumption Start Date',
                     'ConsumptionStartDate',
@@ -1030,7 +1036,7 @@
                 const monthAnchor = consumptionEndRaw !== '---' ? consumptionEndRaw : consumptionStartRaw;
                 if (!inMonth(monthAnchor)) return;
                 const pic = getMAPic(row);
-                if (!pic || pic === '---') return;
+                if (!pic || pic === '---' || pic === 'Gavin') return;
                 const consumptionStart = rawToLocalDate(consumptionStartRaw);
                 const consumptionEnd = rawToLocalDate(consumptionEndRaw);
                 if (!consumptionStart || !consumptionEnd || consumptionEnd <= consumptionStart) return;
@@ -1044,7 +1050,7 @@
                 const receivedDate = getVal(row, ['Received Time', 'ReceivedTime']);
                 if (!inMonth(receivedDate)) return;
                 const pic = getMAPic(row);
-                if (!pic || pic === '---') return;
+                if (!pic || pic === '---' || pic === 'Gavin') return;
                 let hours = 0;
                 const startDate = rawToLocalDate(getVal(row, ['Start Time', 'StartTime']));
                 const endDate = rawToLocalDate(getVal(row, ['Complete Time', 'CompleteTime']));
@@ -1059,11 +1065,25 @@
                 supportHrs[pic] = (supportHrs[pic] || 0) + hours;
             });
 
+            allDownRows.forEach(row => {
+                const dateAnchor = getVal(row, ['Date Update', 'DateUpdate', 'Date']);
+                if (!inMonth(dateAnchor)) return;
+                const pic = getMAPic(row);
+                if (!pic || pic === '---' || pic === 'Gavin') return;
+                const startDate = rawToLocalDate(getVal(row, ['Start Time', 'StartTime', 'Start Time m/d/yyyy']));
+                const endDate = rawToLocalDate(getVal(row, ['Complete Time', 'CompleteTime', 'Complete Time m/d/yyyy']));
+                if (!startDate || !endDate || endDate <= startDate) return;
+                const hours = (endDate - startDate) / 3600000;
+                if (!hours) return;
+                allPICs.add(pic);
+                downHrs[pic] = (downHrs[pic] || 0) + hours;
+            });
+
             allConsumptionRows.forEach(row => {
                 const receivedDate = getVal(row, ['Received Time m/d/yyyy', 'Received Time', 'ReceivedTime']);
                 if (!inMonth(receivedDate)) return;
                 const pic = getMAPic(row);
-                if (!pic || pic === '---') return;
+                if (!pic || pic === '---' || pic === 'Gavin') return;
                 const startDate = rawToLocalDate(getVal(row, ['Start Date m/d/yyyy', 'Start Date', 'StartDate']));
                 const endDate = rawToLocalDate(getVal(row, ['Complete Date m/d/yyyy', 'Complete Date', 'CompleteDate']));
                 if (!startDate || !endDate || endDate <= startDate) return;
@@ -1076,14 +1096,15 @@
             const picList = Array.from(allPICs)
                 .filter(Boolean)
                 .filter(pic => pic !== '---')
+                .filter(pic => pic !== 'Gavin')
                 .sort((a, b) => {
-                    const totalA = (settingHrs[a] || 0) + (laserHrs[a] || 0) + (supportHrs[a] || 0) + (consumptionHrs[a] || 0) + (manualHrs[a] || 0);
-                    const totalB = (settingHrs[b] || 0) + (laserHrs[b] || 0) + (supportHrs[b] || 0) + (consumptionHrs[b] || 0) + (manualHrs[b] || 0);
+                    const totalA = (settingHrs[a] || 0) + (laserHrs[a] || 0) + (supportHrs[a] || 0) + (downHrs[a] || 0) + (consumptionHrs[a] || 0) + (manualHrs[a] || 0);
+                    const totalB = (settingHrs[b] || 0) + (laserHrs[b] || 0) + (supportHrs[b] || 0) + (downHrs[b] || 0) + (consumptionHrs[b] || 0) + (manualHrs[b] || 0);
                     return totalB - totalA;
                 });
 
             const totalCapacity = picList.reduce((sum, pic) => sum + (attCapMap[pic] || 0), 0);
-            const totalWorkload = picList.reduce((sum, pic) => sum + (settingHrs[pic] || 0) + (laserHrs[pic] || 0) + (supportHrs[pic] || 0) + (consumptionHrs[pic] || 0) + (manualHrs[pic] || 0), 0);
+            const totalWorkload = picList.reduce((sum, pic) => sum + (settingHrs[pic] || 0) + (laserHrs[pic] || 0) + (supportHrs[pic] || 0) + (downHrs[pic] || 0) + (consumptionHrs[pic] || 0) + (manualHrs[pic] || 0), 0);
             const overallUtilization = totalCapacity ? Math.round((totalWorkload / totalCapacity) * 100) : 0;
             document.getElementById('att-utilization-pct').innerText = `${overallUtilization}%`;
             document.getElementById('att-utilization-meta').innerText = `${totalWorkload.toFixed(1)}h workload / ${totalCapacity.toFixed(1)}h capacity`;
@@ -1098,6 +1119,7 @@
                         { label: 'Setting', data: picList.map(pic => parseFloat((settingHrs[pic] || 0).toFixed(1))), backgroundColor: '#6366f1' },
                         { label: 'Laser', data: picList.map(pic => parseFloat((laserHrs[pic] || 0).toFixed(1))), backgroundColor: '#10b981' },
                         { label: 'Support', data: picList.map(pic => parseFloat((supportHrs[pic] || 0).toFixed(1))), backgroundColor: '#3b82f6' },
+                        { label: 'Down Filling', data: picList.map(pic => parseFloat((downHrs[pic] || 0).toFixed(1))), backgroundColor: '#0ea5a4' },
                         { label: 'Consumption', data: picList.map(pic => parseFloat((consumptionHrs[pic] || 0).toFixed(1))), backgroundColor: '#8b5cf6' },
                         { label: 'Manual', data: picList.map(pic => parseFloat((manualHrs[pic] || 0).toFixed(1))), backgroundColor: '#f59e0b' }
                     ]
@@ -1129,7 +1151,7 @@
 
             const table = document.getElementById('util-table');
             if (!picList.length) {
-                table.innerHTML = '<tr><td colspan="8" class="p-6 text-center italic text-slate-400">No utilization data for this month.</td></tr>';
+                table.innerHTML = '<tr><td colspan="9" class="p-6 text-center italic text-slate-400">No utilization data for this month.</td></tr>';
                 return;
             }
 
@@ -1137,9 +1159,10 @@
                 const setting = settingHrs[pic] || 0;
                 const laser = laserHrs[pic] || 0;
                 const support = supportHrs[pic] || 0;
+                const down = downHrs[pic] || 0;
                 const consumption = consumptionHrs[pic] || 0;
                 const manual = manualHrs[pic] || 0;
-                const total = setting + laser + support + consumption + manual;
+                const total = setting + laser + support + down + consumption + manual;
                 const cap = attCapMap[pic] || avgCapacity || 0;
                 const pct = cap ? Math.round((total / cap) * 100) : 0;
                 const color = pct >= 90 ? 'bg-rose-500' : pct >= 70 ? 'bg-amber-400' : 'bg-emerald-500';
@@ -1156,6 +1179,7 @@
                     <td class="p-3 font-bold text-indigo-600">${setting.toFixed(1)}</td>
                     <td class="p-3 font-bold text-emerald-600">${laser.toFixed(1)}</td>
                     <td class="p-3 font-bold text-sky-600">${support.toFixed(1)}</td>
+                    <td class="p-3 font-bold text-teal-600">${down.toFixed(1)}</td>
                     <td class="w-20 p-3 font-bold text-violet-600">${consumption.toFixed(1)}</td>
                     <td class="p-3">${manualCell}</td>
                     <td class="p-3 font-bold text-slate-900">${total.toFixed(1)}</td>
