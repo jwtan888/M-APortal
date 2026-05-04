@@ -1789,6 +1789,88 @@
             return convertExcelDate(getLaserRequiredDateRaw(row), false);
         }
 
+        function monthLabelFromDate(date, months) {
+            return date && !isNaN(date.getTime()) ? `${months[date.getMonth()]}-${date.getFullYear()}` : null;
+        }
+
+        function parsePortalDisplayDate(str) {
+            if (!str || str === '---') return null;
+            const parts = String(str).split(' ')[0].split('/').map(Number);
+            if (parts.length !== 3 || parts.some(v => !Number.isFinite(v))) return null;
+            const [day, month, year] = parts;
+            const date = new Date(year, month - 1, day);
+            return isNaN(date.getTime()) ? null : date;
+        }
+
+        function comparePortalDisplayDates(a, b) {
+            const da = parsePortalDisplayDate(a);
+            const db = parsePortalDisplayDate(b);
+            if (!da && !db) return 0;
+            if (!da) return 1;
+            if (!db) return -1;
+            return da - db;
+        }
+
+        function setDashboardText(id, value) {
+            const el = document.getElementById(id);
+            if (el) el.innerText = value;
+        }
+
+        const DASHBOARD_SNAPSHOT_KEY = 'ma_dashboard_snapshot_v1';
+        const DASHBOARD_SNAPSHOT_MAX_AGE_MS = 12 * 60 * 60 * 1000;
+
+        function writeDashboardSnapshot() {
+            try {
+                localStorage.setItem(DASHBOARD_SNAPSHOT_KEY, JSON.stringify({
+                    updatedAt: Date.now(),
+                    templates: allTemplates,
+                    laser: allLaserRows,
+                    support: allSupportRows,
+                    patch: allPatchRows,
+                    consumption: allConsumptionRows,
+                    down: allDownRows
+                }));
+            } catch (e) {
+                console.warn('Dashboard snapshot skipped:', e.message);
+            }
+        }
+
+        function hydrateDashboardFromSnapshot() {
+            try {
+                const snapshot = JSON.parse(localStorage.getItem(DASHBOARD_SNAPSHOT_KEY) || 'null');
+                if (!snapshot || !snapshot.updatedAt || Date.now() - snapshot.updatedAt > DASHBOARD_SNAPSHOT_MAX_AGE_MS) return false;
+                if (Array.isArray(snapshot.templates)) allTemplates = snapshot.templates;
+                if (Array.isArray(snapshot.laser)) allLaserRows = snapshot.laser;
+                if (Array.isArray(snapshot.support)) allSupportRows = snapshot.support;
+                if (Array.isArray(snapshot.patch)) allPatchRows = snapshot.patch;
+                if (Array.isArray(snapshot.consumption)) allConsumptionRows = snapshot.consumption;
+                if (Array.isArray(snapshot.down)) allDownRows = snapshot.down;
+
+                generateMonthOptions();
+                populateTabMonthFilters();
+                updateDashboard();
+                renderLaserTable();
+                renderSupportTable();
+                renderPatchTable();
+                renderConsumptionTable();
+                renderDownTable();
+
+                const ageMin = Math.max(1, Math.round((Date.now() - snapshot.updatedAt) / 60000));
+                [
+                    ['tempSyncStatus', `CACHED: ${ageMin}m ago`],
+                    ['laserSyncStatus', `CACHED: ${ageMin}m ago`],
+                    ['supportSyncStatus', `CACHED: ${ageMin}m ago`],
+                    ['patchSyncStatus', `CACHED: ${ageMin}m ago`],
+                    ['consumptionSyncStatus', `CACHED: ${ageMin}m ago`],
+                    ['downSyncStatus', `CACHED: ${ageMin}m ago`]
+                ].forEach(([id, text]) => setDashboardText(id, text));
+                return true;
+            } catch (e) {
+                console.warn('Dashboard snapshot ignored:', e.message);
+                return false;
+            }
+        }
+
         // FIX 3: updateMachineImage no longer sets opacity to 0 and relies on a timeout.
         // It shows the fallback immediately while loading, then image onload/onerror handles display.
         function updateMachineImage() {
@@ -1884,6 +1966,7 @@
                 })
                 .sort((a, b) => (parseInt(b.id, 10) || 0) - (parseInt(a.id, 10) || 0));
                 allTemplates = mergeTemplatePendingUpdates(allTemplates);
+                writeDashboardSnapshot();
                 generateMonthOptions(); updateDashboard(); 
                 // Don't re-render template table if user is actively typing in it
                 const _tActiveEl = document.activeElement;
@@ -2156,6 +2239,9 @@
                 });
                 const laserPendingTbody = document.getElementById('ld-laser-pending-table');
                 if (laserPendingTbody) laserPendingTbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center italic text-slate-400">No pending laser cut styles.</td></tr>';
+                const pendingTbody = document.getElementById('ld-pending-table');
+                if (pendingTbody) pendingTbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center italic text-slate-400">All caught up! No pending consumption.</td></tr>';
+                if (laserTrendChart) { laserTrendChart.destroy(); laserTrendChart = null; }
                 return;
             }
             const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -2164,9 +2250,10 @@
             const sharedMonth = document.getElementById('monthFilter')?.value || 'ALL';
             const laserMonthFiltered = allLaserRows.filter(r => {
                 if (sharedMonth === 'ALL') return true;
-                const localDate = rawToLocalDate(getVal(r, ['Complete Date','CompleteDate']));
-                if (!localDate) return false;
-                return `${months[localDate.getMonth()]}-${localDate.getFullYear()}` === sharedMonth;
+                const completeDate = parsePortalDisplayDate(convertExcelDate(getVal(r, ['Complete Date','CompleteDate']), false));
+                const requiredDate = parsePortalDisplayDate(getLaserRequiredDateDisplay(r));
+                return monthLabelFromDate(completeDate, months) === sharedMonth
+                    || (!completeDate && monthLabelFromDate(requiredDate, months) === sharedMonth);
             });
             const total = laserMonthFiltered.length;
 
@@ -2185,7 +2272,7 @@
 
             // Laser cut pending = request has a required date but operator has not completed laser cut.
             const laserCutPending = allLaserRows.filter(r => {
-                const requiredDate = rawToLocalDate(getLaserRequiredDateRaw(r));
+                const requiredDate = parsePortalDisplayDate(getLaserRequiredDateDisplay(r));
                 if (!requiredDate) return false;
                 if (sharedMonth !== 'ALL' && `${months[requiredDate.getMonth()]}-${requiredDate.getFullYear()}` !== sharedMonth) return false;
                 const completeDate = convertExcelDate(getVal(r, ['Complete Date','CompleteDate']));
@@ -2237,7 +2324,7 @@
                 laserPendingTbody.innerHTML = laserCutPending.length
                     ? laserCutPending
                         .slice()
-                        .sort((a, b) => rawToLocalDate(getLaserRequiredDateRaw(a)) - rawToLocalDate(getLaserRequiredDateRaw(b)))
+                        .sort((a, b) => comparePortalDisplayDates(getLaserRequiredDateDisplay(a), getLaserRequiredDateDisplay(b)))
                         .map(r => {
                             const style   = getVal(r, ['Style Number','StyleNumber','Style']);
                             const proto   = getVal(r, ['Proto Stage','ProtoStage','Stage']);
@@ -2264,11 +2351,10 @@
                 ptbody.innerHTML = pending.length
                     ? pending
                         .slice()
-                        .sort((a, b) => {
-                            const da = getVal(a, ['Complete Date','CompleteDate']);
-                            const db = getVal(b, ['Complete Date','CompleteDate']);
-                            return (parseFloat(da) || 0) - (parseFloat(db) || 0);
-                        })
+                        .sort((a, b) => comparePortalDisplayDates(
+                            convertExcelDate(getVal(a, ['Complete Date','CompleteDate'])),
+                            convertExcelDate(getVal(b, ['Complete Date','CompleteDate']))
+                        ))
                         .map(r => {
                             const style   = getVal(r, ['Style Number','StyleNumber','Style']);
                             const proto   = getVal(r, ['Proto Stage','ProtoStage','Stage']);
@@ -2333,6 +2419,7 @@
                 const rows = extractRows(await r_l.json());
                 rows.sort((a, b) => (parseInt(b.Id||b.ID||0)) - (parseInt(a.Id||a.ID||0)));
                 allLaserRows = rows;
+                writeDashboardSnapshot();
                 // Don't re-render laser table if user is actively typing in it
                 const _lActiveEl = document.activeElement;
                 const _lTable = document.getElementById('laserTable');
@@ -3427,7 +3514,15 @@
                 let conVolumeChart = null, conProtoChart = null;
 
         function renderConsumptionDashboard() {
-            if (!allConsumptionRows.length) return;
+            if (!allConsumptionRows.length) {
+                ['cd-total','cd-pending','cd-done'].forEach(id => setDashboardText(id, '0'));
+                setDashboardText('cd-avg', '—');
+                const pendingTbody = document.getElementById('cd-pending-table');
+                if (pendingTbody) pendingTbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center italic text-slate-400">No pending consumption styles.</td></tr>';
+                if (conVolumeChart) { conVolumeChart.destroy(); conVolumeChart = null; }
+                if (conProtoChart) { conProtoChart.destroy(); conProtoChart = null; }
+                return;
+            }
             const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             const sharedMonth = document.getElementById('monthFilter')?.value || 'ALL';
             const filtered = allConsumptionRows.filter(r => {
@@ -3519,7 +3614,14 @@
 
         let downVolumeChart = null, downSeasonChart = null;
         function renderDownDashboard() {
-            if (!allDownRows.length) return;
+            if (!allDownRows.length) {
+                ['dd-total','dd-pending','dd-done','dd-styles'].forEach(id => setDashboardText(id, '0'));
+                const picTbody = document.getElementById('dd-pic-table');
+                if (picTbody) picTbody.innerHTML = '<tr><td colspan="2" class="p-6 text-center italic text-slate-400">All down filling jobs completed!</td></tr>';
+                if (downVolumeChart) { downVolumeChart.destroy(); downVolumeChart = null; }
+                if (downSeasonChart) { downSeasonChart.destroy(); downSeasonChart = null; }
+                return;
+            }
             const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             const selectedMonth = document.getElementById('downMonthFilter')?.value || downMonthQuery || '';
             const filtered = allDownRows.filter(r => {
@@ -3587,7 +3689,15 @@
         }
 
         function renderPatchDashboard() {
-            if (!allPatchRows.length) return;
+            if (!allPatchRows.length) {
+                ['db-patch-total','db-patch-pending','db-patch-done'].forEach(id => setDashboardText(id, '0'));
+                setDashboardText('db-patch-rate', '—');
+                const picTbody = document.getElementById('db-patch-pic-table');
+                if (picTbody) picTbody.innerHTML = '<tr><td colspan="2" class="p-6 text-center italic text-slate-400">All patch jobs completed!</td></tr>';
+                if (patchMonthChart) { patchMonthChart.destroy(); patchMonthChart = null; }
+                if (patchSeasonChart) { patchSeasonChart.destroy(); patchSeasonChart = null; }
+                return;
+            }
             const months_pd = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             const sharedMonth = document.getElementById('monthFilter')?.value || 'ALL';
             // Filter by Patch & Fabric Receive Date for the selected month
@@ -3913,7 +4023,16 @@
         }
 
         function renderSupportDashboard() {
-            if (!allSupportRows.length) return;
+            if (!allSupportRows.length) {
+                ['ds-total','ds-pending','ds-repair'].forEach(id => setDashboardText(id, '0'));
+                setDashboardText('ds-avg', '0.00');
+                const picTbody = document.getElementById('ds-pic-table');
+                if (picTbody) picTbody.innerHTML = '<tr><td colspan="2" class="p-6 text-center italic text-slate-400">No pending support jobs.</td></tr>';
+                if (supSectionChart) { supSectionChart.destroy(); supSectionChart = null; }
+                if (supVolumeChart) { supVolumeChart.destroy(); supVolumeChart = null; }
+                if (supTypeChart) { supTypeChart.destroy(); supTypeChart = null; }
+                return;
+            }
             const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             const sharedMonth = document.getElementById('monthFilter')?.value || 'ALL';
 
@@ -4134,6 +4253,7 @@
                     return (rb ? rb.getTime() : 0) - (ra ? ra.getTime() : 0);
                 });
                 allSupportRows = rows;
+                writeDashboardSnapshot();
                 const _sActiveEl = document.activeElement;
                 const _sContent = document.getElementById('content-support');
                 if (!(_sContent && _sActiveEl && _sContent.contains(_sActiveEl) && (_sActiveEl.tagName === 'INPUT' || _sActiveEl.tagName === 'SELECT' || _sActiveEl.tagName === 'TEXTAREA'))) {
@@ -4370,6 +4490,7 @@
                 let d_p; try { d_p = JSON.parse(rawText_p); } catch(pe) { throw new Error(`Bad JSON: ${rawText_p.substring(0,150)}`); }
                 let rows_p=[]; if(Array.isArray(d_p)) rows_p=d_p; else if(d_p?.value&&Array.isArray(d_p.value)) rows_p=d_p.value; else if(d_p?.body?.value&&Array.isArray(d_p.body.value)) rows_p=d_p.body.value; else if(d_p?.body&&Array.isArray(d_p.body)) rows_p=d_p.body; else{for(const k of Object.keys(d_p||{})){if(Array.isArray(d_p[k])&&d_p[k].length){rows_p=d_p[k];break;}}}
                 allPatchRows = rows_p;
+                writeDashboardSnapshot();
                 const _pActiveEl = document.activeElement;
                 const _pContent = document.getElementById('content-patch');
                 if (!(_pContent && _pActiveEl && _pContent.contains(_pActiveEl) && (_pActiveEl.tagName === 'INPUT' || _pActiveEl.tagName === 'SELECT' || _pActiveEl.tagName === 'TEXTAREA'))) {
@@ -4621,6 +4742,7 @@
                 const rows = extractRows(await r.json());
                 rows.sort((a,b) => (parseInt(getVal(b,['Id','ID','id']))||0) - (parseInt(getVal(a,['Id','ID','id']))||0));
                 allDownRows = rows;
+                writeDashboardSnapshot();
                 const _dwActiveEl = document.activeElement;
                 const _dwContent = document.getElementById('content-downfilling');
                 if (!(_dwContent && _dwActiveEl && _dwContent.contains(_dwActiveEl) && (_dwActiveEl.tagName === 'INPUT' || _dwActiveEl.tagName === 'SELECT' || _dwActiveEl.tagName === 'TEXTAREA'))) {
@@ -4908,6 +5030,7 @@
                 rows.sort((a,b) => (parseInt(getVal(b,['Id','ID','id']))||0) - (parseInt(getVal(a,['Id','ID','id']))||0));
                 const _dbg = `allConsumptionRows.length = ${rows.length} | Open browser console (F12) for [CON] debug log`;
                 allConsumptionRows = rows;
+                writeDashboardSnapshot();
                 // Skip re-render if user is actively editing anywhere in the consumption tab (table OR add form)
                 const _cActiveEl = document.activeElement;
                 const _cContent = document.getElementById('content-consumption');
@@ -5162,6 +5285,21 @@
             }
         }
 
+        function loadInitialDashboardData() {
+            [
+                () => refreshTemplateLogs(),
+                () => refreshLaserData(),
+                () => refreshSupportData(),
+                () => refreshPatchData(),
+                () => refreshConsumptionData(),
+                () => refreshDownData()
+            ].forEach(task => safeRun(task));
+
+            // Lower-priority data: useful for utilization/log tabs, but not needed to paint the main dashboard.
+            setTimeout(() => safeRun(() => fetchAttendanceFromCloud()), 2000);
+            setTimeout(() => safeRun(() => refreshLiveLogs()), 3000);
+        }
+
         window.onload = () => {
             updateSessionUI();
             updateLaserPicDisplay();
@@ -5182,18 +5320,10 @@
             updateMachineImage();
             loadAttData(); // load localStorage attendance so utilization works on first render
             switchTab('dashboard'); // always start on dashboard
+            hydrateDashboardFromSnapshot();
 
-            // Fire only the two primary data sources on load — isolate failures so one bad fetch cannot block boot
-            safeRun(() => refreshTemplateLogs());
-            safeRun(() => refreshLaserData());
-
-            // Defer secondary fetches — staggered so Power Automate isn't hit all at once
-            setTimeout(() => safeRun(() => refreshSupportData()),       2000);
-            setTimeout(() => safeRun(() => refreshPatchData()),         4000);
-            setTimeout(() => safeRun(() => refreshConsumptionData()),   6000);
-            setTimeout(() => safeRun(() => refreshDownData()),          8000);
-            setTimeout(() => safeRun(() => refreshLiveLogs()),         10000);
-            setTimeout(() => safeRun(() => fetchAttendanceFromCloud()), 12000);
+            // Start dashboard datasets together. Periodic refreshes remain staggered below.
+            loadInitialDashboardData();
 
             // Stagger auto-refresh intervals so not all hit Power Automate at once
             setInterval(() => safeRun(() => refreshTemplateLogs(true)),    60000);
