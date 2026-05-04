@@ -326,6 +326,10 @@
                         <input type="text" id="l_completeDate" placeholder="3/18/2026 13:15" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Required Date</label>
+                        <input type="text" id="l_requiredDate" placeholder="m/d/yyyy" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Cons. Start Date</label>
                         <input type="text" id="l_consStart" placeholder="m/d/yyyy" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
@@ -378,6 +382,7 @@
                             <th class="p-3">Cons. End</th>
                             <th class="p-3">Cons. PIC</th>
                             <th class="p-3">Remark</th>
+                            <th class="p-3 date-col">Required Date</th>
                             <th class="p-3">Consumption Complete Status</th>
                         </tr>
                     </thead>
@@ -529,10 +534,15 @@
             </div>
 
             <!-- Laser Stat Cards -->
-            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Laser Jobs (Month)</p>
                     <h2 id="ld-total" class="text-3xl font-bold text-slate-800">0</h2>
+                </div>
+                <div onclick="switchTab('laser')" class="bg-white p-6 rounded-xl border shadow-sm cursor-pointer hover:border-blue-400 transition-all">
+                    <p class="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-1">Pending Laser Cut</p>
+                    <h2 id="ld-laser-pending" class="text-3xl font-bold text-blue-600">0</h2>
+                    <p class="text-[9px] text-slate-400 mt-1">Required Date filled · No Complete Date</p>
                 </div>
                 <div onclick="switchTab('laser')" class="bg-white p-6 rounded-xl border shadow-sm cursor-pointer hover:border-amber-400 transition-all">
                     <p class="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1">Pending Consumption</p>
@@ -557,11 +567,50 @@
                 </div>
             </div>
 
+            <!-- Pending Laser Cut Styles -->
+            <div class="bg-white p-6 rounded-xl border shadow-sm mb-6">
+                <h3 class="text-xs font-bold text-blue-500 uppercase tracking-widest mb-4">Pending Laser Cut Styles</h3>
+                <div class="overflow-y-auto max-h-[300px] rounded-lg border">
+                    <table class="w-full text-left text-[11px] table-fixed">
+                        <colgroup>
+                            <col style="width:12%">
+                            <col style="width:15%">
+                            <col style="width:10%">
+                            <col style="width:26%">
+                            <col style="width:12%">
+                            <col style="width:16%">
+                            <col style="width:9%">
+                        </colgroup>
+                        <thead class="bg-slate-50 border-b font-bold text-slate-500 sticky top-0">
+                            <tr>
+                                <th class="p-2">Style</th>
+                                <th class="p-2">Proto Stage</th>
+                                <th class="p-2">Season</th>
+                                <th class="p-2">Section</th>
+                                <th class="p-2">M&A PIC</th>
+                                <th class="p-2">Required Date</th>
+                                <th class="p-2"></th>
+                            </tr>
+                        </thead>
+                        <tbody id="ld-laser-pending-table"></tbody>
+                    </table>
+                </div>
+            </div>
+
             <!-- Pending Consumption Styles -->
             <div class="bg-white p-6 rounded-xl border shadow-sm mb-6">
                 <h3 class="text-xs font-bold text-amber-500 uppercase tracking-widest mb-4">Pending Consumption Styles</h3>
                 <div class="overflow-y-auto max-h-[300px] rounded-lg border">
-                    <table class="w-full text-left text-[11px]">
+                    <table class="w-full text-left text-[11px] table-fixed">
+                        <colgroup>
+                            <col style="width:12%">
+                            <col style="width:15%">
+                            <col style="width:10%">
+                            <col style="width:26%">
+                            <col style="width:12%">
+                            <col style="width:16%">
+                            <col style="width:9%">
+                        </colgroup>
                         <thead class="bg-slate-50 border-b font-bold text-slate-500 sticky top-0">
                             <tr>
                                 <th class="p-2">Style</th>
@@ -1726,6 +1775,20 @@
             return `${d}/${m}/${y} ${hh}:${mm}`;
         }
 
+        const LASER_REQUIRED_DATE_KEYS = [
+            'Required Date', 'RequiredDate', 'Required date',
+            'Required Date m/d/yyyy', 'RequiredDate m/d/yyyy',
+            'Due Date', 'DueDate', 'Need Date', 'NeedDate'
+        ];
+
+        function getLaserRequiredDateRaw(row) {
+            return getVal(row, LASER_REQUIRED_DATE_KEYS);
+        }
+
+        function getLaserRequiredDateDisplay(row) {
+            return convertExcelDate(getLaserRequiredDateRaw(row), false);
+        }
+
         // FIX 3: updateMachineImage no longer sets opacity to 0 and relies on a timeout.
         // It shows the fallback immediately while loading, then image onload/onerror handles display.
         function updateMachineImage() {
@@ -2088,9 +2151,11 @@
 
         function renderLaserDashboard() {
             if (!allLaserRows.length) {
-                ['ld-total','ld-pending','ld-done'].forEach(id => {
+                ['ld-total','ld-laser-pending','ld-pending','ld-done'].forEach(id => {
                     const el = document.getElementById(id); if (el) el.innerText = '0';
                 });
+                const laserPendingTbody = document.getElementById('ld-laser-pending-table');
+                if (laserPendingTbody) laserPendingTbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center italic text-slate-400">No pending laser cut styles.</td></tr>';
                 return;
             }
             const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -2116,6 +2181,15 @@
                 // Check multiple possible field names for Consumption End/Complete date
                 const ceVal = getVal(r, ['Consumption Complete Date','ConsumptionCompleteDate','Cons End','ConsEnd','Consumption End']);
                 if (ceVal && ceVal !== '---' && String(ceVal).trim() !== '') doneJobKeys.add(jobKey(r));
+            });
+
+            // Laser cut pending = request has a required date but operator has not completed laser cut.
+            const laserCutPending = allLaserRows.filter(r => {
+                const requiredDate = rawToLocalDate(getLaserRequiredDateRaw(r));
+                if (!requiredDate) return false;
+                if (sharedMonth !== 'ALL' && `${months[requiredDate.getMonth()]}-${requiredDate.getFullYear()}` !== sharedMonth) return false;
+                const completeDate = convertExcelDate(getVal(r, ['Complete Date','CompleteDate']));
+                return !completeDate || completeDate === '---';
             });
 
             // Pending = Complete Date filled + tracked proto stage + not done + not hidden this session
@@ -2150,13 +2224,41 @@
             });
 
             const elTotal   = document.getElementById('ld-total');
+            const elLaserPending = document.getElementById('ld-laser-pending');
             const elPending = document.getElementById('ld-pending');
             const elDone    = document.getElementById('ld-done');
             if (elTotal)   elTotal.innerText   = total;
+            if (elLaserPending) elLaserPending.innerText = laserCutPending.length;
             if (elPending) elPending.innerText = pending.length;
             if (elDone)    elDone.innerText    = done.length;
 
-            // Pending table — sorted by complete date ascending (oldest first = most urgent)
+            const laserPendingTbody = document.getElementById('ld-laser-pending-table');
+            if (laserPendingTbody) {
+                laserPendingTbody.innerHTML = laserCutPending.length
+                    ? laserCutPending
+                        .slice()
+                        .sort((a, b) => rawToLocalDate(getLaserRequiredDateRaw(a)) - rawToLocalDate(getLaserRequiredDateRaw(b)))
+                        .map(r => {
+                            const style   = getVal(r, ['Style Number','StyleNumber','Style']);
+                            const proto   = getVal(r, ['Proto Stage','ProtoStage','Stage']);
+                            const season  = getVal(r, ['Season']);
+                            const section = getVal(r, ['Section']);
+                            const pic     = getMAPic(r);
+                            const reqDate = getLaserRequiredDateDisplay(r);
+                            return `<tr class="border-b hover:bg-blue-50">
+                                <td class="p-2 font-bold text-blue-700 cursor-pointer truncate" onclick="drillDownLaser('${style.replace(/'/g,"\\'")}')" title="Click to find in Laser Tracking">${style}</td>
+                                <td class="p-2 font-semibold text-purple-700 truncate" title="${proto}">${proto}</td>
+                                <td class="p-2 truncate">${season}</td>
+                                <td class="p-2 truncate" title="${section}">${section}</td>
+                                <td class="p-2 font-medium truncate" title="${pic}">${pic}</td>
+                                <td class="p-2 text-blue-600 font-bold whitespace-nowrap">${reqDate}</td>
+                                <td class="p-2"></td>
+                            </tr>`;
+                        }).join('')
+                    : '<tr><td colspan="7" class="p-6 text-center italic text-slate-400">No pending laser cut styles.</td></tr>';
+            }
+
+            // Pending consumption table — sorted by complete date ascending (oldest first = most urgent)
             const ptbody = document.getElementById('ld-pending-table');
             if (ptbody) {
                 ptbody.innerHTML = pending.length
@@ -2176,12 +2278,12 @@
                             const cd      = convertExcelDate(getVal(r, ['Complete Date','CompleteDate']));
                             const rid = getVal(r, ['Id','ID','id']);
                             return `<tr class="border-b hover:bg-amber-50">
-                                <td class="p-2 font-bold text-blue-700 cursor-pointer" onclick="drillDownLaser('${style.replace(/'/g,"\\'")}')" title="Click to find in Laser Tracking">${style}</td>
-                                <td class="p-2 font-semibold text-purple-700">${proto}</td>
-                                <td class="p-2">${season}</td>
-                                <td class="p-2">${section}</td>
-                                <td class="p-2 font-medium">${pic}</td>
-                                <td class="p-2 text-emerald-600 font-bold">${cd}</td>
+                                <td class="p-2 font-bold text-blue-700 cursor-pointer truncate" onclick="drillDownLaser('${style.replace(/'/g,"\\'")}')" title="Click to find in Laser Tracking">${style}</td>
+                                <td class="p-2 font-semibold text-purple-700 truncate" title="${proto}">${proto}</td>
+                                <td class="p-2 truncate">${season}</td>
+                                <td class="p-2 truncate" title="${section}">${section}</td>
+                                <td class="p-2 font-medium truncate" title="${pic}">${pic}</td>
+                                <td class="p-2 text-emerald-600 font-bold whitespace-nowrap">${cd}</td>
                                 <td class="p-2"></td>
                             </tr>`;
                         }).join('')
@@ -2237,6 +2339,7 @@
                 if (!(_lTable && _lActiveEl && _lTable.contains(_lActiveEl) && (_lActiveEl.tagName === 'INPUT' || _lActiveEl.tagName === 'SELECT'))) {
                     renderLaserTable();
                 }
+                generateMonthOptions();
                 renderLaserDashboard();
                 populateTabMonthFilters();
                 // Render SLA chart if dashboard is visible (canvas must be in DOM and visible)
@@ -2298,6 +2401,7 @@
                 const ironParts    = getVal(i, ['Ironing Part Count','IroningPartCount','Iron Parts']);
                 const trimParts    = getVal(i, ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']);
                 const completeDate = convertExcelDate(getVal(i, ['Complete Date','CompleteDate']));
+                const requiredDate = getLaserRequiredDateDisplay(i);
                 const maPic        = getMAPic(i);
                 const consStart    = convertExcelDate(getVal(i, ['Consumption Start Date','ConsumptionStartDate','Cons Start']));
                 const consEnd      = convertExcelDate(getVal(i, ['Consumption Complete Date','ConsumptionCompleteDate','Cons End']));
@@ -2344,6 +2448,7 @@
                         <td class="p-2 date-cell"><input id="le-consEnd-${rid}" class="${consClass}" value="${consEnd==='---'?'':consEnd}" placeholder="m/d/yyyy"${consDisabled}></td>
                         <td class="p-2"><input id="le-consPic-${rid}" class="${consClass}" value="${consPic==='---'?'':consPic}" placeholder="PIC"${consDisabled}></td>
                         <td class="p-2"><input id="le-remark-${rid}" class="manual-input" value="${remark==='---'?'':remark}" placeholder="Remark"></td>
+                        <td class="p-2 date-cell"><input id="le-requiredDate-${rid}" class="manual-input admin-input" value="${requiredDate==='---'?'':requiredDate}" placeholder="m/d/yyyy"></td>
                         <td class="p-2">
                             <div class="flex flex-col gap-1">
                                 <select id="le-consStatus-${rid}" class="manual-input admin-input" style="width:80px">
@@ -2386,6 +2491,7 @@
                         <td class="p-3">${canEditCons
                             ? `<input id="le-remark-${rid}" class="manual-input admin-input" value="${remark==='---'?'':remark}" placeholder="Remark">`
                             : `<span class="italic text-slate-400 text-[10px]">${remark}</span>`}</td>
+                        <td class="p-3 date-cell ${requiredDate !== '---' ? 'text-amber-600 font-bold' : 'text-slate-400'}">${requiredDate}</td>
                         <td class="p-3">
                             <div class="flex flex-col gap-1">
                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${consIsDone?'bg-emerald-100 text-emerald-700': String(consCompleteStatus).trim().toLowerCase()==='no'?'bg-red-100 text-red-600':'bg-slate-100 text-slate-500'}">${consIsDone?'Yes': String(consCompleteStatus).trim().toLowerCase()==='no'?'No':'—'}</span>
@@ -2429,6 +2535,8 @@
                 ironParts:     document.getElementById('l_ironParts').value || '0',
                 trimParts:     document.getElementById('l_trimParts').value || '0',
                 completeDate:  toExcelDateFormat(document.getElementById('l_completeDate').value.trim()),
+                requiredDate:  toExcelDateFormat(document.getElementById('l_requiredDate').value.trim()),
+                'Required Date': toExcelDateFormat(document.getElementById('l_requiredDate').value.trim()),
                 consStart:     toExcelDateFormat(document.getElementById('l_consStart').value.trim()),
                 consEnd:       toExcelDateFormat(document.getElementById('l_consEnd').value.trim()),
                 maPic:         currentUser,
@@ -2445,14 +2553,14 @@
                     btn.innerText = 'ADDED!';
                     ['l_receivedTime','l_season','l_styleNumber','l_category','l_protoStage',
                      'l_garmentQty','l_laserParts','l_ironParts','l_trimParts',
-                     'l_completeDate','l_consStart','l_consEnd','l_remark'].forEach(id => {
+                     'l_completeDate','l_requiredDate','l_consStart','l_consEnd','l_remark'].forEach(id => {
                         const el = document.getElementById(id); if(el) el.value = '';
                     });
                     document.getElementById('l_section').value = '';
                     refreshLaserData();
                     setTimeout(() => { btn.innerText = '+ ADD ROW'; btn.disabled = false; }, 2000);
                 } else {
-                    alert(`Add failed (HTTP ${res.status}).\n\nThis usually means your Power Automate Add Flow has a field name mismatch.\nCheck that all triggerBody() expressions match exactly:\n- receivedTime\n- styleNumber\n- garmentQty\n- laserParts\n- ironParts\n- trimParts\n- protoStage\n- consumptionPic\n\nResponse: ${respText.substring(0,200)}`);
+                    alert(`Add failed (HTTP ${res.status}).\n\nThis usually means your Power Automate Add Flow has a field name mismatch.\nCheck that all triggerBody() expressions match exactly:\n- receivedTime\n- styleNumber\n- garmentQty\n- laserParts\n- ironParts\n- trimParts\n- requiredDate\n- protoStage\n- consumptionPic\n\nResponse: ${respText.substring(0,200)}`);
                     btn.innerText = '+ ADD ROW'; btn.disabled = false;
                 }
             } catch(e) {
@@ -2510,6 +2618,8 @@
                     ironParts:      getVal(row, ['Ironing Part Count','IroningPartCount','Iron Parts']),
                     trimParts:      getVal(row, ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']),
                     completeDate:   convertExcelDate(getVal(row, ['Complete Date','CompleteDate'])),
+                    requiredDate:   getLaserRequiredDateDisplay(row),
+                    'Required Date': getLaserRequiredDateDisplay(row),
                     maPic:          getMAPic(row),
                     consStart:      '',
                     consEnd:        '',
@@ -2562,6 +2672,8 @@
                 ironParts:      getVal(row, ['Ironing Part Count','IroningPartCount','Iron Parts']),
                 trimParts:      getVal(row, ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']),
                 completeDate:   convertExcelDate(getVal(row, ['Complete Date','CompleteDate'])),
+                requiredDate:   getLaserRequiredDateDisplay(row),
+                'Required Date': getLaserRequiredDateDisplay(row),
                 maPic:          getMAPic(row),
                 consStart:      today,
                 consEnd:        today,
@@ -2594,6 +2706,8 @@
                 ironParts:      getVal(row, ['Ironing Part Count','IroningPartCount','Iron Parts']),
                 trimParts:      getVal(row, ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']),
                 completeDate:   convertExcelDate(getVal(row, ['Complete Date','CompleteDate'])),
+                requiredDate:   getLaserRequiredDateDisplay(row),
+                'Required Date': getLaserRequiredDateDisplay(row),
                 maPic:          getMAPic(row),
                 consStart:      '',
                 consEnd:        today,
@@ -2613,9 +2727,10 @@
             const row = allLaserRows.find(r => String(getVal(r, ['Id','ID','id'])) === String(rid));
             const receivedNorm = preparePortalDatePayload(g('received'), convertExcelDate(getVal(row, ['Received Time','ReceivedTime','Received'])));
             const completeNorm = preparePortalDatePayload(g('completeDate'), convertExcelDate(getVal(row, ['Complete Date','CompleteDate'])));
+            const requiredNorm = preparePortalDatePayload(g('requiredDate'), getLaserRequiredDateDisplay(row), { dateOnly: true });
             const consStartNorm = preparePortalDatePayload(g('consStart'), convertExcelDate(getVal(row, ['Consumption Start Date','ConsumptionStartDate','Cons Start'])));
             const consEndNorm = preparePortalDatePayload(g('consEnd'), convertExcelDate(getVal(row, ['Consumption Complete Date','ConsumptionCompleteDate','Cons End'])));
-            if ([receivedNorm, completeNorm, consStartNorm, consEndNorm].some(v => v === null)) {
+            if ([receivedNorm, completeNorm, requiredNorm, consStartNorm, consEndNorm].some(v => v === null)) {
                 alert('Invalid date format. Use m/d/yyyy or m/d/yyyy hh:mm.');
                 btn.innerText = 'SAVE'; btn.disabled = false; return;
             }
@@ -2632,6 +2747,8 @@
                 ironParts:      g('ironParts'),
                 trimParts:      g('trimParts'),
                 completeDate:   completeNorm,
+                requiredDate:   requiredNorm,
+                'Required Date': requiredNorm,
                 maPic:          g('maPic'),
                 consStart:      consStartNorm,
                 consEnd:        consEndNorm,
@@ -2689,6 +2806,8 @@
                 ironParts:      getVal(row, ['Ironing Part Count','IroningPartCount','Iron Parts']),
                 trimParts:      getVal(row, ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']),
                 completeDate:   convertExcelDate(getVal(row, ['Complete Date','CompleteDate'])),
+                requiredDate:   getLaserRequiredDateDisplay(row),
+                'Required Date': getLaserRequiredDateDisplay(row),
                 maPic:          getMAPic(row),
                 consStart:      consStartNorm,
                 consEnd:        consEndNorm,
@@ -3126,6 +3245,8 @@
             allLaserRows.forEach(r => {
                 const localDate = rawToLocalDate(getVal(r, ['Complete Date','CompleteDate']));
                 if (localDate && localDate <= today_gm) uniqueMonths.add(`${months[localDate.getMonth()]}-${localDate.getFullYear()}`);
+                const requiredDate = rawToLocalDate(getLaserRequiredDateRaw(r));
+                if (requiredDate) uniqueMonths.add(`${months[requiredDate.getMonth()]}-${requiredDate.getFullYear()}`);
             });
             const currentVal = select.value;
             select.innerHTML = '<option value="ALL">All Months</option>';
