@@ -326,10 +326,6 @@
                         <input type="text" id="l_completeDate" placeholder="3/18/2026 13:15" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div class="flex flex-col gap-1">
-                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Required Date</label>
-                        <input type="text" id="l_requiredDate" placeholder="m/d/yyyy" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
-                    </div>
-                    <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Cons. Start Date</label>
                         <input type="text" id="l_consStart" placeholder="m/d/yyyy" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
@@ -1505,7 +1501,7 @@
 
         // picList MUST exactly match the Data Validation list in Excel column Q (M&A PIC).
         // If you add/remove names here, also update the Excel Data Validation list to match.
-        const picList = ["Keat", "Viki", "Ram", "James", "Mark"];
+        const picList = ["Keat", "Viki", "Ram", "James", "Phone", "Mark"];
         const TEMPLATE_PENDING_KEY = 'ma_template_pending_updates';
         const TEMPLATE_PENDING_TTL = 10 * 60 * 1000;
         const TEMPLATE_PENDING_MERGE_MS = 3 * 60 * 1000;
@@ -2622,8 +2618,8 @@
                 ironParts:     document.getElementById('l_ironParts').value || '0',
                 trimParts:     document.getElementById('l_trimParts').value || '0',
                 completeDate:  toExcelDateFormat(document.getElementById('l_completeDate').value.trim()),
-                requiredDate:  toExcelDateFormat(document.getElementById('l_requiredDate').value.trim()),
-                'Required Date': toExcelDateFormat(document.getElementById('l_requiredDate').value.trim()),
+                requiredDate:  '',
+                'Required Date': '',
                 consStart:     toExcelDateFormat(document.getElementById('l_consStart').value.trim()),
                 consEnd:       toExcelDateFormat(document.getElementById('l_consEnd').value.trim()),
                 maPic:         currentUser,
@@ -2640,14 +2636,14 @@
                     btn.innerText = 'ADDED!';
                     ['l_receivedTime','l_season','l_styleNumber','l_category','l_protoStage',
                      'l_garmentQty','l_laserParts','l_ironParts','l_trimParts',
-                     'l_completeDate','l_requiredDate','l_consStart','l_consEnd','l_remark'].forEach(id => {
+                     'l_completeDate','l_consStart','l_consEnd','l_remark'].forEach(id => {
                         const el = document.getElementById(id); if(el) el.value = '';
                     });
                     document.getElementById('l_section').value = '';
                     refreshLaserData();
                     setTimeout(() => { btn.innerText = '+ ADD ROW'; btn.disabled = false; }, 2000);
                 } else {
-                    alert(`Add failed (HTTP ${res.status}).\n\nThis usually means your Power Automate Add Flow has a field name mismatch.\nCheck that all triggerBody() expressions match exactly:\n- receivedTime\n- styleNumber\n- garmentQty\n- laserParts\n- ironParts\n- trimParts\n- requiredDate\n- protoStage\n- consumptionPic\n\nResponse: ${respText.substring(0,200)}`);
+                    alert(`Add failed (HTTP ${res.status}).\n\nThis usually means your Power Automate Add Flow has a field name mismatch.\nCheck that all triggerBody() expressions match exactly:\n- receivedTime\n- styleNumber\n- garmentQty\n- laserParts\n- ironParts\n- trimParts\n- protoStage\n- consumptionPic\n\nResponse: ${respText.substring(0,200)}`);
                     btn.innerText = '+ ADD ROW'; btn.disabled = false;
                 }
             } catch(e) {
@@ -3165,7 +3161,8 @@
         async function adminUpdate(simpleId, triggerEl) {
             const record = allTemplates.find(t => String(t.id) === String(simpleId));
             if (!record) return;
-            const tNo = document.getElementById(`edit-tno-${simpleId}`)?.value.trim() || "";
+            const tNoInput = document.getElementById(`edit-tno-${simpleId}`);
+            const tNo = tNoInput?.value.trim() || "";
             const picDropdown = document.getElementById(`edit-pic-${simpleId}`);
             const tQty = document.getElementById(`qty-${simpleId}`)?.value || "";
             const tDateRaw = document.getElementById(`date-${simpleId}`)?.value || "";
@@ -3218,13 +3215,21 @@
                 ['Remarks', remarkValue]
             ]);
 
-            if (isAdminUser) {
+            if (tNoInput) {
                 const tmplNoVal = preserveTextValue(tNo, record.templateNo);
                 assignIfPresent(payload, [
                     ['templateNo', tmplNoVal],
                     ['Template No.', tmplNoVal],
                     ['Template No', tmplNoVal],
-                    ['TemplateNo', tmplNoVal],
+                    ['TemplateNo', tmplNoVal]
+                ]);
+            }
+
+            if (isAdminUser) {
+                const tSection = preserveTextValue(document.getElementById(`section-${simpleId}`)?.value, record.section);
+                assignIfPresent(payload, [
+                    ['section', tSection],
+                    ['Section', tSection],
                     ['complexity', tComplexity],
                     ['Complexity Level', tComplexity],
                     ['Complexity', tComplexity],
@@ -3269,8 +3274,11 @@
                     (parsedBody && Number(parsedBody.statusCode || 0) >= 400);
                 if (res.ok && !flowReportedError) {
                     record.pic = tPic;
-                    if (isAdminUser) {
+                    if (tNoInput) {
                         record.templateNo = payload.templateNo || record.templateNo;
+                    }
+                    if (isAdminUser) {
+                        record.section = payload.section || record.section;
                         record.complexity = tComplexity || record.complexity;
                         record.dfm = tDFM || record.dfm;
                     }
@@ -3286,6 +3294,7 @@
                     record.remark = preserveTextValue(tRem, record.remark);
                     record.status = record.completeDateDisplay && record.completeDateDisplay !== '---' ? 'COMPLETED' : record.status;
                     stageTemplatePendingUpdate(record.id, {
+                        section: record.section,
                         templateNo: record.templateNo,
                         pic: record.pic,
                         completeDateDisplay: record.completeDateDisplay,
