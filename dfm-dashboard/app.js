@@ -64,6 +64,10 @@
     closeDialogBtn: document.getElementById("close-dialog-btn"),
     cancelDialogBtn: document.getElementById("cancel-dialog-btn"),
     form: document.getElementById("record-form"),
+    constructionPickerToggle: document.getElementById("construction-picker-toggle"),
+    constructionPicker: document.getElementById("construction-picker"),
+    constructionPickerSearch: document.getElementById("construction-picker-search"),
+    constructionPickerResults: document.getElementById("construction-picker-results"),
   };
 
   const state = {
@@ -72,7 +76,9 @@
     investmentNotes: loadInvestmentNotes(),
     investmentVisibility: loadInvestmentVisibility(),
     mvcGallery: new Map(),
+    mvcGalleryItems: [],
     mvcGalleryLoaded: false,
+    constructionPickerSearch: "",
     editingId: null,
     rotation: {
       seconds: 30,
@@ -805,6 +811,7 @@
 
   function buildMvcGalleryIndex(rows) {
     const next = new Map();
+    const items = [];
     rowsFromMvcPayload(rows).forEach((row) => {
       const fields = row?.fields && typeof row.fields === "object" ? row.fields : row || {};
       const code = getMvcValueText(getMvcField(row, [/^name$/i, /code/i, /style/i, /item/i, /title/i]));
@@ -817,15 +824,20 @@
       if (!imageUrl) {
         imageUrl = Object.values(fields).map(getMvcAttachmentUrl).find(Boolean) || "";
       }
-      next.set(normalized, {
+      const item = {
         code,
+        normalized,
         imageUrl,
         rating: getMvcValueText(getMvcField(row, [/nike value rating/i, /value rating/i, /rating/i])),
         complexity: getMvcValueText(getMvcField(row, [/complexity/i, /level/i])),
         endUse: getMvcValueText(getMvcField(row, [/recommended end use/i, /end use/i, /use$/i])),
-      });
+      };
+      item.searchText = [item.code, item.rating, item.complexity, item.endUse].join(" ").toLowerCase();
+      next.set(normalized, item);
+      items.push(item);
     });
     state.mvcGallery = next;
+    state.mvcGalleryItems = items.sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
     state.mvcGalleryLoaded = true;
   }
 
@@ -855,6 +867,7 @@
       }
       buildMvcGalleryIndex(rows);
       render();
+      renderConstructionPicker();
       return true;
     } catch (error) {
       console.warn("Failed to load published MVC gallery mirror", error);
@@ -940,6 +953,78 @@
     if (layer) {
       layer.classList.remove("is-visible");
     }
+  }
+
+  function renderConstructionPicker() {
+    if (!elements.constructionPickerResults) {
+      return;
+    }
+
+    const search = cleanText(state.constructionPickerSearch).toLowerCase();
+    const items = state.mvcGalleryItems
+      .filter((item) => !search || item.searchText.includes(search))
+      .slice(0, 36);
+
+    if (!state.mvcGalleryLoaded) {
+      elements.constructionPickerResults.innerHTML =
+        '<div class="empty-state">MVC Gallery is loading. If this stays empty, export and upload airtable-data.json.</div>';
+      return;
+    }
+
+    if (!state.mvcGalleryItems.length) {
+      elements.constructionPickerResults.innerHTML =
+        '<div class="empty-state">No MVC Gallery records found. Sync Airtable and export airtable-data.json first.</div>';
+      return;
+    }
+
+    if (!items.length) {
+      elements.constructionPickerResults.innerHTML = '<div class="empty-state">No construction matches this search.</div>';
+      return;
+    }
+
+    elements.constructionPickerResults.innerHTML = items
+      .map((item) => {
+        const details = [item.rating, item.complexity, item.endUse].filter(Boolean).join(" | ");
+        return `
+          <button class="construction-option" type="button" data-code="${escapeHtml(item.code)}">
+            <span class="construction-option-image">
+              ${
+                item.imageUrl
+                  ? `<img src="${escapeHtml(item.imageUrl)}" alt="${escapeHtml(item.code)}" loading="lazy" />`
+                  : "<span>No image</span>"
+              }
+            </span>
+            <span class="construction-option-body">
+              <strong>${escapeHtml(item.code)}</strong>
+              ${details ? `<small>${escapeHtml(details)}</small>` : ""}
+            </span>
+          </button>
+        `;
+      })
+      .join("");
+  }
+
+  function setConstructionPickerOpen(isOpen) {
+    if (!elements.constructionPicker) {
+      return;
+    }
+    elements.constructionPicker.hidden = !isOpen;
+    if (isOpen) {
+      renderConstructionPicker();
+      window.setTimeout(() => elements.constructionPickerSearch?.focus(), 20);
+    }
+  }
+
+  function selectConstructionCode(code) {
+    if (!elements.form) {
+      return;
+    }
+    const field = elements.form.elements.namedItem("constructionCode");
+    if (field) {
+      field.value = cleanText(code);
+      field.dispatchEvent(new Event("input", { bubbles: true }));
+    }
+    setConstructionPickerOpen(false);
   }
 
   function filterRecords(records) {
@@ -2052,6 +2137,11 @@
       field.value = value === null ? "" : value;
     });
 
+    state.constructionPickerSearch = cleanText(values.constructionCode);
+    if (elements.constructionPickerSearch) {
+      elements.constructionPickerSearch.value = state.constructionPickerSearch;
+    }
+    setConstructionPickerOpen(!record);
     elements.dialog.showModal();
   }
 
@@ -2061,6 +2151,7 @@
     }
     elements.dialog.close();
     state.editingId = null;
+    setConstructionPickerOpen(false);
   }
 
   function enrichRecordFromCatalog(record) {
@@ -2563,7 +2654,7 @@
         protoStage: formData.get("protoStage"),
         style: formData.get("style"),
         constructionCode,
-        typeCode: currentRecord?.typeCode || constructionCode,
+        typeCode: constructionCode,
         modification: currentRecord?.modification || "",
         remark: formData.get("remark"),
         fgQty: formData.get("fgQty"),
@@ -2722,6 +2813,39 @@
     }
     if (elements.form) {
       elements.form.addEventListener("submit", saveRecord);
+      const constructionField = elements.form.elements.namedItem("constructionCode");
+      if (constructionField) {
+        constructionField.addEventListener("input", () => {
+          if (!elements.constructionPicker || elements.constructionPicker.hidden) {
+            return;
+          }
+          state.constructionPickerSearch = cleanText(constructionField.value);
+          if (elements.constructionPickerSearch) {
+            elements.constructionPickerSearch.value = state.constructionPickerSearch;
+          }
+          renderConstructionPicker();
+        });
+      }
+    }
+    if (elements.constructionPickerToggle) {
+      elements.constructionPickerToggle.addEventListener("click", () => {
+        setConstructionPickerOpen(elements.constructionPicker?.hidden !== false);
+      });
+    }
+    if (elements.constructionPickerSearch) {
+      elements.constructionPickerSearch.addEventListener("input", () => {
+        state.constructionPickerSearch = elements.constructionPickerSearch.value.trim();
+        renderConstructionPicker();
+      });
+    }
+    if (elements.constructionPickerResults) {
+      elements.constructionPickerResults.addEventListener("click", (event) => {
+        const option = event.target.closest(".construction-option[data-code]");
+        if (!option) {
+          return;
+        }
+        selectConstructionCode(option.dataset.code || "");
+      });
     }
 
     if (elements.recordCards) {
@@ -2822,7 +2946,7 @@
   }
 
   bindEvents();
-  if (page === "dashboard") {
+  if (page === "dashboard" || page === "data") {
     if (!loadMvcGalleryFromBrowser()) {
       loadMvcGalleryFromPublishedMirror();
     }

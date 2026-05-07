@@ -270,7 +270,15 @@
           <label>Category <input name="category" required /></label>
           <label>Proto Stage <input name="protoStage" /></label>
           <label>Style <input name="style" required /></label>
-          <label>Construction Code <input name="constructionCode" required /></label>
+          <label class="construction-code-field">
+            Construction Code
+            <div class="construction-code-input-row">
+              <input name="constructionCode" required />
+              <button type="button" id="construction-picker-toggle" class="ghost-btn construction-picker-toggle">
+                Choose
+              </button>
+            </div>
+          </label>
           <label>
             FG Qty
             <input name="fgQty" type="number" min="0" step="1" placeholder="Optional, update later" />
@@ -285,6 +293,17 @@
         <p class="form-note">
           FG Qty can be left blank and updated later. Saving a row updates FG for all rows that share the same season + style key.
         </p>
+
+        <section id="construction-picker" class="construction-picker" hidden>
+          <div class="construction-picker-head">
+            <div>
+              <h3>Choose Construction</h3>
+              <p class="form-note">Search MVC Gallery and select the matching construction before saving.</p>
+            </div>
+            <input id="construction-picker-search" type="search" placeholder="Search code, complexity, end use" autocomplete="off" />
+          </div>
+          <div id="construction-picker-results" class="construction-picker-results"></div>
+        </section>
 
         <div class="dialog-actions">
           <button type="button" id="cancel-dialog-btn" class="ghost-btn">Cancel</button>
