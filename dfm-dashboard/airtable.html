@@ -10,7 +10,6 @@
     <div class="app-shell">
       <header class="topbar">
         <div>
-          <p class="eyebrow">Garment Manufacturing</p>
           <h1 class="topbar-title">DFM Construction Data</h1>
         </div>
         <nav class="nav-tabs">
@@ -59,7 +58,7 @@
           <div class="panel-heading panel-heading--stack">
             <div>
               <h2>Airtable Sync</h2>
-              <p class="panel-note">This file syncs directly from Airtable and stores the mirror in this browser. No local server is required.</p>
+              <p class="panel-note">Normal users load the published mirror automatically. Admin sync is only for refreshing data from Airtable.</p>
             </div>
           </div>
           <div class="filters airtable-sync-controls">
@@ -83,6 +82,7 @@
           <div class="airtable-import-actions">
             <button id="airtable-check-btn" class="ghost-btn" type="button">Check Access</button>
             <button id="airtable-panel-sync-btn" class="primary-btn" type="button">Sync Airtable</button>
+            <button id="airtable-export-btn" class="ghost-btn" type="button">Export Mirror JSON</button>
             <button id="airtable-clear-btn" class="ghost-btn" type="button">Clear Browser Mirror</button>
           </div>
           <div id="airtable-sync-status" class="airtable-sync-status" role="status" aria-live="polite"></div>
@@ -104,6 +104,7 @@
         const CONFIG_KEY = 'dfm-airtable-config';
         const ROWS_KEY = 'dfm-airtable-browser-rows';
         const META_KEY = 'dfm-airtable-browser-meta';
+        const PUBLISHED_JSON_URL = './airtable-data.json';
         const DEFAULT_BASE_ID = 'appW3Ue1ZNAIB7vjd';
         const DEFAULT_TABLE_ID = 'tbluNJZBGnzSBsHrg';
         const state = {
@@ -126,6 +127,7 @@
           tableWrap: document.getElementById('airtable-table-wrap'),
           panelSyncBtn: document.getElementById('airtable-panel-sync-btn'),
           checkBtn: document.getElementById('airtable-check-btn'),
+          exportBtn: document.getElementById('airtable-export-btn'),
           clearBtn: document.getElementById('airtable-clear-btn'),
           tokenInput: document.getElementById('airtable-token-input'),
           baseInput: document.getElementById('airtable-base-input'),
@@ -419,6 +421,14 @@
           render();
         }
 
+        function rowsFromJsonPayload(payload) {
+          if (Array.isArray(payload)) return payload;
+          if (Array.isArray(payload?.records)) return payload.records;
+          if (Array.isArray(payload?.value)) return payload.value;
+          if (Array.isArray(payload?.rows)) return payload.rows;
+          return [];
+        }
+
         function loadBrowserMirror() {
           try {
             const rows = JSON.parse(localStorage.getItem(ROWS_KEY) || '[]');
@@ -427,11 +437,55 @@
               state.rows = normalizeRows(rows);
               state.source = meta.source || 'Browser Airtable mirror';
               state.updatedAt = meta.updatedAt || '';
+              render();
+              return true;
             }
           } catch (error) {
             console.warn('Failed to load browser Airtable mirror', error);
           }
           render();
+          return false;
+        }
+
+        async function loadPublishedMirror() {
+          try {
+            const response = await fetch(`${PUBLISHED_JSON_URL}?t=${Date.now()}`, { cache: 'no-store' });
+            if (!response.ok) throw new Error(`HTTP ${response.status}`);
+            const payload = await response.json();
+            const rows = rowsFromJsonPayload(payload);
+            if (!rows.length) throw new Error('No records in published mirror');
+            state.rows = normalizeRows(rows);
+            state.source = payload.source || 'Published MVC mirror';
+            state.updatedAt = payload.updatedAt || payload.lastSync || '';
+            render();
+            setSyncStatus(`Loaded ${state.rows.length} published MVC records.`, 'ok');
+            return true;
+          } catch (error) {
+            render();
+            setSyncStatus('No published mirror found yet. Admin can sync Airtable and export airtable-data.json for GitHub.', 'error');
+            return false;
+          }
+        }
+
+        function exportMirrorJson() {
+          const records = JSON.parse(localStorage.getItem(ROWS_KEY) || '[]');
+          if (!records.length) {
+            setSyncStatus('Sync Airtable first, then export the mirror JSON.', 'error');
+            return;
+          }
+          const payload = {
+            source: state.source || 'Published MVC mirror',
+            updatedAt: state.updatedAt || new Date().toLocaleString(),
+            records
+          };
+          const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+          const url = URL.createObjectURL(blob);
+          const link = document.createElement('a');
+          link.href = url;
+          link.download = 'airtable-data.json';
+          link.click();
+          URL.revokeObjectURL(url);
+          setSyncStatus('Exported airtable-data.json. Upload it with the GitHub files so other PCs do not need a token.', 'ok');
         }
 
         async function checkAccess() {
@@ -504,6 +558,7 @@
         function bindEvents() {
           el.panelSyncBtn.addEventListener('click', syncAirtable);
           el.checkBtn.addEventListener('click', checkAccess);
+          el.exportBtn.addEventListener('click', exportMirrorJson);
           el.clearBtn.addEventListener('click', () => {
             localStorage.removeItem(ROWS_KEY);
             localStorage.removeItem(META_KEY);
@@ -541,7 +596,7 @@
 
         bindEvents();
         loadSettings();
-        loadBrowserMirror();
+        if (!loadBrowserMirror()) loadPublishedMirror();
       })();
     </script>
   </body>
