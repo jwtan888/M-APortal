@@ -4,6 +4,11 @@
   const SYNC_META_KEY = "dfm-dashboard-sync-meta";
   const INVESTMENT_NOTES_KEY = "dfm-dashboard-investment-notes";
   const INVESTMENT_VISIBILITY_KEY = "dfm-dashboard-investment-visibility";
+  const MVC_GALLERY_ROWS_KEY = "dfm-airtable-browser-rows";
+  const MVC_GALLERY_META_KEY = "dfm-airtable-browser-meta";
+  const MVC_GALLERY_DATA_URL = "./airtable-data.json";
+  const DATA_RECORD_INITIAL_LIMIT = 240;
+  const DATA_RECORD_BATCH_SIZE = 240;
   const SHARED_SESSION_KEY = "ma_admin_session_user";
   const DFM_LOGIN_USERS = ["Gavin", "Joe"];
   const LEGACY_STORAGE_PREFIX = "dfm-dashboard-records-";
@@ -66,6 +71,8 @@
     syncMeta: loadSyncMeta(),
     investmentNotes: loadInvestmentNotes(),
     investmentVisibility: loadInvestmentVisibility(),
+    mvcGallery: new Map(),
+    mvcGalleryLoaded: false,
     editingId: null,
     rotation: {
       seconds: 30,
@@ -81,6 +88,7 @@
     syncStatus: "Waiting for refresh",
     isSaving: false,
     investmentEditingCode: null,
+    dataRecordLimit: DATA_RECORD_INITIAL_LIMIT,
     filters: {
       search: "",
       season: "all",
@@ -736,6 +744,204 @@
       .replace(/'/g, "&#39;");
   }
 
+  function normalizeMvcCode(value) {
+    return cleanText(value).toUpperCase().replace(/\s+/g, "").replace(/M$/, "");
+  }
+
+  function getMvcField(row, patterns) {
+    const fields = row?.fields && typeof row.fields === "object" ? row.fields : row || {};
+    const key = Object.keys(fields).find((field) => patterns.some((pattern) => pattern.test(field)));
+    return key ? fields[key] : "";
+  }
+
+  function getMvcValueText(value) {
+    if (Array.isArray(value)) {
+      return value
+        .map((item) => {
+          if (item && typeof item === "object") {
+            return item.filename || item.name || item.id || "";
+          }
+          return item;
+        })
+        .filter(Boolean)
+        .join(", ");
+    }
+    if (value && typeof value === "object") {
+      return JSON.stringify(value);
+    }
+    return cleanText(value);
+  }
+
+  function getMvcAttachmentUrl(value) {
+    const values = Array.isArray(value) ? value : [value];
+    for (const item of values) {
+      if (typeof item === "string" && item) {
+        return item;
+      }
+      if (item && typeof item === "object") {
+        const url =
+          item.dataUrl ||
+          item.localUrl ||
+          item.url ||
+          item.thumbnails?.large?.url ||
+          item.thumbnails?.full?.url ||
+          item.thumbnails?.small?.url ||
+          "";
+        if (url) {
+          return url;
+        }
+      }
+    }
+    return "";
+  }
+
+  function rowsFromMvcPayload(payload) {
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload?.records)) return payload.records;
+    if (Array.isArray(payload?.rows)) return payload.rows;
+    if (Array.isArray(payload?.value)) return payload.value;
+    return [];
+  }
+
+  function buildMvcGalleryIndex(rows) {
+    const next = new Map();
+    rowsFromMvcPayload(rows).forEach((row) => {
+      const fields = row?.fields && typeof row.fields === "object" ? row.fields : row || {};
+      const code = getMvcValueText(getMvcField(row, [/^name$/i, /code/i, /style/i, /item/i, /title/i]));
+      const normalized = normalizeMvcCode(code);
+      if (!normalized || next.has(normalized)) {
+        return;
+      }
+      const imageField = getMvcField(row, [/image/i, /photo/i, /attachment/i, /sketch/i, /picture/i]);
+      let imageUrl = getMvcAttachmentUrl(imageField);
+      if (!imageUrl) {
+        imageUrl = Object.values(fields).map(getMvcAttachmentUrl).find(Boolean) || "";
+      }
+      next.set(normalized, {
+        code,
+        imageUrl,
+        rating: getMvcValueText(getMvcField(row, [/nike value rating/i, /value rating/i, /rating/i])),
+        complexity: getMvcValueText(getMvcField(row, [/complexity/i, /level/i])),
+        endUse: getMvcValueText(getMvcField(row, [/recommended end use/i, /end use/i, /use$/i])),
+      });
+    });
+    state.mvcGallery = next;
+    state.mvcGalleryLoaded = true;
+  }
+
+  function loadMvcGalleryFromBrowser() {
+    try {
+      const rows = JSON.parse(window.localStorage.getItem(MVC_GALLERY_ROWS_KEY) || "[]");
+      if (Array.isArray(rows) && rows.length) {
+        buildMvcGalleryIndex(rows);
+        return true;
+      }
+    } catch (error) {
+      console.warn("Failed to load MVC gallery browser mirror", error);
+    }
+    return false;
+  }
+
+  async function loadMvcGalleryFromPublishedMirror() {
+    try {
+      const response = await window.fetch(`${MVC_GALLERY_DATA_URL}?t=${Date.now()}`, { cache: "no-store" });
+      if (!response.ok) {
+        return false;
+      }
+      const payload = await response.json();
+      const rows = rowsFromMvcPayload(payload);
+      if (!rows.length) {
+        return false;
+      }
+      buildMvcGalleryIndex(rows);
+      render();
+      return true;
+    } catch (error) {
+      console.warn("Failed to load published MVC gallery mirror", error);
+      return false;
+    }
+  }
+
+  function findMvcGalleryItem(code) {
+    const normalized = normalizeMvcCode(code);
+    return state.mvcGallery.get(normalized) || state.mvcGallery.get(cleanText(code).toUpperCase().replace(/\s+/g, "")) || null;
+  }
+
+  function renderInvestmentCodeCell(code, index) {
+    const item = findMvcGalleryItem(code);
+    const rankClass =
+      index === 0 ? "investment-rank--1" : index === 1 ? "investment-rank--2" : index === 2 ? "investment-rank--3" : "";
+    const rank = `<span class="investment-rank ${rankClass}">Top ${index + 1}</span>`;
+    if (!item || !item.imageUrl) {
+      return `${rank}<span class="investment-code-text">${escapeHtml(code)}</span>`;
+    }
+    const details = [item.rating, item.complexity, item.endUse].filter(Boolean).join(" | ");
+    return `
+      ${rank}
+      <a
+        class="investment-code-link"
+        href="${escapeHtml(item.imageUrl)}"
+        target="_blank"
+        rel="noopener"
+        data-mvc-preview="${escapeHtml(item.imageUrl)}"
+        data-mvc-code="${escapeHtml(item.code || code)}"
+        data-mvc-details="${escapeHtml(details)}"
+      >
+        <span class="investment-code-text">${escapeHtml(code)}</span>
+      </a>
+    `;
+  }
+
+  function ensureMvcPreviewLayer() {
+    let layer = document.getElementById("mvc-preview-layer");
+    if (!layer) {
+      layer = document.createElement("div");
+      layer.id = "mvc-preview-layer";
+      layer.className = "mvc-preview-layer";
+      document.body.appendChild(layer);
+    }
+    return layer;
+  }
+
+  function positionMvcPreviewLayer(link, layer) {
+    const rect = link.getBoundingClientRect();
+    const margin = 12;
+    const layerWidth = 280;
+    const layerHeight = Math.min(300, window.innerHeight - margin * 2);
+    let left = rect.left;
+    let top = rect.bottom + 8;
+    if (left + layerWidth > window.innerWidth - margin) {
+      left = window.innerWidth - layerWidth - margin;
+    }
+    if (top + layerHeight > window.innerHeight - margin) {
+      top = rect.top - layerHeight - 8;
+    }
+    layer.style.left = `${Math.max(margin, left)}px`;
+    layer.style.top = `${Math.max(margin, top)}px`;
+  }
+
+  function showMvcPreview(link) {
+    const imageUrl = link.dataset.mvcPreview || "";
+    if (!imageUrl) {
+      return;
+    }
+    const layer = ensureMvcPreviewLayer();
+    layer.innerHTML = `
+      <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(link.dataset.mvcCode || "Construction preview")}" />
+      <strong>${escapeHtml(link.dataset.mvcCode || "")}</strong>
+      ${link.dataset.mvcDetails ? `<small>${escapeHtml(link.dataset.mvcDetails)}</small>` : ""}
+    `;
+    positionMvcPreviewLayer(link, layer);
+    layer.classList.add("is-visible");
+  }
+
+  function hideMvcPreview() {
+    const layer = document.getElementById("mvc-preview-layer");
+    if (layer) {
+      layer.classList.remove("is-visible");
+    }
+  }
+
   function filterRecords(records) {
     const search = state.filters.search.toLowerCase();
     return records.filter((record) => {
@@ -1347,15 +1553,7 @@
             .map(
               (row, index) => `
                 <tr data-code="${escapeHtml(row.label)}" data-editing="${state.investmentEditingCode === row.label ? "true" : "false"}">
-                  <td class="investment-code"><span class="investment-rank ${
-                    index === 0
-                      ? "investment-rank--1"
-                      : index === 1
-                        ? "investment-rank--2"
-                        : index === 2
-                          ? "investment-rank--3"
-                          : ""
-                  }">Top ${index + 1}</span>${escapeHtml(row.label)}</td>
+                  <td class="investment-code">${renderInvestmentCodeCell(row.label, index)}</td>
                   ${
                     seasonLabels.length
                       ? row.seasonVolumes
@@ -1645,7 +1843,10 @@
       return;
     }
 
-    elements.recordCards.innerHTML = records
+    const visibleRecords = records.slice(0, state.dataRecordLimit);
+    const hasMore = visibleRecords.length < records.length;
+
+    elements.recordCards.innerHTML = visibleRecords
       .map(
         (record) => `
           <article class="record-card">
@@ -1667,7 +1868,15 @@
           </article>
         `,
       )
-      .join("");
+      .join("") +
+      (hasMore
+        ? `
+          <div class="record-load-more">
+            <span>${escapeHtml(`Showing ${formatNumber(visibleRecords.length)} of ${formatNumber(records.length)} rows`)}</span>
+            <button class="ghost-btn" type="button" data-action="show-more-records">Show More</button>
+          </div>
+        `
+        : "");
   }
 
   function persistInvestmentNote(
@@ -2457,6 +2666,7 @@
     if (elements.searchInput) {
       elements.searchInput.addEventListener("input", (event) => {
         state.filters.search = event.target.value.trim();
+        state.dataRecordLimit = DATA_RECORD_INITIAL_LIMIT;
         render();
       });
     }
@@ -2464,6 +2674,7 @@
     if (elements.seasonFilter) {
       elements.seasonFilter.addEventListener("change", (event) => {
         state.filters.season = event.target.value;
+        state.dataRecordLimit = DATA_RECORD_INITIAL_LIMIT;
         render();
       });
     }
@@ -2471,6 +2682,7 @@
     if (elements.categoryFilter) {
       elements.categoryFilter.addEventListener("change", (event) => {
         state.filters.category = event.target.value;
+        state.dataRecordLimit = DATA_RECORD_INITIAL_LIMIT;
         render();
       });
     }
@@ -2478,6 +2690,7 @@
     if (elements.modificationFilter) {
       elements.modificationFilter.addEventListener("change", (event) => {
         state.filters.modification = event.target.value;
+        state.dataRecordLimit = DATA_RECORD_INITIAL_LIMIT;
         render();
       });
     }
@@ -2485,6 +2698,7 @@
     if (elements.defectFilter) {
       elements.defectFilter.addEventListener("change", (event) => {
         state.filters.defectOnly = event.target.checked;
+        state.dataRecordLimit = DATA_RECORD_INITIAL_LIMIT;
         render();
       });
     }
@@ -2516,6 +2730,11 @@
         if (!button) {
           return;
         }
+        if (button.dataset.action === "show-more-records") {
+          state.dataRecordLimit += DATA_RECORD_BATCH_SIZE;
+          render();
+          return;
+        }
         const recordId = button.dataset.id;
         if (button.dataset.action === "edit") {
           openDialog(recordId);
@@ -2527,6 +2746,28 @@
     }
 
     if (elements.investmentBoard) {
+      elements.investmentBoard.addEventListener("mouseover", (event) => {
+        const link = event.target.closest(".investment-code-link[data-mvc-preview]");
+        if (link) {
+          showMvcPreview(link);
+        }
+      });
+      elements.investmentBoard.addEventListener("focusin", (event) => {
+        const link = event.target.closest(".investment-code-link[data-mvc-preview]");
+        if (link) {
+          showMvcPreview(link);
+        }
+      });
+      elements.investmentBoard.addEventListener("mouseout", (event) => {
+        if (event.target.closest(".investment-code-link[data-mvc-preview]")) {
+          hideMvcPreview();
+        }
+      });
+      elements.investmentBoard.addEventListener("focusout", (event) => {
+        if (event.target.closest(".investment-code-link[data-mvc-preview]")) {
+          hideMvcPreview();
+        }
+      });
       elements.investmentBoard.addEventListener("click", (event) => {
         const button = event.target.closest('button[data-action]');
         if (!button) {
@@ -2581,6 +2822,11 @@
   }
 
   bindEvents();
+  if (page === "dashboard") {
+    if (!loadMvcGalleryFromBrowser()) {
+      loadMvcGalleryFromPublishedMirror();
+    }
+  }
   if (page === "dashboard") {
     state.rotation.timerId = window.setInterval(() => {
       state.rotation.tick += 1;
