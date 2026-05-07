@@ -1,0 +1,548 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DFM Construction Data</title>
+    <link rel="stylesheet" href="./styles.css?v=20260424c" />
+  </head>
+  <body data-page="airtable">
+    <div class="app-shell">
+      <header class="topbar">
+        <div>
+          <p class="eyebrow">Garment Manufacturing</p>
+          <h1 class="topbar-title">DFM Construction Data</h1>
+        </div>
+        <nav class="nav-tabs">
+          <a class="nav-tab" data-site-href="index.html" href="../index.html">M&A Portal</a>
+          <a class="nav-tab" data-site-href="dfm-dashboard/index.html" href="./index.html">Dashboard</a>
+          <a class="nav-tab" data-site-href="dfm-dashboard/data.html" href="./data.html">Data Management</a>
+          <a class="nav-tab is-active" data-site-href="dfm-dashboard/airtable.html" href="./airtable.html">MVC Gallery</a>
+        </nav>
+      </header>
+
+      <main class="dashboard">
+        <section class="hero hero--simple">
+          <div class="hero-copy-block">
+            <p class="eyebrow">Internal Source View</p>
+            <h2 class="hero-title">MVC Gallery</h2>
+            <div class="live-status" aria-live="polite">
+              <span id="airtable-source" class="panel-note">Source: Browser mirror</span>
+              <span id="airtable-count" class="panel-note">Rows: 0</span>
+              <span id="airtable-updated" class="panel-note">Last sync: Not yet</span>
+            </div>
+          </div>
+        </section>
+
+        <section class="panel filters-panel airtable-search-panel">
+          <div class="panel-heading">
+            <h2>Search Gallery</h2>
+            <span id="airtable-filter-summary" class="panel-note"></span>
+          </div>
+          <div class="filters airtable-filters">
+            <label class="airtable-search-label">
+              Search
+              <input id="airtable-search" type="search" placeholder="Search code, rating, complexity, end use, or any field" autocomplete="off" autofocus />
+            </label>
+            <label>
+              Field
+              <select id="airtable-field-filter"></select>
+            </label>
+          </div>
+        </section>
+
+        <details class="panel airtable-sync-panel">
+          <summary class="airtable-sync-summary">
+            <span>Airtable Sync</span>
+            <span class="panel-note">Open only when refreshing data</span>
+          </summary>
+          <div class="panel-heading panel-heading--stack">
+            <div>
+              <h2>Airtable Sync</h2>
+              <p class="panel-note">This file syncs directly from Airtable and stores the mirror in this browser. No local server is required.</p>
+            </div>
+          </div>
+          <div class="filters airtable-sync-controls">
+            <label>
+              Personal Access Token
+              <input id="airtable-token-input" type="password" placeholder="pat..." autocomplete="off" />
+            </label>
+            <label>
+              Base
+              <input id="airtable-base-input" value="appW3Ue1ZNAIB7vjd" />
+            </label>
+            <label>
+              Table
+              <input id="airtable-table-input" value="tbluNJZBGnzSBsHrg" />
+            </label>
+            <label class="checkbox">
+              <input id="airtable-cache-images" type="checkbox" />
+              Cache image data when browser allows
+            </label>
+          </div>
+          <div class="airtable-import-actions">
+            <button id="airtable-check-btn" class="ghost-btn" type="button">Check Access</button>
+            <button id="airtable-panel-sync-btn" class="primary-btn" type="button">Sync Airtable</button>
+            <button id="airtable-clear-btn" class="ghost-btn" type="button">Clear Browser Mirror</button>
+          </div>
+          <div id="airtable-sync-status" class="airtable-sync-status" role="status" aria-live="polite"></div>
+        </details>
+
+        <section class="panel airtable-table-panel">
+          <div class="panel-heading">
+            <h2>Records</h2>
+            <span id="airtable-table-summary" class="panel-note"></span>
+          </div>
+          <div id="airtable-table-wrap" class="airtable-table-wrap"></div>
+        </section>
+      </main>
+    </div>
+
+    <script>
+      (function () {
+        const TOKEN_KEY = 'dfm-airtable-token';
+        const CONFIG_KEY = 'dfm-airtable-config';
+        const ROWS_KEY = 'dfm-airtable-browser-rows';
+        const META_KEY = 'dfm-airtable-browser-meta';
+        const DEFAULT_BASE_ID = 'appW3Ue1ZNAIB7vjd';
+        const DEFAULT_TABLE_ID = 'tbluNJZBGnzSBsHrg';
+        const state = {
+          rows: [],
+          columns: [],
+          source: 'Browser mirror',
+          updatedAt: '',
+          search: '',
+          field: 'all'
+        };
+
+        const el = {
+          source: document.getElementById('airtable-source'),
+          count: document.getElementById('airtable-count'),
+          updated: document.getElementById('airtable-updated'),
+          search: document.getElementById('airtable-search'),
+          field: document.getElementById('airtable-field-filter'),
+          filterSummary: document.getElementById('airtable-filter-summary'),
+          tableSummary: document.getElementById('airtable-table-summary'),
+          tableWrap: document.getElementById('airtable-table-wrap'),
+          panelSyncBtn: document.getElementById('airtable-panel-sync-btn'),
+          checkBtn: document.getElementById('airtable-check-btn'),
+          clearBtn: document.getElementById('airtable-clear-btn'),
+          tokenInput: document.getElementById('airtable-token-input'),
+          baseInput: document.getElementById('airtable-base-input'),
+          tableInput: document.getElementById('airtable-table-input'),
+          cacheImages: document.getElementById('airtable-cache-images'),
+          syncStatus: document.getElementById('airtable-sync-status')
+        };
+
+        function escapeHtml(value) {
+          return String(value ?? '')
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;');
+        }
+
+        function setSyncStatus(message = '', mode = '') {
+          el.syncStatus.textContent = message;
+          el.syncStatus.className = `airtable-sync-status${mode ? ` is-${mode}` : ''}`;
+        }
+
+        function normalizeAttachmentValue(value) {
+          if (!Array.isArray(value)) return value;
+          return value.map((item) => {
+            if (!item || typeof item !== 'object') return item;
+            return {
+              filename: item.filename || item.name || '',
+              url: item.url || item.src || '',
+              dataUrl: item.dataUrl || '',
+              type: item.type || '',
+              thumbnails: item.thumbnails || null
+            };
+          });
+        }
+
+        function normalizeRows(rows) {
+          const normalized = (Array.isArray(rows) ? rows : []).map((row, index) => {
+            const source = row && typeof row === 'object'
+              ? (row.fields && typeof row.fields === 'object' ? row.fields : row)
+              : {};
+            const flat = {};
+            Object.keys(source).forEach((key) => {
+              if (key === 'fields') return;
+              flat[key] = normalizeAttachmentValue(source[key]);
+            });
+            const rowOut = { _rowNo: index + 1, ...flat };
+            rowOut._searchText = Object.values(flat).map(valueText).join(' ').toLowerCase();
+            return rowOut;
+          });
+          state.columns = getColumns(normalized);
+          return normalized;
+        }
+
+        function getColumns(rows) {
+          const columns = [];
+          rows.forEach((row) => {
+            Object.keys(row || {}).forEach((key) => {
+              if (key !== '_rowNo' && key !== '_searchText' && !columns.includes(key)) columns.push(key);
+            });
+          });
+          return columns;
+        }
+
+        function populateFilters() {
+          const columns = state.columns;
+          el.field.innerHTML = '<option value="all">All fields</option>' + columns.map((column) => (
+            `<option value="${escapeHtml(column)}" ${state.field === column ? 'selected' : ''}>${escapeHtml(column)}</option>`
+          )).join('');
+          if (state.field === 'all' || !columns.includes(state.field)) {
+            state.field = 'all';
+            return;
+          }
+        }
+
+        function getFilteredRows() {
+          const search = state.search.toLowerCase();
+          return state.rows.filter((row) => {
+            if (state.field !== 'all' && !valueText(row[state.field])) return false;
+            if (!search) return true;
+            if (state.field !== 'all') return valueText(row[state.field]).toLowerCase().includes(search);
+            return row._searchText.includes(search);
+          });
+        }
+
+        function isImageUrl(value) {
+          const text = String(value || '').trim();
+          return /^data:image\//i.test(text)
+            || /\.(png|jpe?g|webp|gif|bmp|svg)(\?.*)?$/i.test(text)
+            || /^https?:\/\/.*(airtableusercontent|dl\.airtable|v5\.airtableusercontent|usercontent).*$/i.test(text);
+        }
+
+        function getAttachmentImageUrl(item) {
+          if (!item || typeof item !== 'object') return '';
+          return item.dataUrl
+            || item.url
+            || item.thumbnails?.large?.url
+            || item.thumbnails?.full?.url
+            || item.thumbnails?.small?.url
+            || '';
+        }
+
+        function findColumn(columns, patterns) {
+          return columns.find((column) => patterns.some((pattern) => pattern.test(column))) || '';
+        }
+
+        function valueText(value) {
+          if (Array.isArray(value)) {
+            return value.map((item) => {
+              if (item && typeof item === 'object') return item.filename || item.name || item.id || '';
+              return item;
+            }).filter(Boolean).join(', ');
+          }
+          if (value && typeof value === 'object') return JSON.stringify(value);
+          return String(value ?? '').trim();
+        }
+
+        function getRowImages(row, columns) {
+          const imageColumn = findColumn(columns, [/image/i, /photo/i, /attachment/i, /sketch/i, /picture/i]);
+          const orderedColumns = imageColumn ? [imageColumn, ...columns.filter((column) => column !== imageColumn)] : columns;
+          for (const column of orderedColumns) {
+            const value = row[column];
+            if (Array.isArray(value)) {
+              const images = value.map(getAttachmentImageUrl).filter(isImageUrl);
+              if (images.length) return images;
+            }
+            if (isImageUrl(value)) return [String(value)];
+          }
+          return [];
+        }
+
+        function chipClass(value) {
+          const text = String(value || '').toLowerCase();
+          if (/high/.test(text)) return 'is-high';
+          if (/med|medium/.test(text)) return 'is-med';
+          if (/low/.test(text)) return 'is-low';
+          if (/mvc/.test(text)) return 'is-mvc';
+          return '';
+        }
+
+        function renderChips(value) {
+          const values = Array.isArray(value)
+            ? value.map(valueText).join(',').split(',')
+            : String(value ?? '').split(',');
+          return values.map((item) => item.trim()).filter(Boolean).map((item) => (
+            `<span class="airtable-card-chip ${chipClass(item)}">${escapeHtml(item)}</span>`
+          )).join('');
+        }
+
+        function renderCards(rows) {
+          const columns = state.columns;
+          el.tableSummary.innerText = rows.length ? `${rows.length} cards` : '0 cards';
+          if (!rows.length || !columns.length) {
+            el.tableWrap.innerHTML = '<div class="empty-state">No Airtable rows synced in this browser yet.</div>';
+            return;
+          }
+          const codeColumn = findColumn(columns, [/^name$/i, /code/i, /style/i, /item/i, /title/i]);
+          const ratingColumn = findColumn(columns, [/nike value rating/i, /value rating/i, /rating/i]);
+          const complexityColumn = findColumn(columns, [/complexity/i, /level/i]);
+          const endUseColumn = findColumn(columns, [/recommended end use/i, /end use/i, /use$/i]);
+          const excluded = new Set([codeColumn, ratingColumn, complexityColumn, endUseColumn].filter(Boolean));
+          el.tableWrap.innerHTML = `
+            <div class="airtable-card-grid">
+              ${rows.map((row) => {
+                const images = getRowImages(row, columns);
+                const title = valueText(row[codeColumn]) || valueText(row.Name) || valueText(row._rowNo);
+                const detailColumns = columns.filter((column) => !excluded.has(column) && !getRowImages({ [column]: row[column] }, [column]).length);
+                return `
+                  <article class="airtable-card">
+                    <a class="airtable-card-image" href="${escapeHtml(images[0] || '#')}" target="_blank" rel="noopener">
+                      ${images[0] ? `<img src="${escapeHtml(images[0])}" alt="${escapeHtml(title)}" loading="lazy" />` : '<span>No image</span>'}
+                    </a>
+                    <div class="airtable-card-body">
+                      <h3>${escapeHtml(title)}</h3>
+                      ${ratingColumn ? `<div class="airtable-card-field"><span>${escapeHtml(ratingColumn)}</span><div>${renderChips(row[ratingColumn])}</div></div>` : ''}
+                      ${complexityColumn ? `<div class="airtable-card-field"><span>${escapeHtml(complexityColumn)}</span><div>${renderChips(row[complexityColumn])}</div></div>` : ''}
+                      ${endUseColumn ? `<div class="airtable-card-field"><span>${escapeHtml(endUseColumn)}</span><div>${renderChips(row[endUseColumn])}</div></div>` : ''}
+                      <details class="airtable-card-details">
+                        <summary>Details</summary>
+                        ${detailColumns.slice(0, 10).map((column) => {
+                          const text = valueText(row[column]);
+                          return text ? `<p><strong>${escapeHtml(column)}</strong><br />${escapeHtml(text)}</p>` : '';
+                        }).join('')}
+                      </details>
+                    </div>
+                  </article>
+                `;
+              }).join('')}
+            </div>
+          `;
+        }
+
+        function render() {
+          populateFilters();
+          const filtered = getFilteredRows();
+          el.source.innerText = `Source: ${state.source}`;
+          el.count.innerText = `Rows: ${state.rows.length}`;
+          el.updated.innerText = `Last sync: ${state.updatedAt || 'Not yet'}`;
+          el.filterSummary.innerText = `${filtered.length} rows shown`;
+          renderCards(filtered);
+        }
+
+        function getConfig() {
+          const baseId = el.baseInput.value.trim() || DEFAULT_BASE_ID;
+          const tableId = el.tableInput.value.trim() || DEFAULT_TABLE_ID;
+          const token = el.tokenInput.value.trim();
+          el.baseInput.value = baseId;
+          el.tableInput.value = tableId;
+          localStorage.setItem(CONFIG_KEY, JSON.stringify({ baseId, tableId, cacheImages: el.cacheImages.checked }));
+          if (token) localStorage.setItem(TOKEN_KEY, token);
+          return { baseId, tableId, token: token || localStorage.getItem(TOKEN_KEY) || '' };
+        }
+
+        function airtableErrorMessage(payload, status) {
+          const message = payload?.error?.message || `Airtable HTTP ${status}`;
+          const type = payload?.error?.type || '';
+          return type ? `${message} (${type})` : message;
+        }
+
+        async function fetchAirtablePage(token, baseId, tableId, offset = '') {
+          const url = new URL(`https://api.airtable.com/v0/${encodeURIComponent(baseId)}/${encodeURIComponent(tableId)}`);
+          url.searchParams.set('pageSize', '100');
+          if (offset) url.searchParams.set('offset', offset);
+          const response = await fetch(url.toString(), {
+            headers: { Authorization: `Bearer ${token}` }
+          });
+          const payload = await response.json().catch(() => ({}));
+          if (!response.ok) throw new Error(airtableErrorMessage(payload, response.status));
+          return payload;
+        }
+
+        async function fetchAllRecords(token, baseId, tableId) {
+          const records = [];
+          let offset = '';
+          do {
+            const payload = await fetchAirtablePage(token, baseId, tableId, offset);
+            records.push(...(payload.records || []));
+            offset = payload.offset || '';
+          } while (offset);
+          return records;
+        }
+
+        function fileToDataUrl(blob) {
+          return new Promise((resolve, reject) => {
+            const reader = new FileReader();
+            reader.onload = () => resolve(String(reader.result || ''));
+            reader.onerror = reject;
+            reader.readAsDataURL(blob);
+          });
+        }
+
+        async function cacheAttachmentImages(records) {
+          const next = [];
+          for (const record of records) {
+            const fields = { ...(record.fields || {}) };
+            const cachedFields = {};
+            for (const [key, value] of Object.entries(fields)) {
+              if (!Array.isArray(value)) {
+                cachedFields[key] = value;
+                continue;
+              }
+              const items = [];
+              for (const item of value) {
+                if (!item || typeof item !== 'object' || !item.url) {
+                  items.push(item);
+                  continue;
+                }
+                try {
+                  const imageUrl = item.thumbnails?.large?.url || item.url;
+                  const response = await fetch(imageUrl, { cache: 'force-cache' });
+                  const blob = await response.blob();
+                  const dataUrl = /^image\//i.test(blob.type || '') ? await fileToDataUrl(blob) : '';
+                  items.push(dataUrl ? { ...item, dataUrl } : item);
+                } catch (error) {
+                  items.push(item);
+                }
+              }
+              cachedFields[key] = items;
+            }
+            next.push({ ...record, fields: cachedFields });
+          }
+          return next;
+        }
+
+        function saveBrowserMirror(records, source) {
+          const updatedAt = new Date().toLocaleString();
+          state.rows = normalizeRows(records);
+          state.source = source;
+          state.updatedAt = updatedAt;
+          localStorage.setItem(ROWS_KEY, JSON.stringify(records));
+          localStorage.setItem(META_KEY, JSON.stringify({ source, updatedAt }));
+          render();
+        }
+
+        function loadBrowserMirror() {
+          try {
+            const rows = JSON.parse(localStorage.getItem(ROWS_KEY) || '[]');
+            const meta = JSON.parse(localStorage.getItem(META_KEY) || '{}');
+            if (Array.isArray(rows) && rows.length) {
+              state.rows = normalizeRows(rows);
+              state.source = meta.source || 'Browser Airtable mirror';
+              state.updatedAt = meta.updatedAt || '';
+            }
+          } catch (error) {
+            console.warn('Failed to load browser Airtable mirror', error);
+          }
+          render();
+        }
+
+        async function checkAccess() {
+          const { token, baseId, tableId } = getConfig();
+          if (!token) {
+            setSyncStatus('Paste the Airtable personal access token first.', 'error');
+            return;
+          }
+          el.checkBtn.disabled = true;
+          el.checkBtn.innerText = 'Checking...';
+          setSyncStatus('Checking Airtable records access...');
+          try {
+            const payload = await fetchAirtablePage(token, baseId, tableId);
+            setSyncStatus(`Access OK. ${payload.records?.length || 0} records can be read from ${tableId}.`, 'ok');
+          } catch (error) {
+            setSyncStatus(`Airtable access failed: ${error.message}`, 'error');
+          } finally {
+            el.checkBtn.disabled = false;
+            el.checkBtn.innerText = 'Check Access';
+          }
+        }
+
+        async function syncAirtable() {
+          const { token, baseId, tableId } = getConfig();
+          if (!token) {
+            setSyncStatus('Paste the Airtable personal access token first.', 'error');
+            return;
+          }
+          el.panelSyncBtn.disabled = true;
+          el.panelSyncBtn.innerText = 'Syncing...';
+          setSyncStatus('Syncing Airtable records into this browser...');
+          try {
+            const records = await fetchAllRecords(token, baseId, tableId);
+            let note = '';
+            saveBrowserMirror(records, `Airtable browser sync: ${tableId}`);
+            if (el.cacheImages.checked) {
+              setSyncStatus(`Synced ${records.length} rows. Caching images in the background...`, 'ok');
+              try {
+                const mirrored = await cacheAttachmentImages(records);
+                saveBrowserMirror(mirrored, `Airtable browser sync: ${tableId}`);
+                note = ' Image data cached when the browser allowed it.';
+              } catch (error) {
+                note = ' Image cache skipped.';
+              }
+            }
+            el.tokenInput.value = '';
+            el.tokenInput.placeholder = 'Saved in this browser';
+            setSyncStatus(`Synced ${records.length} rows from Airtable.${note}`, 'ok');
+          } catch (error) {
+            setSyncStatus(`Airtable sync failed: ${error.message}`, 'error');
+          } finally {
+            el.panelSyncBtn.disabled = false;
+            el.panelSyncBtn.innerText = 'Sync Airtable';
+          }
+        }
+
+        function loadSettings() {
+          try {
+            const config = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
+            el.baseInput.value = config.baseId || DEFAULT_BASE_ID;
+            el.tableInput.value = config.tableId || DEFAULT_TABLE_ID;
+            el.cacheImages.checked = Boolean(config.cacheImages);
+          } catch (error) {
+            el.baseInput.value = DEFAULT_BASE_ID;
+            el.tableInput.value = DEFAULT_TABLE_ID;
+          }
+          if (localStorage.getItem(TOKEN_KEY)) el.tokenInput.placeholder = 'Saved in this browser';
+        }
+
+        function bindEvents() {
+          el.panelSyncBtn.addEventListener('click', syncAirtable);
+          el.checkBtn.addEventListener('click', checkAccess);
+          el.clearBtn.addEventListener('click', () => {
+            localStorage.removeItem(ROWS_KEY);
+            localStorage.removeItem(META_KEY);
+            state.rows = [];
+            state.source = 'Browser mirror';
+            state.updatedAt = '';
+            render();
+            setSyncStatus('Browser mirror cleared.', 'ok');
+          });
+          let searchTimer = 0;
+          el.search.addEventListener('input', () => {
+            clearTimeout(searchTimer);
+            searchTimer = setTimeout(() => {
+              state.search = el.search.value.trim();
+              render();
+            }, 30);
+          });
+          el.field.addEventListener('change', () => {
+            state.field = el.field.value;
+            render();
+          });
+          requestAnimationFrame(() => el.search.focus());
+        }
+
+        if (location.protocol !== 'file:' && /github\.io$/i.test(location.hostname)) {
+          const parts = location.pathname.split('/').filter(Boolean);
+          if (parts.length) {
+            const repoBase = '/' + parts[0] + '/';
+            document.querySelectorAll('[data-site-href]').forEach((link) => {
+              const target = String(link.getAttribute('data-site-href') || '').replace(/^\.?\//, '');
+              if (target) link.setAttribute('href', repoBase + target);
+            });
+          }
+        }
+
+        bindEvents();
+        loadSettings();
+        loadBrowserMirror();
+      })();
+    </script>
+  </body>
+</html>
