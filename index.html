@@ -4,6 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>M&A | Garment Automation Portal</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 68 48'%3E%3Cg fill='%230514ff'%3E%3Cpath d='M9 4h7L7 44H0z'/%3E%3Cpath d='M21 4h12L24 44H12z'/%3E%3Cpath d='M44 4h21c2 0 3 2 3 4l-7 28c-1 5-5 8-10 8H34c-4 0-7-3-6-7l7-26c1-4 5-7 9-7z'/%3E%3C/g%3E%3C/svg%3E">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -1088,6 +1089,7 @@
                         <input type="text" id="consumptionSearch" oninput="applyConsumptionFilter()" placeholder="Search Style, Season, PIC, Request Type..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                         <select id="consumptionMonthFilter" onchange="applyConsumptionFilter()" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 shrink-0"><option value="">All Months</option></select>
                         <button onclick="clearConsumptionSearch()" class="bg-slate-200 text-slate-600 px-4 rounded-lg text-xs font-bold hover:bg-slate-300 shrink-0">CLEAR</button>
+                        <button id="manualQuiltingSyncBtn" onclick="manualSyncQuiltingConsumption(event)" class="hidden bg-orange-500 text-white px-4 py-2.5 rounded-lg text-xs font-bold hover:bg-orange-600 shrink-0">SYNC QUILTING</button>
                     </div>
                     <div id="consumptionSyncStatus2" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"></div>
                 </div>
@@ -1560,6 +1562,7 @@
         const TEMPLATE_PENDING_TTL = 10 * 60 * 1000;
         const TEMPLATE_PENDING_MERGE_MS = 3 * 60 * 1000;
         let allRecords = [], allTemplates = [], currentUser = sessionStorage.getItem('ma_session_user') || null;
+        let templateDataLoaded = false, consumptionDataLoaded = false, quiltingConsumptionSyncing = false;
         let sectionChart = null, volumeChart = null;
 
         function loadTemplatePendingUpdates() {
@@ -2195,7 +2198,9 @@
                 })
                 .sort((a, b) => (parseInt(b.id, 10) || 0) - (parseInt(a.id, 10) || 0));
                 allTemplates = mergeTemplatePendingUpdates(allTemplates);
+                templateDataLoaded = true;
                 writeDashboardSnapshot();
+                syncQuiltingTemplatesToConsumption(true);
                 generateMonthOptions(); updateDashboard(); 
                 // Don't re-render template table if user is actively typing in it
                 const _tActiveEl = document.activeElement;
@@ -3550,6 +3555,7 @@
                         remark: record.remark,
                         status: record.status
                     });
+                    syncQuiltingTemplatesToConsumption(false);
                     btn.innerText = "UPDATED ✓";
                     updateDashboard();
                     renderUtilization();
@@ -4439,8 +4445,36 @@
             if (t === 'downfilling') { refreshDownData(true); updateDownPicDisplay(); }
         }
 
+        function canManualSyncQuiltingDetails() {
+            return currentUser === 'Gavin' || currentUser === 'Joe';
+        }
+
+        function clearConsumptionSyncMessages() {
+            ['consumptionSyncStatus', 'consumptionSyncStatus2'].forEach(id => {
+                const el = document.getElementById(id);
+                if (el) {
+                    el.innerText = '';
+                    el.classList.remove('sync-active');
+                }
+            });
+        }
+
         function login() { currentUser = document.getElementById('userSelect').value; sessionStorage.setItem('ma_session_user', currentUser); updateSessionUI(); updateLaserPicDisplay(); updateConsumptionPicDisplay(); updateDownPicDisplay(); applyTempFilters(false); renderLaserTable(); renderSupportTable(); renderPatchTable(); renderConsumptionTable(); }
-        function logout() { currentUser = null; sessionStorage.removeItem('ma_session_user'); updateSessionUI(); updateLaserPicDisplay(); updateConsumptionPicDisplay(); updateDownPicDisplay(); applyTempFilters(false); renderLaserTable(); renderSupportTable(); renderPatchTable(); renderConsumptionTable(); }
+        function logout() {
+            currentUser = null;
+            sessionStorage.removeItem('ma_session_user');
+            updateSessionUI();
+            updateLaserPicDisplay();
+            updateConsumptionPicDisplay();
+            updateDownPicDisplay();
+            applyTempFilters(false);
+            renderLaserTable();
+            renderSupportTable();
+            renderPatchTable();
+            renderConsumptionTable();
+            clearConsumptionSyncMessages();
+            setTimeout(clearConsumptionSyncMessages, 1500);
+        }
         function updateSessionUI() { 
             const lv = document.getElementById('loginView'), av = document.getElementById('activeUserView');
             if (currentUser) {
@@ -4449,10 +4483,15 @@
                 // Show Reset N/A button only for Gavin
                 const naBtn = document.getElementById('clearNA-btn');
                 if (naBtn) naBtn.classList.toggle('hidden', currentUser !== 'Gavin');
+                const quiltingSyncBtn = document.getElementById('manualQuiltingSyncBtn');
+                if (quiltingSyncBtn) quiltingSyncBtn.classList.toggle('hidden', !canManualSyncQuiltingDetails());
             } else {
                 lv.classList.remove('hidden'); av.classList.add('hidden');
                 const naBtn = document.getElementById('clearNA-btn');
                 if (naBtn) naBtn.classList.add('hidden');
+                const quiltingSyncBtn = document.getElementById('manualQuiltingSyncBtn');
+                if (quiltingSyncBtn) quiltingSyncBtn.classList.add('hidden');
+                clearConsumptionSyncMessages();
             }
         }
 
@@ -5259,6 +5298,178 @@
             if (reqByEl && !reqByEl.value.trim()) reqByEl.value = currentUser || '';
         }
 
+        const QUILTING_CONSUMPTION_SYNC_KEY = 'ma_quilting_consumption_autocreated';
+
+        function readQuiltingConsumptionSyncMap() {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(QUILTING_CONSUMPTION_SYNC_KEY) || '{}');
+                return parsed && typeof parsed === 'object' ? parsed : {};
+            } catch (e) {
+                return {};
+            }
+        }
+
+        function writeQuiltingConsumptionSyncMap(map) {
+            try { localStorage.setItem(QUILTING_CONSUMPTION_SYNC_KEY, JSON.stringify(map || {})); } catch (e) {}
+        }
+
+        function normalizeConsumptionMatchValue(value) {
+            return String(value || '')
+                .trim()
+                .toLowerCase()
+                .replace(/[^a-z0-9]+/g, '');
+        }
+
+        function isQuiltingTemplateRow(row) {
+            const haystack = [
+                row?.templateType,
+                row?.description,
+                row?.remark,
+                row?.dfm
+            ].map(v => String(v || '').toLowerCase()).join(' ');
+            return haystack.includes('quilting');
+        }
+
+        function getQuiltingConsumptionKey(row) {
+            return [
+                normalizeConsumptionMatchValue(row?.style),
+                normalizeConsumptionMatchValue(row?.jobNo),
+                normalizeConsumptionMatchValue(row?.protoStage)
+            ].join('|');
+        }
+
+        const QUILTING_CONSUMPTION_SYNC_CUTOFF = new Date(2026, 4, 8);
+
+        function getTemplateCompletionTimeForConsumption(row) {
+            const completed = sanitizeTemplateValue(row?.completeDateDisplay);
+            if (!completed || completed === '---') return '';
+            return toExcelDateFormat(completed);
+        }
+
+        function isAfterQuiltingConsumptionCutoff(row) {
+            const completed = rawToLocalDate(getTemplateCompletionTimeForConsumption(row));
+            if (!completed) return false;
+            completed.setHours(0, 0, 0, 0);
+            return completed >= QUILTING_CONSUMPTION_SYNC_CUTOFF;
+        }
+
+        function hasMatchingQuiltingConsumptionRow(templateRow) {
+            const templateKey = getQuiltingConsumptionKey(templateRow);
+            const templateId = String(templateRow?.id || '').trim();
+            return allConsumptionRows.some(r => {
+                const requestType = String(getVal(r, ['Request Type','RequestType','Type']) || '').toLowerCase();
+                const remark = String(getVal(r, ['Remark','Remarks']) || '');
+                const rowKey = [
+                    normalizeConsumptionMatchValue(getVal(r, ['Style Number','StyleNumber','Style'])),
+                    normalizeConsumptionMatchValue(getVal(r, ['Job Number','JobNo','Job No'])),
+                    normalizeConsumptionMatchValue(getVal(r, ['Proto Stage','ProtoStage','Stage']))
+                ].join('|');
+                if (templateId && remark.includes(`Template ID ${templateId}`)) return true;
+                return templateKey !== '||' && rowKey === templateKey && requestType.includes('quilting');
+            });
+        }
+
+        function buildQuiltingConsumptionPayload(templateRow) {
+            const templatePic = sanitizeTemplateValue(templateRow?.pic);
+            return {
+                receivedTime: getTemplateCompletionTimeForConsumption(templateRow),
+                season: '',
+                styleNumber: sanitizeTemplateValue(templateRow?.style),
+                jobNo: sanitizeTemplateValue(templateRow?.jobNo),
+                requestBy: '',
+                protoStage: sanitizeTemplateValue(templateRow?.protoStage),
+                requestType: 'Quilting Details',
+                startDate: '',
+                completeDate: '',
+                pic: '',
+                remark: `Template M&A PIC: ${templatePic || '-'} / Auto from Template ID ${sanitizeTemplateValue(templateRow?.id)}${sanitizeTemplateValue(templateRow?.templateNo) ? ` / Template No. ${sanitizeTemplateValue(templateRow?.templateNo)}` : ''}`
+            };
+        }
+
+        async function syncQuiltingTemplatesToConsumption(isSilent = true, options = {}) {
+            if (quiltingConsumptionSyncing || !templateDataLoaded || !consumptionDataLoaded) return { created: 0, candidates: 0 };
+            if (!Array.isArray(allTemplates) || !Array.isArray(allConsumptionRows)) return { created: 0, candidates: 0 };
+
+            const force = !!options.force;
+            const syncMap = readQuiltingConsumptionSyncMap();
+            const candidates = allTemplates.filter(t => {
+                if (!t || t.cancelled) return false;
+                if (!isQuiltingTemplateRow(t)) return false;
+                if (!sanitizeTemplateValue(t.style)) return false;
+                if (!getTemplateCompletionTimeForConsumption(t)) return false;
+                if (!isAfterQuiltingConsumptionCutoff(t)) return false;
+                if (hasMatchingQuiltingConsumptionRow(t)) return false;
+                const marker = syncMap[String(t.id)];
+                return force || !marker || marker.key !== getQuiltingConsumptionKey(t);
+            });
+            if (!candidates.length) {
+                if (!isSilent) {
+                    const statusEl = document.getElementById('consumptionSyncStatus2') || document.getElementById('consumptionSyncStatus');
+                    if (statusEl) statusEl.innerText = 'No new Quilting Details rows.';
+                }
+                return { created: 0, candidates: 0 };
+            }
+
+            quiltingConsumptionSyncing = true;
+            const statusEl = document.getElementById('consumptionSyncStatus2') || document.getElementById('consumptionSyncStatus');
+            if (!isSilent && statusEl) statusEl.innerText = `Creating ${candidates.length} quilting consumption row${candidates.length > 1 ? 's' : ''}...`;
+
+            let created = 0;
+            for (const templateRow of candidates) {
+                const payload = buildQuiltingConsumptionPayload(templateRow);
+                try {
+                    const res = await fetch(consumptionAddURL, {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(payload)
+                    });
+                    if (res.ok) {
+                        created++;
+                        syncMap[String(templateRow.id)] = {
+                            key: getQuiltingConsumptionKey(templateRow),
+                            at: new Date().toISOString()
+                        };
+                        writeQuiltingConsumptionSyncMap(syncMap);
+                    } else {
+                        console.warn('Quilting consumption auto-add failed', res.status, await res.text().catch(() => ''));
+                    }
+                } catch (e) {
+                    console.warn('Quilting consumption auto-add failed', e);
+                }
+            }
+
+            quiltingConsumptionSyncing = false;
+            if (created) {
+                if (statusEl) statusEl.innerText = `Auto-created ${created} quilting consumption row${created > 1 ? 's' : ''}.`;
+                setTimeout(() => refreshConsumptionData(true), 1200);
+            } else if (!isSilent && statusEl) {
+                statusEl.innerText = 'No new Quilting Details rows.';
+            }
+            return { created, candidates: candidates.length };
+        }
+
+        async function manualSyncQuiltingConsumption(event) {
+            if (!canManualSyncQuiltingDetails()) return alert('Only Gavin or Joe can manually sync Quilting Details.');
+            const btn = event?.target;
+            const statusEl = document.getElementById('consumptionSyncStatus2') || document.getElementById('consumptionSyncStatus');
+            const originalText = btn ? btn.innerText : '';
+            if (btn) { btn.innerText = 'SYNCING...'; btn.disabled = true; }
+            if (statusEl) statusEl.innerText = 'Pulling latest Template and Consumption data...';
+            try {
+                await refreshTemplateLogs(true);
+                await refreshConsumptionData(true);
+                const result = await syncQuiltingTemplatesToConsumption(false, { force: true });
+                if (statusEl && result?.created) statusEl.innerText = `Created ${result.created} Quilting Details row${result.created > 1 ? 's' : ''}.`;
+            } catch (e) {
+                if (statusEl) statusEl.innerText = `Manual sync failed: ${e.message}`;
+            } finally {
+                if (btn) {
+                    btn.innerText = originalText || 'SYNC QUILTING';
+                    btn.disabled = false;
+                }
+            }
+        }
+
         function applyConsumptionFilter() {
             consumptionSearchQuery = document.getElementById('consumptionSearch')?.value.toLowerCase() || '';
             consumptionMonthQuery  = document.getElementById('consumptionMonthFilter')?.value || '';
@@ -5286,7 +5497,9 @@
                 rows.sort((a,b) => (parseInt(getVal(b,['Id','ID','id']))||0) - (parseInt(getVal(a,['Id','ID','id']))||0));
                 const _dbg = `allConsumptionRows.length = ${rows.length} | Open browser console (F12) for [CON] debug log`;
                 allConsumptionRows = rows;
+                consumptionDataLoaded = true;
                 writeDashboardSnapshot();
+                syncQuiltingTemplatesToConsumption(true);
                 // Skip re-render if user is actively editing anywhere in the consumption tab (table OR add form)
                 const _cActiveEl = document.activeElement;
                 const _cContent = document.getElementById('content-consumption');
@@ -5375,9 +5588,14 @@
                 const pic      = getMAPic(i);
                 const remark   = getVal(i, ['Remark','Remarks']);
                 const isDone   = completeDt && completeDt !== '---';
-                // PIC edit: own row or Gavin
+                const isQuiltingDetails = String(reqType || '').toLowerCase().includes('quilting');
+                const picOptions = `<select id="con-pic-${sid}" class="manual-input admin-input" style="width:90px">
+                    <option value="">Assign PIC</option>
+                    ${picList.map(p => `<option value="${p}" ${p === pic ? 'selected' : ''}>${p}</option>`).join('')}
+                </select>`;
+                // PIC edit: own row or Gavin; unassigned Quilting Details waits for Gavin assignment.
                 const rowPic   = pic && pic !== '---' ? pic : null;
-                const canEdit  = !!currentUser && (isAdmin || !rowPic || rowPic === currentUser);
+                const canEdit  = !!currentUser && (isAdmin || rowPic === currentUser || (!rowPic && !isQuiltingDetails));
 
                 return `<tr class="border-b hover:bg-slate-50 ${isDone ? 'bg-emerald-50/20' : ''}">
                     <td class="p-3 font-mono text-slate-400 text-[10px]">${rowId}</td>
@@ -5395,9 +5613,11 @@
                         ? `<input id="con-complete-${sid}" class="manual-input admin-input" value="${isDone ? completeDt : ''}" placeholder="m/d/yyyy hh:mm">`
                         : (isDone ? completeDt : '---')}</td>
                     <td class="p-3 font-bold ${(!pic||pic==='---') ? 'text-blue-600' : ''}">${
-                        (!pic||pic==='---') && canEdit
-                        ? `<span class="text-blue-600 text-xs font-bold">${currentUser} <span class="text-[9px] text-slate-400">(on save)</span></span>`
-                        : pic}</td>
+                        isAdmin
+                        ? picOptions
+                        : (!pic||pic==='---') && canEdit
+                            ? `<span class="text-blue-600 text-xs font-bold">${currentUser} <span class="text-[9px] text-slate-400">(on save)</span></span>`
+                            : (pic && pic !== '---' ? pic : '<span class="text-slate-400 text-[10px]">Unassigned</span>')}</td>
                     <td class="p-3">${canEdit
                         ? `<input id="con-remark-${sid}" class="manual-input" value="${remark !== '---' ? remark : ''}" placeholder="Remark...">`
                         : `<span class="italic text-slate-400 text-[10px]">${remark}</span>`}</td>
@@ -5464,7 +5684,10 @@
                 return rId === String(sid) || String(r['__PowerAppsId__']||'') === String(sid);
             });
             const existingPic = existing ? getMAPic(existing) : '---';
-            const picToSave = (!existingPic || existingPic === '---') ? currentUser : existingPic;
+            const selectedPic = document.getElementById(`con-pic-${sid}`)?.value.trim() || '';
+            const picToSave = currentUser === 'Gavin'
+                ? selectedPic
+                : ((!existingPic || existingPic === '---') ? currentUser : existingPic);
             const startNorm = preparePortalDatePayload(startVal, convertExcelDate(getVal(existing, ['Start Date m/d/yyyy','Start Date','StartDate'])));
             const completeNorm = preparePortalDatePayload(completeVal, convertExcelDate(getVal(existing, ['Complete Date m/d/yyyy','Complete Date','CompleteDate'])));
             if ([startNorm, completeNorm].some(v => v === null)) {
