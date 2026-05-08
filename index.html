@@ -106,6 +106,44 @@
         .admin-input { border: 1px solid rgba(0,113,227,0.4) !important; background: rgba(0,113,227,0.04) !important; font-weight: 600; }
         .qty-input { width: 60px; font-weight: bold; color: var(--accent); border: 1px solid var(--border2) !important; }
         .manual-input:focus { border-color: var(--accent) !important; box-shadow: 0 0 0 3px rgba(0,113,227,0.12) !important; background: #fff !important; }
+        .date-picker-active { border-color: var(--accent) !important; box-shadow: 0 0 0 3px rgba(0,113,227,0.18) !important; background: #fff !important; }
+        .date-picker-popover {
+            position: fixed;
+            z-index: 9999;
+            width: 260px;
+            padding: 12px;
+            background: rgba(255,255,255,0.98);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-md);
+            box-shadow: 0 18px 50px rgba(0,0,0,0.16), 0 4px 12px rgba(0,0,0,0.08);
+            backdrop-filter: blur(20px);
+        }
+        .date-picker-popover.hidden { display: none; }
+        .date-picker-popover label {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: var(--text-2);
+        }
+        .date-picker-popover input {
+            width: 100%;
+            padding: 7px 8px;
+            font-size: 12px;
+        }
+        .date-picker-actions {
+            display: flex;
+            justify-content: flex-end;
+            gap: 6px;
+            margin-top: 10px;
+        }
+        .date-picker-actions button {
+            padding: 6px 10px;
+            font-size: 10px;
+            font-weight: 800;
+        }
 
         #machineImg { transition: opacity 0.3s ease-in-out; opacity: 1; }
         .scrollbar-none::-webkit-scrollbar { display: none; }
@@ -327,11 +365,11 @@
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Cons. Start Date</label>
-                        <input type="text" id="l_consStart" placeholder="m/d/yyyy" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="text" id="l_consStart" placeholder="m/d/yyyy hh:mm" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Cons. End Date</label>
-                        <input type="text" id="l_consEnd" placeholder="m/d/yyyy" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="text" id="l_consEnd" placeholder="m/d/yyyy hh:mm" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Remark</label>
@@ -1337,6 +1375,22 @@
         </div>
     </div><!-- end max-w-[1600px] wrapper -->
 
+    <div id="datePickerPopover" class="date-picker-popover hidden" role="dialog" aria-label="Select date and time">
+        <div>
+            <label for="datePickerDate">Date</label>
+            <input type="date" id="datePickerDate">
+        </div>
+        <div id="datePickerTimeWrap" class="mt-2">
+            <label for="datePickerTime">Time</label>
+            <input type="time" id="datePickerTime" step="60">
+        </div>
+        <div class="date-picker-actions">
+            <button type="button" id="datePickerToday" class="bg-slate-200 text-slate-600">NOW</button>
+            <button type="button" id="datePickerClear" class="bg-slate-200 text-slate-600">CLEAR</button>
+            <button type="button" id="datePickerApply" class="bg-blue-600 text-white">APPLY</button>
+        </div>
+    </div>
+
     <script>
     (function () {
         if (location.protocol === 'file:' || !/github\.io$/i.test(location.hostname)) return;
@@ -1674,6 +1728,152 @@
             return options.dateOnly ? normalized.split(' ')[0] : normalized;
         }
 
+        let activeDatePickerInput = null;
+
+        function isDatePickerInput(el) {
+            if (!el || el.tagName !== 'INPUT' || el.disabled || el.readOnly) return false;
+            const type = String(el.getAttribute('type') || 'text').toLowerCase();
+            if (!['text', 'search', ''].includes(type)) return false;
+            const placeholder = String(el.getAttribute('placeholder') || '').toLowerCase();
+            const id = String(el.id || '').toLowerCase();
+            const dateCell = !!el.closest('td.date-cell');
+            if (placeholder.includes('search')) return false;
+            return placeholder.includes('yyyy')
+                || dateCell
+                || /(^|[-_])(date|time|start|complete|received|reqdate|required)([-_]|$)/.test(id);
+        }
+
+        function datePickerNeedsTime(el) {
+            const placeholder = String(el.getAttribute('placeholder') || '').toLowerCase();
+            const id = String(el.id || '').toLowerCase();
+            const value = String(el.value || '');
+            return placeholder.includes('hh:mm')
+                || value.includes(':')
+                || /(time|received|complete|startdate|starttime|dateupdate)/.test(id);
+        }
+
+        function datePickerToInputDate(dateObj) {
+            return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+        }
+
+        function datePickerToInputTime(dateObj) {
+            return `${String(dateObj.getHours()).padStart(2, '0')}:${String(dateObj.getMinutes()).padStart(2, '0')}`;
+        }
+
+        function datePickerParseValue(el) {
+            const value = String(el?.value || '').trim();
+            if (!value || value === '---') return null;
+            const normalized = toExcelDateFormat(value);
+            const date = rawToLocalDate(normalized);
+            return date && !isNaN(date.getTime()) ? date : null;
+        }
+
+        function datePickerFormatForField(el, dateValue, timeValue) {
+            if (!dateValue) return '';
+            const [year, month, day] = dateValue.split('-').map(Number);
+            if (!year || !month || !day) return '';
+            const usesTime = datePickerNeedsTime(el);
+            let output = `${month}/${day}/${year}`;
+            if (usesTime) {
+                const time = timeValue || datePickerToInputTime(new Date());
+                output += ` ${time}`;
+            }
+            return output;
+        }
+
+        function positionDatePicker(el, picker) {
+            const rect = el.getBoundingClientRect();
+            const width = 260;
+            const gap = 6;
+            let left = Math.min(Math.max(8, rect.left), window.innerWidth - width - 8);
+            let top = rect.bottom + gap;
+            picker.style.left = `${left}px`;
+            picker.style.top = `${top}px`;
+            picker.classList.remove('hidden');
+            const pickerRect = picker.getBoundingClientRect();
+            if (pickerRect.bottom > window.innerHeight - 8) {
+                top = Math.max(8, rect.top - pickerRect.height - gap);
+                picker.style.top = `${top}px`;
+            }
+        }
+
+        function openDatePickerForInput(el) {
+            if (!isDatePickerInput(el)) return;
+            const picker = document.getElementById('datePickerPopover');
+            const dateInput = document.getElementById('datePickerDate');
+            const timeInput = document.getElementById('datePickerTime');
+            const timeWrap = document.getElementById('datePickerTimeWrap');
+            if (!picker || !dateInput || !timeInput || !timeWrap) return;
+            if (activeDatePickerInput) activeDatePickerInput.classList.remove('date-picker-active');
+            activeDatePickerInput = el;
+            el.classList.add('date-picker-active');
+            const existing = datePickerParseValue(el) || new Date();
+            dateInput.value = datePickerToInputDate(existing);
+            timeInput.value = datePickerToInputTime(existing);
+            timeWrap.style.display = datePickerNeedsTime(el) ? 'block' : 'none';
+            positionDatePicker(el, picker);
+        }
+
+        function closeDatePicker() {
+            const picker = document.getElementById('datePickerPopover');
+            if (picker) picker.classList.add('hidden');
+            if (activeDatePickerInput) activeDatePickerInput.classList.remove('date-picker-active');
+            activeDatePickerInput = null;
+        }
+
+        function applyDatePickerValue(value) {
+            if (!activeDatePickerInput) return;
+            activeDatePickerInput.value = value;
+            activeDatePickerInput.dispatchEvent(new Event('input', { bubbles: true }));
+            activeDatePickerInput.dispatchEvent(new Event('change', { bubbles: true }));
+            closeDatePicker();
+        }
+
+        function initDatePicker() {
+            document.addEventListener('focusin', (event) => {
+                if (isDatePickerInput(event.target)) openDatePickerForInput(event.target);
+            });
+            document.addEventListener('click', (event) => {
+                const picker = document.getElementById('datePickerPopover');
+                if (!picker) return;
+                if (event.target === activeDatePickerInput || picker.contains(event.target)) return;
+                if (isDatePickerInput(event.target)) {
+                    openDatePickerForInput(event.target);
+                    return;
+                }
+                closeDatePicker();
+            });
+            document.getElementById('datePickerApply')?.addEventListener('click', () => {
+                const dateValue = document.getElementById('datePickerDate')?.value || '';
+                const timeValue = document.getElementById('datePickerTime')?.value || '';
+                const formatted = datePickerFormatForField(activeDatePickerInput, dateValue, timeValue);
+                if (formatted) applyDatePickerValue(formatted);
+            });
+            document.getElementById('datePickerToday')?.addEventListener('click', () => {
+                const now = new Date();
+                const dateInput = document.getElementById('datePickerDate');
+                const timeInput = document.getElementById('datePickerTime');
+                if (dateInput) dateInput.value = datePickerToInputDate(now);
+                if (timeInput) timeInput.value = datePickerToInputTime(now);
+            });
+            document.getElementById('datePickerClear')?.addEventListener('click', () => applyDatePickerValue(''));
+            document.addEventListener('keydown', (event) => {
+                if (event.key === 'Escape') closeDatePicker();
+            });
+            window.addEventListener('scroll', () => {
+                const picker = document.getElementById('datePickerPopover');
+                if (activeDatePickerInput && picker && !picker.classList.contains('hidden')) {
+                    positionDatePicker(activeDatePickerInput, picker);
+                }
+            }, true);
+            window.addEventListener('resize', () => {
+                const picker = document.getElementById('datePickerPopover');
+                if (activeDatePickerInput && picker && !picker.classList.contains('hidden')) {
+                    positionDatePicker(activeDatePickerInput, picker);
+                }
+            });
+        }
+
         function formatExcelPayload(dateStr) {
             if (!dateStr || !dateStr.includes('/')) return dateStr;
             const [datePart, timePart] = dateStr.split(' ');
@@ -1783,6 +1983,39 @@
 
         function getLaserRequiredDateDisplay(row) {
             return convertExcelDate(getLaserRequiredDateRaw(row), false);
+        }
+
+        function getLaserCompleteDateRaw(row) {
+            return getVal(row, ['Complete Date','CompleteDate','Complete Date m/d/yyyy']);
+        }
+
+        function hasLaserCompleteDate(row) {
+            const raw = getLaserCompleteDateRaw(row);
+            const text = String(raw || '').trim();
+            if (!text || text === '---' || text === '-') return false;
+            const display = convertExcelDate(raw);
+            return !!display && display !== '---';
+        }
+
+        function getLaserPendingStatus(row) {
+            if (hasLaserCompleteDate(row)) return null;
+            const requiredDate = parsePortalDisplayDate(getLaserRequiredDateDisplay(row));
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            if (requiredDate) {
+                requiredDate.setHours(0, 0, 0, 0);
+                if (requiredDate < today) {
+                    return { label: 'Delay', className: 'bg-red-100 text-red-600' };
+                }
+            }
+            return { label: 'Pending', className: 'bg-amber-100 text-amber-700' };
+        }
+
+        function renderLaserPendingStatusBadge(row) {
+            const status = getLaserPendingStatus(row);
+            return status
+                ? `<span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${status.className}">${status.label}</span>`
+                : '';
         }
 
         function monthLabelFromDate(date, months) {
@@ -2451,10 +2684,12 @@
             const laserRowsToShow = allLaserRows.filter(i => {
                 // Month filter
                 if (laserMF) {
-                    const cd = rawToLocalDate(getVal(i,['Complete Date','CompleteDate']));
-                    if (!cd) return false;
-                    const cdL = `${months_arr[cd.getMonth()]}-${cd.getFullYear()}`;
-                    if (cdL !== laserMF) return false;
+                    const cd = rawToLocalDate(getLaserCompleteDateRaw(i));
+                    const rd = !cd ? parsePortalDisplayDate(getLaserRequiredDateDisplay(i)) : null;
+                    const filterDate = cd || rd;
+                    if (!filterDate) return false;
+                    const dateLabel = `${months_arr[filterDate.getMonth()]}-${filterDate.getFullYear()}`;
+                    if (dateLabel !== laserMF) return false;
                 }
                 if (!laserSearchQuery) return true;
                 const vals = [
@@ -2485,6 +2720,7 @@
                 const trimParts    = getVal(i, ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']);
                 const completeDate = convertExcelDate(getVal(i, ['Complete Date','CompleteDate']));
                 const requiredDate = getLaserRequiredDateDisplay(i);
+                const laserPendingStatus = renderLaserPendingStatusBadge(i);
                 const maPic        = getMAPic(i);
                 const consStart    = convertExcelDate(getVal(i, ['Consumption Start Date','ConsumptionStartDate','Cons Start']));
                 const consEnd      = convertExcelDate(getVal(i, ['Consumption Complete Date','ConsumptionCompleteDate','Cons End']));
@@ -2525,10 +2761,15 @@
                         <td class="p-2"><input id="le-laserParts-${rid}" class="manual-input qty-input" value="${laserParts==='---'?'':laserParts}" type="number"></td>
                         <td class="p-2"><input id="le-ironParts-${rid}" class="manual-input qty-input" value="${ironParts==='---'?'':ironParts}" type="number"></td>
                         <td class="p-2"><input id="le-trimParts-${rid}" class="manual-input qty-input" value="${trimParts==='---'?'':trimParts}" type="number"></td>
-                        <td class="p-2 date-cell"><input id="le-completeDate-${rid}" class="manual-input admin-input" value="${completeDate==='---'?'':completeDate}" placeholder="m/d/yyyy hh:mm"></td>
+                        <td class="p-2 date-cell">
+                            <div class="flex flex-col gap-1">
+                                <input id="le-completeDate-${rid}" class="manual-input admin-input" value="${completeDate==='---'?'':completeDate}" placeholder="m/d/yyyy hh:mm">
+                                ${laserPendingStatus}
+                            </div>
+                        </td>
                         <td class="p-2"><input id="le-maPic-${rid}" class="manual-input bg-slate-100" value="${maPic==='---'?'':maPic}" readonly title="M&A PIC is set when row is created"></td>
-                        <td class="p-2 date-cell"><input id="le-consStart-${rid}" class="${consClass}" value="${consStart==='---'?'':consStart}" placeholder="m/d/yyyy"${consDisabled}></td>
-                        <td class="p-2 date-cell"><input id="le-consEnd-${rid}" class="${consClass}" value="${consEnd==='---'?'':consEnd}" placeholder="m/d/yyyy"${consDisabled}></td>
+                        <td class="p-2 date-cell"><input id="le-consStart-${rid}" class="${consClass}" value="${consStart==='---'?'':consStart}" placeholder="m/d/yyyy hh:mm"${consDisabled}></td>
+                        <td class="p-2 date-cell"><input id="le-consEnd-${rid}" class="${consClass}" value="${consEnd==='---'?'':consEnd}" placeholder="m/d/yyyy hh:mm"${consDisabled}></td>
                         <td class="p-2"><input id="le-consPic-${rid}" class="${consClass}" value="${consPic==='---'?'':consPic}" placeholder="PIC"${consDisabled}></td>
                         <td class="p-2"><input id="le-remark-${rid}" class="manual-input" value="${remark==='---'?'':remark}" placeholder="Remark"></td>
                         <td class="p-2 date-cell"><input id="le-requiredDate-${rid}" class="manual-input admin-input" value="${requiredDate==='---'?'':requiredDate}" placeholder="m/d/yyyy"></td>
@@ -2558,13 +2799,13 @@
                         <td class="p-3 font-bold">${laserParts}</td>
                         <td class="p-3">${ironParts}</td>
                         <td class="p-3">${trimParts}</td>
-                        <td class="p-3 date-cell ${isComplete?'text-emerald-600 font-bold':'text-slate-400'}">${completeDate}</td>
+                        <td class="p-3 date-cell ${isComplete?'text-emerald-600 font-bold':'text-slate-400'}">${laserPendingStatus || completeDate}</td>
                         <td class="p-3 font-medium">${maPic}</td>
                         <td class="p-3">${canEditCons
-                            ? `<input id="le-consStart-${rid}" class="manual-input admin-input" value="${consStart==='---'?'':consStart}" placeholder="m/d/yyyy">`
+                            ? `<input id="le-consStart-${rid}" class="manual-input admin-input" value="${consStart==='---'?'':consStart}" placeholder="m/d/yyyy hh:mm">`
                             : `<span>${consStart}</span>`}</td>
                         <td class="p-3">${canEditCons
-                            ? `<input id="le-consEnd-${rid}" class="manual-input admin-input" value="${consEnd==='---'?'':consEnd}" placeholder="m/d/yyyy">`
+                            ? `<input id="le-consEnd-${rid}" class="manual-input admin-input" value="${consEnd==='---'?'':consEnd}" placeholder="m/d/yyyy hh:mm">`
                             : `<span>${consEnd}</span>`}</td>
                         <td class="p-3">
                             ${canEditCons
@@ -3226,8 +3467,11 @@
             }
 
             if (isAdminUser) {
+                const tRequestor = preserveTextValue(document.getElementById(`requestor-${simpleId}`)?.value, record.requestor);
                 const tSection = preserveTextValue(document.getElementById(`section-${simpleId}`)?.value, record.section);
                 assignIfPresent(payload, [
+                    ['requestor', tRequestor],
+                    ['Requestor', tRequestor],
                     ['section', tSection],
                     ['Section', tSection],
                     ['complexity', tComplexity],
@@ -3278,6 +3522,7 @@
                         record.templateNo = payload.templateNo || record.templateNo;
                     }
                     if (isAdminUser) {
+                        record.requestor = payload.requestor || record.requestor;
                         record.section = payload.section || record.section;
                         record.complexity = tComplexity || record.complexity;
                         record.dfm = tDFM || record.dfm;
@@ -3294,6 +3539,7 @@
                     record.remark = preserveTextValue(tRem, record.remark);
                     record.status = record.completeDateDisplay && record.completeDateDisplay !== '---' ? 'COMPLETED' : record.status;
                     stageTemplatePendingUpdate(record.id, {
+                        requestor: record.requestor,
                         section: record.section,
                         templateNo: record.templateNo,
                         pic: record.pic,
@@ -3407,8 +3653,9 @@
 
             // Laser: Complete Date month
             buildOptions('laserMonthFilter', allLaserRows.map(r => {
-                const d = rawToLocalDate(getVal(r, ['Complete Date','CompleteDate']));
-                return fmt(d);
+                const completeDate = rawToLocalDate(getLaserCompleteDateRaw(r));
+                const requiredDate = !completeDate ? parsePortalDisplayDate(getLaserRequiredDateDisplay(r)) : null;
+                return fmt(completeDate || requiredDate);
             }));
 
             // Support: Received Time month (always present unlike Complete Time)
@@ -5311,6 +5558,7 @@
 
         window.onload = () => {
             updateSessionUI();
+            initDatePicker();
             updateLaserPicDisplay();
             updateConsumptionPicDisplay();
             updateDownPicDisplay();
