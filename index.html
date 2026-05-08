@@ -229,6 +229,26 @@
             .manual-input { width: 80px !important; font-size: 9px !important; }
             .qty-input { width: 48px !important; }
             nav button { padding: 7px 10px !important; font-size: 9px !important; }
+            .portal-header-top {
+                flex-direction: column !important;
+                align-items: stretch !important;
+                gap: 12px !important;
+            }
+            .portal-brand-row {
+                width: 100%;
+            }
+            .portal-shortcut-row {
+                width: 100%;
+                display: grid !important;
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+                gap: 6px !important;
+            }
+            .portal-shortcut-row a {
+                min-width: 0;
+                padding-left: 6px !important;
+                padding-right: 6px !important;
+                font-size: 9px !important;
+            }
             .portal-filter-row {
                 flex-direction: column;
                 align-items: stretch;
@@ -243,8 +263,8 @@
     <div id="portal-shell" class="max-w-[1600px] mx-auto">
         <header class="mb-4 rounded-[var(--radius-lg)] border overflow-hidden" style="box-shadow:var(--shadow-md)">
             <!-- Top row: logo + title -->
-            <div class="flex items-center justify-between gap-4 px-5 pt-4 pb-3" style="background:rgba(255,255,255,0.92);backdrop-filter:blur(20px)">
-                <div class="flex items-center gap-4 min-w-0">
+            <div class="portal-header-top flex items-center justify-between gap-4 px-5 pt-4 pb-3" style="background:rgba(255,255,255,0.92);backdrop-filter:blur(20px)">
+                <div class="portal-brand-row flex items-center gap-4 min-w-0">
                 <div class="flex-shrink-0 flex items-center justify-center" style="height:38px;min-width:38px">
                     <img src="logo.png" alt="M&A Logo" id="headerLogo"
                         style="height:38px;width:auto;object-fit:contain;display:block"
@@ -258,7 +278,7 @@
                     <p style="color:var(--text-3);font-size:9px;font-weight:700;letter-spacing:0.2em" class="uppercase mt-0.5">Modernization & Automation</p>
                 </div>
                 </div>
-                <div class="flex items-center gap-2 flex-shrink-0">
+                <div class="portal-shortcut-row flex items-center gap-2 flex-shrink-0">
                     <a href="./task-scheduling.html" target="_self"
                        class="inline-flex items-center justify-center text-[10px] font-bold rounded-[10px] px-3 py-2 border transition-all whitespace-nowrap" style="color:#b45309;border-color:rgba(180,83,9,0.28);background:rgba(180,83,9,0.06)">
                         Schedule
