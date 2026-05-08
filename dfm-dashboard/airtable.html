@@ -75,8 +75,8 @@
               <input id="airtable-table-input" value="tbluNJZBGnzSBsHrg" />
             </label>
             <label class="checkbox">
-              <input id="airtable-cache-images" type="checkbox" />
-              Cache image data when browser allows
+              <input id="airtable-cache-images" type="checkbox" checked />
+              Embed image data for GitHub mirror
             </label>
           </div>
           <div class="airtable-import-actions">
@@ -109,6 +109,7 @@
         const DEFAULT_TABLE_ID = 'tbluNJZBGnzSBsHrg';
         const state = {
           rows: [],
+          rawRecords: [],
           columns: [],
           source: 'Browser mirror',
           updatedAt: '',
@@ -378,6 +379,50 @@
           });
         }
 
+        function countImageCache(records) {
+          let attachments = 0;
+          let embedded = 0;
+          (Array.isArray(records) ? records : []).forEach((record) => {
+            const fields = record?.fields && typeof record.fields === 'object' ? record.fields : record || {};
+            Object.values(fields).forEach((value) => {
+              const items = Array.isArray(value) ? value : [value];
+              items.forEach((item) => {
+                if (typeof item === 'string') {
+                  if (/^https?:\/\//i.test(item) || /^data:image\//i.test(item)) attachments += 1;
+                  if (/^data:image\//i.test(item)) embedded += 1;
+                  return;
+                }
+                if (item && typeof item === 'object' && (item.url || item.dataUrl || item.thumbnails)) {
+                  attachments += 1;
+                  if (item.dataUrl) embedded += 1;
+                }
+              });
+            });
+          });
+          return { attachments, embedded, missing: Math.max(0, attachments - embedded) };
+        }
+
+        function stripEmbeddedImageData(records) {
+          return (Array.isArray(records) ? records : []).map((record) => {
+            const fields = record?.fields && typeof record.fields === 'object' ? record.fields : record || {};
+            const nextFields = {};
+            Object.entries(fields).forEach(([key, value]) => {
+              if (!Array.isArray(value)) {
+                nextFields[key] = value;
+                return;
+              }
+              nextFields[key] = value.map((item) => {
+                if (!item || typeof item !== 'object') return item;
+                const { dataUrl, ...rest } = item;
+                return rest;
+              });
+            });
+            return record?.fields && typeof record.fields === 'object'
+              ? { ...record, fields: nextFields }
+              : nextFields;
+          });
+        }
+
         async function cacheAttachmentImages(records) {
           const next = [];
           for (const record of records) {
@@ -390,7 +435,7 @@
               }
               const items = [];
               for (const item of value) {
-                if (!item || typeof item !== 'object' || !item.url) {
+                if (!item || typeof item !== 'object' || item.dataUrl || !item.url) {
                   items.push(item);
                   continue;
                 }
@@ -413,11 +458,17 @@
 
         function saveBrowserMirror(records, source) {
           const updatedAt = new Date().toLocaleString();
+          state.rawRecords = Array.isArray(records) ? records : [];
           state.rows = normalizeRows(records);
           state.source = source;
           state.updatedAt = updatedAt;
-          localStorage.setItem(ROWS_KEY, JSON.stringify(records));
           localStorage.setItem(META_KEY, JSON.stringify({ source, updatedAt }));
+          try {
+            localStorage.setItem(ROWS_KEY, JSON.stringify(records));
+          } catch (error) {
+            localStorage.setItem(ROWS_KEY, JSON.stringify(stripEmbeddedImageData(records)));
+            setSyncStatus('Full image mirror is ready for export, but too large for browser localStorage. Export before reloading this page.', 'ok');
+          }
           render();
         }
 
@@ -434,10 +485,15 @@
             const rows = JSON.parse(localStorage.getItem(ROWS_KEY) || '[]');
             const meta = JSON.parse(localStorage.getItem(META_KEY) || '{}');
             if (Array.isArray(rows) && rows.length) {
+              state.rawRecords = rows;
               state.rows = normalizeRows(rows);
               state.source = meta.source || 'Browser Airtable mirror';
               state.updatedAt = meta.updatedAt || '';
               render();
+              const cache = countImageCache(rows);
+              if (cache.missing) {
+                setSyncStatus(`${cache.missing} image(s) in this browser mirror still use temporary Airtable URLs. Sync Airtable again, then export.`, 'error');
+              }
               return true;
             }
           } catch (error) {
@@ -455,10 +511,17 @@
             const rows = rowsFromJsonPayload(payload);
             if (!rows.length) throw new Error('No records in published mirror');
             state.rows = normalizeRows(rows);
+            state.rawRecords = rows;
             state.source = payload.source || 'Published MVC mirror';
             state.updatedAt = payload.updatedAt || payload.lastSync || '';
             render();
-            setSyncStatus(`Loaded ${state.rows.length} published MVC records.`, 'ok');
+            const cache = countImageCache(rows);
+            setSyncStatus(
+              cache.missing
+                ? `Loaded ${state.rows.length} records, but ${cache.missing} image(s) use expired-prone Airtable URLs. Re-sync and export embedded images.`
+                : `Loaded ${state.rows.length} published MVC records with embedded images.`,
+              cache.missing ? 'error' : 'ok'
+            );
             return true;
           } catch (error) {
             render();
@@ -467,14 +530,16 @@
           }
         }
 
-        function exportMirrorJson() {
-          const records = JSON.parse(localStorage.getItem(ROWS_KEY) || '[]');
+        function downloadMirrorJson(records) {
+          const cache = countImageCache(records);
           if (!records.length) {
             setSyncStatus('Sync Airtable first, then export the mirror JSON.', 'error');
             return;
           }
           const payload = {
-            source: state.source || 'Published MVC mirror',
+            source: cache.attachments && cache.missing === 0
+              ? `${state.source || 'Published MVC mirror'} with embedded images`
+              : state.source || 'Published MVC mirror',
             updatedAt: state.updatedAt || new Date().toLocaleString(),
             records
           };
@@ -485,7 +550,36 @@
           link.download = 'airtable-data.json';
           link.click();
           URL.revokeObjectURL(url);
-          setSyncStatus('Exported airtable-data.json. Upload it with the GitHub files so other PCs do not need a token.', 'ok');
+          setSyncStatus(
+            cache.missing
+              ? `Exported airtable-data.json, but ${cache.missing} image(s) are still temporary Airtable URLs. Sync Airtable again, then export.`
+              : 'Exported airtable-data.json with embedded images. Upload it with the GitHub files so other PCs do not need a token.',
+            cache.missing ? 'error' : 'ok'
+          );
+        }
+
+        async function exportMirrorJson() {
+          let records = state.rawRecords?.length
+            ? state.rawRecords
+            : JSON.parse(localStorage.getItem(ROWS_KEY) || '[]');
+          if (!records.length) {
+            setSyncStatus('Sync Airtable first, then export the mirror JSON.', 'error');
+            return;
+          }
+          const cache = countImageCache(records);
+          el.exportBtn.disabled = true;
+          el.exportBtn.innerText = cache.missing ? 'Embedding...' : 'Exporting...';
+          try {
+            if (cache.missing) {
+              setSyncStatus(`Embedding ${cache.missing} image(s) into airtable-data.json before export...`);
+              records = await cacheAttachmentImages(records);
+              saveBrowserMirror(records, state.source || 'Airtable browser sync');
+            }
+            downloadMirrorJson(records);
+          } finally {
+            el.exportBtn.disabled = false;
+            el.exportBtn.innerText = 'Export Mirror JSON';
+          }
         }
 
         async function checkAccess() {
@@ -519,18 +613,19 @@
           setSyncStatus('Syncing Airtable records into this browser...');
           try {
             const records = await fetchAllRecords(token, baseId, tableId);
+            let mirrored = records;
             let note = '';
-            saveBrowserMirror(records, `Airtable browser sync: ${tableId}`);
-            if (el.cacheImages.checked) {
-              setSyncStatus(`Synced ${records.length} rows. Caching images in the background...`, 'ok');
-              try {
-                const mirrored = await cacheAttachmentImages(records);
-                saveBrowserMirror(mirrored, `Airtable browser sync: ${tableId}`);
-                note = ' Image data cached when the browser allowed it.';
-              } catch (error) {
-                note = ' Image cache skipped.';
-              }
+            setSyncStatus(`Synced ${records.length} rows. Embedding images for the GitHub mirror...`, 'ok');
+            try {
+              mirrored = await cacheAttachmentImages(records);
+              const cache = countImageCache(mirrored);
+              note = cache.missing
+                ? ` ${cache.embedded} image(s) embedded; ${cache.missing} still use Airtable URLs.`
+                : ' Image data embedded for the mirror.';
+            } catch (error) {
+              note = ' Image embedding skipped by browser/network.';
             }
+            saveBrowserMirror(mirrored, `Airtable browser sync: ${tableId}`);
             el.tokenInput.value = '';
             el.tokenInput.placeholder = 'Saved in this browser';
             setSyncStatus(`Synced ${records.length} rows from Airtable.${note}`, 'ok');
@@ -547,10 +642,11 @@
             const config = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
             el.baseInput.value = config.baseId || DEFAULT_BASE_ID;
             el.tableInput.value = config.tableId || DEFAULT_TABLE_ID;
-            el.cacheImages.checked = Boolean(config.cacheImages);
+            el.cacheImages.checked = config.cacheImages !== false;
           } catch (error) {
             el.baseInput.value = DEFAULT_BASE_ID;
             el.tableInput.value = DEFAULT_TABLE_ID;
+            el.cacheImages.checked = true;
           }
           if (localStorage.getItem(TOKEN_KEY)) el.tokenInput.placeholder = 'Saved in this browser';
         }
@@ -562,6 +658,7 @@
           el.clearBtn.addEventListener('click', () => {
             localStorage.removeItem(ROWS_KEY);
             localStorage.removeItem(META_KEY);
+            state.rawRecords = [];
             state.rows = [];
             state.source = 'Browser mirror';
             state.updatedAt = '';
