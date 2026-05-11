@@ -736,6 +736,7 @@
     <script>
         const STORAGE_KEY = 'ma_attendance2_sessions';
         const CORRECTED_HIDE_KEY = 'ma_attendance2_corrected_source_rows';
+        const FINAL_SPLIT_CACHE_KEY = 'ma_attendance2_final_split_rows_cache';
         const PIC_SESSION_KEY = 'ma_admin_session_user';
         const WORK_START = '07:30';
         const WORK_END = '17:00';
@@ -806,15 +807,138 @@
             return [session.sourceTable, task, job, normalizeSignatureValue(session.pic)].join('|');
         }
 
+        function sessionTaskNoPicSignature(session) {
+            if (!session?.sourceTable) return '';
+            const task = normalizeSignatureValue(session.style);
+            const job = normalizeSignatureValue(session.job);
+            if (!task && !job) return '';
+            return [session.sourceTable, task, job].join('|');
+        }
+
+        function sessionLooseTaskSignature(session) {
+            const task = normalizeSignatureValue(session?.style);
+            const job = normalizeSignatureValue(session?.job);
+            if (!task && !job) return '';
+            return [task, job].join('|');
+        }
+
+        function sessionSourceStyleSignature(session) {
+            if (!session?.sourceTable) return '';
+            const task = normalizeSignatureValue(session.style);
+            if (!task) return '';
+            return [session.sourceTable, task].join('|');
+        }
+
+        function sessionStyleSignature(session) {
+            const task = normalizeSignatureValue(session?.style);
+            return task || '';
+        }
+
+        function splitRowSourceTable(row) {
+            return String(row?.sourceTable || row?.source || row?.process || '').replace(/^Actual:\s*/i, '').trim();
+        }
+
+        function splitRowSourceId(row) {
+            return String(row?.sourceRowId || row?.sourceId || row?.rowId || row?.id || row?.recordID || row?.['Request ID'] || '').trim();
+        }
+
+        function splitRowSourceIdSignature(row) {
+            const sourceTable = splitRowSourceTable(row);
+            const sourceRowId = splitRowSourceId(row);
+            if (!sourceTable || !sourceRowId) return '';
+            return [sourceTable, sourceRowId].join('|');
+        }
+
+        function splitRowTaskSignature(row) {
+            const sourceTable = splitRowSourceTable(row);
+            if (!sourceTable) return '';
+            const task = normalizeSignatureValue(row.style);
+            const job = normalizeSignatureValue(row.job);
+            if (!task && !job) return '';
+            return [sourceTable, task, job, normalizeSignatureValue(row.pic)].join('|');
+        }
+
+        function splitRowTaskNoPicSignature(row) {
+            const sourceTable = splitRowSourceTable(row);
+            if (!sourceTable) return '';
+            const task = normalizeSignatureValue(row.style);
+            const job = normalizeSignatureValue(row.job);
+            if (!task && !job) return '';
+            return [sourceTable, task, job].join('|');
+        }
+
+        function splitRowLooseTaskSignature(row) {
+            const task = normalizeSignatureValue(row?.style);
+            const job = normalizeSignatureValue(row?.job);
+            if (!task && !job) return '';
+            return [task, job].join('|');
+        }
+
+        function splitRowSourceStyleSignature(row) {
+            const sourceTable = splitRowSourceTable(row);
+            const task = normalizeSignatureValue(row?.style);
+            if (!sourceTable || !task) return '';
+            return [sourceTable, task].join('|');
+        }
+
+        function splitRowStyleSignature(row) {
+            return normalizeSignatureValue(row?.style);
+        }
+
+        function getFinalSplitSuppressionSets() {
+            const byId = new Set();
+            const byTask = new Set();
+            const byTaskNoPic = new Set();
+            const byLooseTask = new Set();
+            const bySourceStyle = new Set();
+            const byStyle = new Set();
+            finalSplitRows.forEach(row => {
+                const idSignature = splitRowSourceIdSignature(row);
+                const taskSignature = splitRowTaskSignature(row);
+                const taskNoPicSignature = splitRowTaskNoPicSignature(row);
+                const looseTaskSignature = splitRowLooseTaskSignature(row);
+                const sourceStyleSignature = splitRowSourceStyleSignature(row);
+                const styleSignature = splitRowStyleSignature(row);
+                if (idSignature) byId.add(idSignature);
+                if (taskSignature) byTask.add(taskSignature);
+                if (taskNoPicSignature) byTaskNoPic.add(taskNoPicSignature);
+                if (looseTaskSignature) byLooseTask.add(looseTaskSignature);
+                if (sourceStyleSignature) bySourceStyle.add(sourceStyleSignature);
+                if (styleSignature) byStyle.add(styleSignature);
+            });
+            return { byId, byTask, byTaskNoPic, byLooseTask, bySourceStyle, byStyle };
+        }
+
+        function readFinalSplitCache() {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(FINAL_SPLIT_CACHE_KEY) || '[]');
+                return Array.isArray(parsed) ? parsed : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function writeFinalSplitCache(rows) {
+            localStorage.setItem(FINAL_SPLIT_CACHE_KEY, JSON.stringify(Array.isArray(rows) ? rows : []));
+        }
+
         function hideCorrectedSourceSession(session) {
             const signature = sessionSourceSignature(session);
             const idSignature = sessionSourceIdSignature(session);
             const taskSignature = sessionTaskSignature(session);
-            if (!signature && !idSignature && !taskSignature) return;
+            const taskNoPicSignature = sessionTaskNoPicSignature(session);
+            const looseTaskSignature = sessionLooseTaskSignature(session);
+            const sourceStyleSignature = sessionSourceStyleSignature(session);
+            const styleSignature = sessionStyleSignature(session);
+            if (!signature && !idSignature && !taskSignature && !taskNoPicSignature && !looseTaskSignature && !sourceStyleSignature && !styleSignature) return;
             const map = readCorrectedHideMap();
             if (signature) map[signature] = new Date().toISOString();
             if (idSignature) map[idSignature] = new Date().toISOString();
             if (taskSignature) map[taskSignature] = new Date().toISOString();
+            if (taskNoPicSignature) map[taskNoPicSignature] = new Date().toISOString();
+            if (looseTaskSignature) map[looseTaskSignature] = new Date().toISOString();
+            if (sourceStyleSignature) map[sourceStyleSignature] = new Date().toISOString();
+            if (styleSignature) map[styleSignature] = new Date().toISOString();
             writeCorrectedHideMap(map);
         }
 
@@ -1121,6 +1245,9 @@
                 const text = await res.text().catch(() => '');
                 throw new Error(`Split log save failed HTTP ${res.status}: ${text.slice(0, 180)}`);
             }
+            const existing = readFinalSplitCache();
+            finalSplitRows = [...existing, ...splitRows];
+            writeFinalSplitCache(finalSplitRows);
         }
 
         async function loadFinalSplitJson() {
@@ -1130,26 +1257,36 @@
                 const sep = attendanceSplitJsonURL.includes('?') ? '&' : '?';
                 const res = await fetch(`${attendanceSplitJsonURL}${sep}cb=${Date.now()}`, {
                     method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({})
+                    body: '{}'
                 });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
-                const data = await res.json();
+                const text = await res.text();
+                if (!text.trim()) {
+                    const cached = readFinalSplitCache();
+                    if (cached.length) {
+                        finalSplitRows = cached;
+                        document.getElementById('metric-final-json').innerText = finalSplitRows.length;
+                        if (statusEl) statusEl.innerText = `OneDrive Final JSON returned empty. Using ${finalSplitRows.length} local cached split row${finalSplitRows.length !== 1 ? 's' : ''}.`;
+                        return;
+                    }
+                    throw new Error('OneDrive Final JSON fetch returned empty response. Fix the Power Automate Response body.');
+                }
+                let data = JSON.parse(text);
+                if (typeof data === 'string') data = JSON.parse(data);
                 finalSplitRows = Array.isArray(data) ? data : (Array.isArray(data.rows) ? data.rows : []);
+                writeFinalSplitCache(finalSplitRows);
                 document.getElementById('metric-final-json').innerText = finalSplitRows.length;
                 if (statusEl) statusEl.innerText = `Loaded ${finalSplitRows.length} final split JSON row${finalSplitRows.length !== 1 ? 's' : ''}.`;
             } catch (e) {
-                finalSplitRows = [];
-                document.getElementById('metric-final-json').innerText = '0';
+                finalSplitRows = readFinalSplitCache();
+                document.getElementById('metric-final-json').innerText = finalSplitRows.length || '0';
                 if (statusEl) statusEl.innerText = `Final JSON load failed: ${e.message}`;
             }
         }
 
         async function refreshAllData() {
-            await Promise.allSettled([
-                loadFinalSplitJson(),
-                loadActualData()
-            ]);
+            await loadFinalSplitJson();
+            await loadActualData();
         }
 
         function getAbnormalReasons(session) {
@@ -1197,7 +1334,7 @@
             if (!start || !end) return null;
             const style = String(config.style ? config.style(row) : getVal(row, config.styleKeys || ['Style Number', 'StyleNumber', 'Style']) || '').trim();
             const job = String(config.job ? config.job(row) : getVal(row, config.jobKeys || ['Job Number', 'JobNo', 'Job No', 'Job']) || '').trim();
-            const rawId = String(getVal(row, ['ID', 'Id', 'id', 'No', 'Row ID']) || '').trim();
+            const rawId = String(getVal(row, ['__PowerAppsId__', 'ID', 'Id', 'id', 'No', 'Row ID', 'Request ID', 'RequestID']) || '').trim();
             return {
                 id: `actual-${source}-${rawId || style || job || Math.random().toString(36).slice(2)}`,
                 sourceTable: source,
@@ -1315,6 +1452,8 @@
             supportRows.forEach(row => {
                 const session = makeActualSession('Support', row, {
                     process: 'M&A Support',
+                    style: r => firstRealValue(r, ['Style Number', 'StyleNumber', 'Style No', 'Style No.', 'Style', 'Request ID', 'RequestID']),
+                    job: r => firstRealValue(r, ['Job Number', 'JobNo', 'Job No', 'Job', 'Machine No', 'MachineNo', 'Machine']),
                     startKeys: ['Start Time', 'StartTime'],
                     endKeys: ['Complete Time', 'CompleteTime'],
                     pic: getMAPic
@@ -1344,11 +1483,32 @@
 
             const seen = new Set();
             const hidden = readCorrectedHideMap();
+            const finalSplitSuppression = getFinalSplitSuppressionSets();
             return next.filter(session => {
                 const key = [session.source, session.process, session.pic, session.style, session.job, session.start, session.end].join('|');
                 if (seen.has(key)) return false;
                 seen.add(key);
-                if (hidden[sessionSourceSignature(session)] || hidden[sessionSourceIdSignature(session)] || hidden[sessionTaskSignature(session)]) return false;
+                const idSignature = sessionSourceIdSignature(session);
+                const taskSignature = sessionTaskSignature(session);
+                const taskNoPicSignature = sessionTaskNoPicSignature(session);
+                const looseTaskSignature = sessionLooseTaskSignature(session);
+                const sourceStyleSignature = sessionSourceStyleSignature(session);
+                const styleSignature = sessionStyleSignature(session);
+                if (
+                    hidden[sessionSourceSignature(session)] ||
+                    hidden[idSignature] ||
+                    hidden[taskSignature] ||
+                    hidden[taskNoPicSignature] ||
+                    hidden[looseTaskSignature] ||
+                    hidden[sourceStyleSignature] ||
+                    hidden[styleSignature] ||
+                    finalSplitSuppression.byId.has(idSignature) ||
+                    finalSplitSuppression.byTask.has(taskSignature) ||
+                    finalSplitSuppression.byTaskNoPic.has(taskNoPicSignature) ||
+                    finalSplitSuppression.byLooseTask.has(looseTaskSignature) ||
+                    finalSplitSuppression.bySourceStyle.has(sourceStyleSignature) ||
+                    finalSplitSuppression.byStyle.has(styleSignature)
+                ) return false;
                 const reasons = getAbnormalReasons(session);
                 if (!reasons.length) return false;
                 session.abnormalReasons = reasons;
@@ -1633,20 +1793,24 @@
                     if (statusEl) statusEl.innerText = `Saving correction as ${currentPic}...`;
                     session.remark = [session.remark, `Updated by ${currentPic}`].filter(Boolean).join(' / ');
                     await saveSourceCorrection(session);
+                    let splitSaveWarning = '';
                     try {
                         await saveSplitLogRows(session);
                     } catch (splitError) {
-                        if (String(splitError.message || '').includes('not configured')) {
-                            console.warn(splitError.message);
-                        } else {
-                            throw splitError;
-                        }
+                        splitSaveWarning = splitError.message || 'Split log save failed';
+                        console.warn(splitSaveWarning);
                     }
                     hideCorrectedSourceSession(session);
                     session.reviewStatus = 'Manual Correction';
-                    session.correctionNote = 'Correction saved to MA Portal';
+                    session.correctionNote = splitSaveWarning
+                        ? `Correction saved to MA Portal. Split log pending: ${splitSaveWarning}`
+                        : 'Correction saved to MA Portal and split log';
                     sessions = sessions.filter(s => s.id !== editingSessionId);
-                    if (statusEl) statusEl.innerText = 'Correction saved to MA Portal. Old abnormal row hidden while source refresh catches up.';
+                    if (statusEl) {
+                        statusEl.innerText = splitSaveWarning
+                            ? 'Correction saved to MA Portal. Split log flow failed, but old abnormal row is hidden.'
+                            : 'Correction and split log saved. Old abnormal row hidden while source refresh catches up.';
+                    }
                     editingSessionId = '';
                     saveSessions();
                     renderSessions();
