@@ -749,8 +749,8 @@
         const supportUpdateURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/5caccabc64ae4738b3875a4635d3bd31/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=bh4SdKl4N38Yc4Ofnvo0Yez6gJciG6raPEmNzEgj6fg";
         const consumptionUpdateURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/f0612d5d6e1645c1a3a44c2201299a93/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Q_RMUTXSecFlsNb_o2HhIcjrpN_LyunPb4bkvcUJCpI";
         const downUpdateURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/f1e333a19f6d4363abb7c5da664c96d9/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=8U10fyRS0Cb4Rw0d10gQBvOTx-RWDvTSoBZECMiezXo";
-        const attendanceSplitSaveURL = "";
-        const attendanceSplitJsonURL = "./attendance-split-log.json";
+        const attendanceSplitSaveURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/575af242f44a4e0f8236b246c6bfc260/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=fVjsyco1TKROLLx12GvqUV5SUp6hrt6NNBYxx5MqLpo";
+        const attendanceSplitJsonURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/893a170849f34a6092a1f2f57748e3f5/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=JkzXcmLThFEf9LJWakfp0mn_P0EQ3IWbT2g-KegNm5E";
         let sessions = [];
         let editingSessionId = '';
         let currentPic = sessionStorage.getItem(PIC_SESSION_KEY) || '';
@@ -1127,7 +1127,12 @@
             const statusEl = document.getElementById('actualStatus');
             if (statusEl) statusEl.innerText = 'Loading final split JSON...';
             try {
-                const res = await fetch(`${attendanceSplitJsonURL}?cb=${Date.now()}`);
+                const sep = attendanceSplitJsonURL.includes('?') ? '&' : '?';
+                const res = await fetch(`${attendanceSplitJsonURL}${sep}cb=${Date.now()}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({})
+                });
                 if (!res.ok) throw new Error(`HTTP ${res.status}`);
                 const data = await res.json();
                 finalSplitRows = Array.isArray(data) ? data : (Array.isArray(data.rows) ? data.rows : []);
