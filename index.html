@@ -2698,6 +2698,7 @@
             const tbody = document.getElementById('laserTable');
             if (!tbody) return;
             const isAdmin = (currentUser === 'Gavin');
+            const canEditLaserCompletion = isAdmin || currentUser === 'Phone';
             const laserSearchEl = document.getElementById('laserSearch');
             if (laserSearchEl) laserSearchQuery = laserSearchEl.value.toLowerCase();
             if (!allLaserRows.length) {
@@ -2820,11 +2821,13 @@
                         <td class="p-3">${section}</td>
                         <td class="p-3">${category}</td>
                         <td class="p-3 font-semibold text-purple-700">${proto}</td>
-                        <td class="p-3 font-bold">${garmentQty}</td>
-                        <td class="p-3 font-bold">${laserParts}</td>
-                        <td class="p-3">${ironParts}</td>
-                        <td class="p-3">${trimParts}</td>
-                        <td class="p-3 date-cell ${isComplete?'text-emerald-600 font-bold':'text-slate-400'}">${laserPendingStatus || completeDate}</td>
+                        <td class="p-3 font-bold">${canEditLaserCompletion ? `<input id="le-garmentQty-${rid}" class="manual-input qty-input admin-input" value="${garmentQty==='---'?'':garmentQty}" type="number">` : garmentQty}</td>
+                        <td class="p-3 font-bold">${canEditLaserCompletion ? `<input id="le-laserParts-${rid}" class="manual-input qty-input admin-input" value="${laserParts==='---'?'':laserParts}" type="number">` : laserParts}</td>
+                        <td class="p-3">${canEditLaserCompletion ? `<input id="le-ironParts-${rid}" class="manual-input qty-input admin-input" value="${ironParts==='---'?'':ironParts}" type="number">` : ironParts}</td>
+                        <td class="p-3">${canEditLaserCompletion ? `<input id="le-trimParts-${rid}" class="manual-input qty-input admin-input" value="${trimParts==='---'?'':trimParts}" type="number">` : trimParts}</td>
+                        <td class="p-3 date-cell ${isComplete?'text-emerald-600 font-bold':'text-slate-400'}">${canEditLaserCompletion
+                            ? `<div class="flex flex-col gap-1"><input id="le-completeDate-${rid}" class="manual-input admin-input" value="${completeDate==='---'?'':completeDate}" placeholder="m/d/yyyy hh:mm">${laserPendingStatus}</div>`
+                            : (laserPendingStatus || completeDate)}</td>
                         <td class="p-3 font-medium">${maPic}</td>
                         <td class="p-3">${canEditCons
                             ? `<input id="le-consStart-${rid}" class="manual-input admin-input" value="${consStart==='---'?'':consStart}" placeholder="m/d/yyyy hh:mm">`
@@ -2844,6 +2847,7 @@
                         <td class="p-3">
                             <div class="flex flex-col gap-1">
                                 <span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${consIsDone?'bg-emerald-100 text-emerald-700': String(consCompleteStatus).trim().toLowerCase()==='no'?'bg-red-100 text-red-600':'bg-slate-100 text-slate-500'}">${consIsDone?'Yes': String(consCompleteStatus).trim().toLowerCase()==='no'?'No':'—'}</span>
+                                ${canEditLaserCompletion?`<button onclick="saveLaserRow('${rid}', event)" class="bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-blue-700 whitespace-nowrap">SAVE LASER</button>`:''}
                                 ${canEditCons?`<button onclick="saveConsumption('${rid}', event)" class="bg-emerald-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-emerald-700 whitespace-nowrap">SAVE</button>`:''}
                             </div>
                         </td>
@@ -3074,6 +3078,13 @@
             const btn = event.target; btn.innerText = 'SAVING...'; btn.disabled = true;
             const g = id => document.getElementById(`le-${id}-${rid}`)?.value.trim() || '';
             const row = allLaserRows.find(r => String(getVal(r, ['Id','ID','id'])) === String(rid));
+            if (!row) { btn.innerText = 'SAVE'; btn.disabled = false; return; }
+            const existing = keys => getVal(row, keys);
+            const fieldValue = (id, keys) => {
+                const el = document.getElementById(`le-${id}-${rid}`);
+                return el ? el.value.trim() : existing(keys);
+            };
+            const sectionEl = document.getElementById(`le-section-${rid}`);
             const receivedNorm = preparePortalDatePayload(g('received'), convertExcelDate(getVal(row, ['Received Time','ReceivedTime','Received'])));
             const completeNorm = preparePortalDatePayload(g('completeDate'), convertExcelDate(getVal(row, ['Complete Date','CompleteDate'])));
             const requiredNorm = preparePortalDatePayload(g('requiredDate'), getLaserRequiredDateDisplay(row), { dateOnly: true });
@@ -3086,26 +3097,26 @@
             const payload = {
                 recordID:       rid,
                 receivedTime:   receivedNorm,
-                season:         g('season'),
-                styleNumber:    g('style'),
-                section:        document.getElementById(`le-section-${rid}`)?.value || '',
-                category:       g('category'),
-                protoStage:     g('proto'),
-                garmentQty:     g('garmentQty'),
-                laserParts:     g('laserParts'),
-                ironParts:      g('ironParts'),
-                trimParts:      g('trimParts'),
+                season:         fieldValue('season', ['Season']),
+                styleNumber:    fieldValue('style', ['Style Number','StyleNumber','Style']),
+                section:        sectionEl ? sectionEl.value : existing(['Section']),
+                category:       fieldValue('category', ['Category']),
+                protoStage:     fieldValue('proto', ['Proto Stage','ProtoStage','Stage']),
+                garmentQty:     fieldValue('garmentQty', ['Garment Quantity','GarmentQty','Garment Qty']),
+                laserParts:     fieldValue('laserParts', ['Laser Part Count','LaserPartCount','Laser Parts']),
+                ironParts:      fieldValue('ironParts', ['Ironing Part Count','IroningPartCount','Iron Parts']),
+                trimParts:      fieldValue('trimParts', ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']),
                 completeDate:   completeNorm,
                 requiredDate:   requiredNorm,
                 'Required Date': requiredNorm,
-                maPic:          g('maPic'),
+                maPic:          fieldValue('maPic', ['M&A PIC','MA PIC','M & A PIC','M&APIC','MAPIC']),
                 consStart:      consStartNorm,
                 consEnd:        consEndNorm,
-                consumptionPic: g('consPic'),
-                consumptionCompleteStatus: document.getElementById(`le-consStatus-${rid}`)?.value || '',
-                'consumption complete status': document.getElementById(`le-consStatus-${rid}`)?.value || '',
-                'Consumption Complete Status': document.getElementById(`le-consStatus-${rid}`)?.value || '',
-                remark:         g('remark')
+                consumptionPic: fieldValue('consPic', ['Consumption PIC','ConsumptionPIC','Cons PIC']),
+                consumptionCompleteStatus: document.getElementById(`le-consStatus-${rid}`)?.value || existing(['Consumption Complete Status','ConsumptionCompleteStatus','Cons Complete Status']),
+                'consumption complete status': document.getElementById(`le-consStatus-${rid}`)?.value || existing(['Consumption Complete Status','ConsumptionCompleteStatus','Cons Complete Status']),
+                'Consumption Complete Status': document.getElementById(`le-consStatus-${rid}`)?.value || existing(['Consumption Complete Status','ConsumptionCompleteStatus','Cons Complete Status']),
+                remark:         fieldValue('remark', ['Remark','Remarks'])
             };
             try {
                 const res = await fetch(laserUpdateURL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
