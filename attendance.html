@@ -481,6 +481,32 @@
             return sourceTable && sourceRowId ? `${sourceTable}|${sourceRowId}` : '';
         }
 
+        function normalizeWorkloadValue(value) {
+            return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+        }
+
+        function rowStyleValue(row, sourceTable) {
+            if (sourceTable === 'Template') {
+                return getVal(row, ['File Name', 'FileName', 'File', 'Style Number', 'StyleNumber', 'Style No', 'Style']);
+            }
+            return getVal(row, ['Style Number', 'StyleNumber', 'Style No', 'Style', 'Request ID', 'RequestID']);
+        }
+
+        function sourceSplitStyleKey(sourceTable, row) {
+            const style = normalizeWorkloadValue(rowStyleValue(row, sourceTable));
+            return style ? `${sourceTable}|${style}` : '';
+        }
+
+        function splitRowStyleKey(row) {
+            const sourceTable = String(row?.sourceTable || '').trim();
+            const style = normalizeWorkloadValue(row?.style);
+            return sourceTable && style ? `${sourceTable}|${style}` : '';
+        }
+
+        function hasSplitReplacement(sourceTable, row, splitSourceKeys, splitStyleKeys) {
+            return splitSourceKeys.has(sourceSplitKey(sourceTable, row)) || splitStyleKeys.has(sourceSplitStyleKey(sourceTable, row));
+        }
+
         function addSplitHoursToBucket(row, buckets, allPICs, monthLabel) {
             const date = rawToLocalDate(row.splitStart || row.workDate);
             if (!date || `${SHORT_MONTHS[date.getMonth()]}-${date.getFullYear()}` !== monthLabel) return;
@@ -1001,6 +1027,7 @@
             const consumptionHrs = {};
             const manualHrs = {};
             const splitSourceKeys = new Set(allSplitRows.map(splitRowKey).filter(Boolean));
+            const splitStyleKeys = new Set(allSplitRows.map(splitRowStyleKey).filter(Boolean));
             const splitBuckets = {
                 setting: settingHrs,
                 laser: laserHrs,
@@ -1019,7 +1046,7 @@
             });
 
             allSettingRows.forEach(row => {
-                if (splitSourceKeys.has(sourceSplitKey('Template', row))) return;
+                if (hasSplitReplacement('Template', row, splitSourceKeys, splitStyleKeys)) return;
                 const completeRaw = getVal(row, ['Complete Date m/d/yyyy', 'Complete Date', 'CompleteDate']);
                 if (!inMonth(completeRaw)) return;
                 const pic = getVal(row, ['PIC']);
@@ -1034,7 +1061,7 @@
             });
 
             allLaserRows.forEach(row => {
-                if (splitSourceKeys.has(sourceSplitKey('Laser', row))) return;
+                if (hasSplitReplacement('Laser', row, splitSourceKeys, splitStyleKeys)) return;
                 const completeDate = getVal(row, ['Complete Date', 'CompleteDate']);
                 if (!inMonth(completeDate)) return;
                 const received = rawToLocalDate(getVal(row, ['Received Time', 'ReceivedTime', 'Received']));
@@ -1074,7 +1101,7 @@
 
             // Laser rows can also carry separate consumption work spans.
             allLaserRows.forEach(row => {
-                if (splitSourceKeys.has(sourceSplitKey('Laser Consumption', row))) return;
+                if (hasSplitReplacement('Laser Consumption', row, splitSourceKeys, splitStyleKeys)) return;
                 const consumptionEndRaw = getVal(row, [
                     'Consumption Complete Date',
                     'ConsumptionCompleteDate',
@@ -1107,7 +1134,7 @@
             });
 
             allSupportRows.forEach(row => {
-                if (splitSourceKeys.has(sourceSplitKey('Support', row))) return;
+                if (hasSplitReplacement('Support', row, splitSourceKeys, splitStyleKeys)) return;
                 const receivedDate = getVal(row, ['Received Time', 'ReceivedTime']);
                 if (!inMonth(receivedDate)) return;
                 const pic = getMAPic(row);
@@ -1127,7 +1154,7 @@
             });
 
             allDownRows.forEach(row => {
-                if (splitSourceKeys.has(sourceSplitKey('Down Filling', row))) return;
+                if (hasSplitReplacement('Down Filling', row, splitSourceKeys, splitStyleKeys)) return;
                 const dateAnchor = getVal(row, ['Date Update', 'DateUpdate', 'Date']);
                 if (!inMonth(dateAnchor)) return;
                 const pic = getMAPic(row);
@@ -1142,7 +1169,7 @@
             });
 
             allConsumptionRows.forEach(row => {
-                if (splitSourceKeys.has(sourceSplitKey('Consumption', row))) return;
+                if (hasSplitReplacement('Consumption', row, splitSourceKeys, splitStyleKeys)) return;
                 const receivedDate = getVal(row, ['Received Time m/d/yyyy', 'Received Time', 'ReceivedTime']);
                 if (!inMonth(receivedDate)) return;
                 const pic = getMAPic(row);
