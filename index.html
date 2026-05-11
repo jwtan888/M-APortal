@@ -2682,7 +2682,7 @@
                 }
                 generateMonthOptions();
                 renderLaserDashboard();
-                populateTabMonthFilters();
+                    populateTabMonthFilters();
                 // Render SLA chart if dashboard is visible (canvas must be in DOM and visible)
                 const dashVisible = !document.getElementById('content-dashboard')?.classList.contains('hidden');
                 if (dashVisible) requestAnimationFrame(() => renderLaserSLA());
@@ -4093,6 +4093,111 @@
         }
         let utilChart = null;
 
+        function getPositiveNumber(value) {
+            const n = parseFloat(String(value ?? '').replace(/,/g, ''));
+            return Number.isFinite(n) && n > 0 ? n : 0;
+        }
+
+        function minutesBetween(start, end) {
+            if (!start || !end || end <= start) return 0;
+            return (end - start) / 60000;
+        }
+
+        function parseDayFirstDateTime(value) {
+            if (!value || value === '---' || String(value).trim() === '') return null;
+            if (typeof value === 'number' || (!isNaN(value) && !isNaN(parseFloat(value)))) return rawToLocalDate(value);
+            const raw = String(value).replace('Z', '').trim();
+            const match = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?/);
+            if (match) {
+                const day = parseInt(match[1], 10);
+                const month = parseInt(match[2], 10);
+                const year = parseInt(match[3], 10);
+                const hour = parseInt(match[4] || '0', 10);
+                const minute = parseInt(match[5] || '0', 10);
+                const date = new Date(year, month - 1, day, hour, minute);
+                return isNaN(date.getTime()) ? null : date;
+            }
+            return rawToLocalDate(value);
+        }
+
+        function calculateAverageSAMByProcess() {
+            const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+            const selectedMonth = document.getElementById('monthFilter')?.value || 'ALL';
+            const inSelectedMonth = (dateObj) => {
+                if (!dateObj || isNaN(dateObj.getTime())) return false;
+                if (selectedMonth === 'ALL') return true;
+                return `${months[dateObj.getMonth()]}-${dateObj.getFullYear()}` === selectedMonth;
+            };
+            const metrics = {};
+            const addMetric = (process, minutes, units, basis) => {
+                if (!minutes || minutes <= 0 || !units || units <= 0) return;
+                if (!metrics[process]) metrics[process] = { process, minutes: 0, units: 0, rows: 0, basis };
+                metrics[process].minutes += minutes;
+                metrics[process].units += units;
+                metrics[process].rows += 1;
+            };
+
+            allTemplates.forEach(t => {
+                if (!t || t.cancelled) return;
+                const completed = parseTemplateCompletionDate(t);
+                const started = rawToLocalDate(t.raw) || parsePortalDisplayDate(t.startTime);
+                const qty = getPositiveNumber(t.qty);
+                if (!inSelectedMonth(completed)) return;
+                addMetric('Template', minutesBetween(started, completed), qty || 1, qty ? 'minutes / complete qty' : 'minutes / completed job');
+            });
+
+            allLaserRows.forEach(r => {
+                const received = rawToLocalDate(getVal(r, ['Received Time','ReceivedTime','Received']));
+                const completed = rawToLocalDate(getVal(r, ['Complete Date','CompleteDate']));
+                if (!inSelectedMonth(completed)) return;
+                const parts =
+                    getPositiveNumber(getVal(r, ['Laser Part Count','LaserPartCount','Laser Parts'])) +
+                    getPositiveNumber(getVal(r, ['Ironing Part Count','IroningPartCount','Iron Parts'])) +
+                    getPositiveNumber(getVal(r, ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']));
+                addMetric('Laser Tracking', minutesBetween(received, completed), parts, 'minutes / (laser + ironing + trim parts)');
+            });
+
+            allSupportRows.forEach(r => {
+                const start = rawToLocalDate(getVal(r, ['Start Time','StartTime']));
+                const completed = rawToLocalDate(getVal(r, ['Complete Time','CompleteTime']));
+                if (!inSelectedMonth(completed)) return;
+                let minutes = minutesBetween(start, completed);
+                if (!minutes) {
+                    const elapsedHrs = getPositiveNumber(getVal(r, ['Job Elapsed Calendar Hrs','ElapsedHrs','Elapsed','Job Elapsed']));
+                    minutes = elapsedHrs * 60;
+                }
+                addMetric('M&A Support', minutes, 1, 'minutes / completed job');
+            });
+
+            allPatchRows.forEach(r => {
+                const start = rawToLocalDate(getVal(r, ['Start Date m/d/yyyy','Start Date','StartDate']));
+                const completed = rawToLocalDate(getVal(r, ['Complete Date m/d/yyyy','Complete Date','CompleteDate']));
+                if (!inSelectedMonth(completed)) return;
+                const qty = getPositiveNumber(getVal(r, ['Quantity','Qty']));
+                addMetric('Patch', minutesBetween(start, completed), qty || 1, qty ? 'minutes / quantity' : 'minutes / completed job');
+            });
+
+            allConsumptionRows.forEach(r => {
+                const start = parseDayFirstDateTime(getVal(r, ['Start Date m/d/yyyy','Start Date','StartDate']));
+                const completed = parseDayFirstDateTime(getVal(r, ['Complete Date m/d/yyyy','Complete Date','CompleteDate']));
+                if (!start || !completed || completed <= start) return;
+                if (!inSelectedMonth(completed)) return;
+                addMetric('Consumption', minutesBetween(start, completed), 1, 'calendar minutes / completed job');
+            });
+
+            allDownRows.forEach(r => {
+                const start = rawToLocalDate(getVal(r, ['Start Time','StartTime','Start Time m/d/yyyy']));
+                const completed = rawToLocalDate(getVal(r, ['Complete Time','CompleteTime','Complete Time m/d/yyyy']));
+                if (!inSelectedMonth(completed)) return;
+                addMetric('Down Filling', minutesBetween(start, completed), 1, 'minutes / completed job');
+            });
+
+            const rows = Object.values(metrics)
+                .filter(m => m.rows > 0)
+                .sort((a, b) => a.process.localeCompare(b.process));
+            return rows.map(m => ({ ...m, avgSam: m.minutes / m.units }));
+        }
+
         function renderUtilization(monthOverride = null) {
             const months  = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             const sharedMonth = monthOverride || document.getElementById('monthFilter')?.value || 'ALL';
@@ -4586,7 +4691,7 @@
                     renderSupportTable();
                 }
                 renderSupportDashboard();
-                if (st) { st.innerText = 'LIVE: ' + new Date().toLocaleTimeString(); st.classList.remove('sync-active'); }
+                    if (st) { st.innerText = 'LIVE: ' + new Date().toLocaleTimeString(); st.classList.remove('sync-active'); }
             } catch(e) {
                 const tbody = document.getElementById('supportTable');
                 if (tbody) tbody.innerHTML = `<tr><td colspan="17" class="p-6 text-center text-red-400 italic text-xs">Failed to load: ${e.message}<br><br>Check your Power Automate Flow has a Response action returning body/value.</td></tr>`;
@@ -4823,7 +4928,7 @@
                     renderPatchTable();
                 }
                 renderPatchDashboard();
-                populateTabMonthFilters();
+                    populateTabMonthFilters();
                 if (st) { st.innerText = `LIVE: ${new Date().toLocaleTimeString()} (${rows_p.length} rows)`; st.classList.remove('sync-active'); }
             } catch(e) {
                 console.error('[Patch]', e.message);
@@ -5076,7 +5181,7 @@
                 }
                 populateDownMonthFilter();
                 renderDownDashboard();
-                if (st) { st.innerText = 'LIVE: ' + new Date().toLocaleTimeString() + ` (${rows.length} rows)`; st.classList.remove('sync-active'); }
+                    if (st) { st.innerText = 'LIVE: ' + new Date().toLocaleTimeString() + ` (${rows.length} rows)`; st.classList.remove('sync-active'); }
             } catch(e) {
                 const tbody = document.getElementById('downTable');
                 if (tbody) tbody.innerHTML = '<tr><td colspan="25" class="p-6 text-center text-red-400 italic text-xs">Failed to load down filling data. Check the Power Automate flow.</td></tr>';
@@ -5370,6 +5475,7 @@
         }
 
         const QUILTING_CONSUMPTION_SYNC_CUTOFF = new Date(2026, 4, 8);
+        const QUILTING_CONSUMPTION_SYNC_MIN_TEMPLATE_ID = 200;
 
         function parseTemplateCompletionDate(row) {
             const completed = sanitizeTemplateValue(row?.completeDateDisplay);
@@ -5403,6 +5509,11 @@
             if (!completed) return false;
             completed.setHours(0, 0, 0, 0);
             return completed >= QUILTING_CONSUMPTION_SYNC_CUTOFF;
+        }
+
+        function isAfterQuiltingTemplateIdCutoff(row) {
+            const id = parseInt(sanitizeTemplateValue(row?.id), 10);
+            return Number.isFinite(id) && id >= QUILTING_CONSUMPTION_SYNC_MIN_TEMPLATE_ID;
         }
 
         function hasMatchingQuiltingConsumptionRow(templateRow) {
@@ -5441,6 +5552,7 @@
         async function syncQuiltingTemplatesToConsumption(isSilent = true, options = {}) {
             if (quiltingConsumptionSyncing || !templateDataLoaded || !consumptionDataLoaded) return { created: 0, candidates: 0 };
             if (!Array.isArray(allTemplates) || !Array.isArray(allConsumptionRows)) return { created: 0, candidates: 0 };
+            if (isSilent) return { created: 0, candidates: 0 };
 
             const force = !!options.force;
             const syncMap = readQuiltingConsumptionSyncMap();
@@ -5452,6 +5564,7 @@
                 if (!sanitizeTemplateValue(t.style)) return false;
                 if (!getTemplateCompletionTimeForConsumption(t)) return false;
                 if (!isAfterQuiltingConsumptionCutoff(t)) return false;
+                if (!isAfterQuiltingTemplateIdCutoff(t)) return false;
                 if (hasMatchingQuiltingConsumptionRow(t)) return false;
                 const marker = syncMap[String(t.id)];
                 if (!force && marker && marker.key === getQuiltingConsumptionKey(t)) return false;
@@ -5573,7 +5686,7 @@
                 }
                 populateConsumptionMonthFilter();
                 renderConsumptionDashboard();
-                if (st) { st.innerText = 'LIVE: ' + new Date().toLocaleTimeString(); st.classList.remove('sync-active'); }
+                    if (st) { st.innerText = 'LIVE: ' + new Date().toLocaleTimeString(); st.classList.remove('sync-active'); }
             } catch(e) {
                 const tbody = document.getElementById('consumptionTable');
                 if (tbody) tbody.innerHTML = `<tr><td colspan="13" class="p-6 text-center text-red-400 italic text-xs">Failed to load: ${e.message}</td></tr>`;
