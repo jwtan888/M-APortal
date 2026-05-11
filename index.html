@@ -5371,14 +5371,35 @@
 
         const QUILTING_CONSUMPTION_SYNC_CUTOFF = new Date(2026, 4, 8);
 
-        function getTemplateCompletionTimeForConsumption(row) {
+        function parseTemplateCompletionDate(row) {
             const completed = sanitizeTemplateValue(row?.completeDateDisplay);
-            if (!completed || completed === '---') return '';
-            return toExcelDateFormat(completed);
+            if (!completed || completed === '---') return null;
+            const match = completed.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})(?:\s+(\d{1,2}):(\d{2}))?$/);
+            if (match) {
+                const day = parseInt(match[1], 10);
+                const month = parseInt(match[2], 10);
+                const year = parseInt(match[3], 10);
+                const hour = parseInt(match[4] || '0', 10);
+                const minute = parseInt(match[5] || '0', 10);
+                const date = new Date(year, month - 1, day, hour, minute);
+                return isNaN(date.getTime()) ? null : date;
+            }
+            return rawToLocalDate(completed);
+        }
+
+        function getTemplateCompletionTimeForConsumption(row) {
+            const completed = parseTemplateCompletionDate(row);
+            if (!completed) return '';
+            const m = completed.getMonth() + 1;
+            const d = completed.getDate();
+            const y = completed.getFullYear();
+            const hh = String(completed.getHours()).padStart(2, '0');
+            const mm = String(completed.getMinutes()).padStart(2, '0');
+            return `${m}/${d}/${y} ${hh}:${mm}`;
         }
 
         function isAfterQuiltingConsumptionCutoff(row) {
-            const completed = rawToLocalDate(getTemplateCompletionTimeForConsumption(row));
+            const completed = parseTemplateCompletionDate(row);
             if (!completed) return false;
             completed.setHours(0, 0, 0, 0);
             return completed >= QUILTING_CONSUMPTION_SYNC_CUTOFF;
@@ -5423,7 +5444,9 @@
 
             const force = !!options.force;
             const syncMap = readQuiltingConsumptionSyncMap();
-            const candidates = allTemplates.filter(t => {
+            const candidates = [];
+            const candidateKeys = new Set();
+            allTemplates.forEach(t => {
                 if (!t || t.cancelled) return false;
                 if (!isQuiltingTemplateRow(t)) return false;
                 if (!sanitizeTemplateValue(t.style)) return false;
@@ -5431,7 +5454,11 @@
                 if (!isAfterQuiltingConsumptionCutoff(t)) return false;
                 if (hasMatchingQuiltingConsumptionRow(t)) return false;
                 const marker = syncMap[String(t.id)];
-                return force || !marker || marker.key !== getQuiltingConsumptionKey(t);
+                if (!force && marker && marker.key === getQuiltingConsumptionKey(t)) return false;
+                const key = getQuiltingConsumptionKey(t);
+                if (!key || key === '||' || candidateKeys.has(key)) return false;
+                candidateKeys.add(key);
+                candidates.push(t);
             });
             if (!candidates.length) {
                 if (!isSilent) {
@@ -5461,6 +5488,13 @@
                             at: new Date().toISOString()
                         };
                         writeQuiltingConsumptionSyncMap(syncMap);
+                        allConsumptionRows.push({
+                            'Style Number': payload.styleNumber,
+                            'Job Number': payload.jobNo,
+                            'Proto Stage': payload.protoStage,
+                            'Request Type': payload.requestType,
+                            'Remark': payload.remark
+                        });
                     } else {
                         console.warn('Quilting consumption auto-add failed', res.status, await res.text().catch(() => ''));
                     }
