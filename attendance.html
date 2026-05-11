@@ -307,6 +307,7 @@
         const supportFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/cc862bcb25864cf3821934bb3954e426/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=sd0SSGGkna3TT74vR7V1jTT6E8qPxp-a4O1w0AlrqCY";
         const consumptionFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/aee706c4629744f5b5aa3a756eec00f2/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=tU6CI-qPTZJIJgVViryVC6t9oxk4_gL8xvDgB4e_jwE";
         const downFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/925d86d436044eda8ba9dc7b0d628f8d/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=WW4a2zXKZfD-IDWzdX_8XYcGa0Qgh1lGxnbz5WHcE3k";
+        const attendanceSplitJsonURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/893a170849f34a6092a1f2f57748e3f5/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=JkzXcmLThFEf9LJWakfp0mn_P0EQ3IWbT2g-KegNm5E";
         const manualUtilFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/d6fa694c31e94752b66fa1d6ae26af74/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=iwcuo1sQo_vgE1rywE98w5pPTUzu1jkWQUWcV0yh6mc";
         const manualUtilSaveURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/d65c6392288c47ff9ef408cb370b47d2/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=J7oajV0dr747d2FLF56T8oMzyg8x93OAkHQpHr4DzQM";
 
@@ -322,6 +323,7 @@
         let allSupportRows = [];
         let allConsumptionRows = [];
         let allDownRows = [];
+        let allSplitRows = [];
         let utilChart = null;
         let pendingLoginUser = '';
         let utilManualData = {};
@@ -461,6 +463,44 @@
                 date = new Date(String(value).replace('Z', '').trim());
             }
             return isNaN(date.getTime()) ? null : date;
+        }
+
+        function getSourceRowId(row) {
+            const value = getVal(row, ['__PowerAppsId__', 'ItemInternalId', 'ID', 'Id', 'id', 'No', 'Row ID', 'Request ID', 'RequestID']);
+            return value && value !== '---' ? String(value).trim() : '';
+        }
+
+        function sourceSplitKey(sourceTable, row) {
+            const id = getSourceRowId(row);
+            return id ? `${sourceTable}|${id}` : '';
+        }
+
+        function splitRowKey(row) {
+            const sourceTable = String(row?.sourceTable || '').trim();
+            const sourceRowId = String(row?.sourceRowId || '').trim();
+            return sourceTable && sourceRowId ? `${sourceTable}|${sourceRowId}` : '';
+        }
+
+        function addSplitHoursToBucket(row, buckets, allPICs, monthLabel) {
+            const date = rawToLocalDate(row.splitStart || row.workDate);
+            if (!date || `${SHORT_MONTHS[date.getMonth()]}-${date.getFullYear()}` !== monthLabel) return;
+            const pic = String(row.pic || '').trim();
+            const hours = parseFloat(row.netHours || 0) || 0;
+            if (!pic || pic === '---' || pic === 'Gavin' || !hours) return;
+
+            const source = String(row.sourceTable || '').trim();
+            const process = String(row.process || '').trim();
+            let target = null;
+            if (source === 'Template' || process === 'Template') target = buckets.setting;
+            else if (source === 'Laser' || process === 'Laser Tracking') target = buckets.laser;
+            else if (source === 'Laser Consumption') target = buckets.consumption;
+            else if (source === 'Support' || process === 'M&A Support') target = buckets.support;
+            else if (source === 'Down Filling' || process === 'Down Filling') target = buckets.down;
+            else if (source === 'Consumption' || process === 'Consumption') target = buckets.consumption;
+            if (!target) return;
+
+            allPICs.add(pic);
+            target[pic] = (target[pic] || 0) + hours;
         }
 
         function loadAttData() {
@@ -706,12 +746,13 @@
 
         async function loadAllSources() {
             setSourceStatus('Syncing attendance and workload');
-            const [settingRows, laserRows, supportRows, consumptionRows, downRows, attendanceCount, manualCount] = await Promise.all([
+            const [settingRows, laserRows, supportRows, consumptionRows, downRows, splitRows, attendanceCount, manualCount] = await Promise.all([
                 fetchJsonRows(settingFetchURL),
                 fetchJsonRows(laserFetchURL),
                 fetchJsonRows(supportFetchURL),
                 fetchJsonRows(consumptionFetchURL),
                 fetchJsonRows(downFetchURL),
+                fetchJsonRows(attendanceSplitJsonURL),
                 fetchAttendanceFromCloud(),
                 fetchManualUtilFromCloud()
             ]);
@@ -720,9 +761,10 @@
             allSupportRows = supportRows;
             allConsumptionRows = consumptionRows;
             allDownRows = downRows;
+            allSplitRows = splitRows;
             renderAttendance();
             renderUtilization();
-            setSourceStatus(`Synced ${new Date().toLocaleTimeString()} · attendance rows ${attendanceCount || 0} · manual rows ${manualCount || 0}`);
+            setSourceStatus(`Synced ${new Date().toLocaleTimeString()} · attendance rows ${attendanceCount || 0} · split rows ${splitRows.length || 0} · manual rows ${manualCount || 0}`);
         }
 
         function renderAttendance() {
@@ -958,6 +1000,16 @@
             const downHrs = {};
             const consumptionHrs = {};
             const manualHrs = {};
+            const splitSourceKeys = new Set(allSplitRows.map(splitRowKey).filter(Boolean));
+            const splitBuckets = {
+                setting: settingHrs,
+                laser: laserHrs,
+                support: supportHrs,
+                down: downHrs,
+                consumption: consumptionHrs
+            };
+
+            allSplitRows.forEach(row => addSplitHoursToBucket(row, splitBuckets, allPICs, monthLabel));
 
             Object.entries(utilManualData[key] || {}).forEach(([pic, row]) => {
                 const hours = parseFloat(row?.hours || 0) || 0;
@@ -967,6 +1019,7 @@
             });
 
             allSettingRows.forEach(row => {
+                if (splitSourceKeys.has(sourceSplitKey('Template', row))) return;
                 const completeRaw = getVal(row, ['Complete Date m/d/yyyy', 'Complete Date', 'CompleteDate']);
                 if (!inMonth(completeRaw)) return;
                 const pic = getVal(row, ['PIC']);
@@ -981,6 +1034,7 @@
             });
 
             allLaserRows.forEach(row => {
+                if (splitSourceKeys.has(sourceSplitKey('Laser', row))) return;
                 const completeDate = getVal(row, ['Complete Date', 'CompleteDate']);
                 if (!inMonth(completeDate)) return;
                 const received = rawToLocalDate(getVal(row, ['Received Time', 'ReceivedTime', 'Received']));
@@ -1020,6 +1074,7 @@
 
             // Laser rows can also carry separate consumption work spans.
             allLaserRows.forEach(row => {
+                if (splitSourceKeys.has(sourceSplitKey('Laser Consumption', row))) return;
                 const consumptionEndRaw = getVal(row, [
                     'Consumption Complete Date',
                     'ConsumptionCompleteDate',
@@ -1052,6 +1107,7 @@
             });
 
             allSupportRows.forEach(row => {
+                if (splitSourceKeys.has(sourceSplitKey('Support', row))) return;
                 const receivedDate = getVal(row, ['Received Time', 'ReceivedTime']);
                 if (!inMonth(receivedDate)) return;
                 const pic = getMAPic(row);
@@ -1071,6 +1127,7 @@
             });
 
             allDownRows.forEach(row => {
+                if (splitSourceKeys.has(sourceSplitKey('Down Filling', row))) return;
                 const dateAnchor = getVal(row, ['Date Update', 'DateUpdate', 'Date']);
                 if (!inMonth(dateAnchor)) return;
                 const pic = getMAPic(row);
@@ -1085,6 +1142,7 @@
             });
 
             allConsumptionRows.forEach(row => {
+                if (splitSourceKeys.has(sourceSplitKey('Consumption', row))) return;
                 const receivedDate = getVal(row, ['Received Time m/d/yyyy', 'Received Time', 'ReceivedTime']);
                 if (!inMonth(receivedDate)) return;
                 const pic = getMAPic(row);
