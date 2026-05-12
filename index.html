@@ -1550,6 +1550,18 @@
             "CCCM0014": { brand: "JUKI", model: "AMS221ENHS3020S" }
         };
 
+        function postPortalJson(url, payload, timeoutMs = 25000) {
+            const target = `${url}${url.includes('?') ? '&' : '?'}cb=${Date.now()}`;
+            const controller = new AbortController();
+            const timer = setTimeout(() => controller.abort(), timeoutMs);
+            return fetch(target, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload || {}),
+                signal: controller.signal
+            }).finally(() => clearTimeout(timer));
+        }
+
         const machineImages = {
             "AQM0001": "Zoje1.png", "AQM0002": "Zoje2.png", "AQM0003": "Zoje2.png", "AQM0004": "Zoje2.png",
             "AQM0005": "Juita2.png", "AQM0006": "Jack.png", "AQM0007": "Juita2.png", "AQM0008": "Juita2.png",
@@ -1646,6 +1658,35 @@
             });
             persistTemplatePendingUpdates(pending);
             return merged;
+        }
+
+        async function syncTemplateAutoComplexity() {
+            if (!Array.isArray(allTemplates) || !allTemplates.length) return;
+            const candidates = allTemplates.filter(row => {
+                const existing = sanitizeTemplateValue(row.complexity);
+                const mapped = getTemplateComplexityForType(row.templateType);
+                return !existing && mapped && row.id;
+            });
+            if (!candidates.length) return;
+
+            await Promise.allSettled(candidates.slice(0, 10).map(async row => {
+                const mapped = getTemplateComplexityForType(row.templateType);
+                const recordIdValue = String(row.id);
+                const payload = {
+                    recordID: recordIdValue,
+                    recordId: recordIdValue,
+                    id: recordIdValue,
+                    Id: recordIdValue,
+                    ID: recordIdValue,
+                    complexity: mapped,
+                    'Complexity Level': mapped,
+                    Complexity: mapped
+                };
+                const res = await postPortalJson(updateURL, payload);
+                if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                row.complexity = mapped;
+                stageTemplatePendingUpdate(row.id, { complexity: mapped });
+            }));
         }
 
         // FIX 3: Removed prefetchMachineImages entirely — it caused the img onload to fire on the
@@ -1752,6 +1793,20 @@
             return options.dateOnly ? normalized.split(' ')[0] : normalized;
         }
 
+        function withLaserStartDateFields(payload, startValue) {
+            const value = String(startValue || '').trim();
+            payload.startDate = value;
+            payload.startTime = value;
+            payload.laserStartDate = value;
+            payload.StartDate = value;
+            payload.StartTime = value;
+            payload['Start Date'] = value;
+            payload['Start Time'] = value;
+            payload['Start Date m/d/yyyy'] = value;
+            payload['Start Date\nm/d/yyyy'] = value;
+            return payload;
+        }
+
         let activeDatePickerInput = null;
 
         function isDatePickerInput(el) {
@@ -1760,11 +1815,15 @@
             if (!['text', 'search', ''].includes(type)) return false;
             const placeholder = String(el.getAttribute('placeholder') || '').toLowerCase();
             const id = String(el.id || '').toLowerCase();
+            const compactId = id.replace(/[^a-z0-9]/g, '');
             const dateCell = !!el.closest('td.date-cell');
             if (placeholder.includes('search')) return false;
+            if (compactId.includes('relaxedtime')) return false;
             return placeholder.includes('yyyy')
+                || /^\d{1,2}\/\d{1,2}\/\d{4}/.test(placeholder)
                 || dateCell
-                || /(^|[-_])(date|time|start|complete|received|reqdate|required)([-_]|$)/.test(id);
+                || /(^|[-_])(date|time|start|complete|received|reqdate|required)([-_]|$)/.test(id)
+                || /(date|time|start|complete|received|required|reqdate|consstart|consend|completedate|receivedtime)/.test(compactId);
         }
 
         function datePickerNeedsTime(el) {
@@ -2219,6 +2278,7 @@
                 })
                 .sort((a, b) => (parseInt(b.id, 10) || 0) - (parseInt(a.id, 10) || 0));
                 allTemplates = mergeTemplatePendingUpdates(allTemplates);
+                await syncTemplateAutoComplexity();
                 templateDataLoaded = true;
                 writeDashboardSnapshot();
                 syncQuiltingTemplatesToConsumption(true);
@@ -2887,11 +2947,8 @@
             if (!currentUser) return alert('Please login first.');
             const receivedTime = document.getElementById('l_receivedTime').value.trim() || nowAsLaserDate();
             const startDate = receivedTime;
-            const payload = {
+            const payload = withLaserStartDateFields({
                 receivedTime:  toExcelDateFormat(receivedTime),
-                startDate:     toExcelDateFormat(startDate),
-                'Start Date':  toExcelDateFormat(startDate),
-                'Start Date m/d/yyyy': toExcelDateFormat(startDate),
                 season:        document.getElementById('l_season').value.trim(),
                 styleNumber:   document.getElementById('l_styleNumber').value.trim(),
                 section:       document.getElementById('l_section').value,
@@ -2909,12 +2966,12 @@
                 maPic:         currentUser,
                 consumptionPic: '',
                 remark:        document.getElementById('l_remark').value.trim()
-            };
+            }, toExcelDateFormat(startDate));
             if (!payload.styleNumber) return alert('Style Number is required.');
             const btn = document.getElementById('laserAddBtn');
             btn.innerText = 'Saving...'; btn.disabled = true;
             try {
-                const res = await fetch(laserAddURL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+                const res = await postPortalJson(laserAddURL, payload);
                 const respText = await res.text();
                 if (res.ok) {
                     btn.innerText = 'ADDED!';
@@ -2972,7 +3029,7 @@
 
             // Write 'N/A' to Consumption PIC in Excel — persists across all devices
             if (row) {
-                const payload = {
+                const payload = withLaserStartDateFields({
                     recordID:       ridStr,
                     receivedTime:   convertExcelDate(getVal(row, ['Received Time','ReceivedTime','Received'])),
                     season:         getVal(row, ['Season']),
@@ -2984,9 +3041,6 @@
                     laserParts:     getVal(row, ['Laser Part Count','LaserPartCount','Laser Parts']),
                     ironParts:      getVal(row, ['Ironing Part Count','IroningPartCount','Iron Parts']),
                     trimParts:      getVal(row, ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']),
-                    startDate:      convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
-                    'Start Date':   convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
-                    'Start Date m/d/yyyy': convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
                     completeDate:   convertExcelDate(getVal(row, ['Complete Date','CompleteDate'])),
                     requiredDate:   getLaserRequiredDateDisplay(row),
                     'Required Date': getLaserRequiredDateDisplay(row),
@@ -2995,11 +3049,9 @@
                     consEnd:        '',
                     consumptionPic: 'N/A',
                     remark:         getVal(row, ['Remark','Remarks'])
-                };
+                }, convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])));
                 try {
-                    await fetch(laserUpdateURL, { method: 'POST',
-                        headers: {'Content-Type':'application/json'},
-                        body: JSON.stringify(payload) });
+                    await postPortalJson(laserUpdateURL, payload);
                 } catch(e) { /* silent — still hide locally */ }
             }
 
@@ -3029,7 +3081,7 @@
             const today = nowAsLaserDate().split(' ')[0];
             const row = allLaserRows.find(r => String(getVal(r, ['Id','ID','id'])) === String(rid));
             if (!row) { btn.innerText = '✓'; btn.disabled = false; return; }
-            const payload = {
+            const payload = withLaserStartDateFields({
                 recordID: rid,
                 receivedTime:   convertExcelDate(getVal(row, ['Received Time','ReceivedTime','Received'])),
                 season:         getVal(row, ['Season']),
@@ -3041,9 +3093,6 @@
                 laserParts:     getVal(row, ['Laser Part Count','LaserPartCount','Laser Parts']),
                 ironParts:      getVal(row, ['Ironing Part Count','IroningPartCount','Iron Parts']),
                 trimParts:      getVal(row, ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']),
-                startDate:      convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
-                'Start Date':   convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
-                'Start Date m/d/yyyy': convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
                 completeDate:   convertExcelDate(getVal(row, ['Complete Date','CompleteDate'])),
                 requiredDate:   getLaserRequiredDateDisplay(row),
                 'Required Date': getLaserRequiredDateDisplay(row),
@@ -3052,9 +3101,9 @@
                 consEnd:        today,
                 consumptionPic: 'Gavin',
                 remark:         getVal(row, ['Remark','Remarks'])
-            };
+            }, convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])));
             try {
-                const res = await fetch(laserUpdateURL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+                const res = await postPortalJson(laserUpdateURL, payload);
                 if (res.ok) { btn.innerText = '✓ Done'; setTimeout(() => { btn.innerText = '✓'; btn.disabled = false; refreshLaserData(true); }, 4000); }
                 else { btn.innerText = '✓'; btn.disabled = false; alert('Save failed.'); }
             } catch(e) { btn.innerText = '✓'; btn.disabled = false; }
@@ -3066,7 +3115,7 @@
             const today = nowAsLaserDate().split(' ')[0];
             const row = allLaserRows.find(r => String(getVal(r, ['Id','ID','id'])) === String(rid));
             if (!row) { btn.innerText = '✗'; btn.disabled = false; return; }
-            const payload = {
+            const payload = withLaserStartDateFields({
                 recordID: rid,
                 receivedTime:   convertExcelDate(getVal(row, ['Received Time','ReceivedTime','Received'])),
                 season:         getVal(row, ['Season']),
@@ -3078,9 +3127,6 @@
                 laserParts:     getVal(row, ['Laser Part Count','LaserPartCount','Laser Parts']),
                 ironParts:      getVal(row, ['Ironing Part Count','IroningPartCount','Iron Parts']),
                 trimParts:      getVal(row, ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']),
-                startDate:      convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
-                'Start Date':   convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
-                'Start Date m/d/yyyy': convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
                 completeDate:   convertExcelDate(getVal(row, ['Complete Date','CompleteDate'])),
                 requiredDate:   getLaserRequiredDateDisplay(row),
                 'Required Date': getLaserRequiredDateDisplay(row),
@@ -3089,9 +3135,9 @@
                 consEnd:        today,
                 consumptionPic: 'Gavin',
                 remark:         getVal(row, ['Remark','Remarks'])
-            };
+            }, convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])));
             try {
-                const res = await fetch(laserUpdateURL, { method: 'POST', body: JSON.stringify(payload) });
+                const res = await postPortalJson(laserUpdateURL, payload);
                 if (res.ok) { btn.innerText = '✗ Done'; setTimeout(() => { btn.innerText = '✗'; btn.disabled = false; refreshLaserData(true); }, 4000); }
                 else { btn.innerText = '✗'; btn.disabled = false; alert('Save failed.'); }
             } catch(e) { btn.innerText = '✗'; btn.disabled = false; }
@@ -3118,7 +3164,7 @@
                 alert('Invalid date format. Use m/d/yyyy or m/d/yyyy hh:mm.');
                 btn.innerText = 'SAVE'; btn.disabled = false; return;
             }
-            const payload = {
+            const payload = withLaserStartDateFields({
                 recordID:       rid,
                 receivedTime:   receivedNorm,
                 season:         fieldValue('season', ['Season']),
@@ -3130,9 +3176,6 @@
                 laserParts:     fieldValue('laserParts', ['Laser Part Count','LaserPartCount','Laser Parts']),
                 ironParts:      fieldValue('ironParts', ['Ironing Part Count','IroningPartCount','Iron Parts']),
                 trimParts:      fieldValue('trimParts', ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']),
-                startDate:      startNorm,
-                'Start Date':   startNorm,
-                'Start Date m/d/yyyy': startNorm,
                 completeDate:   completeNorm,
                 requiredDate:   requiredNorm,
                 'Required Date': requiredNorm,
@@ -3144,9 +3187,9 @@
                 'consumption complete status': document.getElementById(`le-consStatus-${rid}`)?.value || existing(['Consumption Complete Status','ConsumptionCompleteStatus','Cons Complete Status']),
                 'Consumption Complete Status': document.getElementById(`le-consStatus-${rid}`)?.value || existing(['Consumption Complete Status','ConsumptionCompleteStatus','Cons Complete Status']),
                 remark:         fieldValue('remark', ['Remark','Remarks'])
-            };
+            }, startNorm);
             try {
-                const res = await fetch(laserUpdateURL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
+                const res = await postPortalJson(laserUpdateURL, payload);
                 if (res.ok) {
                     btn.innerText = 'SAVED ✓';
                     refreshLaserData(true);
@@ -3180,7 +3223,7 @@
             const consEndNorm = preparePortalDatePayload(consEnd, convertExcelDate(getVal(row, ['Consumption Complete Date','ConsumptionCompleteDate','Cons End'])));
             if (!consStartNorm) { alert('Please fill Consumption Start Date.'); btn.innerText = 'SAVE'; btn.disabled = false; return; }
             if ([consStartNorm, consEndNorm].some(v => v === null)) { alert('Invalid date format. Use m/d/yyyy or m/d/yyyy hh:mm.'); btn.innerText = 'SAVE'; btn.disabled = false; return; }
-            const payload = {
+            const payload = withLaserStartDateFields({
                 recordID:       rid,
                 receivedTime:   convertExcelDate(getVal(row, ['Received Time','ReceivedTime','Received'])),
                 season:         getVal(row, ['Season']),
@@ -3192,9 +3235,6 @@
                 laserParts:     getVal(row, ['Laser Part Count','LaserPartCount','Laser Parts']),
                 ironParts:      getVal(row, ['Ironing Part Count','IroningPartCount','Iron Parts']),
                 trimParts:      getVal(row, ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']),
-                startDate:      convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
-                'Start Date':   convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
-                'Start Date m/d/yyyy': convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
                 completeDate:   convertExcelDate(getVal(row, ['Complete Date','CompleteDate'])),
                 requiredDate:   getLaserRequiredDateDisplay(row),
                 'Required Date': getLaserRequiredDateDisplay(row),
@@ -3203,13 +3243,9 @@
                 consEnd:        consEndNorm,
                 consumptionPic: currentUser,
                 remark:         document.getElementById(`le-remark-${rid}`)?.value.trim() || getVal(row, ['Remark','Remarks'])
-            };
+            }, convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])));
             try {
-                const res = await fetch(laserUpdateURL, {
-                    method: 'POST',
-                    headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify(payload)
-                });
+                const res = await postPortalJson(laserUpdateURL, payload);
                 if (res.ok) {
                     btn.innerText = 'SAVED ✓';
                     refreshLaserData(true);
@@ -3320,6 +3356,49 @@
             return text;
         }
 
+        const templateRequestTypeOptions = [
+            'Attach Construction',
+            'Embellishment Stitch',
+            'Machine Setting',
+            'Pocket Construction',
+            'Positioning & Marking',
+            'Quilting',
+            'Rework',
+            'Tacking Construction',
+            'Tools'
+        ];
+
+        const templateRequestTypeComplexityMap = {
+            'attach construction': 'Level 2',
+            'embellishment stitch': 'Level 2',
+            'pocket construction': 'Level 3',
+            'positioning & marking': 'Level 1',
+            'quilting': 'Level 2',
+            'tacking construction': 'Level 2'
+        };
+
+        function getTemplateComplexityForType(type) {
+            const key = sanitizeTemplateValue(type).toLowerCase();
+            return templateRequestTypeComplexityMap[key] || '';
+        }
+
+        function applyTemplateComplexityDefault(id) {
+            const type = document.getElementById(`templatetype-${id}`)?.value || '';
+            const mapped = getTemplateComplexityForType(type);
+            const complexityEl = document.getElementById(`complexity-${id}`);
+            if (mapped && complexityEl) complexityEl.value = mapped;
+        }
+
+        function renderTemplateRequestTypeSelect(id, value) {
+            const current = sanitizeTemplateValue(value);
+            const hasCurrent = current && !templateRequestTypeOptions.includes(current);
+            return `<select id="templatetype-${id}" class="manual-input admin-input" style="width:150px" onchange="applyTemplateComplexityDefault('${id}')">
+                <option value="">Select Type</option>
+                ${hasCurrent ? `<option value="${current}" selected>${current}</option>` : ''}
+                ${templateRequestTypeOptions.map(option => `<option value="${option}" ${option === current ? 'selected' : ''}>${option}</option>`).join('')}
+            </select>`;
+        }
+
         function preserveTextValue(value, fallback) {
             const text = sanitizeTemplateValue(value);
             if (text) return text;
@@ -3400,6 +3479,7 @@
             sortTemplateRows(filtered, prioritySort, isPicFilter);
             document.getElementById('tempTable').innerHTML = filtered.map(t => {
                 const done = t.status === 'COMPLETED', isMine = (currentUser === t.pic);
+                const complexityValue = sanitizeTemplateValue(t.complexity) || getTemplateComplexityForType(t.templateType);
                 const canEdit    = isAdmin || (isMine && !done); // structural edits (Gavin always, PIC only when pending)
                 const canEditPIC = isAdmin || isMine;            // remark/date/qty: PIC can always update even after completion
                 const templateNoCell = isAdmin ? `<input type="text" id="edit-tno-${t.id}" class="manual-input admin-input" value="${t.templateNo === '---' ? '' : t.templateNo}" placeholder="Assign No.">` : `<span class="font-bold">${t.templateNo}</span>`;
@@ -3424,7 +3504,7 @@
                         ? `<input id="proto-${t.id}" class="manual-input admin-input" style="width:90px" value="${t.protoStage!=='---'?t.protoStage:''}">`
                         : `<span class="font-semibold text-purple-700">${t.protoStage}</span>`}</td>
                     <td class="p-3">${isAdmin
-                        ? `<input id="templatetype-${t.id}" class="manual-input admin-input" style="width:120px" value="${t.templateType!=='---'?t.templateType:''}">`
+                        ? renderTemplateRequestTypeSelect(t.id, t.templateType)
                         : `<span class="text-orange-700 font-bold text-[10px]">${t.templateType}</span>`}</td>
                     <td class="p-3 max-w-[180px]">${isAdmin
                         ? `<input type="text" id="desc-${t.id}" class="manual-input admin-input" style="width:160px" value="${t.description&&t.description!=='---'?t.description:''}" placeholder="Description">`
@@ -3438,9 +3518,9 @@
                     <td class="p-3">${isAdmin
                         ? `<select id="complexity-${t.id}" class="manual-input admin-input" style="width:80px">
                             <option value="">—</option>
-                            ${[1,2,3,4,5].map(l=>`<option value="Level ${l}" ${t.complexity==='Level '+l?'selected':''}>Level ${l}</option>`).join('')}
+                            ${[1,2,3,4,5].map(l=>`<option value="Level ${l}" ${complexityValue==='Level '+l?'selected':''}>Level ${l}</option>`).join('')}
                            </select>`
-                        : `<span class="text-[10px] font-bold ${t.complexity&&t.complexity!=='---'?'text-indigo-600':''}">${t.complexity&&t.complexity!=='---'?t.complexity:'—'}</span>`}</td>
+                        : `<span class="text-[10px] font-bold ${complexityValue?'text-indigo-600':''}">${complexityValue || '—'}</span>`}</td>
                     <td class="p-3">${isAdmin
                         ? `<input type="text" id="dfm-${t.id}" class="manual-input admin-input" style="width:70px" value="${t.dfm&&t.dfm!=='---'?t.dfm:''}" placeholder="Code/No">`
                         : `<span class="text-[10px] font-bold ${t.dfm&&t.dfm!=='---'?'text-teal-600':''}">${t.dfm&&t.dfm!=='---'?t.dfm:'—'}</span>`}</td>
@@ -3535,11 +3615,15 @@
             if (isAdminUser) {
                 const tRequestor = preserveTextValue(document.getElementById(`requestor-${simpleId}`)?.value, record.requestor);
                 const tSection = preserveTextValue(document.getElementById(`section-${simpleId}`)?.value, record.section);
+                const tTemplateType = preserveTextValue(document.getElementById(`templatetype-${simpleId}`)?.value, record.templateType);
                 assignIfPresent(payload, [
                     ['requestor', tRequestor],
                     ['Requestor', tRequestor],
                     ['section', tSection],
                     ['Section', tSection],
+                    ['templateType', tTemplateType],
+                    ['Template Type', tTemplateType],
+                    ['Template Request Type', tTemplateType],
                     ['complexity', tComplexity],
                     ['Complexity Level', tComplexity],
                     ['Complexity', tComplexity],
@@ -3590,6 +3674,7 @@
                     if (isAdminUser) {
                         record.requestor = payload.requestor || record.requestor;
                         record.section = payload.section || record.section;
+                        record.templateType = payload.templateType || record.templateType;
                         record.complexity = tComplexity || record.complexity;
                         record.dfm = tDFM || record.dfm;
                     }
@@ -3607,6 +3692,7 @@
                     stageTemplatePendingUpdate(record.id, {
                         requestor: record.requestor,
                         section: record.section,
+                        templateType: record.templateType,
                         templateNo: record.templateNo,
                         pic: record.pic,
                         completeDateDisplay: record.completeDateDisplay,
@@ -5058,13 +5144,13 @@
                 const canEdit   = !!currentUser && (isGavinP || !rowPic || rowPic === currentUser);
                 const picDisplay = (!pic||pic==='---') && canEdit ? currentUser : (pic||'---');
 
-                return `<tr class="border-b hover:bg-slate-50 ${isDone?'bg-emerald-50/30':''}  ${!canEdit&&!!currentUser?'opacity-60':''}">
+                return `<tr class="border-b hover:bg-slate-50 ${isDone?'bg-emerald-50/30':''}">
                     <td class="p-3 font-mono text-slate-500 text-[10px]">${noVal}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-season-${sid}" class="manual-input" style="width:70px" value="${season!=='---'?season:''}" placeholder="Season">` : `<span class="text-[10px]">${season}</span>`}</td>
-                    <td class="p-3 font-bold">${isGavinP ? `<input id="patch-style-${sid}" class="manual-input" style="width:90px" value="${style!=='---'?style:''}" placeholder="Style No.">` : `<span class="text-slate-800">${style}</span>`}</td>
+                    <td class="p-3 font-bold text-blue-700">${isGavinP ? `<input id="patch-style-${sid}" class="manual-input admin-input" style="width:90px;color:#1d4ed8;font-weight:bold" value="${style!=='---'?style:''}" placeholder="Style No.">` : `<span>${style}</span>`}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-category-${sid}" class="manual-input" style="width:80px" value="${category!=='---'?category:''}" placeholder="Category">` : `<span class="text-[10px]">${category}</span>`}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-jobno-${sid}" class="manual-input" style="width:80px" value="${jobNo!=='---'?jobNo:''}" placeholder="Job No.">` : `<span class="text-[10px]">${jobNo}</span>`}</td>
-                    <td class="p-3">${isGavinP ? `<input id="patch-bddpic-${sid}" class="manual-input" style="width:70px" value="${bddPic!=='---'?bddPic:''}" placeholder="BDD PIC">` : `<span class="text-[10px]">${bddPic}</span>`}</td>
+                    <td class="p-3 font-bold text-orange-700">${isGavinP ? `<input id="patch-bddpic-${sid}" class="manual-input admin-input" style="width:70px;color:#c2410c;font-weight:bold" value="${bddPic!=='---'?bddPic:''}" placeholder="BDD PIC">` : `<span>${bddPic}</span>`}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-patchitem-${sid}" class="manual-input" style="width:100px" value="${patchItem!=='---'?patchItem:''}" placeholder="Patch Item">` : `<span class="text-[10px]">${patchItem}</span>`}</td>
                     <td class="p-3" style="min-width:280px;max-width:320px">${isGavinP ? `<input id="patch-patchdesc-${sid}" class="manual-input" style="width:260px" value="${patchDesc!=='---'?patchDesc:''}" placeholder="Patch Description">` : `<span class="text-[10px]">${patchDesc}</span>`}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-fabitem-${sid}" class="manual-input" style="width:100px" value="${fabItem!=='---'?fabItem:''}" placeholder="Fabric Item">` : `<span class="text-[10px]">${fabItem}</span>`}</td>
