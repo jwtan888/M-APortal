@@ -1074,11 +1074,27 @@
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Proto Stage</label>
-                        <input type="text" id="c_protoStage" placeholder="e.g. P2" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                        <select id="c_protoStage" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                            <option value="">Select Proto Stage</option>
+                            <option>P1</option>
+                            <option>P2</option>
+                            <option>P3</option>
+                            <option>GGP</option>
+                            <option>Reference Sample</option>
+                            <option>Buyer Reference Sample</option>
+                            <option>SPA</option>
+                            <option>Final Sample</option>
+                            <option>Size Set</option>
+                            <option>Bulk</option>
+                        </select>
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Request Type</label>
-                        <input type="text" id="c_requestType" placeholder="Consumption and Artwork" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                        <select id="c_requestType" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                            <option value="">Select Request Type</option>
+                            <option>Quilting Details</option>
+                            <option>Consumption and Artwork</option>
+                        </select>
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Start Date</label>
@@ -2759,7 +2775,6 @@
             const tbody = document.getElementById('laserTable');
             if (!tbody) return;
             const isAdmin = (currentUser === 'Gavin');
-            const canEditLaserCompletion = isAdmin || currentUser === 'Phone';
             const laserSearchEl = document.getElementById('laserSearch');
             if (laserSearchEl) laserSearchQuery = laserSearchEl.value.toLowerCase();
             if (!allLaserRows.length) {
@@ -2807,13 +2822,13 @@
                 const trimParts    = getVal(i, ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']);
                 const requiredDate = getLaserRequiredDateDisplay(i);
                 const rawStartDate = getVal(i, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time']);
-                const hasRequiredDate = requiredDate && requiredDate !== '---' && String(requiredDate).trim() !== '';
                 const startDate    = rawStartDate && rawStartDate !== '---'
                     ? convertExcelDate(rawStartDate)
-                    : (!hasRequiredDate && received !== '---' ? received : '---');
+                    : '---';
                 const completeDate = convertExcelDate(getVal(i, ['Complete Date','CompleteDate']));
                 const laserPendingStatus = renderLaserPendingStatusBadge(i);
                 const maPic        = getMAPic(i);
+                const canEditLaserCompletion = !!currentUser && (isAdmin || String(currentUser).trim() === String(maPic).trim());
                 const consStart    = convertExcelDate(getVal(i, ['Consumption Start Date','ConsumptionStartDate','Cons Start']));
                 const consEnd      = convertExcelDate(getVal(i, ['Consumption Complete Date','ConsumptionCompleteDate','Cons End']));
                 const consPic      = getVal(i, ['Consumption PIC','ConsumptionPIC','Cons PIC']);
@@ -3148,6 +3163,11 @@
             const g = id => document.getElementById(`le-${id}-${rid}`)?.value.trim() || '';
             const row = allLaserRows.find(r => String(getVal(r, ['Id','ID','id'])) === String(rid));
             if (!row) { btn.innerText = 'SAVE'; btn.disabled = false; return; }
+            const rowMaPic = getMAPic(row);
+            if (currentUser !== 'Gavin' && String(currentUser || '').trim() !== String(rowMaPic || '').trim()) {
+                alert(`Only ${rowMaPic || 'the assigned M&A PIC'} or Gavin can update this laser row.`);
+                btn.innerText = 'SAVE'; btn.disabled = false; return;
+            }
             const existing = keys => getVal(row, keys);
             const fieldValue = (id, keys) => {
                 const el = document.getElementById(`le-${id}-${rid}`);
