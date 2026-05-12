@@ -2874,6 +2874,11 @@
                         ${['Sample Development','Production','Other'].map(s => `<option ${s===section?'selected':''}>${s}</option>`).join('')}
                        </select>`
                     : section;
+                const maPicDropdown = `<select id="le-maPic-${rid}" class="manual-input admin-input" style="width:90px">
+                    <option value="">Select PIC</option>
+                    ${picList.map(p => `<option value="${p}" ${p === maPic ? 'selected' : ''}>${p}</option>`).join('')}
+                    ${maPic && maPic !== '---' && !picList.includes(maPic) ? `<option value="${maPic}" selected>${maPic}</option>` : ''}
+                </select>`;
 
                 if (isAdmin) {
                     return `<tr class="border-b hover:bg-blue-50" id="lrow-${rid}">
@@ -2895,7 +2900,7 @@
                                 ${laserPendingStatus}
                             </div>
                         </td>
-                        <td class="p-2"><input id="le-maPic-${rid}" class="manual-input bg-slate-100" value="${maPic==='---'?'':maPic}" readonly title="M&A PIC is set when row is created"></td>
+                        <td class="p-2">${maPicDropdown}</td>
                         <td class="p-2 date-cell"><input id="le-consStart-${rid}" class="${consClass}" value="${consStart==='---'?'':consStart}" placeholder="m/d/yyyy hh:mm"${consDisabled}></td>
                         <td class="p-2 date-cell"><input id="le-consEnd-${rid}" class="${consClass}" value="${consEnd==='---'?'':consEnd}" placeholder="m/d/yyyy hh:mm"${consDisabled}></td>
                         <td class="p-2"><input id="le-consPic-${rid}" class="${consClass}" value="${consPic==='---'?'':consPic}" placeholder="PIC"${consDisabled}></td>
