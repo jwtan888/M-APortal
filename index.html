@@ -431,6 +431,7 @@
                             <th class="p-3">Laser Parts</th>
                             <th class="p-3">Ironing Parts</th>
                             <th class="p-3">Trim Parts</th>
+                            <th class="p-3 date-col">Start Date</th>
                             <th class="p-3 date-col">Complete Date</th>
                             <th class="p-3">M&A PIC</th>
                             <th class="p-3">Cons. Start</th>
@@ -442,7 +443,7 @@
                         </tr>
                     </thead>
                     <tbody id="laserTable" class="text-slate-700">
-                        <tr><td colspan="19" class="p-6 text-center text-slate-400 italic text-xs">Loading laser data...</td></tr>
+                        <tr><td colspan="20" class="p-6 text-center text-slate-400 italic text-xs">Loading laser data...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -2689,7 +2690,7 @@
                 if (st) { st.innerText = 'LIVE: ' + new Date().toLocaleTimeString() + ` (${rows.length} rows)`; st.classList.remove('sync-active'); }
             } catch(e) {
                 const tbody = document.getElementById('laserTable');
-                if (tbody) tbody.innerHTML = '<tr><td colspan="19" class="p-6 text-center text-red-400 italic text-xs">Failed to load laser data. Check the Power Automate flow.</td></tr>';
+                if (tbody) tbody.innerHTML = '<tr><td colspan="20" class="p-6 text-center text-red-400 italic text-xs">Failed to load laser data. Check the Power Automate flow.</td></tr>';
                 if (st) { st.innerText = 'Error'; st.classList.remove('sync-active'); }
             }
         }
@@ -2702,7 +2703,7 @@
             const laserSearchEl = document.getElementById('laserSearch');
             if (laserSearchEl) laserSearchQuery = laserSearchEl.value.toLowerCase();
             if (!allLaserRows.length) {
-                tbody.innerHTML = '<tr><td colspan="19" class="p-6 text-center text-slate-400 italic text-xs">No laser records found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="20" class="p-6 text-center text-slate-400 italic text-xs">No laser records found.</td></tr>';
                 return;
             }
             const laserMF = getLaserMonthFilter();
@@ -2729,7 +2730,7 @@
                 return vals.some(v => String(v).toLowerCase().includes(laserSearchQuery));
             });
             if (!laserRowsToShow.length) {
-                tbody.innerHTML = `<tr><td colspan="19" class="p-6 text-center text-slate-400 italic text-xs">No results for "${laserSearchQuery}".</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="20" class="p-6 text-center text-slate-400 italic text-xs">No results for "${laserSearchQuery}".</td></tr>`;
                 return;
             }
             tbody.innerHTML = laserRowsToShow.map(i => {
@@ -2744,8 +2745,13 @@
                 const laserParts   = getVal(i, ['Laser Part Count','LaserPartCount','Laser Parts']);
                 const ironParts    = getVal(i, ['Ironing Part Count','IroningPartCount','Iron Parts']);
                 const trimParts    = getVal(i, ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']);
-                const completeDate = convertExcelDate(getVal(i, ['Complete Date','CompleteDate']));
                 const requiredDate = getLaserRequiredDateDisplay(i);
+                const rawStartDate = getVal(i, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time']);
+                const hasRequiredDate = requiredDate && requiredDate !== '---' && String(requiredDate).trim() !== '';
+                const startDate    = rawStartDate && rawStartDate !== '---'
+                    ? convertExcelDate(rawStartDate)
+                    : (!hasRequiredDate && received !== '---' ? received : '---');
+                const completeDate = convertExcelDate(getVal(i, ['Complete Date','CompleteDate']));
                 const laserPendingStatus = renderLaserPendingStatusBadge(i);
                 const maPic        = getMAPic(i);
                 const consStart    = convertExcelDate(getVal(i, ['Consumption Start Date','ConsumptionStartDate','Cons Start']));
@@ -2787,6 +2793,7 @@
                         <td class="p-2"><input id="le-laserParts-${rid}" class="manual-input qty-input" value="${laserParts==='---'?'':laserParts}" type="number"></td>
                         <td class="p-2"><input id="le-ironParts-${rid}" class="manual-input qty-input" value="${ironParts==='---'?'':ironParts}" type="number"></td>
                         <td class="p-2"><input id="le-trimParts-${rid}" class="manual-input qty-input" value="${trimParts==='---'?'':trimParts}" type="number"></td>
+                        <td class="p-2 date-cell"><input id="le-startDate-${rid}" class="manual-input admin-input" value="${startDate==='---'?'':startDate}" placeholder="m/d/yyyy hh:mm"></td>
                         <td class="p-2 date-cell">
                             <div class="flex flex-col gap-1">
                                 <input id="le-completeDate-${rid}" class="manual-input admin-input" value="${completeDate==='---'?'':completeDate}" placeholder="m/d/yyyy hh:mm">
@@ -2825,6 +2832,9 @@
                         <td class="p-3 font-bold">${canEditLaserCompletion ? `<input id="le-laserParts-${rid}" class="manual-input qty-input admin-input" value="${laserParts==='---'?'':laserParts}" type="number">` : laserParts}</td>
                         <td class="p-3">${canEditLaserCompletion ? `<input id="le-ironParts-${rid}" class="manual-input qty-input admin-input" value="${ironParts==='---'?'':ironParts}" type="number">` : ironParts}</td>
                         <td class="p-3">${canEditLaserCompletion ? `<input id="le-trimParts-${rid}" class="manual-input qty-input admin-input" value="${trimParts==='---'?'':trimParts}" type="number">` : trimParts}</td>
+                        <td class="p-3 date-cell ${startDate !== '---' ? 'text-blue-600 font-bold' : 'text-slate-400'}">${canEditLaserCompletion
+                            ? `<input id="le-startDate-${rid}" class="manual-input admin-input" value="${startDate==='---'?'':startDate}" placeholder="m/d/yyyy hh:mm">`
+                            : startDate}</td>
                         <td class="p-3 date-cell ${isComplete?'text-emerald-600 font-bold':'text-slate-400'}">${canEditLaserCompletion
                             ? `<div class="flex flex-col gap-1"><input id="le-completeDate-${rid}" class="manual-input admin-input" value="${completeDate==='---'?'':completeDate}" placeholder="m/d/yyyy hh:mm">${laserPendingStatus}</div>`
                             : (laserPendingStatus || completeDate)}</td>
@@ -2876,8 +2886,12 @@
         async function addLaserRow() {
             if (!currentUser) return alert('Please login first.');
             const receivedTime = document.getElementById('l_receivedTime').value.trim() || nowAsLaserDate();
+            const startDate = receivedTime;
             const payload = {
                 receivedTime:  toExcelDateFormat(receivedTime),
+                startDate:     toExcelDateFormat(startDate),
+                'Start Date':  toExcelDateFormat(startDate),
+                'Start Date m/d/yyyy': toExcelDateFormat(startDate),
                 season:        document.getElementById('l_season').value.trim(),
                 styleNumber:   document.getElementById('l_styleNumber').value.trim(),
                 section:       document.getElementById('l_section').value,
@@ -2913,7 +2927,7 @@
                     refreshLaserData();
                     setTimeout(() => { btn.innerText = '+ ADD ROW'; btn.disabled = false; }, 2000);
                 } else {
-                    alert(`Add failed (HTTP ${res.status}).\n\nThis usually means your Power Automate Add Flow has a field name mismatch.\nCheck that all triggerBody() expressions match exactly:\n- receivedTime\n- styleNumber\n- garmentQty\n- laserParts\n- ironParts\n- trimParts\n- protoStage\n- consumptionPic\n\nResponse: ${respText.substring(0,200)}`);
+                    alert(`Add failed (HTTP ${res.status}).\n\nThis usually means your Power Automate Add Flow has a field name mismatch.\nCheck that all triggerBody() expressions match exactly:\n- receivedTime\n- startDate\n- styleNumber\n- garmentQty\n- laserParts\n- ironParts\n- trimParts\n- protoStage\n- consumptionPic\n\nResponse: ${respText.substring(0,200)}`);
                     btn.innerText = '+ ADD ROW'; btn.disabled = false;
                 }
             } catch(e) {
@@ -2970,6 +2984,9 @@
                     laserParts:     getVal(row, ['Laser Part Count','LaserPartCount','Laser Parts']),
                     ironParts:      getVal(row, ['Ironing Part Count','IroningPartCount','Iron Parts']),
                     trimParts:      getVal(row, ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']),
+                    startDate:      convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
+                    'Start Date':   convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
+                    'Start Date m/d/yyyy': convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
                     completeDate:   convertExcelDate(getVal(row, ['Complete Date','CompleteDate'])),
                     requiredDate:   getLaserRequiredDateDisplay(row),
                     'Required Date': getLaserRequiredDateDisplay(row),
@@ -3024,6 +3041,9 @@
                 laserParts:     getVal(row, ['Laser Part Count','LaserPartCount','Laser Parts']),
                 ironParts:      getVal(row, ['Ironing Part Count','IroningPartCount','Iron Parts']),
                 trimParts:      getVal(row, ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']),
+                startDate:      convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
+                'Start Date':   convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
+                'Start Date m/d/yyyy': convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
                 completeDate:   convertExcelDate(getVal(row, ['Complete Date','CompleteDate'])),
                 requiredDate:   getLaserRequiredDateDisplay(row),
                 'Required Date': getLaserRequiredDateDisplay(row),
@@ -3058,6 +3078,9 @@
                 laserParts:     getVal(row, ['Laser Part Count','LaserPartCount','Laser Parts']),
                 ironParts:      getVal(row, ['Ironing Part Count','IroningPartCount','Iron Parts']),
                 trimParts:      getVal(row, ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']),
+                startDate:      convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
+                'Start Date':   convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
+                'Start Date m/d/yyyy': convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
                 completeDate:   convertExcelDate(getVal(row, ['Complete Date','CompleteDate'])),
                 requiredDate:   getLaserRequiredDateDisplay(row),
                 'Required Date': getLaserRequiredDateDisplay(row),
@@ -3086,11 +3109,12 @@
             };
             const sectionEl = document.getElementById(`le-section-${rid}`);
             const receivedNorm = preparePortalDatePayload(g('received'), convertExcelDate(getVal(row, ['Received Time','ReceivedTime','Received'])));
+            const startNorm = preparePortalDatePayload(g('startDate'), convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])));
             const completeNorm = preparePortalDatePayload(g('completeDate'), convertExcelDate(getVal(row, ['Complete Date','CompleteDate'])));
             const requiredNorm = preparePortalDatePayload(g('requiredDate'), getLaserRequiredDateDisplay(row), { dateOnly: true });
             const consStartNorm = preparePortalDatePayload(g('consStart'), convertExcelDate(getVal(row, ['Consumption Start Date','ConsumptionStartDate','Cons Start'])));
             const consEndNorm = preparePortalDatePayload(g('consEnd'), convertExcelDate(getVal(row, ['Consumption Complete Date','ConsumptionCompleteDate','Cons End'])));
-            if ([receivedNorm, completeNorm, requiredNorm, consStartNorm, consEndNorm].some(v => v === null)) {
+            if ([receivedNorm, startNorm, completeNorm, requiredNorm, consStartNorm, consEndNorm].some(v => v === null)) {
                 alert('Invalid date format. Use m/d/yyyy or m/d/yyyy hh:mm.');
                 btn.innerText = 'SAVE'; btn.disabled = false; return;
             }
@@ -3106,6 +3130,9 @@
                 laserParts:     fieldValue('laserParts', ['Laser Part Count','LaserPartCount','Laser Parts']),
                 ironParts:      fieldValue('ironParts', ['Ironing Part Count','IroningPartCount','Iron Parts']),
                 trimParts:      fieldValue('trimParts', ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']),
+                startDate:      startNorm,
+                'Start Date':   startNorm,
+                'Start Date m/d/yyyy': startNorm,
                 completeDate:   completeNorm,
                 requiredDate:   requiredNorm,
                 'Required Date': requiredNorm,
@@ -3165,6 +3192,9 @@
                 laserParts:     getVal(row, ['Laser Part Count','LaserPartCount','Laser Parts']),
                 ironParts:      getVal(row, ['Ironing Part Count','IroningPartCount','Iron Parts']),
                 trimParts:      getVal(row, ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']),
+                startDate:      convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
+                'Start Date':   convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
+                'Start Date m/d/yyyy': convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])),
                 completeDate:   convertExcelDate(getVal(row, ['Complete Date','CompleteDate'])),
                 requiredDate:   getLaserRequiredDateDisplay(row),
                 'Required Date': getLaserRequiredDateDisplay(row),
