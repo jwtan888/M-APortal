@@ -540,10 +540,10 @@
         <section class="hero">
             <div class="panel hero-main">
                 <p class="eyebrow">Correction + Final Split Log</p>
-                <h2>Correct abnormal MA Portal start/end times, then save final daily split hours to the shared JSON flow.</h2>
+                <h2>Review abnormal MA Portal times. Rows calculate normally by default; edit only when the source time is wrong.</h2>
                 <div class="hero-meta">
                     <span>Default workday: <strong id="hero-window">07:30-17:00</strong></span>
-                    <span>Break rule: <strong id="hero-break">30 min/day</strong></span>
+                    <span>Break rule: <strong id="hero-break">Optional</strong></span>
                     <span>Final hours: <strong>shared JSON</strong></span>
                 </div>
             </div>
@@ -630,34 +630,20 @@
                     </div>
                     <div>
                         <label for="breakMinutes">Break Minutes / Day</label>
-                        <input id="breakMinutes" type="number" min="0" step="5" value="30">
+                        <input id="breakMinutes" type="number" min="0" step="5" placeholder="Optional">
                     </div>
                     <label class="check-row field-full">
                         <input id="excludeNonWorking" type="checkbox" checked>
-                        Remove overnight/non-working time
+                        Remove overnight time for cross-day rows
                     </label>
                     <label class="check-row field-full">
-                        <input id="allowOt" type="checkbox">
-                        Allow OT outside 07:30-17:00
+                        <input id="allowOt" type="checkbox" checked>
+                        Count outside 07:30-17:00 as normal
                     </label>
-                    <div>
-                        <label for="source">Source</label>
-                        <select id="source">
-                            <option>Manual Entry</option>
-                            <option>Punch Card</option>
-                            <option>Power Automate</option>
-                            <option>Correction</option>
-                        </select>
-                    </div>
-                    <div>
-                        <label for="reviewStatus">Status</label>
-                        <select id="reviewStatus">
-                            <option>OK</option>
-                            <option>Missing Punch</option>
-                            <option>Review OT</option>
-                            <option>Manual Correction</option>
-                        </select>
-                    </div>
+                    <label class="check-row field-full">
+                        <input id="allowLongCrossDate" type="checkbox">
+                        Allow long cross-date split
+                    </label>
                     <div class="field-full">
                         <label for="remark">Remark</label>
                         <textarea id="remark" placeholder="Missing punch, OT reason, manual correction..."></textarea>
@@ -665,7 +651,7 @@
                 </div>
 
                 <div class="actions">
-                    <button class="btn btn-primary" onclick="saveFormSession()">Save to MA Portal</button>
+                    <button class="btn btn-primary" onclick="saveFormSession()">Save Correction</button>
                     <button class="btn btn-soft" onclick="previewCurrentForm()">Preview Split</button>
                 </div>
 
@@ -740,6 +726,7 @@
         const PIC_SESSION_KEY = 'ma_admin_session_user';
         const WORK_START = '07:30';
         const WORK_END = '17:00';
+        const MANUAL_HOURS_REQUIRED_PICS = new Set(['Viki']);
         const settingFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/47006a48f8764a49ab01dbb665617acf/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=2eqeoBWF-80BETYDfV2HdHZeqJW7-fDYjd3GXri1wNo";
         const laserFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/f7fd69d7c4114bd2af5d8fffe467982a/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=hAWB_aTnAgdah1KM8cUx2fbYcjNNLN67GGAMOT3jeLI";
         const supportFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/cc862bcb25864cf3821934bb3954e426/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=sd0SSGGkna3TT74vR7V1jTT6E8qPxp-a4O1w0AlrqCY";
@@ -774,6 +761,14 @@
             } catch (e) {
                 return {};
             }
+        }
+
+        function normalizeReviewSessionDefaults(session) {
+            if (!session) return session;
+            if (session.allowOt === undefined || session.allowOt === null) session.allowOt = true;
+            if (session.excludeNonWorking === undefined || session.excludeNonWorking === null) session.excludeNonWorking = true;
+            if (!session.reviewStatus) session.reviewStatus = 'OK';
+            return session;
         }
 
         function writeCorrectedHideMap(map) {
@@ -1143,6 +1138,15 @@
             return Math.round((end - start) / 60000);
         }
 
+        function applyDailyBreak(minutes, session) {
+            const breakLimit = parseInt(session?.breakMinutes || 0, 10) || 0;
+            if (minutes > 240 && breakLimit > 0) {
+                const breakMinutes = Math.min(breakLimit, minutes);
+                return { minutes: minutes - breakMinutes, breakMinutes };
+            }
+            return { minutes, breakMinutes: 0 };
+        }
+
         function isBeforeToday(date) {
             const today = startOfDay(new Date());
             return startOfDay(date) < today;
@@ -1160,12 +1164,9 @@
             }
             if (session.allowOt && isBeforeToday(start)) to = new Date(start.getFullYear(), start.getMonth(), start.getDate(), 23, 59, 0, 0);
 
-            let minutes = minutesBetween(from, to);
-            let breakMinutes = 0;
-            if (minutes > 240 && session.breakMinutes > 0) {
-                breakMinutes = Math.min(session.breakMinutes, minutes);
-                minutes -= breakMinutes;
-            }
+            const adjusted = applyDailyBreak(minutesBetween(from, to), session);
+            const minutes = adjusted.minutes;
+            const breakMinutes = adjusted.breakMinutes;
             if (minutes > 0) {
                 result.rows.push({
                     date: formatDate(start),
@@ -1185,7 +1186,7 @@
         }
 
         function formatSplitDateTime(dateValue, timeValue) {
-            if (!dateValue || timeValue === '-') return '';
+            if (!dateValue || timeValue === '-' || timeValue === 'manual') return '';
             const [day, month, year] = String(dateValue).split('/').map(Number);
             const [hour, minute] = String(timeValue).split(':').map(Number);
             if (!day || !month || !year || Number.isNaN(hour) || Number.isNaN(minute)) return '';
@@ -1207,8 +1208,8 @@
                 splitEnd: formatSplitDateTime(row.date, row.to),
                 netHours: parseFloat((row.minutes / 60).toFixed(2)),
                 breakMinutes: row.breakMinutes,
-                ruleUsed: session.excludeNonWorking ? 'Remove overnight/non-working time' : 'Calendar time',
-                otRule: session.allowOt ? 'OT allowed' : 'No OT',
+                ruleUsed: row.manual ? 'Manual hours override' : (session.excludeNonWorking ? 'Remove overnight/non-working time' : 'Calendar time'),
+                otRule: session.allowOt ? 'Outside hours counted' : 'Outside hours excluded',
                 status: session.reviewStatus || calc.status || '',
                 remark: session.remark || '',
                 updatedBy: currentPic || '',
@@ -1318,8 +1319,9 @@
                 breakMinutes: parseInt(document.getElementById('breakMinutes').value || '0', 10) || 0,
                 excludeNonWorking: document.getElementById('excludeNonWorking').checked,
                 allowOt: document.getElementById('allowOt').checked,
-                source: document.getElementById('source').value || existing.source || 'Manual Entry',
-                reviewStatus: document.getElementById('reviewStatus').value,
+                allowLongCrossDate: document.getElementById('allowLongCrossDate').checked,
+                source: existing.source || 'MA Portal',
+                reviewStatus: existing.reviewStatus || 'OK',
                 remark: document.getElementById('remark').value.trim()
             };
         }
@@ -1350,9 +1352,9 @@
                 originalStart: start,
                 originalEnd: end,
                 manualHours: 0,
-                breakMinutes: 30,
+                breakMinutes: 0,
                 excludeNonWorking: true,
-                allowOt: false,
+                allowOt: true,
                 source: `Actual: ${source}`,
                 reviewStatus: 'OK',
                 remark: `${source} source row${rawId && rawId !== '---' ? ` ${rawId}` : ''}`
@@ -1434,8 +1436,8 @@
             laserRows.forEach(row => {
                 const laserSession = makeActualSession('Laser', row, {
                     process: 'Laser Tracking',
-                    startKeys: ['Received Time', 'ReceivedTime', 'Received'],
-                    endKeys: ['Complete Date', 'CompleteDate'],
+                    startKeys: ['Start Date m/d/yyyy', 'Start Date\nm/d/yyyy', 'Start Date', 'StartDate', 'Laser Start Date', 'LaserStartDate', 'Start Time'],
+                    endKeys: ['End Date m/d/yyyy', 'End Date\nm/d/yyyy', 'End Date', 'EndDate', 'Laser End Date', 'LaserEndDate', 'Complete Date m/d/yyyy', 'Complete Date', 'CompleteDate'],
                     pic: getMAPic
                 });
                 if (laserSession) next.push(laserSession);
@@ -1512,11 +1514,13 @@
                 const reasons = getAbnormalReasons(session);
                 if (!reasons.length) return false;
                 session.abnormalReasons = reasons;
+                normalizeReviewSessionDefaults(session);
                 return true;
             });
         }
 
         function calculateSession(session) {
+            normalizeReviewSessionDefaults(session);
             const start = parseLocalDateTime(session.start);
             const end = parseLocalDateTime(session.end);
             const manualMinutes = Math.round((parseFloat(session.manualHours || 0) || 0) * 60);
@@ -1529,20 +1533,27 @@
                 status: ''
             };
 
+            if (manualMinutes > 0) {
+                result.totalMinutes = manualMinutes;
+                result.rows.push({
+                    date: start ? formatDate(start) : 'Manual',
+                    from: 'manual',
+                    to: 'manual',
+                    minutes: manualMinutes,
+                    breakMinutes: 0,
+                    manual: true
+                });
+                result.badges.push('Manual Hours');
+                result.basis = 'Manual hours override';
+                result.status = 'Manual Correction';
+                return result;
+            }
+
             if (!start) {
-                if (manualMinutes > 0) {
-                    result.totalMinutes = manualMinutes;
-                    result.rows.push({ date: 'Manual', from: '-', to: '-', minutes: manualMinutes, breakMinutes: 0 });
-                    result.badges.push('Manual Hours');
-                    result.needsReview = true;
-                    result.basis = 'Manual fallback';
-                    result.status = 'Manual Review';
-                } else {
-                    result.badges.push('Not Started');
-                    result.needsReview = true;
-                    result.basis = 'No start time';
-                    result.status = 'Not Started';
-                }
+                result.badges.push('Not Started');
+                result.needsReview = true;
+                result.basis = 'No start time';
+                result.status = 'Not Started';
                 return result;
             }
 
@@ -1563,10 +1574,21 @@
                 return result;
             }
 
+            const calendarDays = Math.floor((startOfDay(end) - startOfDay(start)) / 86400000) + 1;
+            if (!session.allowLongCrossDate && MANUAL_HOURS_REQUIRED_PICS.has(String(session.pic || '').trim()) && calendarDays > 2) {
+                result.needsReview = true;
+                result.status = 'Manual Hours Required';
+                result.basis = `${calendarDays} calendar days. Enter Manual Hours to count actual work.`;
+                result.badges.push('Long Gap');
+                result.badges.push('Manual Hours Required');
+                return result;
+            }
+
             if (!session.excludeNonWorking) {
-                const minutes = minutesBetween(start, end);
+                const adjusted = applyDailyBreak(minutesBetween(start, end), session);
+                const minutes = adjusted.minutes;
                 result.totalMinutes = minutes;
-                result.rows.push({ date: formatDate(start), from: formatTime(start), to: formatTime(end), minutes, breakMinutes: 0 });
+                result.rows.push({ date: formatDate(start), from: formatTime(start), to: formatTime(end), minutes, breakMinutes: adjusted.breakMinutes });
                 result.badges.push('Calendar Time');
                 result.basis = 'Calendar elapsed';
                 result.status = start.toDateString() === end.toDateString() ? 'Completed' : 'Cross-Day Completed';
@@ -1575,28 +1597,30 @@
 
             let cursor = startOfDay(start);
             const last = startOfDay(end);
+            const isCrossDay = start.toDateString() !== end.toDateString();
             while (cursor <= last) {
                 const dayStart = timeOnDate(cursor, WORK_START);
                 const dayEnd = timeOnDate(cursor, WORK_END);
-                let from = cursor.toDateString() === start.toDateString() ? new Date(Math.max(start, dayStart)) : dayStart;
-                let to = cursor.toDateString() === end.toDateString() ? new Date(Math.min(end, dayEnd)) : dayEnd;
+                const isStartDay = cursor.toDateString() === start.toDateString();
+                const isEndDay = cursor.toDateString() === end.toDateString();
+                let from = isStartDay
+                    ? (session.allowOt && !isCrossDay ? start : new Date(Math.max(start, dayStart)))
+                    : dayStart;
+                let to;
 
-                if (session.allowOt) {
-                    if (cursor.toDateString() === start.toDateString() && start < dayStart) from = start;
-                    if (cursor.toDateString() === start.toDateString() && start > dayEnd) from = start;
-                    if (cursor.toDateString() === end.toDateString() && end > dayEnd) to = end;
-                    if (cursor.toDateString() !== start.toDateString() && cursor.toDateString() !== end.toDateString()) {
-                        from = dayStart;
-                        to = dayEnd;
-                    }
+                if (!isCrossDay) {
+                    to = session.allowOt ? end : new Date(Math.min(end, dayEnd));
+                } else if (isStartDay) {
+                    to = dayEnd;
+                } else if (isEndDay) {
+                    to = end;
+                } else {
+                    to = dayEnd;
                 }
 
-                let minutes = minutesBetween(from, to);
-                let breakMinutes = 0;
-                if (minutes > 240 && session.breakMinutes > 0) {
-                    breakMinutes = Math.min(session.breakMinutes, minutes);
-                    minutes -= breakMinutes;
-                }
+                const adjusted = applyDailyBreak(minutesBetween(from, to), session);
+                const minutes = adjusted.minutes;
+                const breakMinutes = adjusted.breakMinutes;
 
                 if (minutes > 0) {
                     result.rows.push({
@@ -1611,8 +1635,8 @@
                 cursor = addDays(cursor, 1);
             }
 
-            if (start.toDateString() !== end.toDateString()) result.badges.push('Cross-Day Split');
-            if (session.allowOt) result.badges.push('OT Allowed');
+            if (isCrossDay) result.badges.push('Cross-Day Split');
+            result.badges.push(isCrossDay ? 'Overnight gap removed' : 'OT counted');
             if (!result.totalMinutes) {
                 result.badges.push('No Counted Time');
                 result.needsReview = true;
@@ -1642,13 +1666,8 @@
                 </div>
                 <div class="preview-row">
                     <span>Remark</span>
-                    <span class="badge gray">${session.excludeNonWorking ? 'Remove overnight/non-working time' : 'Calendar time kept'}</span>
-                    <strong>${session.allowOt ? 'OT allowed' : 'No OT'}</strong>
-                </div>
-                <div class="preview-row">
-                    <span>Source / Status</span>
-                    <span class="badge gray">${escapeHtml(session.source || '-')}</span>
-                    <strong>${escapeHtml(session.reviewStatus || calc.status || '-')}</strong>
+                    <span class="badge gray">${session.excludeNonWorking ? 'Overnight gap removed' : 'Calendar time kept'}</span>
+                    <strong>${session.allowOt ? 'Outside hours counted' : 'Outside hours excluded'}</strong>
                 </div>
                 <div class="preview-row">
                     <span>Split Result</span>
@@ -1697,7 +1716,7 @@
                 renderSessions();
                 previewCurrentForm();
                 if (statusEl) {
-                    statusEl.innerText = `Loaded ${sessions.length} abnormal row${sessions.length !== 1 ? 's' : ''}. Normal and incomplete rows are hidden.`;
+                    statusEl.innerText = `Loaded ${sessions.length} abnormal row${sessions.length !== 1 ? 's' : ''}. No action is needed unless the start/end time is wrong.`;
                 }
             } catch (e) {
                 if (statusEl) statusEl.innerText = `Actual data load failed: ${e.message}`;
@@ -1708,7 +1727,7 @@
         function getUpdateConfig(session) {
             const source = session.sourceTable;
             if (source === 'Template') return { url: templateUpdateURL, startKey: 'startDate', endKey: 'completeDate' };
-            if (source === 'Laser') return { url: laserUpdateURL, startKey: 'receivedTime', endKey: 'completeDate' };
+            if (source === 'Laser') return { url: laserUpdateURL, startKey: 'startDate', endKey: 'endDate' };
             if (source === 'Laser Consumption') return { url: laserUpdateURL, startKey: 'consStart', endKey: 'consEnd' };
             if (source === 'Support') return { url: supportUpdateURL, startKey: 'startTime', endKey: 'completeTime' };
             if (source === 'Consumption') return { url: consumptionUpdateURL, startKey: 'startDate', endKey: 'completeDate' };
@@ -1749,6 +1768,29 @@
                 payload['Complete Date'] = endPayload;
                 payload['Complete Date m/d/yyyy'] = endPayload;
                 payload['Complete Date\nm/d/yyyy'] = endPayload;
+            }
+            if (session.sourceTable === 'Laser') {
+                payload.startDate = startPayload;
+                payload.startTime = startPayload;
+                payload.laserStartDate = startPayload;
+                payload.StartDate = startPayload;
+                payload.StartTime = startPayload;
+                payload['Start Date'] = startPayload;
+                payload['Start Time'] = startPayload;
+                payload['Start Date m/d/yyyy'] = startPayload;
+                payload['Start Date\nm/d/yyyy'] = startPayload;
+                payload.endDate = endPayload;
+                payload.endTime = endPayload;
+                payload.laserEndDate = endPayload;
+                payload.EndDate = endPayload;
+                payload.EndTime = endPayload;
+                payload['End Date'] = endPayload;
+                payload['End Time'] = endPayload;
+                payload['End Date m/d/yyyy'] = endPayload;
+                payload['End Date\nm/d/yyyy'] = endPayload;
+                payload.completeDate = endPayload;
+                payload['Complete Date'] = endPayload;
+                payload['Complete Date m/d/yyyy'] = endPayload;
             }
             if (session.sourceTable === 'Support') {
                 const start = parseLocalDateTime(session.start);
@@ -1850,9 +1892,9 @@
                     start: '2026-04-29T10:00',
                     end: '2026-04-30T12:00',
                     manualHours: 0,
-                    breakMinutes: 30,
+                    breakMinutes: 0,
                     excludeNonWorking: true,
-                    allowOt: false,
+                    allowOt: true,
                     source: 'Manual Entry',
                     reviewStatus: 'OK',
                     remark: 'Cross-day example. Overnight time removed.'
@@ -1866,9 +1908,9 @@
                     start: '2026-05-10T16:00',
                     end: '',
                     manualHours: 0,
-                    breakMinutes: 30,
+                    breakMinutes: 0,
                     excludeNonWorking: true,
-                    allowOt: false,
+                    allowOt: true,
                     source: 'Power Automate',
                     reviewStatus: 'OK',
                     remark: 'Started from task data. No complete time yet, so it stays pending overnight.'
@@ -1900,7 +1942,7 @@
                     manualHours: 2.5,
                     breakMinutes: 0,
                     excludeNonWorking: true,
-                    allowOt: false,
+                    allowOt: true,
                     source: 'Manual Entry',
                     reviewStatus: 'Missing Punch',
                     remark: 'Missing punch. Manual hours used.'
@@ -1914,11 +1956,9 @@
             document.getElementById('startTime').value = '2026-04-29T10:00';
             document.getElementById('endTime').value = '2026-04-30T12:00';
             document.getElementById('manualHours').value = '';
-            document.getElementById('breakMinutes').value = '30';
+            document.getElementById('breakMinutes').value = '';
             document.getElementById('excludeNonWorking').checked = true;
-            document.getElementById('allowOt').checked = false;
-            document.getElementById('source').value = 'Manual Entry';
-            document.getElementById('reviewStatus').value = 'OK';
+            document.getElementById('allowOt').checked = true;
             document.getElementById('remark').value = 'Cross-day example. Overnight time removed.';
 
             if (shouldSave) saveSessions();
@@ -1939,6 +1979,7 @@
             if (calc.status === 'Pending Overnight') return '<span class="badge red">Pending Overnight</span>';
             if (calc.status === 'Pending') return '<span class="badge amber">Pending</span>';
             if (calc.status === 'Not Started') return '<span class="badge gray">Not Started</span>';
+            if (calc.status === 'Manual Hours Required') return '<span class="badge red">Manual Hours Required</span>';
             if (calc.status === 'Cross-Day Completed') return '<span class="badge green">Cross-Day Completed</span>';
             if (calc.status === 'Manual Review') return '<span class="badge amber">Manual Review</span>';
             if (calc.status === 'Invalid Time') return '<span class="badge red">Invalid Time</span>';
@@ -1951,6 +1992,7 @@
         }
 
         function renderSessions() {
+            sessions.forEach(normalizeReviewSessionDefaults);
             const query = document.getElementById('search')?.value.trim().toLowerCase() || '';
             const pic = document.getElementById('filterPic')?.value || '';
             const process = document.getElementById('filterProcess')?.value || '';
@@ -2021,14 +2063,15 @@
                             ${getStatusBadge(session, calc)}
                             <div style="margin-top:6px;display:flex;gap:5px;flex-wrap:wrap;">
                                 ${(session.abnormalReasons || []).map(b => `<span class="badge red">${escapeHtml(b)}</span>`).join('')}
-                                <span class="badge gray">${session.excludeNonWorking ? 'Remove overnight/non-working' : 'Calendar time'}</span>
-                                <span class="badge gray">${session.allowOt ? 'OT allowed' : 'No OT'}</span>
+                                <span class="badge gray">${session.excludeNonWorking ? 'Remove overnight' : 'Calendar time'}</span>
+                                <span class="badge gray">${session.allowOt ? 'Outside counted' : 'Outside excluded'}</span>
+                                ${session.allowLongCrossDate ? '<span class="badge gray">Long split allowed</span>' : ''}
                                 <span class="badge gray">${escapeHtml(session.reviewStatus || calc.status || '-')}</span>
                                 ${calc.badges.map(b => `<span class="badge gray">${escapeHtml(b)}</span>`).join('')}
                             </div>
                         </td>
                         <td>
-                            <button class="btn btn-soft" onclick="editSession('${session.id}')">Edit</button>
+                            <button class="btn btn-soft" onclick="editSession('${session.id}')">Correct Time</button>
                         </td>
                     </tr>
                 `).join('');
@@ -2043,7 +2086,8 @@
             document.getElementById('metric-pending').innerText = writeBackRows;
             document.getElementById('metric-final-json').innerText = finalSplitRows.length;
             document.getElementById('hero-window').innerText = `${WORK_START}-${WORK_END}`;
-            document.getElementById('hero-break').innerText = `${document.getElementById('breakMinutes')?.value || 30} min/day`;
+            const breakValue = document.getElementById('breakMinutes')?.value || '';
+            document.getElementById('hero-break').innerText = breakValue ? `${breakValue} min/day` : 'Optional';
         }
 
         function editSession(id) {
@@ -2059,9 +2103,8 @@
             document.getElementById('manualHours').value = session.manualHours || '';
             document.getElementById('breakMinutes').value = session.breakMinutes || 0;
             document.getElementById('excludeNonWorking').checked = !!session.excludeNonWorking;
-            document.getElementById('allowOt').checked = !!session.allowOt;
-            document.getElementById('source').value = session.source || 'Manual Entry';
-            document.getElementById('reviewStatus').value = session.reviewStatus || 'OK';
+            document.getElementById('allowOt').checked = session.allowOt !== false;
+            document.getElementById('allowLongCrossDate').checked = !!session.allowLongCrossDate;
             document.getElementById('remark').value = session.remark || '';
             previewCurrentForm();
             const statusEl = document.getElementById('actualStatus');
@@ -2089,7 +2132,7 @@
             }[ch]));
         }
 
-        ['pic', 'process', 'style', 'job', 'startTime', 'endTime', 'manualHours', 'breakMinutes', 'excludeNonWorking', 'allowOt', 'source', 'reviewStatus', 'remark']
+        ['pic', 'process', 'style', 'job', 'startTime', 'endTime', 'manualHours', 'breakMinutes', 'excludeNonWorking', 'allowOt', 'allowLongCrossDate', 'remark']
             .forEach(id => {
                 window.addEventListener('DOMContentLoaded', () => {
                     const el = document.getElementById(id);

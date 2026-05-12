@@ -7,6 +7,7 @@
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 68 48'%3E%3Cg fill='%230514ff'%3E%3Cpath d='M9 4h7L7 44H0z'/%3E%3Cpath d='M21 4h12L24 44H12z'/%3E%3Cpath d='M44 4h21c2 0 3 2 3 4l-7 28c-1 5-5 8-10 8H34c-4 0-7-3-6-7l7-26c1-4 5-7 9-7z'/%3E%3C/g%3E%3C/svg%3E">
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
     <style>
         :root {
             --bg: #dfe1ea;
@@ -254,26 +255,29 @@
                     <div id="util-att-status" class="text-[11px] font-bold uppercase tracking-[0.14em] text-slate-400">no data</div>
                 </div>
             </div>
-            <div class="grid grid-cols-1 gap-6 xl:grid-cols-[minmax(0,1.22fr)_minmax(400px,0.98fr)]">
-                <div class="h-[370px]">
+            <div class="flex flex-col gap-6">
+                <div class="h-[320px]">
                     <canvas id="utilChart"></canvas>
                 </div>
+                <div class="flex justify-end">
+                    <button onclick="downloadUtilizationXlsx()" class="rounded-full border border-slate-200 bg-white px-3 py-1.5 text-[10px] font-bold uppercase tracking-[0.12em] text-slate-600 transition hover:border-blue-200 hover:bg-blue-50 hover:text-blue-700">Download XLSX</button>
+                </div>
                 <div class="overflow-x-auto rounded-2xl border border-slate-200">
-                    <table class="w-full text-left text-[11px]">
-                        <thead class="bg-slate-50 text-slate-500">
+                    <table class="w-full text-left">
+                        <thead class="bg-slate-50 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-500">
                             <tr>
-                                <th class="p-3 font-bold uppercase tracking-[0.14em]">PIC</th>
-                                <th class="p-3 font-bold uppercase tracking-[0.14em]">Setting</th>
-                                <th class="p-3 font-bold uppercase tracking-[0.14em]">Laser</th>
-                                <th class="p-3 font-bold uppercase tracking-[0.14em]">Support</th>
-                                <th class="p-3 font-bold uppercase tracking-[0.14em]">Down Filling</th>
-                                <th class="w-20 p-3 font-bold uppercase tracking-[0.14em]">Consumption</th>
-                                <th class="p-3 font-bold uppercase tracking-[0.14em]">Manual</th>
-                                <th class="p-3 font-bold uppercase tracking-[0.14em]">Total</th>
-                                <th class="p-3 font-bold uppercase tracking-[0.14em]">Utilization</th>
+                                <th class="p-3">PIC</th>
+                                <th class="p-3">Setting</th>
+                                <th class="p-3">Laser</th>
+                                <th class="p-3">Support</th>
+                                <th class="p-3">Down Filling</th>
+                                <th class="w-20 p-3">Consumption</th>
+                                <th class="p-3">Manual</th>
+                                <th class="p-3">Total</th>
+                                <th class="p-3">Utilization</th>
                             </tr>
                         </thead>
-                        <tbody id="util-table"></tbody>
+                        <tbody id="util-table" class="text-xs"></tbody>
                     </table>
                 </div>
             </div>
@@ -327,6 +331,7 @@
         let utilChart = null;
         let pendingLoginUser = '';
         let utilManualData = {};
+        let utilExportRows = [];
 
         function attKey() {
             return `${attYear}-${String(attMonth + 1).padStart(2, '0')}`;
@@ -1241,11 +1246,12 @@
 
             const table = document.getElementById('util-table');
             if (!picList.length) {
+                utilExportRows = [];
                 table.innerHTML = '<tr><td colspan="9" class="p-6 text-center italic text-slate-400">No utilization data for this month.</td></tr>';
                 return;
             }
 
-            table.innerHTML = picList.map(pic => {
+            utilExportRows = picList.map(pic => {
                 const setting = settingHrs[pic] || 0;
                 const laser = laserHrs[pic] || 0;
                 const support = supportHrs[pic] || 0;
@@ -1255,6 +1261,31 @@
                 const total = setting + laser + support + down + consumption + manual;
                 const cap = attCapMap[pic] || avgCapacity || 0;
                 const pct = cap ? Math.round((total / cap) * 100) : 0;
+                return {
+                    PIC: pic,
+                    Setting: parseFloat(setting.toFixed(1)),
+                    Laser: parseFloat(laser.toFixed(1)),
+                    Support: parseFloat(support.toFixed(1)),
+                    'Down Filling': parseFloat(down.toFixed(1)),
+                    Consumption: parseFloat(consumption.toFixed(1)),
+                    Manual: parseFloat(manual.toFixed(1)),
+                    Total: parseFloat(total.toFixed(1)),
+                    Capacity: cap,
+                    'Utilization %': pct
+                };
+            });
+
+            table.innerHTML = utilExportRows.map(row => {
+                const pic = row.PIC;
+                const setting = row.Setting;
+                const laser = row.Laser;
+                const support = row.Support;
+                const down = row['Down Filling'];
+                const consumption = row.Consumption;
+                const manual = row.Manual;
+                const total = row.Total;
+                const cap = row.Capacity;
+                const pct = row['Utilization %'];
                 const color = pct >= 90 ? 'bg-rose-500' : pct >= 70 ? 'bg-amber-400' : 'bg-emerald-500';
                 const textColor = pct >= 90 ? 'text-rose-600' : pct >= 70 ? 'text-amber-600' : 'text-emerald-600';
                 const safePic = pic.replace(/'/g, "\\'");
@@ -1275,8 +1306,8 @@
                     <td class="p-3 font-bold text-slate-900">${total.toFixed(1)}</td>
                     <td class="p-3">
                         <div class="flex items-center gap-2">
-                            <div class="h-2 flex-1 overflow-hidden rounded-full bg-slate-100">
-                                <div class="h-2 rounded-full ${color}" style="width:${Math.min(pct, 100)}%"></div>
+                            <div class="h-2 w-24 shrink-0 overflow-hidden rounded-full bg-slate-100">
+                                <div class="h-2 rounded-full ${color}" style="width:${Math.min(Math.max(pct, 0), 100)}%"></div>
                             </div>
                             <span class="w-12 text-right text-[10px] font-bold ${textColor}">${pct}%</span>
                         </div>
@@ -1284,6 +1315,38 @@
                     </td>
                 </tr>`;
             }).join('');
+        }
+
+        function downloadUtilizationXlsx() {
+            if (!utilExportRows.length) {
+                alert('No utilization rows to download.');
+                return;
+            }
+
+            const monthLabel = attendanceMonthLabel();
+            const fileBase = `attendance-utilization-${monthLabel}`;
+            if (window.XLSX) {
+                const ws = XLSX.utils.json_to_sheet(utilExportRows);
+                const wb = XLSX.utils.book_new();
+                XLSX.utils.book_append_sheet(wb, ws, 'Utilization');
+                XLSX.writeFile(wb, `${fileBase}.xlsx`);
+                return;
+            }
+
+            const headers = Object.keys(utilExportRows[0]);
+            const csvRows = [
+                headers.join(','),
+                ...utilExportRows.map(row => headers.map(header => {
+                    const value = row[header] ?? '';
+                    return `"${String(value).replace(/"/g, '""')}"`;
+                }).join(','))
+            ];
+            const blob = new Blob([csvRows.join('\n')], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement('a');
+            link.href = URL.createObjectURL(blob);
+            link.download = `${fileBase}.csv`;
+            link.click();
+            URL.revokeObjectURL(link.href);
         }
 
         updateUserUI();
