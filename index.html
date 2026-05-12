@@ -1086,6 +1086,9 @@
                             <option>Final Sample</option>
                             <option>Size Set</option>
                             <option>Bulk</option>
+                            <option>Wash Test</option>
+                            <option>Wear Test</option>
+                            <option>Costing</option>
                         </select>
                     </div>
                     <div class="flex flex-col gap-1">
@@ -2803,7 +2806,24 @@
                     getVal(i, ['Remark','Remarks'])
                 ];
                 return vals.some(v => String(v).toLowerCase().includes(laserSearchQuery));
-            });
+            }).map((row, index) => ({ row, index })).sort((a, b) => {
+                const statusRank = (item) => {
+                    const status = getLaserPendingStatus(item.row);
+                    if (!status) return 2;
+                    return status.label === 'Delay' ? 0 : 1;
+                };
+                const rankA = statusRank(a);
+                const rankB = statusRank(b);
+                if (rankA !== rankB) return rankA - rankB;
+                if (rankA < 2) {
+                    const reqA = parsePortalDisplayDate(getLaserRequiredDateDisplay(a.row));
+                    const reqB = parsePortalDisplayDate(getLaserRequiredDateDisplay(b.row));
+                    if (reqA && reqB && reqA.getTime() !== reqB.getTime()) return reqA - reqB;
+                    if (reqA && !reqB) return -1;
+                    if (!reqA && reqB) return 1;
+                }
+                return a.index - b.index;
+            }).map(item => item.row);
             if (!laserRowsToShow.length) {
                 tbody.innerHTML = `<tr><td colspan="20" class="p-6 text-center text-slate-400 italic text-xs">No results for "${laserSearchQuery}".</td></tr>`;
                 return;
