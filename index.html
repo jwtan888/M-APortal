@@ -369,7 +369,7 @@
                         <input type="number" id="l_garmentQty" placeholder="0" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div class="flex flex-col gap-1">
-                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Laser Parts</label>
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider" title="Laser cut and perforated parts">Laser Parts</label>
                         <input type="number" id="l_laserParts" placeholder="0" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div class="flex flex-col gap-1">
@@ -377,7 +377,7 @@
                         <input type="number" id="l_ironParts" placeholder="0" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div class="flex flex-col gap-1">
-                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Trim Parts</label>
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider" title="Trim after bonding OT/BT">Trim Parts</label>
                         <input type="number" id="l_trimParts" placeholder="0" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div class="flex flex-col gap-1">
@@ -404,6 +404,11 @@
                         <button onclick="addLaserRow()" id="laserAddBtn" class="bg-blue-600 text-white text-xs font-bold py-2 px-6 rounded-lg hover:bg-blue-700 active:scale-95 transition-all shadow-sm">+ ADD ROW</button>
                     </div>
                 </div>
+                <div class="text-[10px] text-slate-500 bg-slate-50 border rounded-lg px-3 py-2 leading-relaxed">
+                    <span class="font-bold text-slate-700">Parts remark:</span>
+                    <span class="font-semibold text-slate-600">Laser parts</span> include laser cut and perforated parts.
+                    <span class="font-semibold text-slate-600">Trim parts</span> means trim after bonding OT/BT.
+                </div>
             </div>
 
             <!-- Laser Search Bar -->
@@ -428,9 +433,9 @@
                             <th class="p-3">Category</th>
                             <th class="p-3">Proto Stage</th>
                             <th class="p-3">Garment Qty</th>
-                            <th class="p-3">Laser Parts</th>
+                            <th class="p-3" title="Laser cut and perforated parts">Laser Parts</th>
                             <th class="p-3">Ironing Parts</th>
-                            <th class="p-3">Trim Parts</th>
+                            <th class="p-3" title="Trim after bonding OT/BT">Trim Parts</th>
                             <th class="p-3 date-col">Start Date</th>
                             <th class="p-3 date-col">Complete Date</th>
                             <th class="p-3">M&A PIC</th>
