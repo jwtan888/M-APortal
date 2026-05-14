@@ -1390,6 +1390,7 @@
                     <thead class="bg-slate-100 border-b text-[11px] uppercase tracking-wider text-slate-500 font-bold">
                         <tr>
                             <th class="p-3">No.</th>
+                            <th class="p-3 text-sky-600 date-col">Request Receive Time</th>
                             <th class="p-3">Season</th>
                             <th class="p-3">Style Number</th>
                             <th class="p-3">Category</th>
@@ -1415,7 +1416,7 @@
                         </tr>
                     </thead>
                     <tbody id="patchTable" class="text-slate-700">
-                        <tr><td colspan="22" class="p-6 text-center text-slate-400 italic text-xs">Loading patch data...</td></tr>
+                        <tr><td colspan="23" class="p-6 text-center text-slate-400 italic text-xs">Loading patch data...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1654,7 +1655,7 @@
             const keys = [
                 'requestor', 'section', 'style', 'jobNo', 'protoStage', 'templateType',
                 'description', 'machine', 'requiredDate', 'templateNo', 'pic',
-                'completeDateDisplay', 'qty', 'complexity', 'dfm', 'remark', 'status'
+                'completeDateDisplay', 'qty', 'complexity', 'dfm', 'remark', 'cancelled', 'status'
             ];
             return keys.every(key => {
                 if (!(key in patch)) return true;
@@ -2298,6 +2299,7 @@
                 .map(t => {
                     const cancelIndicators = [t.startTime, t.completeDateDisplay, t.requiredDate];
                     t.cancelled = cancelIndicators.some(v => String(v).trim() === '-');
+                    if (t.cancelled) t.status = 'NO ACTION';
                     return t;
                 })
                 .sort((a, b) => (parseInt(b.id, 10) || 0) - (parseInt(a.id, 10) || 0));
@@ -3529,12 +3531,17 @@
             sortTemplateRows(filtered, prioritySort, isPicFilter);
             document.getElementById('tempTable').innerHTML = filtered.map(t => {
                 const done = t.status === 'COMPLETED', isMine = (currentUser === t.pic);
+                const noAction = !!t.cancelled || String(t.status || '').toUpperCase() === 'NO ACTION';
                 const complexityValue = sanitizeTemplateValue(t.complexity) || getTemplateComplexityForType(t.templateType);
                 const canEdit    = isAdmin || (isMine && !done); // structural edits (Gavin always, PIC only when pending)
                 const canEditPIC = isAdmin || isMine;            // remark/date/qty: PIC can always update even after completion
                 const templateNoCell = isAdmin ? `<input type="text" id="edit-tno-${t.id}" class="manual-input admin-input" value="${t.templateNo === '---' ? '' : t.templateNo}" placeholder="Assign No.">` : `<span class="font-bold">${t.templateNo}</span>`;
                 const picCell = (isAdmin) ? `<select id="edit-pic-${t.id}" class="manual-input admin-input"><option value="">Select PIC</option>${picList.map(p => `<option value="${p}" ${p === t.pic ? 'selected' : ''}>${p}</option>`).join('')}</select>` : `<span>${t.pic}</span>`;
-                const webTime = formatWebDisplay(new Date()), dateInput = canEditPIC ? `<input type="text" id="date-${t.id}" class="manual-input" value="${done ? t.completeDateDisplay : webTime}">` : `<span>${done ? t.completeDateDisplay : '---'}</span>`, qtyInput = canEditPIC ? `<input type="number" id="qty-${t.id}" class="manual-input qty-input" placeholder="Qty" value="${done?t.qty:''}">` : `<span>${done ? t.qty : '---'}</span>`;
+                const completeDateValue = (done || noAction) && t.completeDateDisplay !== '---' ? t.completeDateDisplay : '';
+                const completeQtyInputValue = (done || noAction) && t.qty !== '---' ? t.qty : '';
+                const completeQtyDisplayValue = (done || noAction) && t.qty !== '---' ? t.qty : '---';
+                const statusClass = noAction ? 'bg-slate-100 text-slate-500' : done ? 'bg-emerald-100 text-emerald-600' : t.status === 'DELAYED' ? 'bg-red-100 text-red-600' : 'bg-amber-100 text-amber-600';
+                const statusLabel = noAction ? 'NO ACTION' : t.status;
                 return `<tr class="border-b hover:bg-slate-50">
                     <td class="p-3 text-slate-400 font-mono text-[10px]">${t.id}</td>
                     <td class="p-3 text-[10px] text-slate-500 date-cell">${t.startTime}</td>
@@ -3575,15 +3582,15 @@
                         ? `<input type="text" id="dfm-${t.id}" class="manual-input admin-input" style="width:70px" value="${t.dfm&&t.dfm!=='---'?t.dfm:''}" placeholder="Code/No">`
                         : `<span class="text-[10px] font-bold ${t.dfm&&t.dfm!=='---'?'text-teal-600':''}">${t.dfm&&t.dfm!=='---'?t.dfm:'—'}</span>`}</td>
                     <td class="p-3 date-cell">${canEditPIC
-                        ? `<input type="text" id="date-${t.id}" class="manual-input${isAdmin?' admin-input':''}" value="${done?t.completeDateDisplay:''}" placeholder="m/d/yyyy hh:mm">`
-                        : `<span class="${done?'text-emerald-600 font-bold':'text-slate-400'} text-[10px]">${done?t.completeDateDisplay:'---'}</span>`}</td>
+                        ? `<input type="text" id="date-${t.id}" class="manual-input${isAdmin?' admin-input':''}" value="${completeDateValue}" placeholder="m/d/yyyy hh:mm or -">`
+                        : `<span class="${done?'text-emerald-600 font-bold':noAction?'text-slate-500 font-bold':'text-slate-400'} text-[10px]">${completeDateValue || '---'}</span>`}</td>
                     <td class="p-3">${canEditPIC
-                        ? `<input type="number" id="qty-${t.id}" class="manual-input qty-input" placeholder="Qty" value="${done?t.qty:''}">`
-                        : `<span>${done?t.qty:'---'}</span>`}</td>
+                        ? `<input type="text" inputmode="decimal" id="qty-${t.id}" class="manual-input qty-input" placeholder="Qty or -" value="${completeQtyInputValue}">`
+                        : `<span>${completeQtyDisplayValue}</span>`}</td>
                     <td class="p-3 text-blue-700">${canEdit
                         ? `<input type="text" id="edit-tno-${t.id}" class="manual-input admin-input" value="${t.templateNo!=='---'?t.templateNo:''}" placeholder="Assign No.">`
                         : `<span class="font-bold">${t.templateNo}</span>`}</td>
-                    <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${done?'bg-emerald-100 text-emerald-600':t.status==='DELAYED'?'bg-red-100 text-red-600':'bg-amber-100 text-amber-600'}">${t.status}</span></td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${statusClass}">${statusLabel}</span></td>
                     <td class="p-3 font-medium">${picCell}</td>
                     <td class="p-3">${canEditPIC
                         ? `<input type="text" id="remark-${t.id}" class="manual-input" value="${t.remark!=='---'?t.remark:''}" placeholder="Add remark...">`
@@ -3631,8 +3638,10 @@
             const picValue = String(tPic);
             const hasEditedDate = !!sanitizeTemplateValue(tDateRaw);
             const hasEditedQty = !!sanitizeTemplateValue(tQty);
-            const completionDateValue = String(hasEditedDate ? tDateExcel : '');
-            const completionDateDisplayValue = completionDateValue ? convertExcelDate(completionDateValue, true) : '';
+            const dateNoAction = String(tDateRaw || '').trim() === '-';
+            const qtyNoAction = String(tQty || '').trim() === '-';
+            const completionDateValue = String(hasEditedDate && !dateNoAction ? tDateExcel : '');
+            const completionDateDisplayValue = dateNoAction ? '-' : (completionDateValue ? convertExcelDate(completionDateValue, true) : '');
             const completeQtyValue = String(hasEditedQty ? preserveTextValue(tQty, '') : '');
             const remarkValue = String(preserveTextValue(tRem, record.remark));
             const payload = {
@@ -3643,7 +3652,10 @@
                 ID: recordIdValue,
                 pic: picValue,
                 PIC: picValue,
-                "M&A PIC": picValue
+                "M&A PIC": picValue,
+                noAction: dateNoAction || qtyNoAction,
+                noActionDate: dateNoAction ? '-' : '',
+                noActionQty: qtyNoAction ? '-' : ''
             };
             assignIfPresent(payload, [
                 ['remark', remarkValue],
@@ -3684,11 +3696,14 @@
 
             if (!isAdminUser || hasEditedDate || hasEditedQty) {
                 assignIfPresent(payload, [
-                    ['completionDate', completionDateValue],
-                    ['completeDate', completionDateValue],
-                    ['CompleteDate', completionDateValue],
-                    ['Complete Date', completionDateValue],
-                    ['Complete Date m/d/yyyy', completionDateValue],
+                    ['completionDate', dateNoAction ? '' : completionDateValue],
+                    ['completeDate', dateNoAction ? '' : completionDateValue],
+                    ['CompleteDate', dateNoAction ? '' : completionDateValue],
+                    ['Complete Date', dateNoAction ? '' : completionDateValue],
+                    ['Complete Date m/d/yyyy', dateNoAction ? '' : completionDateValue],
+                    ['completionDateText', dateNoAction ? '-' : ''],
+                    ['completeDateText', dateNoAction ? '-' : ''],
+                    ['Complete Date Text', dateNoAction ? '-' : ''],
                     ['completeQty', completeQtyValue],
                     ['quantity', completeQtyValue],
                     ['Quantity', completeQtyValue],
@@ -3707,16 +3722,18 @@
                 let parsedBody = null;
                 try { parsedBody = rawBody ? JSON.parse(rawBody) : null; } catch (e) {}
                 const bodyText = String(rawBody || JSON.stringify(parsedBody || '')).toLowerCase();
+                const powerAutomateNoResponse =
+                    bodyText.includes('noreponse') ||
+                    bodyText.includes('noresponse') ||
+                    bodyText.includes('did not receive a response from an upstream server');
                 const flowReportedError =
                     bodyText.includes('notfound') ||
                     bodyText.includes('no row was found') ||
                     bodyText.includes('triggerinputschemamismatch') ||
-                    bodyText.includes('noreponse') ||
-                    bodyText.includes('noresponse') ||
                     (parsedBody && parsedBody.ok === false) ||
-                    (parsedBody && parsedBody.error) ||
+                    (parsedBody && parsedBody.error && !powerAutomateNoResponse) ||
                     (parsedBody && Number(parsedBody.statusCode || 0) >= 400);
-                if (res.ok && !flowReportedError) {
+                if ((res.ok && !flowReportedError) || powerAutomateNoResponse) {
                     record.pic = tPic;
                     if (tNoInput) {
                         record.templateNo = payload.templateNo || record.templateNo;
@@ -3738,7 +3755,8 @@
                         record.completeDateDisplay = completionDateDisplayValue || record.completeDateDisplay;
                     }
                     record.remark = preserveTextValue(tRem, record.remark);
-                    record.status = record.completeDateDisplay && record.completeDateDisplay !== '---' ? 'COMPLETED' : record.status;
+                    record.cancelled = [record.startTime, record.completeDateDisplay, record.requiredDate].some(v => String(v).trim() === '-');
+                    record.status = record.cancelled ? 'NO ACTION' : (record.completeDateDisplay && record.completeDateDisplay !== '---' ? 'COMPLETED' : record.status);
                     stageTemplatePendingUpdate(record.id, {
                         requestor: record.requestor,
                         section: record.section,
@@ -3750,15 +3768,17 @@
                         complexity: record.complexity,
                         dfm: record.dfm,
                         remark: record.remark,
+                        cancelled: record.cancelled,
                         status: record.status
                     });
                     syncQuiltingTemplatesToConsumption(false);
-                    btn.innerText = "UPDATED ✓";
+                    btn.innerText = powerAutomateNoResponse ? "SENT - CHECKING" : "UPDATED ✓";
                     updateDashboard();
                     renderUtilization();
                     applyTempFilters(false);
-                    setTimeout(() => refreshTemplateLogs(true), 5000);
-                    setTimeout(() => refreshTemplateLogs(true), 15000);
+                    [5000, 15000, 30000, 60000].forEach(delay => {
+                        setTimeout(() => refreshTemplateLogs(true), delay);
+                    });
                     setTimeout(() => { btn.innerText = "SAVE"; btn.disabled = false; }, 2000);
                 } else {
                     btn.innerText = "ERROR - RETRY";
@@ -5099,7 +5119,7 @@
             } catch(e) {
                 console.error('[Patch]', e.message);
                 const tbody = document.getElementById('patchTable');
-                if (tbody) tbody.innerHTML = `<tr><td colspan="22" class="p-6 text-center text-red-400 italic text-xs">ERR: ${e.message}</td></tr>`;
+                if (tbody) tbody.innerHTML = `<tr><td colspan="23" class="p-6 text-center text-red-400 italic text-xs">ERR: ${e.message}</td></tr>`;
                 if (st) { st.innerText = `ERR: ${e.message.substring(0,60)}`; st.classList.remove('sync-active'); }
             }
         }
@@ -5135,6 +5155,7 @@
                     getVal(r,['Style Number','StyleNumber']), getVal(r,['Category']),
                     getVal(r,['Job Number','JobNo']), getVal(r,['BDD PIC','BDDPIC']),
                     getVal(r,['Patch Item','PatchItem']), getVal(r,['Patch Description','PatchDescription']),
+                    getVal(r,['Request Receive Time (Auto Do Not Edit)','Request Receive Time m/d/yyyy','Request Receive Time','RequestReceiveTime','Request Date','RequestDate']),
                     getVal(r,['Template No.','TemplateNo','Template No']),
                     getVal(r,['Machine No.','Machine No','MachineNo','Machine']),
                     getMAPic(r), getVal(r,['Month']), getVal(r,['Remark','Remarks'])
@@ -5157,7 +5178,7 @@
             if (el('patch-done'))    el('patch-done').innerText    = done;
 
             if (!rows.length) {
-                tbody.innerHTML = `<tr><td colspan="22" class="p-6 text-center text-slate-400 italic text-xs">${patchSearchQuery?'No results.':'No patch records found.'}</td></tr>`;
+                tbody.innerHTML = `<tr><td colspan="23" class="p-6 text-center text-slate-400 italic text-xs">${patchSearchQuery?'No results.':'No patch records found.'}</td></tr>`;
                 return;
             }
 
@@ -5167,6 +5188,7 @@
                 const noVal     = String(i['No_x002e_'] ?? i['No.'] ?? getVal(i,['No.','No']) ?? '').trim();
                 const sid       = noVal; // sid = No. value, used to match row for save
                 const rawPAId   = i['__PowerAppsId__'] || i['Id'] || i['ID'] || noVal;
+                const requestReceived = convertExcelDate(getVal(i,['Request Receive Time (Auto Do Not Edit)','Request Receive Time m/d/yyyy','Request Receive Time','RequestReceiveTime','Request Date','RequestDate']));
                 const season    = getVal(i,['Season']);
                 const style     = getVal(i,['Style Number','StyleNumber']);
                 const category  = getVal(i,['Category']);
@@ -5196,6 +5218,7 @@
 
                 return `<tr class="border-b hover:bg-slate-50 ${isDone?'bg-emerald-50/30':''}">
                     <td class="p-3 font-mono text-slate-500 text-[10px]">${noVal}</td>
+                    <td class="p-3 text-sky-700 text-[10px] date-cell font-semibold">${requestReceived}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-season-${sid}" class="manual-input" style="width:70px" value="${season!=='---'?season:''}" placeholder="Season">` : `<span class="text-[10px]">${season}</span>`}</td>
                     <td class="p-3 font-bold text-blue-700">${isGavinP ? `<input id="patch-style-${sid}" class="manual-input admin-input" style="width:90px;color:#1d4ed8;font-weight:bold" value="${style!=='---'?style:''}" placeholder="Style No.">` : `<span>${style}</span>`}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-category-${sid}" class="manual-input" style="width:80px" value="${category!=='---'?category:''}" placeholder="Category">` : `<span class="text-[10px]">${category}</span>`}</td>
