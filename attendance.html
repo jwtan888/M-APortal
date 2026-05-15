@@ -302,6 +302,7 @@
         const SESSION_KEY = 'ma_admin_session_user';
         const ATT_STORAGE_KEY = 'ma_attendance';
         const ATT_UTIL_MANUAL_KEY = 'ma_attendance_util_manual';
+        const LASER_CACHE_KEY = 'ma_portal_laser_rows_v2';
         const ATT_EDITOR_PASSWORD = 'Modernization@888';
 
         const attendanceUpdateURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/b0bdaebbf2104b669de00b09a78add75/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=5rXFrjS1WABIzdnSZrqhqsxfZqp0G1c7E-GzkSnkqBk";
@@ -707,18 +708,20 @@
             return data?.['@odata.nextLink'] || data?.body?.['@odata.nextLink'] || data?.nextLink || data?.body?.nextLink || '';
         }
 
-        async function fetchJsonRows(url) {
+        async function fetchJsonRowsOnce(url, timeoutMs = 25000) {
             const rows = [];
             let nextUrl = url + '&cb=' + Date.now();
             let method = 'POST';
             let pageCount = 0;
             while (nextUrl && pageCount < 10) {
                 const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), 25000);
+                const timer = setTimeout(() => controller.abort(), timeoutMs);
                 try {
                     const res = await fetch(nextUrl, {
                         method,
+                        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
                         body: method === 'POST' ? JSON.stringify({}) : undefined,
+                        cache: 'no-store',
                         signal: controller.signal
                     });
                     clearTimeout(timer);
@@ -736,6 +739,38 @@
                 }
             }
             return rows;
+        }
+
+        async function fetchJsonRows(url, options = {}) {
+            const retries = options.retries || 1;
+            const timeoutMs = options.timeoutMs || 25000;
+            let rows = [];
+            for (let attempt = 1; attempt <= retries; attempt += 1) {
+                rows = await fetchJsonRowsOnce(url, timeoutMs);
+                if (rows.length || attempt === retries) return rows;
+                await new Promise(resolve => setTimeout(resolve, attempt * 1500));
+            }
+            return rows;
+        }
+
+        function readPortalLaserCache() {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(LASER_CACHE_KEY) || 'null');
+                return parsed && Array.isArray(parsed.rows) ? parsed.rows : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function writePortalLaserCache(rows) {
+            try {
+                localStorage.setItem(LASER_CACHE_KEY, JSON.stringify({
+                    updatedAt: Date.now(),
+                    rows: Array.isArray(rows) ? rows : []
+                }));
+            } catch (e) {
+                console.warn('Laser cache write skipped:', e.message);
+            }
         }
 
         async function fetchAttendanceFromCloud() {
@@ -779,7 +814,7 @@
             setSourceStatus('Syncing attendance and workload');
             const [settingRows, laserRows, supportRows, consumptionRows, downRows, splitRows, attendanceCount, manualCount] = await Promise.all([
                 fetchJsonRows(settingFetchURL),
-                fetchJsonRows(laserFetchURL),
+                fetchJsonRows(laserFetchURL, { retries: 4, timeoutMs: 40000 }),
                 fetchJsonRows(supportFetchURL),
                 fetchJsonRows(consumptionFetchURL),
                 fetchJsonRows(downFetchURL),
@@ -788,7 +823,8 @@
                 fetchManualUtilFromCloud()
             ]);
             allSettingRows = settingRows;
-            allLaserRows = laserRows;
+            allLaserRows = laserRows.length ? laserRows : readPortalLaserCache();
+            if (laserRows.length) writePortalLaserCache(laserRows);
             allSupportRows = supportRows;
             allConsumptionRows = consumptionRows;
             allDownRows = downRows;
@@ -1067,12 +1103,23 @@
 
             allLaserRows.forEach(row => {
                 if (hasSplitReplacement('Laser', row, splitSourceKeys, splitStyleKeys)) return;
-                const completeDate = getVal(row, ['Complete Date', 'CompleteDate']);
+                const completeDate = getVal(row, ['Complete Date m/d/yyyy', 'Complete Date\nm/d/yyyy', 'Complete Date', 'CompleteDate']);
                 if (!inMonth(completeDate)) return;
-                const received = rawToLocalDate(getVal(row, ['Received Time', 'ReceivedTime', 'Received']));
+                const started = rawToLocalDate(getVal(row, [
+                    'Start Date m/d/yyyy',
+                    'Start Date\nm/d/yyyy',
+                    'Start Date',
+                    'StartDate',
+                    'Laser Start Date',
+                    'LaserStartDate',
+                    'Start Time',
+                    'Received Time',
+                    'ReceivedTime',
+                    'Received'
+                ]));
                 const completed = rawToLocalDate(completeDate);
                 const pic = getMAPic(row);
-                if (!received || !completed || !pic || pic === '---' || pic === 'Gavin') return;
+                if (!started || !completed || !pic || pic === '---' || pic === 'Gavin') return;
                 const consumptionStart = rawToLocalDate(getVal(row, [
                     'Consumption Start Date',
                     'ConsumptionStartDate',
@@ -1091,9 +1138,9 @@
                     'Consumption End Date',
                     'Cons. End Date'
                 ]));
-                let hours = Math.max(0, (completed - received) / 3600000);
+                let hours = Math.max(0, (completed - started) / 3600000);
                 if (consumptionStart && consumptionEnd && consumptionEnd > consumptionStart) {
-                    const overlapStart = Math.max(received.getTime(), consumptionStart.getTime());
+                    const overlapStart = Math.max(started.getTime(), consumptionStart.getTime());
                     const overlapEnd = Math.min(completed.getTime(), consumptionEnd.getTime());
                     if (overlapEnd > overlapStart) {
                         hours -= (overlapEnd - overlapStart) / 3600000;
