@@ -1587,6 +1587,10 @@
             }).finally(() => clearTimeout(timer));
         }
 
+        function delay(ms) {
+            return new Promise(resolve => setTimeout(resolve, ms));
+        }
+
         const machineImages = {
             "AQM0001": "Zoje1.png", "AQM0002": "Zoje2.png", "AQM0003": "Zoje2.png", "AQM0004": "Zoje2.png",
             "AQM0005": "Juita2.png", "AQM0006": "Jack.png", "AQM0007": "Juita2.png", "AQM0008": "Juita2.png",
@@ -2524,6 +2528,8 @@
         // Store laser rows in memory
         let allLaserRows = [];
         let laserSearchQuery = '';
+        const LASER_CACHE_KEY = 'ma_portal_laser_rows_v2';
+        const LASER_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
         let allSupportRows = [];
         let supportSearchQuery = '';
 
@@ -2750,16 +2756,67 @@
             }
         }
 
+        async function fetchLaserRowsWithRetry() {
+            let lastError = null;
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    const res = await postPortalJson(laserFetchURL, {}, attempt === 1 ? 25000 : 40000);
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    const rows = extractRows(await res.json());
+                    if (!Array.isArray(rows)) throw new Error('Laser response did not contain rows.');
+                    return rows;
+                } catch (err) {
+                    lastError = err;
+                    if (attempt < 3) await delay(attempt * 1500);
+                }
+            }
+            throw lastError || new Error('Laser data request failed.');
+        }
+
+        function saveLaserRowsCache(rows) {
+            try {
+                localStorage.setItem(LASER_CACHE_KEY, JSON.stringify({
+                    updatedAt: Date.now(),
+                    rows
+                }));
+            } catch (e) {
+                console.warn('Laser cache skipped:', e.message);
+            }
+        }
+
+        function loadLaserRowsCache() {
+            try {
+                const cache = JSON.parse(localStorage.getItem(LASER_CACHE_KEY) || 'null');
+                if (!cache || !Array.isArray(cache.rows) || !cache.updatedAt) return null;
+                if (Date.now() - cache.updatedAt > LASER_CACHE_MAX_AGE_MS) return null;
+                return cache;
+            } catch (e) {
+                console.warn('Laser cache ignored:', e.message);
+                return null;
+            }
+        }
+
+        function showCachedLaserRows(cache, st) {
+            allLaserRows = cache.rows;
+            renderLaserTable();
+            renderLaserDashboard();
+            generateMonthOptions();
+            populateTabMonthFilters();
+            const ageMin = Math.max(1, Math.round((Date.now() - cache.updatedAt) / 60000));
+            if (st) {
+                st.innerText = `PA slow - cached ${allLaserRows.length} rows (${ageMin}m)`;
+                st.classList.remove('sync-active');
+            }
+        }
+
         async function refreshLaserData(isSilent = false) {
             const st = document.getElementById('laserSyncStatus');
             if (!isSilent && st) { st.innerText = 'Syncing...'; st.classList.add('sync-active'); }
             try {
-                const _ctrl_l = new AbortController(); const _t_l = setTimeout(() => _ctrl_l.abort(), 25000);
-                const r_l = await fetch(laserFetchURL + "&cb=" + Date.now(), { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}), signal: _ctrl_l.signal }); clearTimeout(_t_l);
-                if (!r_l.ok) throw new Error(`HTTP ${r_l.status}`);
-                const rows = extractRows(await r_l.json());
+                const rows = await fetchLaserRowsWithRetry();
                 rows.sort((a, b) => (parseInt(b.Id||b.ID||0)) - (parseInt(a.Id||a.ID||0)));
                 allLaserRows = rows;
+                saveLaserRowsCache(rows);
                 writeDashboardSnapshot();
                 // Don't re-render laser table if user is actively typing in it
                 const _lActiveEl = document.activeElement;
@@ -2775,9 +2832,29 @@
                 if (dashVisible) requestAnimationFrame(() => renderLaserSLA());
                 if (st) { st.innerText = 'LIVE: ' + new Date().toLocaleTimeString() + ` (${rows.length} rows)`; st.classList.remove('sync-active'); }
             } catch(e) {
+                console.warn('Laser data refresh failed:', e);
+                if (allLaserRows.length) {
+                    renderLaserTable();
+                    renderLaserDashboard();
+                    const message = `PA slow - showing cached ${allLaserRows.length} rows`;
+                    if (st) { st.innerText = message; st.classList.remove('sync-active'); }
+                    return;
+                }
+                const laserCache = loadLaserRowsCache();
+                if (laserCache) {
+                    showCachedLaserRows(laserCache, st);
+                    return;
+                }
+                const hydrated = hydrateDashboardFromSnapshot();
+                if (hydrated && allLaserRows.length) {
+                    const message = `PA slow - showing cached ${allLaserRows.length} rows`;
+                    if (st) { st.innerText = message; st.classList.remove('sync-active'); }
+                    return;
+                }
                 const tbody = document.getElementById('laserTable');
-                if (tbody) tbody.innerHTML = '<tr><td colspan="20" class="p-6 text-center text-red-400 italic text-xs">Failed to load laser data. Check the Power Automate flow.</td></tr>';
-                if (st) { st.innerText = 'Error'; st.classList.remove('sync-active'); }
+                if (tbody) tbody.innerHTML = '<tr><td colspan="20" class="p-6 text-center text-amber-500 italic text-xs">Laser data is still syncing. Retrying automatically...</td></tr>';
+                if (st) { st.innerText = 'Retrying...'; st.classList.remove('sync-active'); }
+                if (!isSilent) setTimeout(() => safeRun(() => refreshLaserData(true)), 15000);
             }
         }
 
@@ -6133,17 +6210,17 @@
 
         function loadInitialDashboardData() {
             [
-                () => refreshTemplateLogs(),
-                () => refreshLaserData(),
-                () => refreshSupportData(),
-                () => refreshPatchData(),
-                () => refreshConsumptionData(),
-                () => refreshDownData()
-            ].forEach(task => safeRun(task));
+                [0, () => refreshTemplateLogs()],
+                [700, () => refreshLaserData()],
+                [1400, () => refreshSupportData()],
+                [2100, () => refreshPatchData()],
+                [2800, () => refreshConsumptionData()],
+                [3500, () => refreshDownData()]
+            ].forEach(([delayMs, task]) => setTimeout(() => safeRun(task), delayMs));
 
             // Lower-priority data: useful for utilization/log tabs, but not needed to paint the main dashboard.
-            setTimeout(() => safeRun(() => fetchAttendanceFromCloud()), 2000);
-            setTimeout(() => safeRun(() => refreshLiveLogs()), 3000);
+            setTimeout(() => safeRun(() => fetchAttendanceFromCloud()), 4500);
+            setTimeout(() => safeRun(() => refreshLiveLogs()), 5200);
         }
 
         window.onload = () => {
