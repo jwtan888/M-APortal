@@ -723,6 +723,7 @@
         const STORAGE_KEY = 'ma_attendance2_sessions';
         const CORRECTED_HIDE_KEY = 'ma_attendance2_corrected_source_rows';
         const FINAL_SPLIT_CACHE_KEY = 'ma_attendance2_final_split_rows_cache';
+        const LASER_CACHE_KEY = 'ma_portal_laser_rows_v2';
         const PIC_SESSION_KEY = 'ma_admin_session_user';
         const WORK_START = '07:30';
         const WORK_END = '17:00';
@@ -917,6 +918,26 @@
             localStorage.setItem(FINAL_SPLIT_CACHE_KEY, JSON.stringify(Array.isArray(rows) ? rows : []));
         }
 
+        function readPortalLaserCache() {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(LASER_CACHE_KEY) || 'null');
+                return parsed && Array.isArray(parsed.rows) ? parsed.rows : [];
+            } catch (e) {
+                return [];
+            }
+        }
+
+        function writePortalLaserCache(rows) {
+            try {
+                localStorage.setItem(LASER_CACHE_KEY, JSON.stringify({
+                    updatedAt: Date.now(),
+                    rows: Array.isArray(rows) ? rows : []
+                }));
+            } catch (e) {
+                console.warn('Laser cache write skipped:', e.message);
+            }
+        }
+
         function hideCorrectedSourceSession(session) {
             const signature = sessionSourceSignature(session);
             const idSignature = sessionSourceIdSignature(session);
@@ -1008,18 +1029,20 @@
             return data?.['@odata.nextLink'] || data?.body?.['@odata.nextLink'] || data?.nextLink || data?.body?.nextLink || '';
         }
 
-        async function fetchJsonRows(url) {
+        async function fetchJsonRowsOnce(url, timeoutMs = 35000) {
             const rows = [];
             let nextUrl = `${url}&cb=${Date.now()}`;
             let method = 'POST';
             let pageCount = 0;
             while (nextUrl && pageCount < 10) {
                 const controller = new AbortController();
-                const timer = setTimeout(() => controller.abort(), 25000);
+                const timer = setTimeout(() => controller.abort(), timeoutMs);
                 try {
                     const res = await fetch(nextUrl, {
                         method,
+                        headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-cache' },
                         body: method === 'POST' ? JSON.stringify({}) : undefined,
+                        cache: 'no-store',
                         signal: controller.signal
                     });
                     clearTimeout(timer);
@@ -1037,6 +1060,21 @@
                 }
             }
             return rows;
+        }
+
+        async function fetchJsonRows(url, options = {}) {
+            const retries = options.retries || 3;
+            const timeoutMs = options.timeoutMs || 35000;
+            let lastError = null;
+            for (let attempt = 1; attempt <= retries; attempt += 1) {
+                try {
+                    return await fetchJsonRowsOnce(url, timeoutMs);
+                } catch (e) {
+                    lastError = e;
+                    if (attempt < retries) await new Promise(resolve => setTimeout(resolve, attempt * 1500));
+                }
+            }
+            throw lastError || new Error('Data request failed.');
         }
 
         function getVal(obj, keys) {
@@ -1704,19 +1742,42 @@
             const statusEl = document.getElementById('actualStatus');
             if (statusEl) statusEl.innerText = 'Loading abnormal MA Portal time data...';
             try {
-                const [settingRows, laserRows, supportRows, consumptionRows, downRows] = await Promise.all([
+                const results = await Promise.allSettled([
                     fetchJsonRows(settingFetchURL),
-                    fetchJsonRows(laserFetchURL),
+                    fetchJsonRows(laserFetchURL, { retries: 4, timeoutMs: 40000 }),
                     fetchJsonRows(supportFetchURL),
                     fetchJsonRows(consumptionFetchURL),
                     fetchJsonRows(downFetchURL)
                 ]);
+                const labels = ['Template', 'Laser', 'Support', 'Consumption', 'Down Filling'];
+                const failures = [];
+                const rowsFor = (index) => {
+                    if (results[index].status === 'fulfilled') return results[index].value;
+                    failures.push(`${labels[index]}: ${results[index].reason?.message || 'load failed'}`);
+                    return [];
+                };
+                const settingRows = rowsFor(0);
+                let laserRows = rowsFor(1);
+                const supportRows = rowsFor(2);
+                const consumptionRows = rowsFor(3);
+                const downRows = rowsFor(4);
+
+                if (laserRows.length) {
+                    writePortalLaserCache(laserRows);
+                } else {
+                    const cachedLaserRows = readPortalLaserCache();
+                    if (cachedLaserRows.length) {
+                        laserRows = cachedLaserRows;
+                        failures.push(`Laser: using cached ${cachedLaserRows.length} rows while PA catches up`);
+                    }
+                }
                 sessions = mapActualSessions({ settingRows, laserRows, supportRows, consumptionRows, downRows });
                 saveSessions();
                 renderSessions();
                 previewCurrentForm();
                 if (statusEl) {
-                    statusEl.innerText = `Loaded ${sessions.length} abnormal row${sessions.length !== 1 ? 's' : ''}. No action is needed unless the start/end time is wrong.`;
+                    const failureText = failures.length ? ` Partial load: ${failures.join(' | ')}` : '';
+                    statusEl.innerText = `Loaded ${sessions.length} abnormal row${sessions.length !== 1 ? 's' : ''}. No action is needed unless the start/end time is wrong.${failureText}`;
                 }
             } catch (e) {
                 if (statusEl) statusEl.innerText = `Actual data load failed: ${e.message}`;
