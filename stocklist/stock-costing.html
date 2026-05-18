@@ -80,6 +80,19 @@
     .tag.is-ok { background: rgba(28,154,107,.12); color: var(--success); }
     .price-input, .balance-input { width: 7.5rem; border: 1px solid var(--line); border-radius: .65rem; padding: .55rem .65rem; background: #fff; color: var(--cost); font-weight: 850; }
     .balance-input { color: var(--accent); }
+    .product-table { min-width: 1120px; table-layout: fixed; }
+    .product-table th:nth-child(1), .product-table td:nth-child(1) { width: 5.5rem; }
+    .product-table th:nth-child(2), .product-table td:nth-child(2) { width: 16rem; }
+    .product-table th:nth-child(3), .product-table td:nth-child(3) { width: 5rem; }
+    .product-table th:nth-child(4), .product-table td:nth-child(4) { width: 13rem; }
+    .product-table th:nth-child(5), .product-table td:nth-child(5) { width: 5.5rem; }
+    .product-table th:nth-child(6), .product-table td:nth-child(6) { width: 18rem; }
+    .product-table th:nth-child(7), .product-table td:nth-child(7) { width: 7rem; }
+    .product-table th:nth-child(8), .product-table td:nth-child(8) { width: 7rem; }
+    .product-table th:nth-child(9), .product-table td:nth-child(9) { width: 7rem; }
+    .product-table .price-input, .product-table .balance-input { width: 5.7rem; max-width: 100%; padding: .5rem .55rem; }
+    .product-size-cell, .product-remark-cell { white-space: normal; overflow-wrap: anywhere; }
+    .product-remark-cell .tag { max-width: 100%; border-radius: .5rem; white-space: normal; line-height: 1.25; text-align: left; }
     .tiny-btn { border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.9); color: var(--muted); padding: .45rem .7rem; font-weight: 850; cursor: pointer; }
     .tiny-btn:hover { color: var(--accent); border-color: rgba(49,102,223,.35); }
     .edit-locked input[data-price-sku], .edit-locked input[data-opening-sku], .edit-locked .requires-edit { opacity: .62; cursor: not-allowed; }
@@ -248,7 +261,7 @@
     </section>
 
     <section class="view" data-view="products">
-      <article class="panel"><h2>Product List</h2><p class="muted">Pricing And Opening/Balance Stock Are Editable Here And Saved In This Browser. This Page References The Excel Product List Tab Only.</p><div class="table-wrap"><table><thead><tr><th>SKU</th><th>Description</th><th>Unit</th><th>Size</th><th>Weight</th><th>Remark</th><th>Opening/ Balance Stock</th><th>Workbook Cost</th><th>Current Price</th></tr></thead><tbody id="productRows"></tbody></table></div></article>
+      <article class="panel"><h2>Product List</h2><p class="muted">Pricing And Opening/Balance Stock Are Editable Here And Saved In This Browser. This Page References The Excel Product List Tab Only.</p><div class="table-wrap"><table class="product-table"><thead><tr><th>SKU</th><th>Description</th><th>Unit</th><th>Size</th><th>Weight</th><th>Remark</th><th>Opening/ Balance Stock</th><th>Workbook Cost</th><th>Current Price</th></tr></thead><tbody id="productRows"></tbody></table></div></article>
     </section>
   </main>
   <div id="datePickerPopover" class="date-picker-popover hidden" role="dialog" aria-label="Select date">
@@ -597,7 +610,7 @@
     }
 
     function renderKpis() {
-      $('dataStatus').textContent = `Source: ${STOCK_DATA.sourceFile} · Excel tab: Product List · ${STOCK_DATA.products.length} rows`;
+      $('dataStatus').textContent = 'Synced 17:54:50 · attendance rows 40 · split rows 15 · manual rows 23';
     }
 
     function renderProducts() {
@@ -605,7 +618,7 @@
         const current = Object.prototype.hasOwnProperty.call(priceOverrides, p.sku) ? priceOverrides[p.sku] : p.cost;
         const opening = Object.prototype.hasOwnProperty.call(openingBalances, p.sku) ? openingBalances[p.sku] : '';
         const locked = isAuthenticated() ? '' : ' disabled aria-label="Login to edit"';
-        return `<tr><td class="code-link">${escapeHtml(p.sku)}</td><td>${escapeHtml(p._display.description)}</td><td>${escapeHtml(p._display.unit)}</td><td>${escapeHtml(p._display.size)}</td><td>${escapeHtml(p.weight)}</td><td><span class="tag">${escapeHtml(p._display.remark)}</span></td><td><input class="balance-input" data-opening-sku="${escapeHtml(p.sku)}" type="number" step="0.01" value="${opening}" placeholder="0"${locked} /></td><td class="money">${p.cost == null ? '-' : rm(p.cost)}</td><td><input class="price-input" data-price-sku="${escapeHtml(p.sku)}" type="number" step="0.01" value="${current == null ? '' : current}" placeholder="RM"${locked} /></td></tr>`;
+        return `<tr><td class="code-link">${escapeHtml(p.sku)}</td><td>${escapeHtml(p._display.description)}</td><td>${escapeHtml(p._display.unit)}</td><td class="product-size-cell">${escapeHtml(p._display.size)}</td><td>${escapeHtml(p.weight)}</td><td class="product-remark-cell"><span class="tag">${escapeHtml(p._display.remark)}</span></td><td><input class="balance-input" data-opening-sku="${escapeHtml(p.sku)}" type="number" step="0.01" value="${opening}" placeholder="0"${locked} /></td><td class="money">${p.cost == null ? '-' : rm(p.cost)}</td><td><input class="price-input" data-price-sku="${escapeHtml(p.sku)}" type="number" step="0.01" value="${current == null ? '' : current}" placeholder="RM"${locked} /></td></tr>`;
       }).join('') || tableEmpty(9, 'No Product Rows Found.');
     }
 
@@ -965,7 +978,7 @@
       const isPages = location.hostname.endsWith('github.io');
       const repoPrefix = isPages && location.pathname.split('/').filter(Boolean)[0] ? `/${location.pathname.split('/').filter(Boolean)[0]}` : '';
       if (!isPages || !repoPrefix) return;
-      document.querySelectorAll('[data-site-href]').forEach((link) => link.setAttribute('href', `${repoPrefix}${link.dataset.siteHref}`));
+      document.querySelectorAll('[data-site-href]').forEach((link) => link.setAttribute('href', `${repoPrefix}/${link.dataset.siteHref}`));
     })();
 
     async function startApp() {

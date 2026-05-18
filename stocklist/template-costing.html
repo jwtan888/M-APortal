@@ -842,7 +842,7 @@
       const isPages = location.hostname.endsWith('github.io');
       const repoPrefix = isPages && location.pathname.split('/').filter(Boolean)[0] ? `/${location.pathname.split('/').filter(Boolean)[0]}` : '';
       if (!isPages || !repoPrefix) return;
-      document.querySelectorAll('[data-site-href]').forEach((link) => link.setAttribute('href', `${repoPrefix}${link.dataset.siteHref}`));
+      document.querySelectorAll('[data-site-href]').forEach((link) => link.setAttribute('href', `${repoPrefix}/${link.dataset.siteHref}`));
     })();
 
     async function startApp() {
