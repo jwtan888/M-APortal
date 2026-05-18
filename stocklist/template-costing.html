@@ -1,0 +1,867 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>M&A Template Costing</title>
+  <link rel="icon" href="./favicon.png" />
+  <style>
+    :root { --bg: #dfe1ea; --panel: rgba(255,255,255,.9); --surface-soft: #f8fafc; --text: #1a1d25; --muted: #7d8598; --line: rgba(91,104,138,.12); --accent: #315fd6; --accent-soft: #e9efff; --success: #1c9a6b; --warning: #d65a3a; --cost: #b45f1d; --teal: #2f938b; --purple: #7047e8; --shadow: 0 20px 50px rgba(48, 59, 86, .08); font-family: "Inter", "Aptos", "Segoe UI Variable", "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: radial-gradient(circle at top left, rgba(255,255,255,.55), transparent 26rem), linear-gradient(180deg, #dfe1ea 0%, #d9dbe6 100%); color: var(--text); }
+    button, input, select { font: inherit; }
+    .login-shell { padding: 1rem 1.25rem; background: var(--panel); border: 1px solid var(--line); border-radius: 1.35rem; box-shadow: var(--shadow); }
+    .login-shell[hidden] { display: none; }
+    .login-layout { display: flex; flex-direction: column; gap: 1rem; }
+    .login-title { margin: .25rem 0 0; font-size: 1.25rem; font-weight: 700; line-height: 1.1; letter-spacing: -.025em; color: #0f172a; }
+    .login-grid { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; justify-content: flex-start; }
+    .login-grid .field { min-width: 180px; }
+    .login-grid .field label { display: none; }
+    .login-grid input, .login-grid select { border-radius: 10px; padding: .55rem .75rem; background: var(--surface-soft); color: var(--text); font-size: .875rem; font-weight: 600; border: 1px solid var(--line); }
+    .login-grid .primary-btn { background: #111827; padding: .62rem 1rem; font-size: .75rem; text-transform: uppercase; letter-spacing: .12em; }
+    .login-status { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; color: var(--muted); font-size: .875rem; }
+    .login-status-pill { display: inline-flex; align-items: center; min-height: 2.5rem; border-radius: 999px; background: #f1f5f9; padding: .5rem 1rem; color: #475569; font-weight: 600; white-space: nowrap; }
+    .login-source-status { color: #94a3b8; font-size: .75rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+    .login-error { margin: .85rem 0 0; color: var(--warning); font-weight: 800; }
+    .hidden { display: none !important; }
+    .password-modal { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; padding: 1rem; }
+    .password-backdrop { position: absolute; inset: 0; background: rgba(15, 23, 42, .42); }
+    .password-dialog { position: relative; width: min(24rem, 100%); padding: 1.25rem; background: #fff; border: 1px solid var(--line); border-radius: 1rem; box-shadow: 0 24px 70px rgba(15, 23, 42, .22); }
+    .password-dialog h3 { margin: .25rem 0 1rem; color: #111827; font-size: 1.35rem; letter-spacing: -.025em; }
+    .password-dialog input { width: 100%; border: 1px solid var(--line); border-radius: .75rem; padding: .75rem .9rem; background: var(--surface-soft); color: var(--text); font-weight: 700; outline: none; }
+    .password-dialog input:focus { border-color: rgba(49,95,214,.55); box-shadow: 0 0 0 3px rgba(49,95,214,.16); }
+    .password-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
+    .app-shell { width: min(1440px, calc(100vw - 2rem)); margin: 0 auto; padding: 1rem 0; }
+    .topbar { display: flex; justify-content: space-between; gap: 1rem; align-items: end; margin-bottom: 1rem; }
+    .topbar-title { margin: .2rem 0 0; font-size: clamp(1.6rem, 3vw, 2.5rem); line-height: 1; letter-spacing: -.03em; font-weight: 700; }
+    .eyebrow { margin: 0; color: #94a3b8; font-size: .6875rem; letter-spacing: .16em; text-transform: uppercase; font-weight: 700; }
+    .nav-tabs { display: inline-flex; gap: .45rem; align-items: center; padding: .35rem; border-radius: 999px; background: rgba(255,255,255,.7); border: 1px solid var(--line); }
+    .nav-tab { color: var(--muted); text-decoration: none; border-radius: 999px; padding: .8rem 1rem; font-weight: 700; font-size: .95rem; white-space: nowrap; }
+    .nav-tab.is-active { background: #fff; color: var(--text); box-shadow: 0 8px 20px rgba(48, 59, 86, .08); }
+    .hero, .panel, .kpi-card { background: var(--panel); border: 1px solid var(--line); border-radius: 1.35rem; box-shadow: var(--shadow); }
+    .hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: center; padding: 1.5rem; overflow: hidden; }
+    .hero-title { margin: 0; font-size: clamp(2rem, 5vw, 4.6rem); line-height: .95; letter-spacing: 0; text-transform: capitalize; }
+    .hero-copy { margin: .8rem 0 0; color: var(--muted); font-size: 1.04rem; font-weight: 650; max-width: 62rem; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: .75rem; justify-content: flex-end; }
+    .primary-btn, .ghost-btn { border-radius: 999px; padding: .9rem 1.25rem; font-weight: 900; letter-spacing: .03em; border: 1px solid var(--line); cursor: pointer; }
+    .primary-btn { background: var(--accent); color: #fff; border-color: transparent; }
+    .ghost-btn { background: rgba(255,255,255,.75); color: var(--text); }
+    .panel, .kpi-card { padding: 1.25rem; }
+    .panel h2 { margin: 0 0 .45rem; font-size: 1.45rem; letter-spacing: 0; text-transform: capitalize; }
+    .stock-layout { display: grid; gap: 1rem; }
+    .entry-grid { display: grid; grid-template-columns: 1fr .9fr 1.1fr 1.4fr .7fr .7fr .6fr 1.2fr auto; gap: .7rem; align-items: end; }
+    .field { display: grid; gap: .35rem; }
+    .field label { font-size: .76rem; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); font-weight: 800; }
+    .field input, .field select { width: 100%; border: 1px solid var(--line); border-radius: .9rem; background: rgba(255,255,255,.86); color: var(--text); padding: .9rem 1rem; font-weight: 700; outline: none; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+    .dashboard-grid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 1rem; align-items: stretch; }
+    .dashboard-chart { display: grid; gap: .8rem; }
+    .monthly-bars { display: grid; gap: .55rem; padding: .95rem 1rem; border: 1px solid var(--line); border-radius: 1rem; background: linear-gradient(180deg, #fff 0%, #f7f9fd 100%); }
+    .month-bar { display: grid; grid-template-columns: 4.5rem minmax(0, 1fr) 7rem; gap: .8rem; align-items: center; min-height: 2.2rem; padding: .25rem .45rem; border-radius: .75rem; }
+    .month-bar.is-selected { background: rgba(49, 95, 214, .07); box-shadow: inset 0 0 0 1px rgba(49, 95, 214, .24); }
+    .bar-stack { width: 100%; height: .8rem; border-radius: 999px; overflow: hidden; display: flex; background: #edf1f7; box-shadow: inset 0 0 0 1px rgba(45, 54, 75, .05); }
+    .bar-seg { height: 100%; }
+    .bar-seg.production { background: var(--accent); }
+    .bar-seg.sample { background: #f0a12b; }
+    .bar-label { color: var(--muted); font-size: .76rem; font-weight: 900; text-transform: uppercase; }
+    .bar-value { color: var(--text); font-size: .82rem; font-weight: 900; white-space: nowrap; text-align: right; }
+    .legend-row { display: flex; flex-wrap: wrap; gap: .85rem; color: var(--muted); font-weight: 800; font-size: .82rem; }
+    .legend-dot { display: inline-block; width: .65rem; height: .65rem; border-radius: 999px; margin-right: .35rem; vertical-align: middle; }
+    .legend-dot.production { background: var(--accent); }
+    .legend-dot.sample { background: #f0a12b; }
+    .analysis-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+    .analysis-card { border: 1px solid var(--line); border-radius: 1rem; background: rgba(255,255,255,.7); padding: .95rem; min-height: 112px; }
+    .analysis-card strong { display: block; font-size: 1.55rem; line-height: 1; margin: .25rem 0 .3rem; letter-spacing: 0; }
+    .section-title { display: flex; align-items: center; justify-content: space-between; gap: 1rem; margin-bottom: .8rem; }
+    .section-title h2 { margin: 0; }
+    .dashboard-tools { display: flex; gap: .7rem; align-items: end; flex-wrap: wrap; justify-content: flex-end; }
+    .dashboard-tools .field { min-width: 12rem; }
+    .metric-value { font-size: clamp(2rem, 4vw, 3rem); line-height: 1; letter-spacing: -.04em; font-weight: 850; }
+    .metric-value.is-blue { color: var(--accent); } .metric-value.is-green { color: var(--success); } .metric-value.is-orange { color: #d97621; }
+    .table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 1rem; background: rgba(255,255,255,.7); }
+    table { width: 100%; border-collapse: collapse; min-width: 1180px; }
+    th { position: sticky; top: 0; z-index: 1; background: #f6f7fb; color: #676f82; text-align: left; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; }
+    th, td { padding: .82rem .85rem; border-bottom: 1px solid var(--line); vertical-align: middle; }
+    td { color: #2b303b; font-weight: 650; font-size: .88rem; }
+    .muted { color: var(--muted); font-weight: 650; }
+    .money { color: var(--cost); font-weight: 850; white-space: nowrap; }
+    .code-link { color: var(--accent); font-weight: 850; }
+    .entry-input, .entry-select { width: 100%; border: 1px solid var(--line); border-radius: .65rem; padding: .55rem .65rem; background: #fff; color: var(--text); font-weight: 800; }
+    .entry-number { min-width: 5.4rem; }
+    .tiny-btn { border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.9); color: var(--muted); padding: .45rem .7rem; font-weight: 850; cursor: pointer; }
+    .tiny-btn:hover { color: var(--accent); border-color: rgba(49,102,223,.35); }
+    .edit-locked .requires-edit, .edit-locked .entry-input, .edit-locked .entry-select { opacity: .62; cursor: not-allowed; }
+    .logout-btn { border: 1px solid rgba(244,63,94,.2); color: #dc2626; background: rgba(255,255,255,.75); padding: .62rem 1rem; font-size: .75rem; text-transform: uppercase; letter-spacing: .12em; }
+    .date-picker-active { border-color: var(--accent) !important; box-shadow: 0 0 0 3px rgba(49,95,214,.18) !important; background: #fff !important; }
+    .date-picker-popover { position: fixed; z-index: 9999; width: 260px; padding: .75rem; background: rgba(255,255,255,.98); border: 1px solid var(--line); border-radius: 1rem; box-shadow: 0 18px 50px rgba(40,48,68,.16), 0 4px 12px rgba(40,48,68,.08); }
+    .date-picker-popover.hidden { display: none; }
+    .date-picker-popover label { display: block; margin-bottom: .3rem; font-size: .68rem; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .date-picker-popover input { width: 100%; border: 1px solid var(--line); border-radius: .7rem; padding: .55rem .65rem; font-weight: 800; }
+    .date-picker-actions { display: flex; justify-content: flex-end; gap: .4rem; margin-top: .65rem; }
+    .date-picker-actions .tiny-btn,
+    .date-picker-actions .primary-btn { width: auto; min-width: 0; padding: .48rem .72rem; font-size: .78rem; line-height: 1.1; letter-spacing: .02em; }
+    .date-picker-actions .primary-btn { border-radius: 999px; }
+    .row-form { border: 1px solid var(--line); border-radius: 1rem; background: rgba(255,255,255,.58); padding: 1rem; margin-top: 1rem; }
+    .status-line { color: var(--muted); font-weight: 750; }
+    @media (min-width: 900px) { .login-layout { flex-direction: row; align-items: center; justify-content: space-between; } .login-grid, .login-status { justify-content: flex-end; } }
+    @media (max-width: 1200px) { .entry-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } .dashboard-grid { grid-template-columns: 1fr; } }
+    @media (max-width: 900px) { .hero, .entry-grid, .grid-3, .analysis-grid { grid-template-columns: 1fr; } .topbar { flex-direction: column; align-items: stretch; gap: .85rem; } .nav-tabs { display: flex; width: 100%; flex-wrap: wrap; } .nav-tab { flex: 1 1 calc(33.333% - .45rem); text-align: center; font-size: .82rem; } .hero-actions, .primary-btn, .ghost-btn { width: 100%; } }
+  </style>
+</head>
+<body class="edit-locked">
+  <main class="app-shell stock-layout">
+    <header class="topbar">
+      <div>
+        <h1 class="topbar-title">M&A Template Costing</h1>
+      </div>
+      <nav class="nav-tabs" aria-label="Navigation">
+        <a class="nav-tab" href="../index.html" data-site-href="index.html">M&A Portal</a>
+        <a class="nav-tab" href="./stock-costing.html" data-site-href="stocklist/stock-costing.html">Stock List</a>
+        <a class="nav-tab is-active" href="./template-costing.html" data-site-href="stocklist/template-costing.html">Template Costing</a>
+      </nav>
+    </header>
+
+    <section class="login-shell" id="loginShell">
+      <div class="login-layout">
+        <div>
+          <p class="eyebrow">Session</p>
+          <h1 class="login-title">Template Costing Admin</h1>
+        </div>
+        <div class="login-grid" id="loginControls">
+          <div class="field" id="loginUserField"><label for="loginUser">PIC</label><select id="loginUser"><option value="">Select PIC...</option><option value="Gavin">Gavin</option><option value="James">James</option></select></div>
+          <button class="primary-btn" id="loginBtn" type="button">Login</button>
+          <button class="tiny-btn logout-btn" id="logoutBtn" type="button" hidden>Logout</button>
+        </div>
+        <div class="login-status">
+          <span class="login-status-pill" id="activeUser">Not Logged In</span>
+          <span class="login-source-status" id="sourceStatus">View Only · Login To Edit</span>
+        </div>
+      </div>
+      <p class="login-error" id="loginError" hidden>Invalid PIC Or Password.</p>
+    </section>
+    <div class="live-status status-line" id="dataStatus" hidden></div>
+
+    <div id="passwordModal" class="password-modal hidden" role="dialog" aria-modal="true" aria-labelledby="passwordModalTitle">
+      <div class="password-backdrop" id="passwordBackdrop"></div>
+      <div class="password-dialog">
+        <p class="eyebrow">Template Costing Admin</p>
+        <h3 id="passwordModalTitle">Enter Password</h3>
+        <input id="modalPasswordInput" type="password" placeholder="Password" autocomplete="current-password" />
+        <p class="login-error" id="modalPasswordError" hidden>Invalid PIC Or Password.</p>
+        <div class="password-actions">
+          <button class="tiny-btn" id="passwordCancelBtn" type="button">Cancel</button>
+          <button class="primary-btn" id="passwordSubmitBtn" type="button">Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <section class="grid-3" aria-label="Summary">
+      <article class="kpi-card"><p class="eyebrow">Material Lines</p><div class="metric-value is-blue" id="lineCount">0</div><p class="muted">Actual Usage Rows</p></article>
+      <article class="kpi-card"><p class="eyebrow">PVC Qty</p><div class="metric-value is-green" id="qtyTotal">0</div><p class="muted">Total Sheet Usage Qty</p></article>
+      <article class="kpi-card"><p class="eyebrow">Template Cost</p><div class="metric-value is-orange" id="costKpi">RM0.00</div><p class="muted">Current Estimate</p></article>
+    </section>
+
+    <section class="dashboard-grid" aria-label="Template costing dashboard">
+      <article class="panel">
+        <div class="section-title">
+          <div>
+            <h2>Template Cost By Month</h2>
+          </div>
+          <div class="dashboard-tools">
+            <div class="field"><label for="dashboardMonth">Filter Month</label><select id="dashboardMonth"></select></div>
+          </div>
+        </div>
+        <div class="dashboard-chart">
+          <div class="monthly-bars" id="monthlyBars"></div>
+          <div class="legend-row">
+            <span><i class="legend-dot production"></i>Production</span>
+            <span><i class="legend-dot sample"></i>Sample</span>
+          </div>
+        </div>
+      </article>
+
+    </section>
+
+    <section class="panel">
+      <div class="section-title">
+        <div>
+          <h2>Monthly Material Summary</h2>
+        </div>
+      </div>
+      <div class="table-wrap"><table><thead><tr><th>Month</th><th>Production Type</th><th>Production Total Area</th><th>Production Cost</th><th>Sample Type</th><th>Sample Total Area</th><th>Sample Cost</th><th>Monthly Total</th></tr></thead><tbody id="dashboardRows"></tbody></table></div>
+    </section>
+
+    <section>
+      <article class="panel">
+        <h2>Template Costing Sheet</h2>
+        <div class="row-form">
+          <div class="entry-grid">
+            <div class="field"><label for="entryDate">Date</label><input class="entry-input date-picker-input" id="entryDate" type="text" placeholder="m/d/yyyy" autocomplete="off" /></div>
+            <div class="field"><label for="entrySection">Section</label><select class="entry-select" id="entrySection"><option value="Sample Development">Sample Development</option><option value="Production">Production</option></select></div>
+            <div class="field"><label for="entryStyleJob">Style / Job</label><input class="entry-input" id="entryStyleJob" type="text" placeholder="Style Or Job No." /></div>
+            <div class="field"><label for="entryMaterial">PVC Type</label><select class="entry-select" id="entryMaterial"></select></div>
+            <div class="field"><label for="entryLength">Length cm</label><input class="entry-input entry-number" id="entryLength" type="number" step="0.1" min="0" placeholder="L" /></div>
+            <div class="field"><label for="entryWidth">Width cm</label><input class="entry-input entry-number" id="entryWidth" type="number" step="0.1" min="0" placeholder="W" /></div>
+            <div class="field"><label for="entryQty">PVC Qty</label><input class="entry-input entry-number" id="entryQty" type="number" step="1" min="1" value="1" /></div>
+            <div class="field"><label for="entryRemark">Remark</label><input class="entry-input" id="entryRemark" type="text" placeholder="Optional" /></div>
+            <button class="primary-btn requires-edit" id="addCostRowBtn2" type="button">Add</button>
+          </div>
+        </div>
+        <div class="table-wrap" style="margin-top:1rem"><table><thead><tr><th>Date</th><th>Section</th><th>Style / Job</th><th>PVC Type</th><th>PVC Size Per Job (L x W cm)</th><th>PVC Qty Per Job</th><th>Final Cost</th><th>Remark</th><th></th></tr></thead><tbody id="costingRows"></tbody></table></div>
+        <p class="muted" id="costingStatus" style="margin-top:.85rem">No Costing Rows Entered.</p>
+      </article>
+
+      <article class="panel">
+        <h2>Material Cost Factor</h2>
+        <div class="table-wrap"><table><thead><tr><th>PVC Type</th><th>PVC Size (cm)</th><th>PVC Area cm2</th><th>Cost Per Area cm2</th><th>Unit Cost PVC</th></tr></thead><tbody id="factorRows"></tbody></table></div>
+      </article>
+    </section>
+  </main>
+  <div id="datePickerPopover" class="date-picker-popover hidden" role="dialog" aria-label="Select date">
+    <label for="datePickerDate">Date</label>
+    <input type="date" id="datePickerDate">
+    <div class="date-picker-actions">
+      <button type="button" class="tiny-btn" id="datePickerToday">NOW</button>
+      <button type="button" class="tiny-btn" id="datePickerClear">CLEAR</button>
+      <button type="button" class="primary-btn" id="datePickerApply">APPLY</button>
+    </div>
+  </div>
+  <script>
+    const STOCK_DATA = {"generatedAt":"2026-05-15","sourceFile":"M&A Stock List.xlsx","products":[{"row":6,"sku":"A001","description":"AAA 1 INCH TAPE","unit":"Roll","photo":"#VALUE!","remark":"TEMPLATE ASSEMBLY","size":"1\"","weight":"","cost":null,"rawCost":""},{"row":7,"sku":"A002","description":"ACRYLIC 3MM","unit":"Sheet","photo":"#VALUE!","remark":"SAFETY SHEILD, AUTOMATION DEVICE COVER","size":"","weight":"","cost":null,"rawCost":""},{"row":8,"sku":"A003","description":"ACRYLIC 5MM","unit":"Sheet","photo":"#VALUE!","remark":"SAFETY SHEILD, AUTOMATION DEVICE COVER","size":"122cm * 244cm","weight":"","cost":null,"rawCost":""},{"row":9,"sku":"A004","description":"APOLO CT 39 CLEAR TAPE 4.7CM","unit":"Roll","photo":"#VALUE!","remark":"TEMPLATE ASSEMBLY","size":"1.8\"","weight":"","cost":null,"rawCost":""},{"row":10,"sku":"A005","description":"BIG BLADE KNIFE","unit":"Pcs","photo":"#VALUE!","remark":"","size":"1.8cm","weight":"","cost":29.5,"rawCost":"29.5"},{"row":11,"sku":"A006","description":"BLUE MIX WHITE PVC 1.2MM","unit":"Sheet","photo":"#VALUE!","remark":"TEMPLATE, CUT PANEL RACK","size":"60cm * 40cm","weight":"","cost":null,"rawCost":""},{"row":12,"sku":"A007","description":"BLUE MIX WHITE PVC 1.2MM","unit":"Sheet","photo":"#VALUE!","remark":"TEMPLATE, CUT PANEL RACK","size":"80cm * 240cm","weight":"2.7kg","cost":39.0,"rawCost":"RM39"},{"row":13,"sku":"A008","description":"BLUE PVC 1.4MM","unit":"Sheet","photo":"#VALUE!","remark":"TEMPLATE, CUT PANEL RACK","size":"80cm * 240cm","weight":"4.25kg","cost":56.0,"rawCost":"RM56"},{"row":14,"sku":"A009","description":"BLUE PVC 1.4MM","unit":"Sheet","photo":"#VALUE!","remark":"TEMPLATE, CUT PANEL RACK","size":"60cm * 40cm","weight":"","cost":null,"rawCost":""},{"row":15,"sku":"A010","description":"CLEAR PLASTIC PVC 0.6MM","unit":"Sheet","photo":"#VALUE!","remark":"TEMPLATE (POSITIONING)","size":"122cm * 244cm","weight":"2kg","cost":32.0,"rawCost":"RM32"},{"row":16,"sku":"A011","description":"CLEAR PLASTIC PVC 0.6MM","unit":"Sheet","photo":"#VALUE!","remark":"TEMPLATE (POSITIONING)","size":"60cm * 40cm","weight":"","cost":null,"rawCost":""},{"row":17,"sku":"A012","description":"CLEAR RIGID PVC 1.5MM","unit":"Sheet","photo":"#VALUE!","remark":"TEMPLATE BASE","size":"91cm * 243cm","weight":"","cost":61.0,"rawCost":"RM61"},{"row":18,"sku":"A013","description":"CLEAR RIGID PVC 2.0MM","unit":"Sheet","photo":"#VALUE!","remark":"TEMPLATE BASE","size":"91cm * 243cm","weight":"","cost":null,"rawCost":""},{"row":19,"sku":"A014","description":"CLOTH TAPE 1\"","unit":"Roll","photo":"#VALUE!","remark":"TEMPLATE ASSEMBLY","size":"1\"","weight":"","cost":1.6,"rawCost":"1.6"},{"row":20,"sku":"A015","description":"CLOTH TAPE 2\"","unit":"Roll","photo":"#VALUE!","remark":"TEMPLATE ASSEMBLY","size":"2\"","weight":"","cost":3.2,"rawCost":"3.2"},{"row":21,"sku":"A016","description":"DOUBLE SIDED FOAM TAPE (2.4CM)","unit":"Roll","photo":"#VALUE!","remark":"FIXTURE TO MACHINE","size":"1\"","weight":"","cost":null,"rawCost":""},{"row":22,"sku":"A017","description":"ECON YELLOW TAPE","unit":"Roll","photo":"#VALUE!","remark":"TEMPLATE ASSEMBLY","size":"1cm","weight":"","cost":null,"rawCost":""},{"row":23,"sku":"A018","description":"MASKING TAPE 502 (1.2)CM","unit":"Roll","photo":"#VALUE!","remark":"TEMPLATE MARKING","size":"1.2cm","weight":"","cost":null,"rawCost":""},{"row":24,"sku":"A019","description":"MASKING TAPE 504 ( 2.4cm)","unit":"Roll","photo":"#VALUE!","remark":"TEMPLATE MARKING","size":"1\"","weight":"","cost":null,"rawCost":""},{"row":25,"sku":"A020","description":"PLASTIC PET 0.5MM","unit":"Sheet","photo":"#VALUE!","remark":"TEMPLATE (POSITIONING)","size":"122cm * 244cm","weight":"1.8kg","cost":34.2,"rawCost":"RM34.20"},{"row":26,"sku":"A021","description":"PLASTIC PET 0.5MM","unit":"Sheet","photo":"#VALUE!","remark":"TEMPLATE (POSITIONING)","size":"60cm * 40cm","weight":"","cost":null,"rawCost":""},{"row":27,"sku":"A022","description":"RUBBER PLATE","unit":"Sheet","photo":"#VALUE!","remark":"IMPROVE FRICTION OF TEMPLATE (UNDERNEATH TEMPLATE BASE)","size":"1.5mm","weight":"","cost":null,"rawCost":""},{"row":28,"sku":"A023","description":"RUBBER PLATE","unit":"Sheet","photo":"#VALUE!","remark":"IMPROVE FRICTION OF TEMPLATE (UNDERNEATH TEMPLATE BASE)","size":"2mm","weight":"","cost":7.2,"rawCost":"7.2"},{"row":29,"sku":"A024","description":"RUBBER PLATE","unit":"Sheet","photo":"#VALUE!","remark":"IMPROVE FRICTION OF TEMPLATE (UNDERNEATH TEMPLATE BASE)","size":"3mm","weight":"","cost":12.0,"rawCost":"12"},{"row":30,"sku":"A025","description":"SAND PAPER (1000)","unit":"Sheet","photo":"#VALUE!","remark":"CUT PANEL PLACEMENT POSITIONING","size":"9\" * 11\"","weight":"","cost":null,"rawCost":""},{"row":31,"sku":"A026","description":"SAND PAPER (600)","unit":"Sheet","photo":"#VALUE!","remark":"CUT PANEL PLACEMENT POSITIONING","size":"9\" * 11\"","weight":"","cost":1.0,"rawCost":"1"},{"row":32,"sku":"A027","description":"SAND PAPER (800)","unit":"Sheet","photo":"#VALUE!","remark":"CUT PANEL PLACEMENT POSITIONING","size":"9\" * 11\"","weight":"","cost":1.0,"rawCost":"1"},{"row":33,"sku":"A028","description":"SAND PAPER ABRASIVE LATEX PAPER P80","unit":"Sheet","photo":"#VALUE!","remark":"SMOOTHEN TEMPLATE EDGE & SURFACE","size":"9\" * 11\"","weight":"","cost":null,"rawCost":""},{"row":34,"sku":"A029","description":"SAND PAPER EMERY CLOTH NO.2 (60)","unit":"Sheet","photo":"#VALUE!","remark":"SMOOTHEN TEMPLATE EDGE & SURFACE","size":"9\" * 11\"","weight":"","cost":1.7,"rawCost":"1.7"},{"row":35,"sku":"A030","description":"SMALL BLADE KNIFE","unit":"Pcs","photo":"#VALUE!","remark":"","size":"9 MM","weight":"","cost":13.5,"rawCost":"13.5"},{"row":36,"sku":"A031","description":"SUPER GLUE (502)","unit":"Bottle","photo":"#VALUE!","remark":"","size":"-","weight":"","cost":2.7,"rawCost":"2.7"},{"row":37,"sku":"A032","description":"DOUBLE SIDED  TAPE 1.2CM","unit":"PCS","photo":"#VALUE!","remark":"","size":"1.2cm","weight":"","cost":null,"rawCost":""},{"row":38,"sku":"A033","description":"DOUBLE SIDED  TAPE 1.8CM","unit":"PCS","photo":"#VALUE!","remark":"","size":"1.8cm","weight":"","cost":null,"rawCost":""},{"row":39,"sku":"A034","description":"DOUBLE SIDE TAPE  3.6CM","unit":"PCS","photo":"#VALUE!","remark":"","size":"3.6cm","weight":"","cost":null,"rawCost":""},{"row":40,"sku":"A035","description":"WHITE PVC 0.8CM","unit":"Sheet","photo":"#VALUE!","remark":"TEMPLATE (POSITIONING)","size":"122cm * 244cm","weight":"","cost":null,"rawCost":""},{"row":41,"sku":"A036","description":"CARDBOARD 3MM","unit":"Sheet","photo":"","remark":"TEMPLATE, CUT PANEL RACK","size":"39CM X 66CM","weight":"","cost":null,"rawCost":""},{"row":42,"sku":"A037","description":"CARDBOARD 1.5MM","unit":"Sheet","photo":"","remark":"TEMPLATE, CUT PANEL RACK","size":"72CM X 109CM","weight":"","cost":5.5,"rawCost":"RM5.50"},{"row":43,"sku":"A038","description":"CARDBOARD 1MM","unit":"Sheet","photo":"","remark":"TEMPLATE, CUT PANEL RACK","size":"72CM X 109CM","weight":"","cost":null,"rawCost":""},{"row":44,"sku":"A039","description":"CARDBOARD 0.8MM","unit":"Sheet","photo":"","remark":"TEMPLATE, CUT PANEL RACK","size":"72CM X 109CM","weight":"","cost":null,"rawCost":""},{"row":45,"sku":"A040","description":"WIRE TAPE","unit":"ROLL","photo":"","remark":"","size":"","weight":"","cost":null,"rawCost":""},{"row":46,"sku":"A041","description":"CABLE TIE","unit":"PCS","photo":"","remark":"","size":"","weight":"","cost":null,"rawCost":""}]};
+    const STOCK_FETCH_URL = 'https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/efa8578054af42ee85f010a6e9f450d5/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=JTYs4G2czYSjILuqsAlOQGBJK30BY933Y2MFu_AgIA8';
+    const TEMPLATE_COSTING_UPDATE_URL = 'https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/e94d56136261420dabe2fa947287cc1a/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Vd_5pEA5lOzImn6_U7K12hrddQBoySNQoFfpWa4I5BA';
+    const AUTH_KEY = 'ma_stock_costing_user';
+    const AUTH_PASSWORDS = {
+      Gavin: 'Modernization@888',
+      James: 'Modernization@11246',
+    };
+    const AUTH_USERS = Object.keys(AUTH_PASSWORDS);
+    let pendingLoginUser = '';
+    const PRICE_KEY = 'ma-stock-list-prices-v1';
+    const COSTING_KEY = 'ma-template-costing-rows-v1';
+    const TEMPLATE_MATERIALS = [
+      { id: 'blue-mix-white-pvc-08', name: 'BLUE MIX WHITE PVC 0.8MM', size: '80 x 240', cost: 39.00, aliases: ['BLUE MIX WHITE PVC 0.8MM', 'BLUE MIX WHITE PVC 1.2MM'] },
+      { id: 'blue-pvc-14', name: 'BLUE PVC 1.4MM', size: '80 x 240', cost: 56.00, aliases: ['BLUE PVC 1.4MM'] },
+      { id: 'cardboard-15', name: 'CARDBOARD 1.5MM', size: '72 x 109', cost: 5.50, aliases: ['CARDBOARD 1.5MM'] },
+      { id: 'cardboard-10', name: 'CARDBOARD 1MM', size: '72 x 109', cost: 5.00, aliases: ['CARDBOARD 1MM'] },
+      { id: 'clear-plastic-pvc-06', name: 'CLEAR PLASTIC PVC 0.6MM', size: '122 x 244', cost: 32.00, aliases: ['CLEAR PLASTIC PVC 0.6MM'] },
+      { id: 'clear-rigid-pvc-15', name: 'CLEAR RIGID PVC 1.5MM', size: '91 x 243', cost: 61.00, aliases: ['CLEAR RIGID PVC 1.5MM'] },
+      { id: 'plastic-pet-05', name: 'PLASTIC PET 0.5MM', size: '122 x 244', cost: 34.20, aliases: ['PLASTIC PET 0.5MM'] },
+    ];
+    let priceOverrides = loadPrices();
+    let costingRows = loadCostingRows();
+    let materialFactorCache = new Map();
+    let currentUser = sessionStorage.getItem(AUTH_KEY) || '';
+    let appStarted = false;
+
+    const $ = (id) => document.getElementById(id);
+    const norm = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const num = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
+    const rm = (value) => `RM${num(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    const stockText = (value) => String(value ?? '').trim().toLowerCase().replace(/[a-z]+/g, (word) => {
+      const upper = word.toUpperCase();
+      if (['MM', 'CM'].includes(upper)) return upper.toLowerCase();
+      if (['AAA', 'PVC', 'PET', 'PU', 'TPU', 'SKU', 'RM', 'KG', 'OT', 'BT'].includes(upper)) return upper;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    });
+
+    function excelNumber(value) {
+      const clean = String(value ?? '').replace(/RM/gi, '').replace(/,/g, '').trim();
+      return clean && Number.isFinite(Number(clean)) ? Number(clean) : null;
+    }
+
+    function excelDateText(value) {
+      const raw = String(value ?? '').trim();
+      if (!raw) return '';
+      const serial = excelNumber(raw);
+      if (serial && serial > 20000 && serial < 80000) {
+        const date = new Date(Date.UTC(1899, 11, 30 + Math.floor(serial)));
+        return `${date.getUTCMonth() + 1}/${date.getUTCDate()}/${date.getUTCFullYear()}`;
+      }
+      const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (iso) return `${Number(iso[2])}/${Number(iso[3])}/${iso[1]}`;
+      return raw;
+    }
+
+    function dateSortValue(value) {
+      const raw = String(value ?? '').trim();
+      const serial = excelNumber(raw);
+      if (serial && serial > 20000 && serial < 80000) return serial;
+      const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (iso) return Date.UTC(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3])) / 86400000;
+      const mdy = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (mdy) return Date.UTC(Number(mdy[3]), Number(mdy[1]) - 1, Number(mdy[2])) / 86400000;
+      return 0;
+    }
+
+    function datePickerToInputDate(dateObj) {
+      return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+    }
+
+    function parsePortalDate(value) {
+      const raw = String(value ?? '').trim();
+      if (!raw) return null;
+      const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+      const mdy = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (mdy) return new Date(Number(mdy[3]), Number(mdy[1]) - 1, Number(mdy[2]));
+      return null;
+    }
+
+    function formatPortalDate(dateObj) {
+      return `${dateObj.getMonth() + 1}/${dateObj.getDate()}/${dateObj.getFullYear()}`;
+    }
+
+    function normalizeProductRow(row, index) {
+      const cost = excelNumber(row['Current Price']) ?? excelNumber(row['Workbook Cost']);
+      return {
+        row: index + 1,
+        sku: String(row.SKU || row.Sku || '').trim(),
+        description: String(row.Description || '').trim(),
+        unit: String(row.Unit || '').trim(),
+        photo: '',
+        remark: String(row.Remark || '').trim(),
+        size: String(row.Size || '').trim(),
+        weight: String(row.Weight || '').trim(),
+        cost,
+        rawCost: cost == null ? '' : String(cost),
+      };
+    }
+
+    function materialIdFromName(value) {
+      const key = norm(value);
+      return TEMPLATE_MATERIALS.find((material) => material.aliases.some((alias) => norm(alias) === key) || norm(material.name) === key)?.id || TEMPLATE_MATERIALS[0].id;
+    }
+
+    function normalizeCostingRow(row) {
+      const size = String(row['PVC Size Per Job (L x W cm)'] || '');
+      const parts = size.match(/([\d.]+)\s*x\s*([\d.]+)/i);
+      return {
+        date: excelDateText(row.Date),
+        section: String(row.Section || '').trim(),
+        styleJob: String(row['Style / Job'] || '').trim(),
+        materialId: materialIdFromName(row['PVC Type']),
+        length: parts ? parts[1] : '',
+        width: parts ? parts[2] : '',
+        qty: excelNumber(row['PVC Qty Per Job']) || '1',
+        remark: String(row.Remark || '').trim(),
+      };
+    }
+
+    function applyRemoteStockPayload(payload) {
+      const products = Array.isArray(payload?.productList) ? payload.productList : [];
+      const remoteCostingRows = Array.isArray(payload?.templateCosting) ? payload.templateCosting : [];
+      if (products.length) {
+        STOCK_DATA.products = products.map(normalizeProductRow).filter((row) => row.sku);
+        priceOverrides = {};
+        products.forEach((row) => {
+          const sku = String(row.SKU || row.Sku || '').trim();
+          const price = excelNumber(row['Current Price']);
+          if (sku && price != null) priceOverrides[sku] = price;
+        });
+        rebuildProductIndex();
+        materialFactorCache = new Map();
+      }
+      if (remoteCostingRows.length) costingRows = remoteCostingRows.map(normalizeCostingRow).filter((row) => row.styleJob || row.section || row.date);
+      STOCK_DATA.sourceFile = 'OneDrive MA_Stock_Costing_Sync.xlsx';
+    }
+
+    async function fetchRemoteStockData() {
+      if (!STOCK_FETCH_URL) return false;
+      $('dataStatus').textContent = 'Loading OneDrive Stock Data...';
+      try {
+        const response = await fetch(STOCK_FETCH_URL, { method: 'POST' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        if (!payload?.ok) throw new Error('Power Automate returned no ok flag');
+        applyRemoteStockPayload(payload);
+        $('dataStatus').textContent = 'Loaded Latest Stock Data From OneDrive.';
+        return true;
+      } catch (error) {
+        $('dataStatus').textContent = `OneDrive Stock Sync Failed. Showing Local Fallback. ${error.message}`;
+        return false;
+      }
+    }
+
+    function costingPayload(row) {
+      const material = TEMPLATE_MATERIALS.find((m) => m.id === row.materialId) || TEMPLATE_MATERIALS[0];
+      const factor = materialFactor(material);
+      const qty = Math.max(0, num(row.qty));
+      const length = Math.max(0, num(row.length));
+      const width = Math.max(0, num(row.width));
+      const usedArea = length * width * qty;
+      const finalCost = usedArea * factor.costPerArea;
+      return {
+        date: row.date,
+        section: row.section,
+        styleJob: row.styleJob,
+        pvcType: stockText(material.name),
+        pvcSizePerJob: `${length} x ${width}`,
+        pvcQtyPerJob: qty,
+        unitCostPvc: factor.unitCost,
+        costPerCm2: factor.costPerArea,
+        usedAreaCm2: usedArea,
+        finalCost,
+        remark: row.remark || '',
+        pic: currentUser || '',
+      };
+    }
+
+    async function saveCostingRemote(row) {
+      if (!TEMPLATE_COSTING_UPDATE_URL) return true;
+      const response = await fetch(TEMPLATE_COSTING_UPDATE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(costingPayload(row)),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json().catch(() => ({}));
+      if (payload && payload.ok === false) throw new Error(payload.message || 'Power Automate save failed');
+      return true;
+    }
+
+    function loadPrices() {
+      try { return JSON.parse(localStorage.getItem(PRICE_KEY) || '{}') || {}; }
+      catch { return {}; }
+    }
+
+    function loadCostingRows() {
+      try { return JSON.parse(localStorage.getItem(COSTING_KEY) || '[]') || []; }
+      catch { return []; }
+    }
+
+    function saveCostingRows() {
+      localStorage.setItem(COSTING_KEY, JSON.stringify(costingRows));
+    }
+
+    let PRODUCT_BY_DESCRIPTION = new Map();
+
+    function rebuildProductIndex() {
+      PRODUCT_BY_DESCRIPTION = new Map();
+      STOCK_DATA.products.forEach((product) => PRODUCT_BY_DESCRIPTION.set(norm(product.description), product));
+    }
+
+    function findMaterialProduct(material) {
+      return material.aliases.map((alias) => PRODUCT_BY_DESCRIPTION.get(norm(alias))).find(Boolean);
+    }
+
+    function parseSize(size) {
+      const match = String(size || '').match(/([\d.]+)\s*(?:cm)?\s*[x*]\s*([\d.]+)\s*(?:cm)?/i);
+      if (!match) return { width: 0, length: 0, area: 0 };
+      const width = num(match[1]);
+      const length = num(match[2]);
+      return { width, length, area: width * length };
+    }
+
+    function materialUnitCost(material) {
+      const product = findMaterialProduct(material);
+      const override = product && Object.prototype.hasOwnProperty.call(priceOverrides, product.sku) ? num(priceOverrides[product.sku]) : 0;
+      if (override > 0) return override;
+      const productCost = product && product.cost != null ? num(product.cost) : 0;
+      if (productCost > 0) return productCost;
+      return num(material.cost);
+    }
+
+    function materialFactor(material) {
+      if (materialFactorCache.has(material.id)) return materialFactorCache.get(material.id);
+      const size = parseSize(material.size);
+      const unitCost = materialUnitCost(material);
+      const costPerArea = size.area ? unitCost / size.area : 0;
+      const factor = { ...size, unitCost, costPerArea };
+      materialFactorCache.set(material.id, factor);
+      return factor;
+    }
+
+    function monthKeyFromDate(value) {
+      const parsed = parsePortalDate(excelDateText(value));
+      if (!parsed) return '';
+      return `${parsed.getFullYear()}-${String(parsed.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    function monthName(monthKey) {
+      const [year, month] = String(monthKey || '').split('-').map(Number);
+      if (!year || !month) return monthKey || '-';
+      return new Date(year, month - 1, 1).toLocaleString(undefined, { month: 'long' });
+    }
+
+    function monthShort(monthKey) {
+      const [year, month] = String(monthKey || '').split('-').map(Number);
+      if (!year || !month) return monthKey || '-';
+      return new Date(year, month - 1, 1).toLocaleString(undefined, { month: 'short' });
+    }
+
+    function availableDashboardMonths() {
+      return [...new Set(costingRows.map((row) => monthKeyFromDate(row.date)).filter(Boolean))].sort();
+    }
+
+    function selectedDashboardMonth() {
+      const selected = $('dashboardMonth')?.value;
+      if (selected) return selected;
+      const months = availableDashboardMonths();
+      if (months.length) return months[months.length - 1];
+      const now = new Date();
+      return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    function dashboardYear() {
+      return Number(selectedDashboardMonth().slice(0, 4)) || new Date().getFullYear();
+    }
+
+    function dashboardMonths() {
+      const selected = selectedDashboardMonth();
+      const [year, endMonth] = selected.split('-').map(Number);
+      return Array.from({ length: Math.max(1, endMonth || 1) }, (_, index) => `${year}-${String(index + 1).padStart(2, '0')}`);
+    }
+
+    function renderDashboardMonthOptions() {
+      const select = $('dashboardMonth');
+      if (!select) return;
+      const previous = select.value;
+      const months = availableDashboardMonths();
+      const fallback = selectedDashboardMonth();
+      select.innerHTML = months.map((month) => `<option value="${escapeHtml(month)}">${escapeHtml(monthName(month))} ${escapeHtml(month.slice(0, 4))}</option>`).join('');
+      if (months.includes(previous)) select.value = previous;
+      else select.value = months[months.length - 1] || fallback;
+    }
+
+    function sectionGroup(section) {
+      return norm(section).includes('production') ? 'production' : 'sample';
+    }
+
+    function materialGroup(material) {
+      return norm(material.name).includes('cardboard') ? 'cardboard' : 'pvc';
+    }
+
+    function dashboardLine(row) {
+      const material = TEMPLATE_MATERIALS.find((m) => m.id === row.materialId) || TEMPLATE_MATERIALS[0];
+      const factor = materialFactor(material);
+      const qty = Math.max(0, num(row.qty));
+      const usedArea = Math.max(0, num(row.length) * num(row.width) * qty);
+      const cost = usedArea * factor.costPerArea;
+      return {
+        month: monthKeyFromDate(row.date),
+        section: sectionGroup(row.section),
+        material: materialGroup(material),
+        area: usedArea,
+        cost,
+        styleJob: row.styleJob || '-',
+      };
+    }
+
+    function dashboardData() {
+      const months = dashboardMonths();
+      const initialBucket = () => ({
+        production: { pvc: { area: 0, cost: 0 }, cardboard: { area: 0, cost: 0 } },
+        sample: { pvc: { area: 0, cost: 0 }, cardboard: { area: 0, cost: 0 } },
+      });
+      const buckets = new Map(months.map((month) => [month, initialBucket()]));
+      const lines = costingRows.map(dashboardLine).filter((line) => line.month && months.includes(line.month));
+      lines.forEach((line) => {
+        const target = buckets.get(line.month)[line.section][line.material];
+        target.area += line.area;
+        target.cost += line.cost;
+      });
+      return { months, buckets, lines };
+    }
+
+    function bucketTotal(bucket, section) {
+      return bucket[section].pvc.cost + bucket[section].cardboard.cost;
+    }
+
+    function bucketArea(bucket, section, material) {
+      return bucket[section][material].area;
+    }
+
+    function bucketCost(bucket, section, material) {
+      return bucket[section][material].cost;
+    }
+
+    function renderDashboard() {
+      const data = dashboardData();
+      const monthTotals = data.months.map((month) => {
+        const bucket = data.buckets.get(month);
+        return {
+          month,
+          production: bucketTotal(bucket, 'production'),
+          sample: bucketTotal(bucket, 'sample'),
+          total: bucketTotal(bucket, 'production') + bucketTotal(bucket, 'sample'),
+        };
+      });
+      const maxTotal = Math.max(...monthTotals.map((row) => row.total), 1);
+      $('monthlyBars').innerHTML = monthTotals.map((row) => {
+        const width = Math.max(row.total ? 6 : 1.5, (row.total / maxTotal) * 100);
+        const productionPct = row.total ? (row.production / row.total) * 100 : 0;
+        const samplePct = row.total ? 100 - productionPct : 0;
+        const selectedClass = row.month === selectedDashboardMonth() ? ' is-selected' : '';
+        return `<div class="month-bar${selectedClass}" title="${escapeHtml(monthName(row.month))}: ${escapeHtml(rm(row.total))}">
+          <div class="bar-label">${escapeHtml(monthShort(row.month))}</div>
+          <div class="bar-stack" style="width:${width}%">
+            <span class="bar-seg production" style="width:${productionPct}%"></span>
+            <span class="bar-seg sample" style="width:${samplePct}%"></span>
+          </div>
+          <div class="bar-value">${row.total ? rm(row.total) : '-'}</div>
+        </div>`;
+      }).join('');
+
+      $('dashboardRows').innerHTML = data.months.flatMap((month) => {
+        const bucket = data.buckets.get(month);
+        const monthlyTotal = bucketTotal(bucket, 'production') + bucketTotal(bucket, 'sample');
+        return [
+          `<tr><td class="code-link">${escapeHtml(monthName(month))}</td><td>PVC</td><td>${bucketArea(bucket, 'production', 'pvc').toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td class="money">${rm(bucketCost(bucket, 'production', 'pvc'))}</td><td>PVC</td><td>${bucketArea(bucket, 'sample', 'pvc').toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td class="money">${rm(bucketCost(bucket, 'sample', 'pvc'))}</td><td class="money">${rm(monthlyTotal)}</td></tr>`,
+          `<tr><td></td><td>Cardboard</td><td>${bucketArea(bucket, 'production', 'cardboard').toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td class="money">${rm(bucketCost(bucket, 'production', 'cardboard'))}</td><td>Cardboard</td><td>${bucketArea(bucket, 'sample', 'cardboard').toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td class="money">${rm(bucketCost(bucket, 'sample', 'cardboard'))}</td><td></td></tr>`,
+        ];
+      }).join('');
+
+    }
+
+    function materialOptions(selectedId) {
+      return TEMPLATE_MATERIALS.map((m) => `<option value="${escapeHtml(m.id)}"${m.id === selectedId ? ' selected' : ''}>${escapeHtml(stockText(m.name))}</option>`).join('');
+    }
+
+    function populateEntryMaterial() {
+      $('entryMaterial').innerHTML = materialOptions(TEMPLATE_MATERIALS[0].id);
+    }
+
+    function renderFactors() {
+      $('factorRows').innerHTML = TEMPLATE_MATERIALS.map((m) => {
+        const factor = materialFactor(m);
+        return `<tr><td class="code-link">${escapeHtml(stockText(m.name))}</td><td>${escapeHtml(m.size)}</td><td>${factor.area.toLocaleString()}</td><td class="money">RM${factor.costPerArea.toFixed(4)}</td><td class="money">${rm(factor.unitCost)}</td></tr>`;
+      }).join('');
+    }
+
+    function renderCosting() {
+      let total = 0;
+      let qtyTotal = 0;
+      const displayRows = costingRows
+        .map((row, index) => ({ row, index }))
+        .sort((a, b) => dateSortValue(b.row.date) - dateSortValue(a.row.date));
+      $('costingRows').innerHTML = displayRows.map(({ row, index }) => {
+        const material = TEMPLATE_MATERIALS.find((m) => m.id === row.materialId) || TEMPLATE_MATERIALS[0];
+        const factor = materialFactor(material);
+        const qty = Math.max(0, num(row.qty));
+        const usedArea = Math.max(0, num(row.length) * num(row.width) * qty);
+        const lineCost = usedArea * factor.costPerArea;
+        total += lineCost;
+        qtyTotal += qty;
+        return `<tr>
+          <td>${escapeHtml(excelDateText(row.date) || '-')}</td>
+          <td>${escapeHtml(row.section || '-')}</td>
+          <td class="code-link">${escapeHtml(row.styleJob || '-')}</td>
+          <td>${escapeHtml(stockText(material.name))}</td>
+          <td>${num(row.length) || '-'} x ${num(row.width) || '-'} <span class="muted">(${usedArea ? usedArea.toLocaleString(undefined, { maximumFractionDigits: 1 }) : 0} cm2)</span></td>
+          <td>${qty || '-'}</td>
+          <td class="money">${rm(lineCost)}</td>
+          <td>${escapeHtml(row.remark || '-')}</td>
+          <td><button class="tiny-btn requires-edit" type="button" data-remove-cost-line="${index}"${isAuthenticated() ? '' : ' disabled'}>Remove</button></td>
+        </tr>`;
+      }).join('') || tableEmpty(9, 'Add A Costing Row To Calculate Template Cost.');
+      $('lineCount').textContent = costingRows.length.toLocaleString();
+      $('qtyTotal').textContent = qtyTotal.toLocaleString(undefined, { maximumFractionDigits: 0 });
+      $('costKpi').textContent = rm(total);
+      $('costingStatus').textContent = costingRows.length ? `${costingRows.length} Costing Row(s). Total Cost ${rm(total)}.` : 'No Costing Rows Entered.';
+      $('dataStatus').textContent = `Source: ${STOCK_DATA.sourceFile} · Excel Tab: Product List · ${TEMPLATE_MATERIALS.length} Costing Factors`;
+      renderDashboardMonthOptions();
+      renderDashboard();
+    }
+
+    async function addCostRow() {
+      if (!isAuthenticated()) {
+        $('costingStatus').textContent = 'View Only. Login As Gavin Or James To Add Template Costing.';
+        return;
+      }
+      const row = {
+        date: $('entryDate').value,
+        section: $('entrySection').value.trim(),
+        styleJob: $('entryStyleJob').value.trim(),
+        materialId: $('entryMaterial').value,
+        length: $('entryLength').value,
+        width: $('entryWidth').value,
+        qty: $('entryQty').value || '1',
+        remark: $('entryRemark').value.trim(),
+      };
+      let saveMessage = '';
+      $('costingStatus').textContent = 'Saving Template Costing Row To OneDrive...';
+      try {
+        await saveCostingRemote(row);
+        saveMessage = 'Template Costing Row Saved To OneDrive.';
+      } catch (error) {
+        saveMessage = `OneDrive save failed. Row kept locally. ${error.message}`;
+      }
+      costingRows.push(row);
+      saveCostingRows();
+      $('entryLength').value = '';
+      $('entryWidth').value = '';
+      $('entryQty').value = '1';
+      $('entryRemark').value = '';
+      renderCosting();
+      $('costingStatus').textContent = saveMessage;
+    }
+
+    function tableEmpty(cols, text) { return `<tr><td colspan="${cols}" class="muted">${escapeHtml(text)}</td></tr>`; }
+    function escapeHtml(value) { return String(value ?? '').replace(/[&<>"]/g, (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])); }
+
+    function bind() {
+      $('addCostRowBtn2').addEventListener('click', addCostRow);
+      $('dashboardMonth').addEventListener('change', renderDashboard);
+      $('costingRows').addEventListener('click', (event) => {
+        const index = Number(event.target.dataset.removeCostLine);
+        if (!Number.isInteger(index)) return;
+        if (!isAuthenticated()) {
+          $('costingStatus').textContent = 'View Only. Login As Gavin Or James To Remove Template Costing.';
+          return;
+        }
+        costingRows.splice(index, 1);
+        saveCostingRows();
+        renderCosting();
+      });
+    }
+
+    let activeDatePickerInput = null;
+
+    function positionDatePicker(input, popover) {
+      const rect = input.getBoundingClientRect();
+      const top = Math.min(rect.bottom + 8, window.innerHeight - popover.offsetHeight - 12);
+      const left = Math.min(rect.left, window.innerWidth - popover.offsetWidth - 12);
+      popover.style.top = `${Math.max(12, top)}px`;
+      popover.style.left = `${Math.max(12, left)}px`;
+    }
+
+    function openDatePickerForInput(input) {
+      const popover = $('datePickerPopover');
+      const picker = $('datePickerDate');
+      if (activeDatePickerInput) activeDatePickerInput.classList.remove('date-picker-active');
+      activeDatePickerInput = input;
+      input.classList.add('date-picker-active');
+      const parsed = parsePortalDate(input.value) || new Date();
+      picker.value = datePickerToInputDate(parsed);
+      popover.classList.remove('hidden');
+      positionDatePicker(input, popover);
+    }
+
+    function closeDatePicker() {
+      if (activeDatePickerInput) activeDatePickerInput.classList.remove('date-picker-active');
+      activeDatePickerInput = null;
+      $('datePickerPopover').classList.add('hidden');
+    }
+
+    function applyDatePickerValue(value) {
+      if (!activeDatePickerInput || !value) return;
+      const [year, month, day] = value.split('-').map(Number);
+      activeDatePickerInput.value = formatPortalDate(new Date(year, month - 1, day));
+      activeDatePickerInput.dispatchEvent(new Event('input', { bubbles: true }));
+      closeDatePicker();
+    }
+
+    function initDatePicker() {
+      document.addEventListener('click', (event) => {
+        const popover = $('datePickerPopover');
+        if (event.target.classList?.contains('date-picker-input')) return openDatePickerForInput(event.target);
+        if (!popover.contains(event.target)) closeDatePicker();
+      });
+      document.addEventListener('focusin', (event) => {
+        if (event.target.classList?.contains('date-picker-input')) openDatePickerForInput(event.target);
+      });
+      $('datePickerApply').addEventListener('click', () => applyDatePickerValue($('datePickerDate').value));
+      $('datePickerToday').addEventListener('click', () => applyDatePickerValue(datePickerToInputDate(new Date())));
+      $('datePickerClear').addEventListener('click', () => {
+        if (activeDatePickerInput) activeDatePickerInput.value = '';
+        closeDatePicker();
+      });
+      window.addEventListener('resize', () => {
+        if (activeDatePickerInput) positionDatePicker(activeDatePickerInput, $('datePickerPopover'));
+      });
+    }
+
+    function isAuthenticated() {
+      return AUTH_USERS.includes(currentUser);
+    }
+
+    function updateAuthView() {
+      const authed = isAuthenticated();
+      document.body.classList.toggle('edit-locked', !authed);
+      $('activeUser').textContent = authed ? `PIC: ${currentUser}` : 'Not Logged In';
+      $('sourceStatus').textContent = authed ? 'Edit Access Enabled' : 'View Only · Login To Edit';
+      $('loginUserField').hidden = authed;
+      $('loginBtn').hidden = authed;
+      $('logoutBtn').hidden = !authed;
+      document.querySelectorAll('.requires-edit, .entry-input, .entry-select').forEach((el) => {
+        el.disabled = !authed;
+      });
+    }
+
+    function openPasswordModal() {
+      const user = $('loginUser').value;
+      if (!AUTH_USERS.includes(user)) {
+        $('loginError').hidden = false;
+        return;
+      }
+      pendingLoginUser = user;
+      $('passwordModalTitle').textContent = `Enter ${user} Password`;
+      $('modalPasswordInput').value = '';
+      $('modalPasswordError').hidden = true;
+      $('loginError').hidden = true;
+      $('passwordModal').classList.remove('hidden');
+      setTimeout(() => $('modalPasswordInput').focus(), 0);
+    }
+
+    function closePasswordModal() {
+      $('passwordModal').classList.add('hidden');
+      pendingLoginUser = '';
+    }
+
+    function submitPasswordLogin() {
+      const password = $('modalPasswordInput').value;
+      if (!AUTH_USERS.includes(pendingLoginUser) || password !== AUTH_PASSWORDS[pendingLoginUser]) {
+        $('modalPasswordError').hidden = false;
+        return;
+      }
+      currentUser = pendingLoginUser;
+      sessionStorage.setItem(AUTH_KEY, currentUser);
+      closePasswordModal();
+      updateAuthView();
+      renderCosting();
+    }
+
+    function bindLogin() {
+      $('loginBtn').addEventListener('click', openPasswordModal);
+      $('passwordCancelBtn').addEventListener('click', closePasswordModal);
+      $('passwordBackdrop').addEventListener('click', closePasswordModal);
+      $('passwordSubmitBtn').addEventListener('click', submitPasswordLogin);
+      $('modalPasswordInput').addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') submitPasswordLogin();
+        if (event.key === 'Escape') closePasswordModal();
+      });
+      $('logoutBtn').addEventListener('click', () => {
+        sessionStorage.removeItem(AUTH_KEY);
+        currentUser = '';
+        location.reload();
+      });
+    }
+
+    (function rewriteGithubPagesLinks() {
+      const isPages = location.hostname.endsWith('github.io');
+      const repoPrefix = isPages && location.pathname.split('/').filter(Boolean)[0] ? `/${location.pathname.split('/').filter(Boolean)[0]}` : '';
+      if (!isPages || !repoPrefix) return;
+      document.querySelectorAll('[data-site-href]').forEach((link) => link.setAttribute('href', `${repoPrefix}${link.dataset.siteHref}`));
+    })();
+
+    async function startApp() {
+      if (appStarted) return;
+      appStarted = true;
+      initDatePicker();
+      bind();
+      rebuildProductIndex();
+      await fetchRemoteStockData();
+      populateEntryMaterial();
+      $('entryDate').value = formatPortalDate(new Date());
+      renderFactors();
+      renderCosting();
+      updateAuthView();
+    }
+
+    bindLogin();
+    updateAuthView();
+    startApp();
+  </script>
+</body>
+</html>
