@@ -1,0 +1,993 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>M&A Stock List</title>
+  <link rel="icon" href="./favicon.png" />
+  <style>
+    :root { --bg: #dfe1ea; --panel: rgba(255,255,255,.9); --surface-soft: #f8fafc; --text: #1a1d25; --muted: #7d8598; --line: rgba(91,104,138,.12); --accent: #315fd6; --accent-soft: #e9efff; --success: #1c9a6b; --warning: #d65a3a; --cost: #b45f1d; --teal: #2f938b; --purple: #7047e8; --shadow: 0 20px 50px rgba(48, 59, 86, .08); font-family: "Inter", "Aptos", "Segoe UI Variable", "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: radial-gradient(circle at top left, rgba(255,255,255,.55), transparent 26rem), linear-gradient(180deg, #dfe1ea 0%, #d9dbe6 100%); color: var(--text); }
+    button, input, select { font: inherit; }
+    .login-shell { padding: 1rem 1.25rem; background: var(--panel); border: 1px solid var(--line); border-radius: 1.35rem; box-shadow: var(--shadow); }
+    .login-shell[hidden] { display: none; }
+    .login-layout { display: flex; flex-direction: column; gap: 1rem; }
+    .login-title { margin: .25rem 0 0; font-size: 1.25rem; font-weight: 700; line-height: 1.1; letter-spacing: -.025em; color: #0f172a; }
+    .login-grid { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; justify-content: flex-start; }
+    .login-grid .field { min-width: 180px; }
+    .login-grid .field label { display: none; }
+    .login-grid input, .login-grid select { border-radius: 10px; padding: .55rem .75rem; background: var(--surface-soft); color: var(--text); font-size: .875rem; font-weight: 600; border: 1px solid var(--line); }
+    .login-grid .primary-btn { background: #111827; padding: .62rem 1rem; font-size: .75rem; text-transform: uppercase; letter-spacing: .12em; }
+    .login-status { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; color: var(--muted); font-size: .875rem; }
+    .login-status-pill { display: inline-flex; align-items: center; min-height: 2.5rem; border-radius: 999px; background: #f1f5f9; padding: .5rem 1rem; color: #475569; font-weight: 600; white-space: nowrap; }
+    .login-source-status { color: #94a3b8; font-size: .75rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
+    .login-error { margin: .85rem 0 0; color: var(--warning); font-weight: 800; }
+    .hidden { display: none !important; }
+    .password-modal { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; padding: 1rem; }
+    .password-backdrop { position: absolute; inset: 0; background: rgba(15, 23, 42, .42); }
+    .password-dialog { position: relative; width: min(24rem, 100%); padding: 1.25rem; background: #fff; border: 1px solid var(--line); border-radius: 1rem; box-shadow: 0 24px 70px rgba(15, 23, 42, .22); }
+    .password-dialog h3 { margin: .25rem 0 1rem; color: #111827; font-size: 1.35rem; letter-spacing: -.025em; }
+    .password-dialog input { width: 100%; border: 1px solid var(--line); border-radius: .75rem; padding: .75rem .9rem; background: var(--surface-soft); color: var(--text); font-weight: 700; outline: none; }
+    .password-dialog input:focus { border-color: rgba(49,95,214,.55); box-shadow: 0 0 0 3px rgba(49,95,214,.16); }
+    .password-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
+    .app-shell { width: min(1440px, calc(100vw - 2rem)); margin: 0 auto; padding: 1rem 0; }
+    .topbar { display: flex; justify-content: space-between; gap: 1rem; align-items: end; margin-bottom: 1rem; }
+    .topbar-title { margin: .2rem 0 0; font-size: clamp(1.6rem, 3vw, 2.5rem); line-height: 1; letter-spacing: -.03em; font-weight: 700; }
+    .eyebrow { margin: 0; color: #94a3b8; font-size: .6875rem; letter-spacing: .16em; text-transform: uppercase; font-weight: 700; }
+    .nav-tabs { display: inline-flex; gap: .45rem; align-items: center; padding: .35rem; border-radius: 999px; background: rgba(255,255,255,.7); border: 1px solid var(--line); }
+    .nav-tab { color: var(--muted); text-decoration: none; border-radius: 999px; padding: .8rem 1rem; font-weight: 700; font-size: .95rem; white-space: nowrap; }
+    .nav-tab.is-active { background: #fff; color: var(--text); box-shadow: 0 8px 20px rgba(48, 59, 86, .08); }
+    .hero, .panel, .kpi-card { background: var(--panel); border: 1px solid var(--line); border-radius: 1.35rem; box-shadow: var(--shadow); }
+    .hero { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 1rem; align-items: center; padding: 1.5rem; overflow: hidden; }
+    .hero-title { margin: 0; font-size: clamp(2rem, 5vw, 4.6rem); line-height: .95; letter-spacing: 0; text-transform: capitalize; }
+    .hero-copy { margin: .8rem 0 0; color: var(--muted); font-size: 1.04rem; font-weight: 650; max-width: 62rem; }
+    .hero-actions { display: flex; flex-wrap: wrap; gap: .75rem; justify-content: flex-end; }
+    .primary-btn, .ghost-btn { border-radius: 999px; padding: .9rem 1.25rem; font-weight: 900; letter-spacing: .03em; border: 1px solid var(--line); cursor: pointer; }
+    .primary-btn { background: var(--accent); color: #fff; border-color: transparent; }
+    .ghost-btn { background: rgba(255,255,255,.75); color: var(--text); }
+    .panel, .kpi-card { padding: 1.25rem; }
+    .panel h2 { margin: 0 0 .45rem; font-size: 1.45rem; letter-spacing: 0; text-transform: capitalize; }
+    .stock-layout { display: grid; gap: .85rem; }
+    .page-tabs { display: flex; flex-wrap: wrap; gap: .5rem; }
+    .page-tab { border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.72); color: #687286; padding: .75rem 1rem; font-weight: 900; cursor: pointer; }
+    .page-tab.is-active { background: var(--accent); color: #fff; border-color: transparent; }
+    .view[hidden] { display: none; }
+    .toolbar { display: grid; grid-template-columns: minmax(22rem, 1fr); gap: .75rem; align-items: end; }
+    .movement-form { display: grid; grid-template-columns: .8fr 1.4fr .75fr .65fr 1fr auto; gap: .75rem; align-items: end; }
+    .field { display: grid; gap: .35rem; }
+    .field label { font-size: .76rem; text-transform: uppercase; letter-spacing: .12em; color: var(--muted); font-weight: 800; }
+    .field input, .field select { width: 100%; border: 1px solid var(--line); border-radius: .9rem; background: rgba(255,255,255,.86); color: var(--text); padding: .9rem 1rem; font-weight: 700; outline: none; }
+    .grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
+    .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+    .metric-value { font-size: clamp(2rem, 4vw, 3rem); line-height: 1; letter-spacing: -.04em; font-weight: 850; }
+    .metric-value.is-blue { color: var(--accent); } .metric-value.is-green { color: var(--success); } .metric-value.is-orange { color: #d97621; } .metric-value.is-purple { color: var(--purple); }
+    .is-green { color: var(--success); } .is-orange { color: #d97621; }
+    .table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 1rem; background: rgba(255,255,255,.7); }
+    table { width: 100%; border-collapse: collapse; min-width: 920px; }
+    th { position: sticky; top: 0; z-index: 1; background: #f6f7fb; color: #676f82; text-align: left; font-size: .72rem; letter-spacing: .12em; text-transform: uppercase; }
+    th, td { padding: .82rem .85rem; border-bottom: 1px solid var(--line); vertical-align: top; }
+    td { color: #2b303b; font-weight: 650; font-size: .88rem; }
+    .muted { color: var(--muted); font-weight: 650; }
+    .money { color: var(--cost); font-weight: 850; white-space: nowrap; }
+    .code-link { color: var(--accent); font-weight: 850; }
+    .tag-row { display: flex; flex-wrap: wrap; gap: .35rem; }
+    .tag { display: inline-flex; align-items: center; border-radius: 999px; padding: .3rem .55rem; background: var(--accent-soft); color: var(--accent); font-size: .75rem; font-weight: 850; }
+    .tag.is-warn { background: rgba(214,90,58,.12); color: var(--warning); }
+    .tag.is-in { background: rgba(28,154,107,.12); color: var(--success); }
+    .tag.is-out { background: rgba(214,90,58,.12); color: var(--warning); }
+    .tag.is-low { background: rgba(214,90,58,.12); color: var(--warning); }
+    .tag.is-ok { background: rgba(28,154,107,.12); color: var(--success); }
+    .price-input, .balance-input { width: 7.5rem; border: 1px solid var(--line); border-radius: .65rem; padding: .55rem .65rem; background: #fff; color: var(--cost); font-weight: 850; }
+    .balance-input { color: var(--accent); }
+    .tiny-btn { border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.9); color: var(--muted); padding: .45rem .7rem; font-weight: 850; cursor: pointer; }
+    .tiny-btn:hover { color: var(--accent); border-color: rgba(49,102,223,.35); }
+    .edit-locked input[data-price-sku], .edit-locked input[data-opening-sku], .edit-locked .requires-edit { opacity: .62; cursor: not-allowed; }
+    .logout-btn { border: 1px solid rgba(244,63,94,.2); color: #dc2626; background: rgba(255,255,255,.75); padding: .62rem 1rem; font-size: .75rem; text-transform: uppercase; letter-spacing: .12em; }
+    .date-picker-active { border-color: var(--accent) !important; box-shadow: 0 0 0 3px rgba(49,95,214,.18) !important; background: #fff !important; }
+    .date-picker-popover { position: fixed; z-index: 9999; width: 260px; padding: .75rem; background: rgba(255,255,255,.98); border: 1px solid var(--line); border-radius: 1rem; box-shadow: 0 18px 50px rgba(40,48,68,.16), 0 4px 12px rgba(40,48,68,.08); }
+    .date-picker-popover.hidden { display: none; }
+    .date-picker-popover label { display: block; margin-bottom: .3rem; font-size: .68rem; font-weight: 850; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+    .date-picker-popover input { width: 100%; border: 1px solid var(--line); border-radius: .7rem; padding: .55rem .65rem; font-weight: 800; }
+    .date-picker-actions { display: flex; justify-content: flex-end; gap: .4rem; margin-top: .65rem; }
+    .date-picker-actions .tiny-btn,
+    .date-picker-actions .primary-btn { width: auto; min-width: 0; padding: .48rem .72rem; font-size: .78rem; line-height: 1.1; letter-spacing: .02em; }
+    .date-picker-actions .primary-btn { border-radius: 999px; }
+    .status-line { color: var(--muted); font-weight: 750; }
+    .panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
+    .tab-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
+    .pdf-title { display: none; }
+    @page { size: A4 portrait; margin: 8mm; }
+    @media print {
+      html, body { width: 210mm; min-height: 297mm; background: #fff; }
+      body.printing-balance .topbar,
+      body.printing-balance .hero,
+      body.printing-balance .page-tabs,
+      body.printing-balance .view[data-view="products"],
+      body.printing-balance .view[data-view="movement"] > article:not(.balance-print-panel),
+      body.printing-balance .grid-2,
+      body.printing-balance .grid-3,
+      body.printing-balance .movement-form,
+      body.printing-balance #movementRows,
+      body.printing-balance #movementStatus,
+      body.printing-balance .date-picker-popover,
+      body.printing-balance .no-print { display: none !important; }
+      body.printing-balance .app-shell { width: 100%; padding: 0; margin: 0; }
+      body.printing-balance .view[data-view="movement"] { display: block !important; }
+      body.printing-balance .balance-print-panel { display: block !important; padding: 0; border: 0; box-shadow: none; break-inside: avoid; }
+      body.printing-balance .balance-print-panel .panel-head { display: none; }
+      body.printing-balance .pdf-title { display: block; margin: 0 0 5mm; font-size: 13px; font-weight: 900; letter-spacing: .01em; }
+      body.printing-balance table { min-width: 0; width: 100%; table-layout: fixed; border-collapse: collapse; line-height: 1.05; }
+      body.printing-balance th,
+      body.printing-balance td { padding: 1.3px 2px !important; vertical-align: top !important; font-size: 6.4px !important; line-height: 1.08 !important; font-weight: 650 !important; letter-spacing: 0 !important; }
+      body.printing-balance th { font-size: 5.8px !important; letter-spacing: .08em !important; line-height: 1.15 !important; font-weight: 800 !important; }
+      body.printing-balance .code-link,
+      body.printing-balance .is-green,
+      body.printing-balance .is-orange,
+      body.printing-balance .money,
+      body.printing-balance .muted { font-size: 6.4px !important; line-height: 1.08 !important; font-weight: 750 !important; }
+      body.printing-balance th:nth-child(1), body.printing-balance td:nth-child(1) { width: 8%; }
+      body.printing-balance th:nth-child(2), body.printing-balance td:nth-child(2) { width: 27%; }
+      body.printing-balance th:nth-child(3), body.printing-balance td:nth-child(3),
+      body.printing-balance th:nth-child(4), body.printing-balance td:nth-child(4),
+      body.printing-balance th:nth-child(5), body.printing-balance td:nth-child(5),
+      body.printing-balance th:nth-child(6), body.printing-balance td:nth-child(6),
+      body.printing-balance th:nth-child(7), body.printing-balance td:nth-child(7) { width: 9%; }
+      body.printing-balance th:nth-child(8), body.printing-balance td:nth-child(8) { width: 12%; }
+      body.printing-balance th:nth-child(9), body.printing-balance td:nth-child(9) { width: 7%; }
+      body.printing-balance .table-wrap { overflow: visible; margin-top: 0 !important; }
+      body.printing-balance .tag { padding: 0; background: transparent; border: 0; font-size: 5.7px; border-radius: 0; white-space: nowrap; }
+    }
+    @media (min-width: 900px) { .login-layout { flex-direction: row; align-items: center; justify-content: space-between; } .login-grid, .login-status { justify-content: flex-end; } }
+    @media (max-width: 1100px) { .movement-form { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @media (max-width: 900px) { .hero, .toolbar, .movement-form, .grid-2, .grid-3 { grid-template-columns: 1fr; } .topbar { flex-direction: column; align-items: stretch; gap: .85rem; } .nav-tabs { display: flex; width: 100%; flex-wrap: wrap; } .nav-tab { flex: 1 1 calc(33.333% - .45rem); text-align: center; font-size: .82rem; } .hero-actions { justify-content: stretch; } .primary-btn, .ghost-btn { width: 100%; } }
+  </style>
+</head>
+<body class="edit-locked">
+  <main class="app-shell stock-layout">
+    <header class="topbar">
+      <div>
+        <h1 class="topbar-title">M&A Stock List</h1>
+      </div>
+      <nav class="nav-tabs" aria-label="Navigation">
+        <a class="nav-tab" href="../index.html" data-site-href="index.html">M&A Portal</a>
+        <a class="nav-tab is-active" href="./stock-costing.html" data-site-href="stocklist/stock-costing.html">Stock List</a>
+        <a class="nav-tab" href="./template-costing.html" data-site-href="stocklist/template-costing.html">Template Costing</a>
+      </nav>
+    </header>
+
+    <section class="login-shell" id="loginShell">
+      <div class="login-layout">
+        <div>
+          <p class="eyebrow">Session</p>
+          <h1 class="login-title">Stock List Admin</h1>
+        </div>
+        <div class="login-grid" id="loginControls">
+          <div class="field" id="loginUserField"><label for="loginUser">PIC</label><select id="loginUser"><option value="">Select PIC...</option><option value="Gavin">Gavin</option><option value="James">James</option></select></div>
+          <button class="primary-btn" id="loginBtn" type="button">Login</button>
+          <button class="tiny-btn logout-btn" id="logoutBtn" type="button" hidden>Logout</button>
+        </div>
+        <div class="login-status">
+          <span class="login-status-pill" id="activeUser">Not Logged In</span>
+          <span class="login-source-status" id="sourceStatus">View Only · Login To Edit</span>
+        </div>
+      </div>
+      <p class="login-error" id="loginError" hidden>Invalid PIC Or Password.</p>
+    </section>
+
+    <div id="passwordModal" class="password-modal hidden" role="dialog" aria-modal="true" aria-labelledby="passwordModalTitle">
+      <div class="password-backdrop" id="passwordBackdrop"></div>
+      <div class="password-dialog">
+        <p class="eyebrow">Stock List Admin</p>
+        <h3 id="passwordModalTitle">Enter Password</h3>
+        <input id="modalPasswordInput" type="password" placeholder="Password" autocomplete="current-password" />
+        <p class="login-error" id="modalPasswordError" hidden>Invalid PIC Or Password.</p>
+        <div class="password-actions">
+          <button class="tiny-btn" id="passwordCancelBtn" type="button">Cancel</button>
+          <button class="primary-btn" id="passwordSubmitBtn" type="button">Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <section class="panel">
+      <div class="tab-panel-head">
+        <div class="page-tabs" role="tablist" aria-label="Stock views">
+          <button class="page-tab is-active" type="button" data-view-tab="products">Product List</button>
+          <button class="page-tab" type="button" data-view-tab="movement">Stock In / Out Monthly</button>
+        </div>
+        <button class="primary-btn requires-edit" id="saveStockDataBtn" type="button">Save Stock Data</button>
+      </div>
+      <div class="live-status status-line" id="dataStatus" style="margin-top:.75rem"></div>
+    </section>
+
+    <section class="grid-3 view" data-view="movement" aria-label="Monthly stock summary" hidden>
+      <article class="kpi-card"><p class="eyebrow">Stock In</p><div class="metric-value is-green" id="stockInQty">0</div><p class="muted">Selected Month Qty</p></article>
+      <article class="kpi-card"><p class="eyebrow">Stock Out</p><div class="metric-value is-orange" id="stockOutQty">0</div><p class="muted">Selected Month Qty</p></article>
+      <article class="kpi-card"><p class="eyebrow">Net Movement</p><div class="metric-value is-blue" id="netMovementQty">0</div><p class="muted">In Minus Out</p></article>
+    </section>
+
+    <section class="panel view" data-view="products">
+      <div class="toolbar">
+        <div class="field"><label for="searchInput">Search</label><input id="searchInput" type="search" placeholder="SKU, material, unit, size, remark..." /></div>
+      </div>
+    </section>
+
+    <section class="view" data-view="movement" hidden>
+      <article class="panel">
+        <h2>Stock In / Out Monthly</h2>
+        <p class="muted">Add One Movement Row When Stock Comes In Or Goes Out. Rows Are Saved In This Browser First.</p>
+        <div class="movement-form" style="margin-top:1rem">
+          <div class="field"><label for="movementDate">Date</label><input id="movementDate" type="text" class="date-picker-input" placeholder="m/d/yyyy" autocomplete="off" /></div>
+          <div class="field"><label for="movementSku">Product</label><select id="movementSku"></select></div>
+          <div class="field"><label for="movementType">Type</label><select id="movementType"><option value="in">Stock In</option><option value="out">Stock Out</option></select></div>
+          <div class="field"><label for="movementQty">Qty</label><input id="movementQty" type="number" min="0" step="0.01" placeholder="0" /></div>
+          <div class="field"><label for="movementRemark">Remark</label><input id="movementRemark" type="text" placeholder="Optional" /></div>
+          <button class="primary-btn requires-edit" id="addMovementBtn" type="button">Add</button>
+        </div>
+      </article>
+
+      <article class="panel">
+        <div class="toolbar">
+          <div class="field"><label for="movementMonth">Filter Month</label><select id="movementMonth"><option value="">All Available Months</option></select></div>
+        </div>
+        <div class="table-wrap" style="margin-top:1rem"><table><thead><tr><th>Date</th><th>SKU</th><th>Description</th><th>Type</th><th>Qty</th><th>Unit</th><th>Remark</th><th></th></tr></thead><tbody id="movementRows"></tbody></table></div>
+        <p class="muted" id="movementStatus" style="margin-top:.85rem">No Stock Movement Rows Entered.</p>
+      </article>
+
+      <article class="panel balance-print-panel">
+        <div class="panel-head">
+          <div>
+            <h2>Current Balance</h2>
+            <p class="muted" id="balanceCaption">Filter A Month To Calculate Opening/Balance Stock From The Previous Month, Then Add That Month Stock In/Out.</p>
+          </div>
+          <button class="ghost-btn no-print" id="downloadBalancePdfBtn" type="button">Download PDF</button>
+        </div>
+        <h2 class="pdf-title" id="balancePrintTitle">M&A Stock Balance</h2>
+        <div class="table-wrap" style="margin-top:1rem"><table><thead><tr><th>SKU</th><th>Description</th><th>Opening/ Balance Stock</th><th>Total In</th><th>Total Out</th><th>Avg Monthly Usage</th><th>Current Balance</th><th>Stock Level</th><th>Unit</th></tr></thead><tbody id="balanceRows"></tbody></table></div>
+      </article>
+    </section>
+
+    <section class="view" data-view="products">
+      <article class="panel"><h2>Product List</h2><p class="muted">Pricing And Opening/Balance Stock Are Editable Here And Saved In This Browser. This Page References The Excel Product List Tab Only.</p><div class="table-wrap"><table><thead><tr><th>SKU</th><th>Description</th><th>Unit</th><th>Size</th><th>Weight</th><th>Remark</th><th>Opening/ Balance Stock</th><th>Workbook Cost</th><th>Current Price</th></tr></thead><tbody id="productRows"></tbody></table></div></article>
+    </section>
+  </main>
+  <div id="datePickerPopover" class="date-picker-popover hidden" role="dialog" aria-label="Select date">
+    <label for="datePickerDate">Date</label>
+    <input type="date" id="datePickerDate">
+    <div class="date-picker-actions">
+      <button type="button" class="tiny-btn" id="datePickerToday">NOW</button>
+      <button type="button" class="tiny-btn" id="datePickerClear">CLEAR</button>
+      <button type="button" class="primary-btn" id="datePickerApply">APPLY</button>
+    </div>
+  </div>
+  <script>
+    const STOCK_DATA = {"generatedAt":"2026-05-15","sourceFile":"M&A Stock List.xlsx","products":[{"row":6,"sku":"A001","description":"AAA 1 INCH TAPE","unit":"Roll","photo":"#VALUE!","remark":"TEMPLATE ASSEMBLY","size":"1\"","weight":"","cost":null,"rawCost":""},{"row":7,"sku":"A002","description":"ACRYLIC 3MM","unit":"Sheet","photo":"#VALUE!","remark":"SAFETY SHEILD, AUTOMATION DEVICE COVER","size":"","weight":"","cost":null,"rawCost":""},{"row":8,"sku":"A003","description":"ACRYLIC 5MM","unit":"Sheet","photo":"#VALUE!","remark":"SAFETY SHEILD, AUTOMATION DEVICE COVER","size":"122cm * 244cm","weight":"","cost":null,"rawCost":""},{"row":9,"sku":"A004","description":"APOLO CT 39 CLEAR TAPE 4.7CM","unit":"Roll","photo":"#VALUE!","remark":"TEMPLATE ASSEMBLY","size":"1.8\"","weight":"","cost":null,"rawCost":""},{"row":10,"sku":"A005","description":"BIG BLADE KNIFE","unit":"Pcs","photo":"#VALUE!","remark":"","size":"1.8cm","weight":"","cost":29.5,"rawCost":"29.5"},{"row":11,"sku":"A006","description":"BLUE MIX WHITE PVC 1.2MM","unit":"Sheet","photo":"#VALUE!","remark":"TEMPLATE, CUT PANEL RACK","size":"60cm * 40cm","weight":"","cost":null,"rawCost":""},{"row":12,"sku":"A007","description":"BLUE MIX WHITE PVC 1.2MM","unit":"Sheet","photo":"#VALUE!","remark":"TEMPLATE, CUT PANEL RACK","size":"80cm * 240cm","weight":"2.7kg","cost":39.0,"rawCost":"RM39"},{"row":13,"sku":"A008","description":"BLUE PVC 1.4MM","unit":"Sheet","photo":"#VALUE!","remark":"TEMPLATE, CUT PANEL RACK","size":"80cm * 240cm","weight":"4.25kg","cost":56.0,"rawCost":"RM56"},{"row":14,"sku":"A009","description":"BLUE PVC 1.4MM","unit":"Sheet","photo":"#VALUE!","remark":"TEMPLATE, CUT PANEL RACK","size":"60cm * 40cm","weight":"","cost":null,"rawCost":""},{"row":15,"sku":"A010","description":"CLEAR PLASTIC PVC 0.6MM","unit":"Sheet","photo":"#VALUE!","remark":"TEMPLATE (POSITIONING)","size":"122cm * 244cm","weight":"2kg","cost":32.0,"rawCost":"RM32"},{"row":16,"sku":"A011","description":"CLEAR PLASTIC PVC 0.6MM","unit":"Sheet","photo":"#VALUE!","remark":"TEMPLATE (POSITIONING)","size":"60cm * 40cm","weight":"","cost":null,"rawCost":""},{"row":17,"sku":"A012","description":"CLEAR RIGID PVC 1.5MM","unit":"Sheet","photo":"#VALUE!","remark":"TEMPLATE BASE","size":"91cm * 243cm","weight":"","cost":61.0,"rawCost":"RM61"},{"row":18,"sku":"A013","description":"CLEAR RIGID PVC 2.0MM","unit":"Sheet","photo":"#VALUE!","remark":"TEMPLATE BASE","size":"91cm * 243cm","weight":"","cost":null,"rawCost":""},{"row":19,"sku":"A014","description":"CLOTH TAPE 1\"","unit":"Roll","photo":"#VALUE!","remark":"TEMPLATE ASSEMBLY","size":"1\"","weight":"","cost":1.6,"rawCost":"1.6"},{"row":20,"sku":"A015","description":"CLOTH TAPE 2\"","unit":"Roll","photo":"#VALUE!","remark":"TEMPLATE ASSEMBLY","size":"2\"","weight":"","cost":3.2,"rawCost":"3.2"},{"row":21,"sku":"A016","description":"DOUBLE SIDED FOAM TAPE (2.4CM)","unit":"Roll","photo":"#VALUE!","remark":"FIXTURE TO MACHINE","size":"1\"","weight":"","cost":null,"rawCost":""},{"row":22,"sku":"A017","description":"ECON YELLOW TAPE","unit":"Roll","photo":"#VALUE!","remark":"TEMPLATE ASSEMBLY","size":"1cm","weight":"","cost":null,"rawCost":""},{"row":23,"sku":"A018","description":"MASKING TAPE 502 (1.2)CM","unit":"Roll","photo":"#VALUE!","remark":"TEMPLATE MARKING","size":"1.2cm","weight":"","cost":null,"rawCost":""},{"row":24,"sku":"A019","description":"MASKING TAPE 504 ( 2.4cm)","unit":"Roll","photo":"#VALUE!","remark":"TEMPLATE MARKING","size":"1\"","weight":"","cost":null,"rawCost":""},{"row":25,"sku":"A020","description":"PLASTIC PET 0.5MM","unit":"Sheet","photo":"#VALUE!","remark":"TEMPLATE (POSITIONING)","size":"122cm * 244cm","weight":"1.8kg","cost":34.2,"rawCost":"RM34.20"},{"row":26,"sku":"A021","description":"PLASTIC PET 0.5MM","unit":"Sheet","photo":"#VALUE!","remark":"TEMPLATE (POSITIONING)","size":"60cm * 40cm","weight":"","cost":null,"rawCost":""},{"row":27,"sku":"A022","description":"RUBBER PLATE","unit":"Sheet","photo":"#VALUE!","remark":"IMPROVE FRICTION OF TEMPLATE (UNDERNEATH TEMPLATE BASE)","size":"1.5mm","weight":"","cost":null,"rawCost":""},{"row":28,"sku":"A023","description":"RUBBER PLATE","unit":"Sheet","photo":"#VALUE!","remark":"IMPROVE FRICTION OF TEMPLATE (UNDERNEATH TEMPLATE BASE)","size":"2mm","weight":"","cost":7.2,"rawCost":"7.2"},{"row":29,"sku":"A024","description":"RUBBER PLATE","unit":"Sheet","photo":"#VALUE!","remark":"IMPROVE FRICTION OF TEMPLATE (UNDERNEATH TEMPLATE BASE)","size":"3mm","weight":"","cost":12.0,"rawCost":"12"},{"row":30,"sku":"A025","description":"SAND PAPER (1000)","unit":"Sheet","photo":"#VALUE!","remark":"CUT PANEL PLACEMENT POSITIONING","size":"9\" * 11\"","weight":"","cost":null,"rawCost":""},{"row":31,"sku":"A026","description":"SAND PAPER (600)","unit":"Sheet","photo":"#VALUE!","remark":"CUT PANEL PLACEMENT POSITIONING","size":"9\" * 11\"","weight":"","cost":1.0,"rawCost":"1"},{"row":32,"sku":"A027","description":"SAND PAPER (800)","unit":"Sheet","photo":"#VALUE!","remark":"CUT PANEL PLACEMENT POSITIONING","size":"9\" * 11\"","weight":"","cost":1.0,"rawCost":"1"},{"row":33,"sku":"A028","description":"SAND PAPER ABRASIVE LATEX PAPER P80","unit":"Sheet","photo":"#VALUE!","remark":"SMOOTHEN TEMPLATE EDGE & SURFACE","size":"9\" * 11\"","weight":"","cost":null,"rawCost":""},{"row":34,"sku":"A029","description":"SAND PAPER EMERY CLOTH NO.2 (60)","unit":"Sheet","photo":"#VALUE!","remark":"SMOOTHEN TEMPLATE EDGE & SURFACE","size":"9\" * 11\"","weight":"","cost":1.7,"rawCost":"1.7"},{"row":35,"sku":"A030","description":"SMALL BLADE KNIFE","unit":"Pcs","photo":"#VALUE!","remark":"","size":"9 MM","weight":"","cost":13.5,"rawCost":"13.5"},{"row":36,"sku":"A031","description":"SUPER GLUE (502)","unit":"Bottle","photo":"#VALUE!","remark":"","size":"-","weight":"","cost":2.7,"rawCost":"2.7"},{"row":37,"sku":"A032","description":"DOUBLE SIDED  TAPE 1.2CM","unit":"PCS","photo":"#VALUE!","remark":"","size":"1.2cm","weight":"","cost":null,"rawCost":""},{"row":38,"sku":"A033","description":"DOUBLE SIDED  TAPE 1.8CM","unit":"PCS","photo":"#VALUE!","remark":"","size":"1.8cm","weight":"","cost":null,"rawCost":""},{"row":39,"sku":"A034","description":"DOUBLE SIDE TAPE  3.6CM","unit":"PCS","photo":"#VALUE!","remark":"","size":"3.6cm","weight":"","cost":null,"rawCost":""},{"row":40,"sku":"A035","description":"WHITE PVC 0.8CM","unit":"Sheet","photo":"#VALUE!","remark":"TEMPLATE (POSITIONING)","size":"122cm * 244cm","weight":"","cost":null,"rawCost":""},{"row":41,"sku":"A036","description":"CARDBOARD 3MM","unit":"Sheet","photo":"","remark":"TEMPLATE, CUT PANEL RACK","size":"39CM X 66CM","weight":"","cost":null,"rawCost":""},{"row":42,"sku":"A037","description":"CARDBOARD 1.5MM","unit":"Sheet","photo":"","remark":"TEMPLATE, CUT PANEL RACK","size":"72CM X 109CM","weight":"","cost":5.5,"rawCost":"RM5.50"},{"row":43,"sku":"A038","description":"CARDBOARD 1MM","unit":"Sheet","photo":"","remark":"TEMPLATE, CUT PANEL RACK","size":"72CM X 109CM","weight":"","cost":null,"rawCost":""},{"row":44,"sku":"A039","description":"CARDBOARD 0.8MM","unit":"Sheet","photo":"","remark":"TEMPLATE, CUT PANEL RACK","size":"72CM X 109CM","weight":"","cost":null,"rawCost":""},{"row":45,"sku":"A040","description":"WIRE TAPE","unit":"ROLL","photo":"","remark":"","size":"","weight":"","cost":null,"rawCost":""},{"row":46,"sku":"A041","description":"CABLE TIE","unit":"PCS","photo":"","remark":"","size":"","weight":"","cost":null,"rawCost":""}]};
+    const STOCK_MOVEMENT_SEED = [["8/1/2024","2024-08","A001","in",22.0,"Opening balance from Stock-update 2025"],["8/1/2024","2024-08","A001","out",3.0,"Imported from Stock-update 2025"],["8/1/2024","2024-08","A004","in",1.0,"Opening balance from Stock-update 2025"],["8/1/2024","2024-08","A005","in",1.0,"Opening balance from Stock-update 2025"],["8/1/2024","2024-08","A007","in",7.0,"Opening balance from Stock-update 2025"],["8/1/2024","2024-08","A008","in",2.0,"Opening balance from Stock-update 2025"],["8/1/2024","2024-08","A012","in",13.0,"Opening balance from Stock-update 2025"],["8/1/2024","2024-08","A012","out",8.0,"Imported from Stock-update 2025"],["8/1/2024","2024-08","A013","in",2.0,"Opening balance from Stock-update 2025"],["8/1/2024","2024-08","A015","in",1.0,"Opening balance from Stock-update 2025"],["8/1/2024","2024-08","A015","out",1.0,"Imported from Stock-update 2025"],["8/1/2024","2024-08","A017","in",7.0,"Opening balance from Stock-update 2025"],["8/1/2024","2024-08","A027","in",6.0,"Opening balance from Stock-update 2025"],["8/1/2024","2024-08","A027","out",5.0,"Imported from Stock-update 2025"],["8/1/2024","2024-08","A028","in",2.0,"Opening balance from Stock-update 2025"],["8/1/2024","2024-08","A029","in",5.0,"Opening balance from Stock-update 2025"],["8/1/2024","2024-08","A029","out",2.0,"Imported from Stock-update 2025"],["8/1/2024","2024-08","A031","in",10.0,"Opening balance from Stock-update 2025"],["8/1/2024","2024-08","A031","out",2.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A004","out",1.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A005","in",10.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A005","out",1.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A006","in",16.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A007","out",1.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A008","out",1.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A009","in",16.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A011","in",31.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A012","out",4.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A013","out",1.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A014","in",24.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A014","out",2.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A015","in",20.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A015","out",2.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A021","in",12.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A023","in",1.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A024","in",1.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A026","in",10.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A026","out",1.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A027","in",10.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A027","out",3.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A029","in",10.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A029","out",1.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A030","in",10.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A030","out",1.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A031","in",15.0,"Imported from Stock-update 2025"],["9/1/2024","2024-09","A031","out",1.0,"Imported from Stock-update 2025"],["10/1/2024","2024-10","A005","out",1.0,"Imported from Stock-update 2025"],["10/1/2024","2024-10","A006","out",6.0,"Imported from Stock-update 2025"],["10/1/2024","2024-10","A007","in",5.0,"Imported from Stock-update 2025"],["10/1/2024","2024-10","A008","in",8.0,"Imported from Stock-update 2025"],["10/1/2024","2024-10","A008","out",1.0,"Imported from Stock-update 2025"],["10/1/2024","2024-10","A009","out",1.0,"Imported from Stock-update 2025"],["10/1/2024","2024-10","A010","in",5.0,"Imported from Stock-update 2025"],["10/1/2024","2024-10","A010","out",2.0,"Imported from Stock-update 2025"],["10/1/2024","2024-10","A011","out",8.0,"Imported from Stock-update 2025"],["10/1/2024","2024-10","A012","in",15.0,"Imported from Stock-update 2025"],["10/1/2024","2024-10","A012","out",12.0,"Imported from Stock-update 2025"],["10/1/2024","2024-10","A014","in",6.0,"Imported from Stock-update 2025"],["10/1/2024","2024-10","A014","out",6.0,"Imported from Stock-update 2025"],["10/1/2024","2024-10","A015","out",6.0,"Imported from Stock-update 2025"],["10/1/2024","2024-10","A027","out",1.0,"Imported from Stock-update 2025"],["10/1/2024","2024-10","A031","out",2.0,"Imported from Stock-update 2025"],["10/1/2024","2024-10","A035","in",5.0,"Imported from Stock-update 2025"],["11/1/2024","2024-11","A001","out",2.0,"Imported from Stock-update 2025"],["11/1/2024","2024-11","A005","out",1.0,"Imported from Stock-update 2025"],["11/1/2024","2024-11","A006","out",4.0,"Imported from Stock-update 2025"],["11/1/2024","2024-11","A007","out",1.0,"Imported from Stock-update 2025"],["11/1/2024","2024-11","A008","out",2.0,"Imported from Stock-update 2025"],["11/1/2024","2024-11","A009","out",7.0,"Imported from Stock-update 2025"],["11/1/2024","2024-11","A010","out",2.0,"Imported from Stock-update 2025"],["11/1/2024","2024-11","A011","out",11.0,"Imported from Stock-update 2025"],["11/1/2024","2024-11","A012","out",2.0,"Imported from Stock-update 2025"],["11/1/2024","2024-11","A014","in",12.0,"Imported from Stock-update 2025"],["11/1/2024","2024-11","A014","out",8.0,"Imported from Stock-update 2025"],["11/1/2024","2024-11","A015","in",12.0,"Imported from Stock-update 2025"],["11/1/2024","2024-11","A015","out",7.0,"Imported from Stock-update 2025"],["11/1/2024","2024-11","A021","out",1.0,"Imported from Stock-update 2025"],["11/1/2024","2024-11","A026","out",2.0,"Imported from Stock-update 2025"],["11/1/2024","2024-11","A027","in",15.0,"Imported from Stock-update 2025"],["11/1/2024","2024-11","A027","out",8.0,"Imported from Stock-update 2025"],["11/1/2024","2024-11","A030","out",4.0,"Imported from Stock-update 2025"],["11/1/2024","2024-11","A031","out",12.0,"Imported from Stock-update 2025"],["11/1/2024","2024-11","A042","in",375.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A001","out",1.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A002","in",10.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A002","out",1.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A003","in",5.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A007","in",12.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A008","out",6.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A010","in",20.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A010","out",2.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A012","in",30.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A012","out",6.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A014","out",2.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A015","out",7.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A016","in",5.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A018","in",288.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A021","out",7.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A026","out",1.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A029","out",2.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A030","out",2.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A031","in",10.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A031","out",3.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A033","in",64.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A034","in",8.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A034","out",1.0,"Imported from Stock-update 2025"],["12/1/2024","2024-12","A042","out",100.0,"Imported from Stock-update 2025"],["1/1/2025","2025-01","A001","out",2.0,"Imported from Stock-update 2025"],["1/1/2025","2025-01","A005","out",1.0,"Imported from Stock-update 2025"],["1/1/2025","2025-01","A010","out",3.0,"Imported from Stock-update 2025"],["1/1/2025","2025-01","A011","out",7.0,"Imported from Stock-update 2025"],["1/1/2025","2025-01","A012","out",7.0,"Imported from Stock-update 2025"],["1/1/2025","2025-01","A014","out",9.0,"Imported from Stock-update 2025"],["1/1/2025","2025-01","A015","out",6.0,"Imported from Stock-update 2025"],["1/1/2025","2025-01","A018","out",6.0,"Imported from Stock-update 2025"],["1/1/2025","2025-01","A021","out",2.0,"Imported from Stock-update 2025"],["1/1/2025","2025-01","A026","out",3.0,"Imported from Stock-update 2025"],["1/1/2025","2025-01","A027","out",5.0,"Imported from Stock-update 2025"],["1/1/2025","2025-01","A030","in",20.0,"Imported from Stock-update 2025"],["1/1/2025","2025-01","A030","out",2.0,"Imported from Stock-update 2025"],["1/1/2025","2025-01","A031","out",6.0,"Imported from Stock-update 2025"],["1/1/2025","2025-01","A033","out",2.0,"Imported from Stock-update 2025"],["1/1/2025","2025-01","A034","out",1.0,"Imported from Stock-update 2025"],["1/1/2025","2025-01","A042","out",100.0,"Imported from Stock-update 2025"],["2/1/2025","2025-02","A001","out",4.0,"Imported from Stock-update 2025"],["2/1/2025","2025-02","A005","out",2.0,"Imported from Stock-update 2025"],["2/1/2025","2025-02","A006","out",3.0,"Imported from Stock-update 2025"],["2/1/2025","2025-02","A007","out",5.0,"Imported from Stock-update 2025"],["2/1/2025","2025-02","A009","out",4.0,"Imported from Stock-update 2025"],["2/1/2025","2025-02","A010","out",4.0,"Imported from Stock-update 2025"],["2/1/2025","2025-02","A011","out",2.0,"Imported from Stock-update 2025"],["2/1/2025","2025-02","A012","out",4.0,"Imported from Stock-update 2025"],["2/1/2025","2025-02","A014","in",25.0,"Imported from Stock-update 2025"],["2/1/2025","2025-02","A014","out",9.0,"Imported from Stock-update 2025"],["2/1/2025","2025-02","A015","in",30.0,"Imported from Stock-update 2025"],["2/1/2025","2025-02","A015","out",2.0,"Imported from Stock-update 2025"],["2/1/2025","2025-02","A016","out",2.0,"Imported from Stock-update 2025"],["2/1/2025","2025-02","A018","out",4.0,"Imported from Stock-update 2025"],["2/1/2025","2025-02","A021","out",2.0,"Imported from Stock-update 2025"],["2/1/2025","2025-02","A027","out",9.0,"Imported from Stock-update 2025"],["2/1/2025","2025-02","A029","out",1.0,"Imported from Stock-update 2025"],["2/1/2025","2025-02","A030","out",4.0,"Imported from Stock-update 2025"],["2/1/2025","2025-02","A031","out",8.0,"Imported from Stock-update 2025"],["2/1/2025","2025-02","A033","out",1.0,"Imported from Stock-update 2025"],["2/1/2025","2025-02","A034","out",1.0,"Imported from Stock-update 2025"],["2/1/2025","2025-02","A035","out",1.0,"Imported from Stock-update 2025"],["3/1/2025","2025-03","A009","out",3.0,"Imported from Stock-update 2025"],["3/1/2025","2025-03","A010","out",3.0,"Imported from Stock-update 2025"],["3/1/2025","2025-03","A011","out",3.0,"Imported from Stock-update 2025"],["3/1/2025","2025-03","A012","out",6.0,"Imported from Stock-update 2025"],["3/1/2025","2025-03","A014","out",8.0,"Imported from Stock-update 2025"],["3/1/2025","2025-03","A015","out",3.0,"Imported from Stock-update 2025"],["3/1/2025","2025-03","A018","out",7.0,"Imported from Stock-update 2025"],["3/1/2025","2025-03","A026","in",15.0,"Imported from Stock-update 2025"],["3/1/2025","2025-03","A026","out",7.0,"Imported from Stock-update 2025"],["3/1/2025","2025-03","A027","in",20.0,"Imported from Stock-update 2025"],["3/1/2025","2025-03","A027","out",8.0,"Imported from Stock-update 2025"],["3/1/2025","2025-03","A029","out",3.0,"Imported from Stock-update 2025"],["3/1/2025","2025-03","A030","out",7.0,"Imported from Stock-update 2025"],["3/1/2025","2025-03","A031","in",15.0,"Imported from Stock-update 2025"],["3/1/2025","2025-03","A031","out",3.0,"Imported from Stock-update 2025"],["3/1/2025","2025-03","A033","out",1.0,"Imported from Stock-update 2025"],["4/1/2025","2025-04","A001","out",2.0,"Imported from Stock-update 2025"],["4/1/2025","2025-04","A008","in",20.0,"Imported from Stock-update 2025"],["4/1/2025","2025-04","A008","out",8.0,"Imported from Stock-update 2025"],["4/1/2025","2025-04","A010","out",2.0,"Imported from Stock-update 2025"],["4/1/2025","2025-04","A012","out",8.0,"Imported from Stock-update 2025"],["4/1/2025","2025-04","A014","out",9.0,"Imported from Stock-update 2025"],["4/1/2025","2025-04","A015","out",6.0,"Imported from Stock-update 2025"],["4/1/2025","2025-04","A016","out",2.0,"Imported from Stock-update 2025"],["4/1/2025","2025-04","A018","out",17.0,"Imported from Stock-update 2025"],["4/1/2025","2025-04","A024","out",1.0,"Imported from Stock-update 2025"],["4/1/2025","2025-04","A027","out",11.0,"Imported from Stock-update 2025"],["4/1/2025","2025-04","A031","out",4.0,"Imported from Stock-update 2025"],["4/1/2025","2025-04","A033","out",2.0,"Imported from Stock-update 2025"],["4/1/2025","2025-04","A034","out",1.0,"Imported from Stock-update 2025"],["4/1/2025","2025-04","A042","out",100.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A001","in",20.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A001","out",5.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A006","out",2.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A007","out",1.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A008","out",10.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A012","out",1.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A013","out",1.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A014","in",4.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A014","out",7.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A015","out",10.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A016","out",1.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A018","out",19.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A026","in",10.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A026","out",8.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A027","in",20.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A027","out",1.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A029","out",3.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A030","in",10.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A030","out",4.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A031","in",7.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A031","out",8.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A033","out",3.0,"Imported from Stock-update 2025"],["5/1/2025","2025-05","A042","out",50.0,"Imported from Stock-update 2025"],["6/1/2025","2025-06","A001","out",3.0,"Imported from Stock-update 2025"],["6/1/2025","2025-06","A007","out",2.0,"Imported from Stock-update 2025"],["6/1/2025","2025-06","A008","out",2.0,"Imported from Stock-update 2025"],["6/1/2025","2025-06","A014","in",26.0,"Imported from Stock-update 2025"],["6/1/2025","2025-06","A014","out",7.0,"Imported from Stock-update 2025"],["6/1/2025","2025-06","A015","out",3.0,"Imported from Stock-update 2025"],["6/1/2025","2025-06","A018","out",14.0,"Imported from Stock-update 2025"],["6/1/2025","2025-06","A026","out",1.0,"Imported from Stock-update 2025"],["6/1/2025","2025-06","A027","out",1.0,"Imported from Stock-update 2025"],["6/1/2025","2025-06","A030","in",10.0,"Imported from Stock-update 2025"],["6/1/2025","2025-06","A030","out",3.0,"Imported from Stock-update 2025"],["6/1/2025","2025-06","A031","in",3.0,"Imported from Stock-update 2025"],["6/1/2025","2025-06","A031","out",4.0,"Imported from Stock-update 2025"],["6/1/2025","2025-06","A033","out",3.0,"Imported from Stock-update 2025"],["6/1/2025","2025-06","A042","out",15.0,"Imported from Stock-update 2025"],["7/1/2025","2025-07","A001","out",2.0,"Imported from Stock-update 2025"],["7/1/2025","2025-07","A005","out",1.0,"Imported from Stock-update 2025"],["7/1/2025","2025-07","A008","in",35.0,"Imported from Stock-update 2025"],["7/1/2025","2025-07","A008","out",1.0,"Imported from Stock-update 2025"],["7/1/2025","2025-07","A010","in",6.0,"Imported from Stock-update 2025"],["7/1/2025","2025-07","A010","out",1.0,"Imported from Stock-update 2025"],["7/1/2025","2025-07","A012","in",35.0,"Imported from Stock-update 2025"],["7/1/2025","2025-07","A012","out",3.0,"Imported from Stock-update 2025"],["7/1/2025","2025-07","A014","out",5.0,"Imported from Stock-update 2025"],["7/1/2025","2025-07","A015","out",4.0,"Imported from Stock-update 2025"],["7/1/2025","2025-07","A018","out",12.0,"Imported from Stock-update 2025"],["7/1/2025","2025-07","A020","in",20.0,"Imported from Stock-update 2025"],["7/1/2025","2025-07","A020","out",1.0,"Imported from Stock-update 2025"],["7/1/2025","2025-07","A026","out",2.0,"Imported from Stock-update 2025"],["7/1/2025","2025-07","A027","out",1.0,"Imported from Stock-update 2025"],["7/1/2025","2025-07","A030","out",1.0,"Imported from Stock-update 2025"],["7/1/2025","2025-07","A031","out",3.0,"Imported from Stock-update 2025"],["7/1/2025","2025-07","A033","out",6.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A001","out",1.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A008","out",4.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A010","out",1.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A012","out",3.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A014","in",20.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A014","out",5.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A015","in",30.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A015","out",2.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A018","out",7.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A020","out",1.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A026","out",3.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A027","out",2.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A030","out",2.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A031","in",12.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A031","out",4.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A036","in",80.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A037","in",100.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A037","out",44.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A038","in",50.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A038","out",21.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A039","in",100.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A039","out",11.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A040","in",5.0,"Imported from Stock-update 2025"],["8/1/2025","2025-08","A041","in",100.0,"Imported from Stock-update 2025"],["9/1/2025","2025-09","A005","out",1.0,"Imported from Stock-update 2025"],["9/1/2025","2025-09","A008","out",2.0,"Imported from Stock-update 2025"],["9/1/2025","2025-09","A012","out",7.0,"Imported from Stock-update 2025"],["9/1/2025","2025-09","A014","out",6.0,"Imported from Stock-update 2025"],["9/1/2025","2025-09","A015","out",11.0,"Imported from Stock-update 2025"],["9/1/2025","2025-09","A018","out",10.0,"Imported from Stock-update 2025"],["9/1/2025","2025-09","A027","out",12.0,"Imported from Stock-update 2025"],["9/1/2025","2025-09","A030","out",4.0,"Imported from Stock-update 2025"],["9/1/2025","2025-09","A031","out",7.0,"Imported from Stock-update 2025"],["9/1/2025","2025-09","A033","out",2.0,"Imported from Stock-update 2025"],["9/1/2025","2025-09","A037","out",25.0,"Imported from Stock-update 2025"],["9/1/2025","2025-09","A038","out",9.0,"Imported from Stock-update 2025"],["9/1/2025","2025-09","A039","out",3.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A001","out",2.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A006","out",1.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A008","out",3.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A010","out",3.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A012","out",12.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A014","out",5.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A015","out",3.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A018","out",22.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A026","in",21.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A026","out",6.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A027","in",25.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A027","out",4.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A030","out",2.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A031","in",11.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A031","out",4.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A033","out",7.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A034","out",2.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A035","out",1.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A037","out",31.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A038","out",7.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A039","out",14.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A040","out",2.0,"Imported from Stock-update 2025"],["10/1/2025","2025-10","A041","out",100.0,"Imported from Stock-update 2025"],["11/1/2025","2025-11","A004","in",192.0,"Imported from Stock-update 2025"],["11/1/2025","2025-11","A004","out",3.0,"Imported from Stock-update 2025"],["11/1/2025","2025-11","A007","out",1.0,"Imported from Stock-update 2025"],["11/1/2025","2025-11","A008","out",3.0,"Imported from Stock-update 2025"],["11/1/2025","2025-11","A009","out",1.0,"Imported from Stock-update 2025"],["11/1/2025","2025-11","A010","out",1.0,"Imported from Stock-update 2025"],["11/1/2025","2025-11","A012","out",7.0,"Imported from Stock-update 2025"],["11/1/2025","2025-11","A014","out",4.0,"Imported from Stock-update 2025"],["11/1/2025","2025-11","A015","out",4.0,"Imported from Stock-update 2025"],["11/1/2025","2025-11","A018","out",6.0,"Imported from Stock-update 2025"],["11/1/2025","2025-11","A019","in",144.0,"Imported from Stock-update 2025"],["11/1/2025","2025-11","A019","out",1.0,"Imported from Stock-update 2025"],["11/1/2025","2025-11","A026","out",1.0,"Imported from Stock-update 2025"],["11/1/2025","2025-11","A027","out",3.0,"Imported from Stock-update 2025"],["11/1/2025","2025-11","A030","out",2.0,"Imported from Stock-update 2025"],["11/1/2025","2025-11","A031","out",2.0,"Imported from Stock-update 2025"],["11/1/2025","2025-11","A036","out",14.0,"Imported from Stock-update 2025"],["11/1/2025","2025-11","A037","in",100.0,"Imported from Stock-update 2025"],["11/1/2025","2025-11","A037","out",25.0,"Imported from Stock-update 2025"],["11/1/2025","2025-11","A038","out",9.0,"Imported from Stock-update 2025"],["11/1/2025","2025-11","A039","out",7.0,"Imported from Stock-update 2025"],["12/1/2025","2025-12","A001","out",1.0,"Imported from Stock-update 2025"],["12/1/2025","2025-12","A004","out",5.0,"Imported from Stock-update 2025"],["12/1/2025","2025-12","A008","out",9.0,"Imported from Stock-update 2025"],["12/1/2025","2025-12","A010","out",2.0,"Imported from Stock-update 2025"],["12/1/2025","2025-12","A012","out",1.0,"Imported from Stock-update 2025"],["12/1/2025","2025-12","A014","out",5.0,"Imported from Stock-update 2025"],["12/1/2025","2025-12","A015","out",4.0,"Imported from Stock-update 2025"],["12/1/2025","2025-12","A018","out",7.0,"Imported from Stock-update 2025"],["12/1/2025","2025-12","A026","out",6.0,"Imported from Stock-update 2025"],["12/1/2025","2025-12","A027","out",4.0,"Imported from Stock-update 2025"],["12/1/2025","2025-12","A030","out",3.0,"Imported from Stock-update 2025"],["12/1/2025","2025-12","A031","out",4.0,"Imported from Stock-update 2025"],["12/1/2025","2025-12","A033","out",2.0,"Imported from Stock-update 2025"],["12/1/2025","2025-12","A036","out",3.0,"Imported from Stock-update 2025"],["12/1/2025","2025-12","A037","out",66.0,"Imported from Stock-update 2025"],["12/1/2025","2025-12","A038","out",4.0,"Imported from Stock-update 2025"],["12/1/2025","2025-12","A039","out",17.0,"Imported from Stock-update 2025"],["12/1/2025","2025-12","A042","in",375.0,"Imported from Stock-update 2025"],["1/1/2026","2026-01","A001","in",14.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A001","out",3.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A002","in",9.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A002","out",1.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A003","in",5.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A003","out",1.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A004","in",184.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A004","out",5.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A005","in",3.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A007","in",13.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A007","out",3.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A008","in",13.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A008","out",13.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A010","in",5.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A010","out",2.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A012","in",2.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A012","out",2.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A014","in",30.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A014","out",5.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A015","in",22.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A015","out",7.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A017","in",7.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A018","in",157.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A018","out",7.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A019","in",143.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A020","in",18.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A020","out",2.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A023","in",1.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A026","in",15.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A026","out",6.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A027","in",18.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A028","in",2.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A029","in",3.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A030","in",9.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A030","out",1.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A031","in",6.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A031","out",4.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A033","in",35.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A033","out",4.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A034","in",2.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A034","out",1.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A035","in",3.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A036","in",63.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A036","out",3.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A037","in",209.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A037","out",29.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A039","in",48.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A039","out",27.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A040","in",3.0,"Imported from Stock-update 2026"],["1/1/2026","2026-01","A042","in",375.0,"Imported from Stock-update 2026"],["2/1/2026","2026-02","A002","out",1.0,"Imported from Stock-update 2026"],["2/1/2026","2026-02","A004","out",2.0,"Imported from Stock-update 2026"],["2/1/2026","2026-02","A010","out",1.0,"Imported from Stock-update 2026"],["2/1/2026","2026-02","A015","out",1.0,"Imported from Stock-update 2026"],["2/1/2026","2026-02","A018","out",6.0,"Imported from Stock-update 2026"],["2/1/2026","2026-02","A026","out",3.0,"Imported from Stock-update 2026"],["2/1/2026","2026-02","A030","out",1.0,"Imported from Stock-update 2026"],["2/1/2026","2026-02","A031","out",2.0,"Imported from Stock-update 2026"],["2/1/2026","2026-02","A036","out",4.0,"Imported from Stock-update 2026"],["2/1/2026","2026-02","A037","out",31.0,"Imported from Stock-update 2026"],["2/1/2026","2026-02","A039","out",13.0,"Imported from Stock-update 2026"],["2/1/2026","2026-02","A040","out",2.0,"Imported from Stock-update 2026"],["3/1/2026","2026-03","A001","out",1.0,"Imported from Stock-update 2026"],["3/1/2026","2026-03","A004","out",10.0,"Imported from Stock-update 2026"],["3/1/2026","2026-03","A007","out",7.0,"Imported from Stock-update 2026"],["3/1/2026","2026-03","A010","out",1.0,"Imported from Stock-update 2026"],["3/1/2026","2026-03","A014","out",3.0,"Imported from Stock-update 2026"],["3/1/2026","2026-03","A015","out",2.0,"Imported from Stock-update 2026"],["3/1/2026","2026-03","A018","out",5.0,"Imported from Stock-update 2026"],["3/1/2026","2026-03","A019","out",6.0,"Imported from Stock-update 2026"],["3/1/2026","2026-03","A026","out",2.0,"Imported from Stock-update 2026"],["3/1/2026","2026-03","A027","out",5.0,"Imported from Stock-update 2026"],["3/1/2026","2026-03","A029","out",1.0,"Imported from Stock-update 2026"],["3/1/2026","2026-03","A030","out",1.0,"Imported from Stock-update 2026"],["3/1/2026","2026-03","A031","out",5.0,"Imported from Stock-update 2026"],["3/1/2026","2026-03","A033","out",5.0,"Imported from Stock-update 2026"],["3/1/2026","2026-03","A034","out",1.0,"Imported from Stock-update 2026"],["3/1/2026","2026-03","A036","out",14.0,"Imported from Stock-update 2026"],["3/1/2026","2026-03","A037","in",100.0,"Imported from Stock-update 2026"],["3/1/2026","2026-03","A037","out",67.0,"Imported from Stock-update 2026"],["3/1/2026","2026-03","A039","out",8.0,"Imported from Stock-update 2026"],["3/1/2026","2026-03","A040","out",1.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A001","in",15.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A004","out",23.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A007","out",2.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A008","in",20.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A008","out",3.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A010","in",10.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A010","out",1.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A012","in",35.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A012","out",8.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A014","out",5.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A015","in",10.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A015","out",6.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A016","in",10.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A016","out",2.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A018","out",20.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A019","out",20.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A026","in",20.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A026","out",7.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A027","out",6.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A030","in",100.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A030","out",5.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A031","in",20.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A031","out",10.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A034","in",10.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A036","out",10.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A037","out",120.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A040","in",10.0,"Imported from Stock-update 2026"],["4/1/2026","2026-04","A041","in",200.0,"Imported from Stock-update 2026"],["5/1/2026","2026-05","A004","out",3.0,"Imported from Stock-update 2026"],["5/1/2026","2026-05","A008","out",1.0,"Imported from Stock-update 2026"],["5/1/2026","2026-05","A012","out",4.0,"Imported from Stock-update 2026"],["5/1/2026","2026-05","A014","out",1.0,"Imported from Stock-update 2026"],["5/1/2026","2026-05","A015","out",1.0,"Imported from Stock-update 2026"],["5/1/2026","2026-05","A018","out",5.0,"Imported from Stock-update 2026"],["5/1/2026","2026-05","A019","out",9.0,"Imported from Stock-update 2026"],["5/1/2026","2026-05","A026","out",2.0,"Imported from Stock-update 2026"],["5/1/2026","2026-05","A031","out",1.0,"Imported from Stock-update 2026"],["5/1/2026","2026-05","A036","out",7.0,"Imported from Stock-update 2026"],["5/1/2026","2026-05","A037","out",22.0,"Imported from Stock-update 2026"]];
+    const STOCK_FETCH_URL = 'https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/efa8578054af42ee85f010a6e9f450d5/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=JTYs4G2czYSjILuqsAlOQGBJK30BY933Y2MFu_AgIA8';
+    const STOCK_MOVEMENT_UPDATE_URL = 'https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/b22975e3cf9341df99a79a89e029799a/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=tBFU6vmJj7om1-uGnSx_Cy9OQTGcilEGEQe8qO2yVzY';
+    const PRODUCT_UPDATE_URL = 'https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/ded030e3b8464aa6b0e41e0d63f04fef/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=a_QrKRiKqoLEbOn2DNrD3IT7NY1sbzP6qrF3v6f1Kbg';
+    const AUTH_KEY = 'ma_stock_costing_user';
+    const AUTH_PASSWORDS = {
+      Gavin: 'Modernization@888',
+      James: 'Modernization@11246',
+    };
+    const AUTH_USERS = Object.keys(AUTH_PASSWORDS);
+    let pendingLoginUser = '';
+    const PRICE_KEY = 'ma-stock-list-prices-v1';
+    const MOVEMENT_KEY = 'ma-stock-monthly-movements-v1';
+    const OPENING_KEY = 'ma-stock-opening-balance-v1';
+    let priceOverrides = loadPrices();
+    let movements = loadMovements();
+    let openingBalances = loadOpeningBalances();
+    let currentUser = sessionStorage.getItem(AUTH_KEY) || '';
+    let appStarted = false;
+    let searchTimer = 0;
+
+    const $ = (id) => document.getElementById(id);
+    const norm = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
+    const num = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
+    const rm = (value) => `RM${num(value).toFixed(2)}`;
+    const qtyText = (value) => num(value).toLocaleString(undefined, { maximumFractionDigits: 2 });
+    const stockText = (value) => String(value ?? '').trim().toLowerCase().replace(/[a-z]+/g, (word) => {
+      const upper = word.toUpperCase();
+      if (['MM', 'CM'].includes(upper)) return upper.toLowerCase();
+      if (['AAA', 'PVC', 'PET', 'PU', 'TPU', 'SKU', 'RM', 'KG', 'OT', 'BT', 'CT'].includes(upper)) return upper;
+      return word.charAt(0).toUpperCase() + word.slice(1);
+    });
+
+    function excelNumber(value) {
+      const clean = String(value ?? '').replace(/RM/gi, '').replace(/,/g, '').trim();
+      return clean && Number.isFinite(Number(clean)) ? Number(clean) : null;
+    }
+
+    function datePickerToInputDate(dateObj) {
+      return `${dateObj.getFullYear()}-${String(dateObj.getMonth() + 1).padStart(2, '0')}-${String(dateObj.getDate()).padStart(2, '0')}`;
+    }
+
+    function parsePortalDate(value) {
+      const raw = String(value ?? '').trim();
+      if (!raw) return null;
+      if (/^\d+(\.\d+)?$/.test(raw)) {
+        const serial = Number(raw);
+        if (serial > 25000 && serial < 70000) {
+          const utc = Date.UTC(1899, 11, 30) + Math.floor(serial) * 86400000;
+          const parsed = new Date(utc);
+          return new Date(parsed.getUTCFullYear(), parsed.getUTCMonth(), parsed.getUTCDate());
+        }
+      }
+      const iso = raw.match(/^(\d{4})-(\d{2})-(\d{2})/);
+      if (iso) return new Date(Number(iso[1]), Number(iso[2]) - 1, Number(iso[3]));
+      const mdy = raw.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})/);
+      if (mdy) return new Date(Number(mdy[3]), Number(mdy[1]) - 1, Number(mdy[2]));
+      return null;
+    }
+
+    function formatPortalDate(dateObj) {
+      return `${dateObj.getMonth() + 1}/${dateObj.getDate()}/${dateObj.getFullYear()}`;
+    }
+
+    function formatMonthLabel(dateObj) {
+      return dateObj.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+    }
+
+    function parseMonthLabel(value) {
+      const raw = String(value ?? '').trim();
+      if (!raw) return null;
+      const key = raw.match(/^(\d{4})-(\d{2})$/);
+      if (key) return new Date(Number(key[1]), Number(key[2]) - 1, 1);
+      const parsed = new Date(`${raw} 1`);
+      return Number.isNaN(parsed.getTime()) ? null : new Date(parsed.getFullYear(), parsed.getMonth(), 1);
+    }
+
+    function monthKeyFromFilter(value) {
+      const raw = String(value ?? '').trim();
+      if (/^\d{4}-\d{2}$/.test(raw)) return raw;
+      const date = parseMonthLabel(raw);
+      if (!date) return '';
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    function monthKeyFromDate(value) {
+      const date = parsePortalDate(value);
+      if (!date) return '';
+      return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+    }
+
+    function normalizeType(value) {
+      const text = String(value || '').toLowerCase();
+      return text.includes('out') ? 'out' : 'in';
+    }
+
+    function normalizeProductRow(row, index) {
+      const cost = excelNumber(row['Current Price']) ?? excelNumber(row['Workbook Cost']);
+      return {
+        row: index + 1,
+        sku: String(row.SKU || row.Sku || '').trim(),
+        description: String(row.Description || '').trim(),
+        unit: String(row.Unit || '').trim(),
+        photo: '',
+        remark: String(row.Remark || '').trim(),
+        size: String(row.Size || '').trim(),
+        weight: String(row.Weight || '').trim(),
+        cost,
+        rawCost: cost == null ? '' : String(cost),
+      };
+    }
+
+    function normalizeMovementRow(row, index) {
+      const parsedDate = parsePortalDate(row.Date);
+      const parsedMonth = monthKeyFromFilter(row.Month) || (parsedDate ? monthKeyFromDate(formatPortalDate(parsedDate)) : monthKeyFromDate(row.Date));
+      return {
+        id: String(row.ItemInternalId || row.ID || row.Id || `remote-${index}`),
+        date: parsedDate ? formatPortalDate(parsedDate) : String(row.Date || '').slice(0, 10),
+        month: parsedMonth,
+        sku: String(row.SKU || row.Sku || '').trim(),
+        type: normalizeType(row.Type),
+        qty: excelNumber(row.Quantity) || 0,
+        remark: String(row.Remark || '').trim(),
+      };
+    }
+
+    function seedMovementRows() {
+      return STOCK_MOVEMENT_SEED.map((row, index) => ({
+        id: `seed-${index}`,
+        date: row[0],
+        month: row[1],
+        sku: row[2],
+        type: row[3],
+        qty: num(row[4]),
+        remark: row[5] || '',
+      })).filter((row) => row.sku && row.month && row.qty);
+    }
+
+    function movementDedupeKey(row) {
+      return [row.month || monthKeyFromDate(row.date), row.sku, row.type, num(row.qty), row.remark || ''].join('|');
+    }
+
+    function mergeMovementRows(...groups) {
+      const merged = new Map();
+      groups.flat().filter(Boolean).forEach((row) => {
+        const normalized = { ...row, month: row.month || monthKeyFromDate(row.date) };
+        if (!normalized.sku || !normalized.month || !num(normalized.qty)) return;
+        merged.set(movementDedupeKey(normalized), normalized);
+      });
+      return [...merged.values()].sort((a, b) => String(b.month || '').localeCompare(String(a.month || '')) || String(a.sku || '').localeCompare(String(b.sku || '')));
+    }
+
+    function movementPayload(row) {
+      const product = productBySku(row.sku);
+      const quantity = Math.max(0, num(row.qty));
+      const unitCost = Object.prototype.hasOwnProperty.call(priceOverrides, row.sku) ? num(priceOverrides[row.sku]) : num(product?.cost);
+      return {
+        date: row.date,
+        month: row.month || monthKeyFromDate(row.date),
+        sku: row.sku,
+        description: product?._display?.description || product?.description || '',
+        type: row.type === 'out' ? 'Stock Out' : 'Stock In',
+        quantity,
+        unit: product?._display?.unit || product?.unit || '',
+        unitCost,
+        amount: quantity * unitCost,
+        pic: currentUser || '',
+        remark: row.remark || '',
+      };
+    }
+
+    function applyRemoteStockPayload(payload) {
+      const products = Array.isArray(payload?.productList) ? payload.productList : [];
+      const remoteMovements = Array.isArray(payload?.stockMovement) ? payload.stockMovement : [];
+      if (products.length) {
+        STOCK_DATA.products = products.map(normalizeProductRow).filter((row) => row.sku);
+        openingBalances = {};
+        priceOverrides = {};
+        products.forEach((row) => {
+          const sku = String(row.SKU || row.Sku || '').trim();
+          if (!sku) return;
+          const opening = excelNumber(row['Opening Stock']);
+          const price = excelNumber(row['Current Price']);
+          if (opening != null) openingBalances[sku] = opening;
+          if (price != null) priceOverrides[sku] = price;
+        });
+      }
+      if (remoteMovements.length) movements = mergeMovementRows(seedMovementRows(), remoteMovements.map(normalizeMovementRow).filter((row) => row.sku && row.qty));
+      STOCK_DATA.sourceFile = 'OneDrive MA_Stock_Costing_Sync.xlsx';
+    }
+
+    async function fetchRemoteStockData() {
+      if (!STOCK_FETCH_URL) return false;
+      $('dataStatus').textContent = 'Loading OneDrive Stock Data...';
+      try {
+        const response = await fetch(STOCK_FETCH_URL, { method: 'POST' });
+        if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        const payload = await response.json();
+        if (!payload?.ok) throw new Error('Power Automate returned no ok flag');
+        applyRemoteStockPayload(payload);
+        $('dataStatus').textContent = 'Loaded Latest Stock Data From OneDrive.';
+        return true;
+      } catch (error) {
+        $('dataStatus').textContent = `OneDrive Stock Sync Failed. Showing Local Fallback. ${error.message}`;
+        return false;
+      }
+    }
+
+    async function saveMovementRemote(row) {
+      if (!STOCK_MOVEMENT_UPDATE_URL) return true;
+      const response = await fetch(STOCK_MOVEMENT_UPDATE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(movementPayload(row)),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json().catch(() => ({}));
+      if (payload && payload.ok === false) throw new Error(payload.message || 'Power Automate save failed');
+      return true;
+    }
+
+    function productUpdatePayload(product) {
+      return {
+        sku: product.sku,
+        description: product._display?.description || product.description || '',
+        unit: product._display?.unit || product.unit || '',
+        size: product._display?.size || product.size || '',
+        weight: product.weight || '',
+        remark: product._display?.remark || product.remark || '',
+        workbookCost: product.cost == null ? 0 : num(product.cost),
+        currentPrice: Object.prototype.hasOwnProperty.call(priceOverrides, product.sku) ? num(priceOverrides[product.sku]) : num(product.cost),
+        openingStock: Object.prototype.hasOwnProperty.call(openingBalances, product.sku) ? num(openingBalances[product.sku]) : 0,
+        active: true,
+        lastUpdated: new Date().toISOString(),
+      };
+    }
+
+    async function saveProductRemote(product) {
+      if (!PRODUCT_UPDATE_URL) return true;
+      const response = await fetch(PRODUCT_UPDATE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(productUpdatePayload(product)),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json().catch(() => ({}));
+      if (payload && payload.ok === false) throw new Error(payload.message || 'Power Automate update failed');
+      return true;
+    }
+
+    function prepareData() {
+      STOCK_DATA.products.forEach((p) => {
+        p._search = norm([p.sku, p.description, p.unit, p.remark, p.size, p.weight].join(' '));
+        p._display = {
+          description: stockText(p.description),
+          unit: stockText(p.unit),
+          size: stockText(p.size),
+          remark: stockText(p.remark || 'Material'),
+        };
+      });
+    }
+
+    function loadPrices() {
+      try { return JSON.parse(localStorage.getItem(PRICE_KEY) || '{}') || {}; }
+      catch { return {}; }
+    }
+
+    function loadMovements() {
+      try { return JSON.parse(localStorage.getItem(MOVEMENT_KEY) || '[]') || []; }
+      catch { return []; }
+    }
+
+    function saveMovements() {
+      localStorage.setItem(MOVEMENT_KEY, JSON.stringify(movements));
+    }
+
+    function loadOpeningBalances() {
+      try { return JSON.parse(localStorage.getItem(OPENING_KEY) || '{}') || {}; }
+      catch { return {}; }
+    }
+
+    async function saveStockData() {
+      if (!isAuthenticated()) {
+        $('dataStatus').textContent = 'View Only. Login As Gavin Or James To Edit Stock Data.';
+        return;
+      }
+      const touchedSkus = new Set();
+      document.querySelectorAll('[data-price-sku]').forEach((input) => {
+        const sku = input.dataset.priceSku;
+        touchedSkus.add(sku);
+        const value = input.value.trim();
+        if (!value) delete priceOverrides[sku];
+        else priceOverrides[sku] = Number(value);
+      });
+      document.querySelectorAll('[data-opening-sku]').forEach((input) => {
+        const sku = input.dataset.openingSku;
+        touchedSkus.add(sku);
+        const value = input.value.trim();
+        if (!value) delete openingBalances[sku];
+        else openingBalances[sku] = Number(value);
+      });
+      localStorage.setItem(PRICE_KEY, JSON.stringify(priceOverrides));
+      localStorage.setItem(OPENING_KEY, JSON.stringify(openingBalances));
+      const productsToUpdate = [...touchedSkus].map((sku) => productBySku(sku)).filter(Boolean);
+      let remoteSaved = 0;
+      let remoteError = '';
+      if (productsToUpdate.length) {
+        $('dataStatus').textContent = `Updating ${productsToUpdate.length} product row(s) in OneDrive...`;
+        try {
+          for (const product of productsToUpdate) {
+            await saveProductRemote(product);
+            remoteSaved += 1;
+          }
+        } catch (error) {
+          remoteError = error.message;
+        }
+      }
+      renderKpis();
+      renderBalance();
+      $('dataStatus').textContent = remoteError
+        ? `Saved locally. OneDrive product update stopped after ${remoteSaved} row(s): ${remoteError}`
+        : `Saved ${Object.keys(priceOverrides).length} price override(s), ${Object.keys(openingBalances).length} opening/balance stock value(s), and updated ${remoteSaved} OneDrive row(s).`;
+    }
+
+    function filteredProducts() {
+      const q = norm($('searchInput').value);
+      if (!q) return STOCK_DATA.products;
+      return STOCK_DATA.products.filter((p) => p._search.includes(q));
+    }
+
+    function productBySku(sku) {
+      return STOCK_DATA.products.find((p) => p.sku === sku) || STOCK_DATA.products[0];
+    }
+
+    function renderKpis() {
+      $('dataStatus').textContent = `Source: ${STOCK_DATA.sourceFile} · Excel tab: Product List · ${STOCK_DATA.products.length} rows`;
+    }
+
+    function renderProducts() {
+      $('productRows').innerHTML = filteredProducts().map((p) => {
+        const current = Object.prototype.hasOwnProperty.call(priceOverrides, p.sku) ? priceOverrides[p.sku] : p.cost;
+        const opening = Object.prototype.hasOwnProperty.call(openingBalances, p.sku) ? openingBalances[p.sku] : '';
+        const locked = isAuthenticated() ? '' : ' disabled aria-label="Login to edit"';
+        return `<tr><td class="code-link">${escapeHtml(p.sku)}</td><td>${escapeHtml(p._display.description)}</td><td>${escapeHtml(p._display.unit)}</td><td>${escapeHtml(p._display.size)}</td><td>${escapeHtml(p.weight)}</td><td><span class="tag">${escapeHtml(p._display.remark)}</span></td><td><input class="balance-input" data-opening-sku="${escapeHtml(p.sku)}" type="number" step="0.01" value="${opening}" placeholder="0"${locked} /></td><td class="money">${p.cost == null ? '-' : rm(p.cost)}</td><td><input class="price-input" data-price-sku="${escapeHtml(p.sku)}" type="number" step="0.01" value="${current == null ? '' : current}" placeholder="RM"${locked} /></td></tr>`;
+      }).join('') || tableEmpty(9, 'No Product Rows Found.');
+    }
+
+    function populateMovementProducts() {
+      $('movementSku').innerHTML = STOCK_DATA.products.map((p) => `<option value="${escapeHtml(p.sku)}">${escapeHtml(p.sku)} · ${escapeHtml(p._display.description)}</option>`).join('');
+      $('movementDate').value = formatPortalDate(new Date());
+      renderMovementMonthOptions();
+    }
+
+    function movementMonthLabel(monthKey) {
+      const [year, month] = String(monthKey || '').split('-').map(Number);
+      if (!year || !month) return monthKey || '';
+      return formatMonthLabel(new Date(year, month - 1, 1));
+    }
+
+    function availableMovementMonths() {
+      return [...new Set(movements.map((row) => row.month || monthKeyFromDate(row.date)).filter(Boolean))].sort().reverse();
+    }
+
+    function renderMovementMonthOptions() {
+      const select = $('movementMonth');
+      const previous = select.value;
+      const months = availableMovementMonths();
+      select.innerHTML = `<option value="">All Available Months</option>${months.map((month) => `<option value="${escapeHtml(month)}">${escapeHtml(movementMonthLabel(month))}</option>`).join('')}`;
+      const currentMonth = `${new Date().getFullYear()}-${String(new Date().getMonth() + 1).padStart(2, '0')}`;
+      if (months.includes(previous)) select.value = previous;
+      else if (months.includes(currentMonth)) select.value = currentMonth;
+      else select.value = months[0] || '';
+    }
+
+    function filteredMovements() {
+      const month = monthKeyFromFilter($('movementMonth').value);
+      if (!month) return movements;
+      return movements.filter((row) => (row.month || monthKeyFromDate(row.date)) === month);
+    }
+
+    function selectedMovementMonth() {
+      return monthKeyFromFilter($('movementMonth').value);
+    }
+
+    function renderMovements() {
+      const rows = filteredMovements();
+      let stockIn = 0;
+      let stockOut = 0;
+      $('movementRows').innerHTML = rows.map((row) => {
+        const product = productBySku(row.sku);
+        const qty = Math.max(0, num(row.qty));
+        if (row.type === 'out') stockOut += qty;
+        else stockIn += qty;
+        return `<tr>
+          <td>${escapeHtml(row.date || '-')}</td>
+          <td class="code-link">${escapeHtml(row.sku || '-')}</td>
+          <td>${escapeHtml(product?._display?.description || '-')}</td>
+          <td><span class="tag ${row.type === 'out' ? 'is-out' : 'is-in'}">${row.type === 'out' ? 'Stock Out' : 'Stock In'}</span></td>
+          <td>${qtyText(qty)}</td>
+          <td>${escapeHtml(product?._display?.unit || '-')}</td>
+          <td>${escapeHtml(row.remark || '-')}</td>
+          <td><button class="tiny-btn requires-edit" type="button" data-delete-movement="${escapeHtml(row.id)}"${isAuthenticated() ? '' : ' disabled'}>Remove</button></td>
+        </tr>`;
+      }).join('') || tableEmpty(8, 'No Stock Movement Rows For This Month.');
+      $('stockInQty').textContent = qtyText(stockIn);
+      $('stockOutQty').textContent = qtyText(stockOut);
+      $('netMovementQty').textContent = qtyText(stockIn - stockOut);
+      const selectedMonth = $('movementMonth').value;
+      $('movementStatus').textContent = rows.length ? `${rows.length} Movement Row(s) Shown For ${selectedMonth ? movementMonthLabel(selectedMonth) : 'All Available Months'}.` : 'No Stock Movement Rows Entered.';
+      renderBalance();
+    }
+
+    function stockTotalsBySku(selectedMonth = '') {
+      const totals = new Map();
+      STOCK_DATA.products.forEach((product) => totals.set(product.sku, { in: 0, out: 0, openingIn: 0, openingOut: 0, historyOut: 0, outMonths: new Map() }));
+      movements.forEach((row) => {
+        const total = totals.get(row.sku) || { in: 0, out: 0, openingIn: 0, openingOut: 0, historyOut: 0, outMonths: new Map() };
+        const qty = Math.max(0, num(row.qty));
+        const month = row.month || monthKeyFromDate(row.date);
+        const isCurrent = !selectedMonth || month === selectedMonth;
+        const isPrevious = selectedMonth && month && month < selectedMonth;
+        if (row.type === 'out') {
+          if (isCurrent) total.out += qty;
+          if (isPrevious) total.openingOut += qty;
+          if (!selectedMonth || !month || month <= selectedMonth) {
+            total.historyOut += qty;
+            if (month) total.outMonths.set(month, (total.outMonths.get(month) || 0) + qty);
+          }
+        } else {
+          if (isCurrent) total.in += qty;
+          if (isPrevious) total.openingIn += qty;
+        }
+        totals.set(row.sku, total);
+      });
+      return totals;
+    }
+
+    function monthSpan(months) {
+      const sorted = [...months].sort();
+      if (!sorted.length) return 0;
+      const [startYear, startMonth] = sorted[0].split('-').map(Number);
+      const [endYear, endMonth] = sorted[sorted.length - 1].split('-').map(Number);
+      return Math.max(1, ((endYear - startYear) * 12) + (endMonth - startMonth) + 1);
+    }
+
+    function renderBalance() {
+      const month = selectedMovementMonth();
+      const totals = stockTotalsBySku(month);
+      const rows = STOCK_DATA.products.map((product) => {
+        const total = totals.get(product.sku) || { in: 0, out: 0 };
+        const baseOpening = num(openingBalances[product.sku]);
+        const opening = month ? baseOpening + num(total.openingIn) - num(total.openingOut) : baseOpening;
+        const avgMonthlyUsage = num(total.historyOut) / monthSpan(total.outMonths?.keys?.() || []);
+        const balance = opening + total.in - total.out;
+        const stockLevelMonths = avgMonthlyUsage ? balance / avgMonthlyUsage : null;
+        return { product, opening, inQty: total.in, outQty: total.out, avgMonthlyUsage, balance, stockLevelMonths };
+      }).filter((row) => row.opening || row.inQty || row.outQty || row.avgMonthlyUsage || row.balance);
+      const monthLabel = month ? movementMonthLabel(month) : 'All available months';
+      $('balanceCaption').textContent = month
+        ? `${monthLabel}: Opening/Balance Stock Is Previous Month Closing Balance. Target Stock Level Is 3 Months.`
+        : 'All Months: Opening/Balance Stock Is Product Opening/Balance Stock. Target Stock Level Is 3 Months.';
+      $('balancePrintTitle').textContent = balanceReportName();
+      $('balanceRows').innerHTML = rows.map((row) => `<tr>
+        <td class="code-link">${escapeHtml(row.product.sku)}</td>
+        <td>${escapeHtml(row.product._display.description)}</td>
+        <td>${qtyText(row.opening)}</td>
+        <td class="is-green">${qtyText(row.inQty)}</td>
+        <td class="is-orange">${qtyText(row.outQty)}</td>
+        <td class="is-orange">${qtyText(row.avgMonthlyUsage)}</td>
+        <td class="${row.balance < 0 ? 'is-orange' : 'code-link'}">${qtyText(row.balance)}</td>
+        <td>${row.stockLevelMonths == null ? '<span class="muted">No Usage</span>' : `<span class="tag ${row.stockLevelMonths < 3 ? 'is-low' : 'is-ok'}">${qtyText(row.stockLevelMonths)} Months</span>`}</td>
+        <td>${escapeHtml(row.product._display.unit)}</td>
+      </tr>`).join('') || tableEmpty(9, 'No Opening/Balance Stock Or Movement Rows Yet.');
+    }
+
+    function downloadBalancePdf() {
+      document.title = balanceReportName();
+      document.body.classList.add('printing-balance');
+      window.print();
+    }
+
+    function compactMonthLabel(monthKey) {
+      const [year, month] = String(monthKey || '').split('-').map(Number);
+      if (!year || !month) return 'AllMonths';
+      return `${new Date(year, month - 1, 1).toLocaleString('en-US', { month: 'long' })}${year}`;
+    }
+
+    function balanceReportName() {
+      const month = selectedMovementMonth();
+      return `M&AStockBalance-${month ? compactMonthLabel(month) : 'AllMonths'}`;
+    }
+
+    async function addMovement() {
+      if (!isAuthenticated()) {
+        $('movementStatus').textContent = 'View Only. Login As Gavin Or James To Add Stock Movement.';
+        return;
+      }
+      const qty = num($('movementQty').value);
+      if (!qty) {
+        $('movementStatus').textContent = 'Qty Is Required Before Adding Stock Movement.';
+        return;
+      }
+      const row = {
+        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        date: $('movementDate').value || formatPortalDate(new Date()),
+        month: monthKeyFromDate($('movementDate').value || formatPortalDate(new Date())),
+        sku: $('movementSku').value,
+        type: $('movementType').value,
+        qty,
+        remark: $('movementRemark').value.trim(),
+      };
+      $('movementStatus').textContent = 'Saving Stock Movement To OneDrive...';
+      try {
+        await saveMovementRemote(row);
+        row.id = `remote-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        movements.unshift(row);
+        $('movementStatus').textContent = 'Stock Movement Saved To OneDrive.';
+      } catch (error) {
+        row.id = `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
+        movements.unshift(row);
+        $('movementStatus').textContent = `OneDrive Save Failed. Row Kept Locally. ${error.message}`;
+      }
+      saveMovements();
+      $('movementQty').value = '';
+      $('movementRemark').value = '';
+      renderMovementMonthOptions();
+      $('movementMonth').value = row.month || monthKeyFromDate(row.date) || $('movementMonth').value;
+      renderMovements();
+      renderBalance();
+    }
+
+    function showView(name) {
+      document.querySelectorAll('[data-view]').forEach((section) => { section.hidden = section.dataset.view !== name; });
+      document.querySelectorAll('[data-view-tab]').forEach((button) => button.classList.toggle('is-active', button.dataset.viewTab === name));
+      if (name === 'movement') renderMovements();
+    }
+
+    function scheduleRender() {
+      clearTimeout(searchTimer);
+      searchTimer = setTimeout(renderProducts, 120);
+    }
+
+    function tableEmpty(cols, text) { return `<tr><td colspan="${cols}" class="muted">${escapeHtml(text)}</td></tr>`; }
+    function escapeHtml(value) { return String(value ?? '').replace(/[&<>"]/g, (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])); }
+
+    let activeDatePickerInput = null;
+
+    function positionDatePicker(el, picker) {
+      const rect = el.getBoundingClientRect();
+      const width = 260;
+      picker.style.left = `${Math.min(Math.max(8, rect.left), window.innerWidth - width - 8)}px`;
+      picker.style.top = `${rect.bottom + 6}px`;
+      picker.classList.remove('hidden');
+    }
+
+    function openDatePickerForInput(el) {
+      const picker = $('datePickerPopover');
+      const input = $('datePickerDate');
+      if (!picker || !input) return;
+      if (activeDatePickerInput) activeDatePickerInput.classList.remove('date-picker-active');
+      activeDatePickerInput = el;
+      el.classList.add('date-picker-active');
+      const parsed = el.dataset.pickerMode === 'month' ? parseMonthLabel(el.value) : parsePortalDate(el.value);
+      input.value = datePickerToInputDate(parsed || new Date());
+      positionDatePicker(el, picker);
+    }
+
+    function closeDatePicker() {
+      $('datePickerPopover')?.classList.add('hidden');
+      if (activeDatePickerInput) activeDatePickerInput.classList.remove('date-picker-active');
+      activeDatePickerInput = null;
+    }
+
+    function applyDatePickerValue(value) {
+      if (!activeDatePickerInput) return;
+      activeDatePickerInput.value = value;
+      activeDatePickerInput.dispatchEvent(new Event('input', { bubbles: true }));
+      activeDatePickerInput.dispatchEvent(new Event('change', { bubbles: true }));
+      closeDatePicker();
+    }
+
+    function initDatePicker() {
+      document.addEventListener('focusin', (event) => {
+        if (event.target.classList?.contains('date-picker-input')) openDatePickerForInput(event.target);
+      });
+      document.addEventListener('click', (event) => {
+        const picker = $('datePickerPopover');
+        if (!picker) return;
+        if (event.target === activeDatePickerInput || picker.contains(event.target)) return;
+        if (event.target.classList?.contains('date-picker-input')) return openDatePickerForInput(event.target);
+        closeDatePicker();
+      });
+      $('datePickerApply')?.addEventListener('click', () => {
+        const value = $('datePickerDate')?.value;
+        if (!value) return;
+        const [year, month, day] = value.split('-').map(Number);
+        if (activeDatePickerInput?.dataset.pickerMode === 'month') applyDatePickerValue(formatMonthLabel(new Date(year, month - 1, 1)));
+        else applyDatePickerValue(`${month}/${day}/${year}`);
+      });
+      $('datePickerToday')?.addEventListener('click', () => { $('datePickerDate').value = datePickerToInputDate(new Date()); });
+      $('datePickerClear')?.addEventListener('click', () => applyDatePickerValue(''));
+      document.addEventListener('keydown', (event) => { if (event.key === 'Escape') closeDatePicker(); });
+    }
+
+    function bind() {
+      $('searchInput').addEventListener('input', scheduleRender);
+      $('saveStockDataBtn').addEventListener('click', saveStockData);
+      $('addMovementBtn').addEventListener('click', addMovement);
+      $('movementMonth').addEventListener('change', renderMovements);
+      $('downloadBalancePdfBtn').addEventListener('click', downloadBalancePdf);
+      window.addEventListener('afterprint', () => document.body.classList.remove('printing-balance'));
+      $('movementRows').addEventListener('click', (event) => {
+        const id = event.target.dataset.deleteMovement;
+        if (!id) return;
+        if (!isAuthenticated()) {
+          $('movementStatus').textContent = 'View Only. Login As Gavin Or James To Remove Stock Movement.';
+          return;
+        }
+        movements = movements.filter((row) => row.id !== id);
+        saveMovements();
+        renderMovementMonthOptions();
+        renderMovements();
+        renderBalance();
+      });
+      document.querySelectorAll('[data-view-tab]').forEach((button) => {
+        button.addEventListener('click', () => showView(button.dataset.viewTab));
+      });
+    }
+
+    function isAuthenticated() {
+      return AUTH_USERS.includes(currentUser);
+    }
+
+    function updateAuthView() {
+      const authed = isAuthenticated();
+      document.body.classList.toggle('edit-locked', !authed);
+      $('activeUser').textContent = authed ? `PIC: ${currentUser}` : 'Not Logged In';
+      $('sourceStatus').textContent = authed ? 'Edit Access Enabled' : 'View Only · Login To Edit';
+      $('loginUserField').hidden = authed;
+      $('loginBtn').hidden = authed;
+      $('logoutBtn').hidden = !authed;
+      document.querySelectorAll('.requires-edit, #movementDate, #movementSku, #movementType, #movementQty, #movementRemark').forEach((el) => {
+        el.disabled = !authed;
+      });
+      document.querySelectorAll('[data-price-sku], [data-opening-sku]').forEach((el) => {
+        el.disabled = !authed;
+      });
+    }
+
+    function openPasswordModal() {
+      const user = $('loginUser').value;
+      if (!AUTH_USERS.includes(user)) {
+        $('loginError').hidden = false;
+        return;
+      }
+      pendingLoginUser = user;
+      $('passwordModalTitle').textContent = `Enter ${user} Password`;
+      $('modalPasswordInput').value = '';
+      $('modalPasswordError').hidden = true;
+      $('loginError').hidden = true;
+      $('passwordModal').classList.remove('hidden');
+      setTimeout(() => $('modalPasswordInput').focus(), 0);
+    }
+
+    function closePasswordModal() {
+      $('passwordModal').classList.add('hidden');
+      pendingLoginUser = '';
+    }
+
+    function submitPasswordLogin() {
+      const password = $('modalPasswordInput').value;
+      if (!AUTH_USERS.includes(pendingLoginUser) || password !== AUTH_PASSWORDS[pendingLoginUser]) {
+        $('modalPasswordError').hidden = false;
+        return;
+      }
+      currentUser = pendingLoginUser;
+      sessionStorage.setItem(AUTH_KEY, currentUser);
+      closePasswordModal();
+      updateAuthView();
+      renderProducts();
+      renderMovements();
+    }
+
+    function bindLogin() {
+      $('loginBtn').addEventListener('click', openPasswordModal);
+      $('passwordCancelBtn').addEventListener('click', closePasswordModal);
+      $('passwordBackdrop').addEventListener('click', closePasswordModal);
+      $('passwordSubmitBtn').addEventListener('click', submitPasswordLogin);
+      $('modalPasswordInput').addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') submitPasswordLogin();
+        if (event.key === 'Escape') closePasswordModal();
+      });
+      $('logoutBtn').addEventListener('click', () => {
+        sessionStorage.removeItem(AUTH_KEY);
+        currentUser = '';
+        location.reload();
+      });
+    }
+
+    (function rewriteGithubPagesLinks() {
+      const isPages = location.hostname.endsWith('github.io');
+      const repoPrefix = isPages && location.pathname.split('/').filter(Boolean)[0] ? `/${location.pathname.split('/').filter(Boolean)[0]}` : '';
+      if (!isPages || !repoPrefix) return;
+      document.querySelectorAll('[data-site-href]').forEach((link) => link.setAttribute('href', `${repoPrefix}${link.dataset.siteHref}`));
+    })();
+
+    async function startApp() {
+      if (appStarted) return;
+      appStarted = true;
+      initDatePicker();
+      bind();
+      await fetchRemoteStockData();
+      movements = mergeMovementRows(seedMovementRows(), movements);
+      saveMovements();
+      prepareData();
+      populateMovementProducts();
+      renderKpis();
+      renderMovements();
+      renderBalance();
+      updateAuthView();
+      requestAnimationFrame(renderProducts);
+    }
+
+    bindLogin();
+    updateAuthView();
+    startApp();
+  </script>
+</body>
+</html>
