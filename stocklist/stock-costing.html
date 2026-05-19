@@ -400,6 +400,22 @@
       return text.includes('out') ? 'out' : 'in';
     }
 
+    function normalizeColumnKey(key) {
+      return String(key || '')
+        .replace(/_x([0-9a-fA-F]{4})_/g, (_, hex) => String.fromCharCode(parseInt(hex, 16)))
+        .toLowerCase()
+        .replace(/[^a-z0-9]/g, '');
+    }
+
+    function rowField(row, ...names) {
+      for (const name of names) {
+        if (Object.prototype.hasOwnProperty.call(row, name)) return row[name];
+      }
+      const wanted = new Set(names.map(normalizeColumnKey));
+      const match = Object.entries(row || {}).find(([key]) => wanted.has(normalizeColumnKey(key)));
+      return match ? match[1] : undefined;
+    }
+
     function normalizeProductRow(row, index) {
       const cost = excelNumber(row['Current Price']) ?? excelNumber(row['Workbook Cost']);
       return {
@@ -419,8 +435,9 @@
     function normalizeMovementRow(row, index) {
       const parsedDate = parsePortalDate(row.Date);
       const parsedMonth = monthKeyFromFilter(row.Month) || (parsedDate ? monthKeyFromDate(formatPortalDate(parsedDate)) : monthKeyFromDate(row.Date));
+      const movementId = rowField(row, 'Movement ID', 'MovementID', 'movementId', 'Stock Movement ID', 'ID', 'Id');
       return {
-        id: String(row['Movement ID'] || row.MovementID || row.movementId || row.ItemInternalId || row.ID || row.Id || `remote-${index}`),
+        id: String(movementId || `remote-${index}`),
         date: parsedDate ? formatPortalDate(parsedDate) : String(row.Date || '').slice(0, 10),
         month: parsedMonth,
         sku: String(row.SKU || row.Sku || '').trim(),
@@ -498,7 +515,10 @@
           if (price != null) priceOverrides[sku] = price;
         });
       }
-      if (remoteMovements.length) movements = mergeMovementRows(seedMovementRows(), remoteMovements.map(normalizeMovementRow).filter((row) => row.sku && row.qty));
+      if (remoteMovements.length) {
+        const remoteRows = remoteMovements.map(normalizeMovementRow).filter((row) => row.sku && row.qty);
+        movements = mergeMovementRows(seedMovementRows(), movements, remoteRows);
+      }
       STOCK_DATA.sourceFile = 'OneDrive MA_Stock_Costing_Sync.xlsx';
     }
 
@@ -529,7 +549,7 @@
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const payload = await response.json().catch(() => ({}));
       if (payload && payload.ok === false) throw new Error(payload.message || 'Power Automate save failed');
-      return true;
+      return payload || {};
     }
 
     async function deleteMovementRemote(row) {
@@ -840,7 +860,8 @@
       };
       $('movementStatus').textContent = 'Saving Stock Movement To OneDrive...';
       try {
-        await saveMovementRemote(row);
+        const payload = await saveMovementRemote(row);
+        row.id = String(payload.movementId || payload.id || payload.ID || row.id);
         movements.unshift(row);
         $('movementStatus').textContent = 'Stock Movement Saved To OneDrive.';
       } catch (error) {
