@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>M&A Stock List</title>
-  <link rel="icon" href="./favicon.png" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 68 48'%3E%3Cg fill='%230514ff'%3E%3Cpath d='M9 4h7L7 44H0z'/%3E%3Cpath d='M21 4h12L24 44H12z'/%3E%3Cpath d='M44 4h21c2 0 3 2 3 4l-7 28c-1 5-5 8-10 8H34c-4 0-7-3-6-7l7-26c1-4 5-7 9-7z'/%3E%3C/g%3E%3C/svg%3E">
   <style>
     :root { --bg: #dfe1ea; --panel: rgba(255,255,255,.9); --surface-soft: #f8fafc; --text: #1a1d25; --muted: #7d8598; --line: rgba(91,104,138,.12); --accent: #315fd6; --accent-soft: #e9efff; --success: #1c9a6b; --warning: #d65a3a; --cost: #b45f1d; --teal: #2f938b; --purple: #7047e8; --shadow: 0 20px 50px rgba(48, 59, 86, .08); font-family: "Inter", "Aptos", "Segoe UI Variable", "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
     * { box-sizing: border-box; }
@@ -27,10 +27,15 @@
     .password-modal { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; padding: 1rem; }
     .password-backdrop { position: absolute; inset: 0; background: rgba(15, 23, 42, .42); }
     .password-dialog { position: relative; width: min(24rem, 100%); padding: 1.25rem; background: #fff; border: 1px solid var(--line); border-radius: 1rem; box-shadow: 0 24px 70px rgba(15, 23, 42, .22); }
-    .password-dialog h3 { margin: .25rem 0 1rem; color: #111827; font-size: 1.35rem; letter-spacing: -.025em; }
-    .password-dialog input { width: 100%; border: 1px solid var(--line); border-radius: .75rem; padding: .75rem .9rem; background: var(--surface-soft); color: var(--text); font-weight: 700; outline: none; }
+    .password-dialog h3 { margin: .25rem 0 1rem; color: #111827; font-size: 1.125rem; line-height: 1.75rem; font-weight: 700; letter-spacing: -.025em; }
+    .password-dialog input { width: 100%; border: 1px solid var(--line); border-radius: .75rem; padding: .625rem .75rem; background: var(--surface-soft); color: var(--text); font-size: .875rem; font-weight: 700; outline: none; }
     .password-dialog input:focus { border-color: rgba(49,95,214,.55); box-shadow: 0 0 0 3px rgba(49,95,214,.16); }
     .password-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
+    .password-actions .tiny-btn,
+    .password-actions .primary-btn { width: auto; min-width: 0; border-radius: 999px; padding: .5rem 1rem; font-size: .75rem; line-height: 1.1; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .password-actions .primary-btn { background: #111827; color: #fff; border-color: transparent; }
+    .password-actions .primary-btn:hover { background: #374151; }
+    .password-actions .tiny-btn { color: #475569; background: rgba(255,255,255,.9); }
     .app-shell { width: min(1440px, calc(100vw - 2rem)); margin: 0 auto; padding: 1rem 0; }
     .topbar { display: flex; justify-content: space-between; gap: 1rem; align-items: end; margin-bottom: 1rem; }
     .topbar-title { margin: .2rem 0 0; font-size: clamp(1.6rem, 3vw, 2.5rem); line-height: 1; letter-spacing: -.03em; font-weight: 700; }
@@ -116,7 +121,9 @@
       html, body { width: 210mm; min-height: 297mm; background: #fff; }
       body.printing-balance .topbar,
       body.printing-balance .hero,
+      body.printing-balance .login-shell,
       body.printing-balance .page-tabs,
+      body.printing-balance main > section.panel,
       body.printing-balance .view[data-view="products"],
       body.printing-balance .view[data-view="movement"] > article:not(.balance-print-panel),
       body.printing-balance .grid-2,
@@ -124,6 +131,7 @@
       body.printing-balance .movement-form,
       body.printing-balance #movementRows,
       body.printing-balance #movementStatus,
+      body.printing-balance #passwordModal,
       body.printing-balance .date-picker-popover,
       body.printing-balance .no-print { display: none !important; }
       body.printing-balance .app-shell { width: 100%; padding: 0; margin: 0; }
@@ -229,7 +237,6 @@
     <section class="view view-stack" data-view="movement" hidden>
       <article class="panel">
         <h2>Stock In / Out Monthly</h2>
-        <p class="muted">Add One Movement Row When Stock Comes In Or Goes Out.</p>
         <div class="movement-form" style="margin-top:1rem">
           <div class="field"><label for="movementDate">Date</label><input id="movementDate" type="text" class="date-picker-input" placeholder="m/d/yyyy" autocomplete="off" /></div>
           <div class="field"><label for="movementSku">Product</label><select id="movementSku"></select></div>
@@ -244,7 +251,7 @@
         <div class="toolbar">
           <div class="field"><label for="movementMonth">Filter Month</label><select id="movementMonth"><option value="">All Available Months</option></select></div>
         </div>
-        <div class="table-wrap" style="margin-top:1rem"><table><thead><tr><th>Date</th><th>SKU</th><th>Description</th><th>Type</th><th>Qty</th><th>Unit</th><th>Remark</th><th></th></tr></thead><tbody id="movementRows"></tbody></table></div>
+        <div class="table-wrap" style="margin-top:1rem"><table><thead><tr><th>Date</th><th>SKU</th><th>Description</th><th>Type</th><th>Qty</th><th>Unit</th><th>Remark</th><th>Action</th></tr></thead><tbody id="movementRows"></tbody></table></div>
         <p class="muted" id="movementStatus" style="margin-top:.85rem">No Stock Movement Rows Entered.</p>
       </article>
 
@@ -252,7 +259,7 @@
         <div class="panel-head">
           <div>
             <h2>Current Balance</h2>
-            <p class="muted" id="balanceCaption">Filter A Month To Calculate Opening/Balance Stock From The Previous Month, Then Add That Month Stock In/Out.</p>
+            <p class="muted" id="balanceCaption">Target Stock Level Is 3 Months.</p>
           </div>
           <button class="ghost-btn no-print" id="downloadBalancePdfBtn" type="button">Download PDF</button>
         </div>
@@ -262,7 +269,7 @@
     </section>
 
     <section class="view" data-view="products">
-      <article class="panel"><h2>Product List</h2><p class="muted">Pricing And Opening/Balance Stock Are Editable Here And Saved In This Browser. This Page References The Excel Product List Tab Only.</p><div class="table-wrap"><table class="product-table"><thead><tr><th>SKU</th><th>Description</th><th>Unit</th><th>Size</th><th>Weight</th><th>Remark</th><th>Opening/ Balance Stock</th><th>Workbook Cost</th><th>Current Price</th></tr></thead><tbody id="productRows"></tbody></table></div></article>
+      <article class="panel"><h2>Product List</h2><div class="table-wrap"><table class="product-table"><thead><tr><th>SKU</th><th>Description</th><th>Unit</th><th>Size</th><th>Weight</th><th>Remark</th><th>Opening/ Balance Stock</th><th>Workbook Cost</th><th>Current Price</th></tr></thead><tbody id="productRows"></tbody></table></div></article>
     </section>
   </main>
   <div id="datePickerPopover" class="date-picker-popover hidden" role="dialog" aria-label="Select date">
@@ -301,7 +308,7 @@
     const norm = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
     const num = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
     const rm = (value) => `RM${num(value).toFixed(2)}`;
-    const qtyText = (value) => num(value).toLocaleString(undefined, { maximumFractionDigits: 2 });
+    const qtyText = (value, maximumFractionDigits = 2) => num(value).toLocaleString(undefined, { maximumFractionDigits });
     const stockText = (value) => String(value ?? '').trim().toLowerCase().replace(/[a-z]+/g, (word) => {
       const upper = word.toUpperCase();
       if (['MM', 'CM'].includes(upper)) return upper.toLowerCase();
@@ -338,6 +345,12 @@
 
     function formatPortalDate(dateObj) {
       return `${dateObj.getMonth() + 1}/${dateObj.getDate()}/${dateObj.getFullYear()}`;
+    }
+
+    function formatDisplayDate(value) {
+      const parsed = parsePortalDate(value);
+      if (!parsed) return String(value || '-');
+      return `${parsed.getDate()}/${parsed.getMonth() + 1}/${parsed.getFullYear()}`;
     }
 
     function formatMonthLabel(dateObj) {
@@ -392,7 +405,7 @@
       const parsedDate = parsePortalDate(row.Date);
       const parsedMonth = monthKeyFromFilter(row.Month) || (parsedDate ? monthKeyFromDate(formatPortalDate(parsedDate)) : monthKeyFromDate(row.Date));
       return {
-        id: String(row.ItemInternalId || row.ID || row.Id || `remote-${index}`),
+        id: String(row['Movement ID'] || row.MovementID || row.movementId || row.ItemInternalId || row.ID || row.Id || `remote-${index}`),
         date: parsedDate ? formatPortalDate(parsedDate) : String(row.Date || '').slice(0, 10),
         month: parsedMonth,
         sku: String(row.SKU || row.Sku || '').trim(),
@@ -428,11 +441,13 @@
       return [...merged.values()].sort((a, b) => String(b.month || '').localeCompare(String(a.month || '')) || String(a.sku || '').localeCompare(String(b.sku || '')));
     }
 
-    function movementPayload(row) {
+    function movementPayload(row, action = 'add') {
       const product = productBySku(row.sku);
       const quantity = Math.max(0, num(row.qty));
       const unitCost = Object.prototype.hasOwnProperty.call(priceOverrides, row.sku) ? num(priceOverrides[row.sku]) : num(product?.cost);
       return {
+        action,
+        movementId: row.id || '',
         date: row.date,
         month: row.month || monthKeyFromDate(row.date),
         sku: row.sku,
@@ -489,11 +504,24 @@
       const response = await fetch(STOCK_MOVEMENT_UPDATE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(movementPayload(row)),
+        body: JSON.stringify(movementPayload(row, 'add')),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const payload = await response.json().catch(() => ({}));
       if (payload && payload.ok === false) throw new Error(payload.message || 'Power Automate save failed');
+      return true;
+    }
+
+    async function deleteMovementRemote(row) {
+      if (!STOCK_MOVEMENT_UPDATE_URL) return true;
+      const response = await fetch(STOCK_MOVEMENT_UPDATE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(movementPayload(row, 'delete')),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json().catch(() => ({}));
+      if (payload && payload.ok === false) throw new Error(payload.message || 'Power Automate delete failed');
       return true;
     }
 
@@ -611,7 +639,8 @@
     }
 
     function renderKpis() {
-      $('dataStatus').textContent = 'Synced 17:54:50 · attendance rows 40 · split rows 15 · manual rows 23';
+      const syncedAt = new Date().toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+      $('dataStatus').textContent = `Synced ${syncedAt} · product rows ${STOCK_DATA.products.length} · movement rows ${movements.length}`;
     }
 
     function renderProducts() {
@@ -670,14 +699,14 @@
         if (row.type === 'out') stockOut += qty;
         else stockIn += qty;
         return `<tr>
-          <td>${escapeHtml(row.date || '-')}</td>
+          <td>${escapeHtml(formatDisplayDate(row.date))}</td>
           <td class="code-link">${escapeHtml(row.sku || '-')}</td>
           <td>${escapeHtml(product?._display?.description || '-')}</td>
           <td><span class="tag ${row.type === 'out' ? 'is-out' : 'is-in'}">${row.type === 'out' ? 'Stock Out' : 'Stock In'}</span></td>
           <td>${qtyText(qty)}</td>
           <td>${escapeHtml(product?._display?.unit || '-')}</td>
           <td>${escapeHtml(row.remark || '-')}</td>
-          <td><button class="tiny-btn requires-edit" type="button" data-delete-movement="${escapeHtml(row.id)}"${isAuthenticated() ? '' : ' disabled'}>Remove</button></td>
+          <td><button class="ghost-btn requires-edit" type="button" data-delete-movement="${escapeHtml(row.id || '')}" ${isAuthenticated() ? '' : 'disabled'}>Delete</button></td>
         </tr>`;
       }).join('') || tableEmpty(8, 'No Stock Movement Rows For This Month.');
       $('stockInQty').textContent = qtyText(stockIn);
@@ -733,10 +762,7 @@
         const stockLevelMonths = avgMonthlyUsage ? balance / avgMonthlyUsage : null;
         return { product, opening, inQty: total.in, outQty: total.out, avgMonthlyUsage, balance, stockLevelMonths };
       }).filter((row) => row.opening || row.inQty || row.outQty || row.avgMonthlyUsage || row.balance);
-      const monthLabel = month ? movementMonthLabel(month) : 'All available months';
-      $('balanceCaption').textContent = month
-        ? `${monthLabel}: Opening/Balance Stock Is Previous Month Closing Balance. Target Stock Level Is 3 Months.`
-        : 'All Months: Opening/Balance Stock Is Product Opening/Balance Stock. Target Stock Level Is 3 Months.';
+      $('balanceCaption').textContent = 'Target Stock Level Is 3 Months.';
       $('balancePrintTitle').textContent = balanceReportName();
       $('balanceRows').innerHTML = rows.map((row) => `<tr>
         <td class="code-link">${escapeHtml(row.product.sku)}</td>
@@ -744,7 +770,7 @@
         <td>${qtyText(row.opening)}</td>
         <td class="is-green">${qtyText(row.inQty)}</td>
         <td class="is-orange">${qtyText(row.outQty)}</td>
-        <td class="is-orange">${qtyText(row.avgMonthlyUsage)}</td>
+        <td class="is-orange">${qtyText(row.avgMonthlyUsage, 1)}</td>
         <td class="${row.balance < 0 ? 'is-orange' : 'code-link'}">${qtyText(row.balance)}</td>
         <td>${row.stockLevelMonths == null ? '<span class="muted">No Usage</span>' : `<span class="tag ${row.stockLevelMonths < 3 ? 'is-low' : 'is-ok'}">${qtyText(row.stockLevelMonths)} Months</span>`}</td>
         <td>${escapeHtml(row.product._display.unit)}</td>
@@ -779,7 +805,7 @@
         return;
       }
       const row = {
-        id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+        id: `SM-${Date.now()}`,
         date: $('movementDate').value || formatPortalDate(new Date()),
         month: monthKeyFromDate($('movementDate').value || formatPortalDate(new Date())),
         sku: $('movementSku').value,
@@ -790,7 +816,6 @@
       $('movementStatus').textContent = 'Saving Stock Movement To OneDrive...';
       try {
         await saveMovementRemote(row);
-        row.id = `remote-${Date.now()}-${Math.random().toString(16).slice(2)}`;
         movements.unshift(row);
         $('movementStatus').textContent = 'Stock Movement Saved To OneDrive.';
       } catch (error) {
@@ -805,6 +830,35 @@
       $('movementMonth').value = row.month || monthKeyFromDate(row.date) || $('movementMonth').value;
       renderMovements();
       renderBalance();
+    }
+
+    async function deleteMovement(id) {
+      if (!isAuthenticated()) {
+        $('movementStatus').textContent = 'View Only. Login As Gavin Or James To Delete Stock Movement.';
+        return;
+      }
+      const row = movements.find((item) => String(item.id) === String(id));
+      if (!row) {
+        $('movementStatus').textContent = 'Movement Row Not Found. Refresh Data And Try Again.';
+        return;
+      }
+      if (!String(row.id || '').startsWith('SM-')) {
+        $('movementStatus').textContent = 'This Row Has No Movement ID Yet. Upload The New Workbook Copy And Refresh First.';
+        return;
+      }
+      if (!window.confirm(`Delete ${row.sku || 'this'} stock movement from OneDrive?`)) return;
+      $('movementStatus').textContent = 'Deleting Stock Movement From OneDrive...';
+      try {
+        await deleteMovementRemote(row);
+        movements = movements.filter((item) => String(item.id) !== String(id));
+        saveMovements();
+        renderMovementMonthOptions();
+        renderMovements();
+        renderBalance();
+        $('movementStatus').textContent = 'Stock Movement Deleted From OneDrive.';
+      } catch (error) {
+        $('movementStatus').textContent = `Delete Failed. ${error.message}`;
+      }
     }
 
     function showView(name) {
@@ -885,21 +939,12 @@
       $('saveStockDataBtn').addEventListener('click', saveStockData);
       $('addMovementBtn').addEventListener('click', addMovement);
       $('movementMonth').addEventListener('change', renderMovements);
+      $('movementRows').addEventListener('click', (event) => {
+        const button = event.target.closest('[data-delete-movement]');
+        if (button) deleteMovement(button.dataset.deleteMovement);
+      });
       $('downloadBalancePdfBtn').addEventListener('click', downloadBalancePdf);
       window.addEventListener('afterprint', () => document.body.classList.remove('printing-balance'));
-      $('movementRows').addEventListener('click', (event) => {
-        const id = event.target.dataset.deleteMovement;
-        if (!id) return;
-        if (!isAuthenticated()) {
-          $('movementStatus').textContent = 'View Only. Login As Gavin Or James To Remove Stock Movement.';
-          return;
-        }
-        movements = movements.filter((row) => row.id !== id);
-        saveMovements();
-        renderMovementMonthOptions();
-        renderMovements();
-        renderBalance();
-      });
       document.querySelectorAll('[data-view-tab]').forEach((button) => {
         button.addEventListener('click', () => showView(button.dataset.viewTab));
       });
@@ -932,7 +977,7 @@
         return;
       }
       pendingLoginUser = user;
-      $('passwordModalTitle').textContent = `Enter ${user} Password`;
+      $('passwordModalTitle').textContent = `Enter Password for ${user}`;
       $('modalPasswordInput').value = '';
       $('modalPasswordError').hidden = true;
       $('loginError').hidden = true;

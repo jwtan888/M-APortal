@@ -4,7 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>M&A Template Costing</title>
-  <link rel="icon" href="./favicon.png" />
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 68 48'%3E%3Cg fill='%230514ff'%3E%3Cpath d='M9 4h7L7 44H0z'/%3E%3Cpath d='M21 4h12L24 44H12z'/%3E%3Cpath d='M44 4h21c2 0 3 2 3 4l-7 28c-1 5-5 8-10 8H34c-4 0-7-3-6-7l7-26c1-4 5-7 9-7z'/%3E%3C/g%3E%3C/svg%3E">
   <style>
     :root { --bg: #dfe1ea; --panel: rgba(255,255,255,.9); --surface-soft: #f8fafc; --text: #1a1d25; --muted: #7d8598; --line: rgba(91,104,138,.12); --accent: #315fd6; --accent-soft: #e9efff; --success: #1c9a6b; --warning: #d65a3a; --cost: #b45f1d; --teal: #2f938b; --purple: #7047e8; --shadow: 0 20px 50px rgba(48, 59, 86, .08); font-family: "Inter", "Aptos", "Segoe UI Variable", "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
     * { box-sizing: border-box; }
@@ -27,10 +27,15 @@
     .password-modal { position: fixed; inset: 0; z-index: 9999; display: grid; place-items: center; padding: 1rem; }
     .password-backdrop { position: absolute; inset: 0; background: rgba(15, 23, 42, .42); }
     .password-dialog { position: relative; width: min(24rem, 100%); padding: 1.25rem; background: #fff; border: 1px solid var(--line); border-radius: 1rem; box-shadow: 0 24px 70px rgba(15, 23, 42, .22); }
-    .password-dialog h3 { margin: .25rem 0 1rem; color: #111827; font-size: 1.35rem; letter-spacing: -.025em; }
-    .password-dialog input { width: 100%; border: 1px solid var(--line); border-radius: .75rem; padding: .75rem .9rem; background: var(--surface-soft); color: var(--text); font-weight: 700; outline: none; }
+    .password-dialog h3 { margin: .25rem 0 1rem; color: #111827; font-size: 1.125rem; line-height: 1.75rem; font-weight: 700; letter-spacing: -.025em; }
+    .password-dialog input { width: 100%; border: 1px solid var(--line); border-radius: .75rem; padding: .625rem .75rem; background: var(--surface-soft); color: var(--text); font-size: .875rem; font-weight: 700; outline: none; }
     .password-dialog input:focus { border-color: rgba(49,95,214,.55); box-shadow: 0 0 0 3px rgba(49,95,214,.16); }
     .password-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
+    .password-actions .tiny-btn,
+    .password-actions .primary-btn { width: auto; min-width: 0; border-radius: 999px; padding: .5rem 1rem; font-size: .75rem; line-height: 1.1; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
+    .password-actions .primary-btn { background: #111827; color: #fff; border-color: transparent; }
+    .password-actions .primary-btn:hover { background: #374151; }
+    .password-actions .tiny-btn { color: #475569; background: rgba(255,255,255,.9); }
     .app-shell { width: min(1440px, calc(100vw - 2rem)); margin: 0 auto; padding: 1rem 0; }
     .topbar { display: flex; justify-content: space-between; gap: 1rem; align-items: end; margin-bottom: 1rem; }
     .topbar-title { margin: .2rem 0 0; font-size: clamp(1.6rem, 3vw, 2.5rem); line-height: 1; letter-spacing: -.03em; font-weight: 700; }
@@ -66,8 +71,10 @@
     .bar-seg { height: 100%; }
     .bar-seg.production { background: var(--accent); }
     .bar-seg.sample { background: #f0a12b; }
+    .bar-seg.saving { background: var(--success); }
     .bar-label { color: var(--muted); font-size: .76rem; font-weight: 900; text-transform: uppercase; }
     .bar-value { color: var(--text); font-size: .82rem; font-weight: 900; white-space: nowrap; text-align: right; }
+    .bar-saving-value { display: block; margin-top: .12rem; color: var(--success); font-size: .68rem; font-weight: 900; }
     .legend-row { display: flex; flex-wrap: wrap; gap: .85rem; color: var(--muted); font-weight: 800; font-size: .82rem; }
     .legend-dot { display: inline-block; width: .65rem; height: .65rem; border-radius: 999px; margin-right: .35rem; vertical-align: middle; }
     .legend-dot.production { background: var(--accent); }
@@ -88,6 +95,8 @@
     td { color: #2b303b; font-weight: 650; font-size: .88rem; }
     .muted { color: var(--muted); font-weight: 650; }
     .money { color: var(--cost); font-weight: 850; white-space: nowrap; }
+    .equivalent-money { color: rgba(43,48,59,.62); font-weight: 850; white-space: nowrap; }
+    .saving-money { color: var(--success); font-weight: 900; white-space: nowrap; }
     .code-link { color: var(--accent); font-weight: 850; }
     .entry-input, .entry-select { width: 100%; border: 1px solid var(--line); border-radius: .65rem; padding: .55rem .65rem; background: #fff; color: var(--text); font-weight: 800; }
     .entry-number { min-width: 5.4rem; }
@@ -159,8 +168,8 @@
     </div>
 
     <section class="grid-2" aria-label="Summary">
-      <article class="kpi-card"><p class="eyebrow">PVC Qty</p><div class="metric-value is-green" id="qtyTotal">0</div><p class="muted">Sum Of PVC Qty Per Job</p></article>
       <article class="kpi-card"><p class="eyebrow">Template Cost</p><div class="metric-value is-orange" id="costKpi">RM0.00</div><p class="muted">Current Estimate</p></article>
+      <article class="kpi-card"><p class="eyebrow">Cost Saving</p><div class="metric-value is-green" id="savingKpi">RM0.00</div><p class="muted">Cardboard Versus PVC Equivalent</p></article>
     </section>
 
     <section class="dashboard-grid" aria-label="Template costing dashboard">
@@ -178,6 +187,7 @@
             <div class="legend-row">
               <span><i class="legend-dot production"></i>Production</span>
               <span><i class="legend-dot sample"></i>Sample</span>
+              <span><i class="legend-dot" style="background:var(--success)"></i>Saving</span>
             </div>
             <strong class="money" id="dashboardSelectedTotal">RM0.00</strong>
           </div>
@@ -193,7 +203,7 @@
           <h2>Monthly Material Summary</h2>
         </div>
       </div>
-      <div class="table-wrap"><table><thead><tr><th>Month</th><th>Production Type</th><th>Production Total Area</th><th>Production Cost</th><th>Sample Type</th><th>Sample Total Area</th><th>Sample Cost</th><th>Monthly Total</th></tr></thead><tbody id="dashboardRows"></tbody></table></div>
+      <div class="table-wrap"><table><thead><tr><th>Month</th><th>Production Type</th><th>Production Total Area</th><th>Production Cost</th><th>Sample Type</th><th>Sample Total Area</th><th>Sample Cost</th><th>Monthly Total</th><th>PVC Equivalent Cost</th><th>Cost Saving</th></tr></thead><tbody id="dashboardRows"></tbody></table></div>
     </section>
 
     <section class="view-stack">
@@ -212,7 +222,7 @@
             <button class="primary-btn requires-edit" id="addCostRowBtn2" type="button">Add</button>
           </div>
         </div>
-        <div class="table-wrap" style="margin-top:1rem"><table><thead><tr><th>Date</th><th>Section</th><th>Style / Job</th><th>PVC Type</th><th>PVC Size Per Job (L x W cm)</th><th>PVC Qty Per Job</th><th>Final Cost</th><th>Remark</th><th></th></tr></thead><tbody id="costingRows"></tbody></table></div>
+        <div class="table-wrap" style="margin-top:1rem"><table><thead><tr><th>Date</th><th>Section</th><th>Style / Job</th><th>PVC Type</th><th>PVC Size Per Job (L x W cm)</th><th>PVC Qty Per Job</th><th>Final Cost</th><th>Remark</th><th>Action</th></tr></thead><tbody id="costingRows"></tbody></table></div>
         <p class="muted" id="costingStatus" style="margin-top:.85rem">No Costing Rows Entered.</p>
       </article>
 
@@ -317,6 +327,13 @@
       return `${dateObj.getMonth() + 1}/${dateObj.getDate()}/${dateObj.getFullYear()}`;
     }
 
+    function formatDisplayDate(value) {
+      const raw = excelDateText(value);
+      const parsed = parsePortalDate(raw);
+      if (!parsed) return raw;
+      return `${parsed.getDate()}/${parsed.getMonth() + 1}/${parsed.getFullYear()}`;
+    }
+
     function normalizeProductRow(row, index) {
       const cost = excelNumber(row['Current Price']) ?? excelNumber(row['Workbook Cost']);
       return {
@@ -342,6 +359,7 @@
       const size = String(row['PVC Size Per Job (L x W cm)'] || '');
       const parts = size.match(/([\d.]+)\s*x\s*([\d.]+)/i);
       return {
+        id: String(row['Costing ID'] || row.CostingID || row.costingId || row.ItemInternalId || row.ID || row.Id || ''),
         date: excelDateText(row.Date),
         section: String(row.Section || '').trim(),
         styleJob: String(row['Style / Job'] || '').trim(),
@@ -388,7 +406,7 @@
       }
     }
 
-    function costingPayload(row) {
+    function costingPayload(row, action = 'add') {
       const material = TEMPLATE_MATERIALS.find((m) => m.id === row.materialId) || TEMPLATE_MATERIALS[0];
       const factor = materialFactor(material);
       const qty = Math.max(0, num(row.qty));
@@ -397,6 +415,8 @@
       const usedArea = length * width * qty;
       const finalCost = usedArea * factor.costPerArea;
       return {
+        action,
+        costingId: row.id || '',
         date: row.date,
         section: row.section,
         styleJob: row.styleJob,
@@ -417,11 +437,24 @@
       const response = await fetch(TEMPLATE_COSTING_UPDATE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(costingPayload(row)),
+        body: JSON.stringify(costingPayload(row, 'add')),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const payload = await response.json().catch(() => ({}));
       if (payload && payload.ok === false) throw new Error(payload.message || 'Power Automate save failed');
+      return true;
+    }
+
+    async function deleteCostingRemote(row) {
+      if (!TEMPLATE_COSTING_UPDATE_URL) return true;
+      const response = await fetch(TEMPLATE_COSTING_UPDATE_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(costingPayload(row, 'delete')),
+      });
+      if (!response.ok) throw new Error(`HTTP ${response.status}`);
+      const payload = await response.json().catch(() => ({}));
+      if (payload && payload.ok === false) throw new Error(payload.message || 'Power Automate delete failed');
       return true;
     }
 
@@ -537,6 +570,11 @@
       return norm(material.name).includes('cardboard') ? 'cardboard' : 'pvc';
     }
 
+    function pvcSavingFactor() {
+      const clearRigid = TEMPLATE_MATERIALS.find((m) => m.id === 'clear-rigid-pvc-15') || TEMPLATE_MATERIALS.find((m) => materialGroup(m) === 'pvc');
+      return clearRigid ? materialFactor(clearRigid) : { costPerArea: 0, unitCost: 0 };
+    }
+
     function dashboardLine(row) {
       const material = TEMPLATE_MATERIALS.find((m) => m.id === row.materialId) || TEMPLATE_MATERIALS[0];
       const factor = materialFactor(material);
@@ -581,42 +619,60 @@
       return bucket[section][material].cost;
     }
 
+    function bucketSaving(bucket) {
+      const cardboardArea = bucketArea(bucket, 'production', 'cardboard') + bucketArea(bucket, 'sample', 'cardboard');
+      const cardboardCost = bucketCost(bucket, 'production', 'cardboard') + bucketCost(bucket, 'sample', 'cardboard');
+      const pvcEquivalentCost = cardboardArea * pvcSavingFactor().costPerArea;
+      return {
+        cardboardArea,
+        cardboardCost,
+        pvcEquivalentCost,
+        costSaving: Math.max(0, pvcEquivalentCost - cardboardCost),
+      };
+    }
+
     function renderDashboard() {
       const data = dashboardData();
       const selected = selectedDashboardMonth();
       const monthTotals = data.months.map((month) => {
         const bucket = data.buckets.get(month);
+        const saving = bucketSaving(bucket).costSaving;
         return {
           month,
           production: bucketTotal(bucket, 'production'),
           sample: bucketTotal(bucket, 'sample'),
+          saving,
           total: bucketTotal(bucket, 'production') + bucketTotal(bucket, 'sample'),
         };
       });
-      const maxTotal = Math.max(...monthTotals.map((row) => row.total), 1);
-      const selectedTotal = monthTotals.find((row) => row.month === selected)?.total || 0;
-      $('dashboardSelectedTotal').textContent = `${monthName(selected)} Total ${selectedTotal ? rm(selectedTotal) : '-'}`;
+      const maxTotal = Math.max(...monthTotals.map((row) => row.total + row.saving), 1);
+      const selectedRow = monthTotals.find((row) => row.month === selected) || { total: 0, saving: 0 };
+      $('dashboardSelectedTotal').textContent = `${monthName(selected)} Total ${selectedRow.total ? rm(selectedRow.total) : '-'} · Saving ${selectedRow.saving ? rm(selectedRow.saving) : '-'}`;
       $('monthlyBars').innerHTML = monthTotals.map((row) => {
-        const width = Math.max(row.total ? 6 : 1.5, (row.total / maxTotal) * 100);
-        const productionPct = row.total ? (row.production / row.total) * 100 : 0;
-        const samplePct = row.total ? 100 - productionPct : 0;
+        const chartTotal = row.total + row.saving;
+        const width = Math.max(chartTotal ? 6 : 1.5, (chartTotal / maxTotal) * 100);
+        const productionPct = chartTotal ? (row.production / chartTotal) * 100 : 0;
+        const samplePct = chartTotal ? (row.sample / chartTotal) * 100 : 0;
+        const savingPct = chartTotal ? (row.saving / chartTotal) * 100 : 0;
         const selectedClass = row.month === selectedDashboardMonth() ? ' is-selected' : '';
-        return `<div class="month-bar${selectedClass}" title="${escapeHtml(monthName(row.month))}: ${escapeHtml(rm(row.total))}">
+        return `<div class="month-bar${selectedClass}" title="${escapeHtml(monthName(row.month))}: ${escapeHtml(rm(row.total))}, Saving ${escapeHtml(rm(row.saving))}">
           <div class="bar-label">${escapeHtml(monthShort(row.month))}</div>
           <div class="bar-stack" style="width:${width}%">
             <span class="bar-seg production" style="width:${productionPct}%"></span>
             <span class="bar-seg sample" style="width:${samplePct}%"></span>
+            <span class="bar-seg saving" style="width:${savingPct}%"></span>
           </div>
-          <div class="bar-value">${row.total ? rm(row.total) : '-'}</div>
+          <div class="bar-value">${row.total ? rm(row.total) : '-'}${row.saving ? `<span class="bar-saving-value">Save ${rm(row.saving)}</span>` : ''}</div>
         </div>`;
       }).join('');
 
       $('dashboardRows').innerHTML = data.months.flatMap((month) => {
         const bucket = data.buckets.get(month);
         const monthlyTotal = bucketTotal(bucket, 'production') + bucketTotal(bucket, 'sample');
+        const { pvcEquivalentCost, costSaving } = bucketSaving(bucket);
         return [
-          `<tr><td class="code-link">${escapeHtml(monthName(month))}</td><td>PVC</td><td>${bucketArea(bucket, 'production', 'pvc').toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td class="money">${rm(bucketCost(bucket, 'production', 'pvc'))}</td><td>PVC</td><td>${bucketArea(bucket, 'sample', 'pvc').toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td class="money">${rm(bucketCost(bucket, 'sample', 'pvc'))}</td><td class="money">${rm(monthlyTotal)}</td></tr>`,
-          `<tr><td></td><td>Cardboard</td><td>${bucketArea(bucket, 'production', 'cardboard').toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td class="money">${rm(bucketCost(bucket, 'production', 'cardboard'))}</td><td>Cardboard</td><td>${bucketArea(bucket, 'sample', 'cardboard').toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td class="money">${rm(bucketCost(bucket, 'sample', 'cardboard'))}</td><td></td></tr>`,
+          `<tr><td class="code-link">${escapeHtml(monthName(month))}</td><td>PVC</td><td>${bucketArea(bucket, 'production', 'pvc').toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td class="money">${rm(bucketCost(bucket, 'production', 'pvc'))}</td><td>PVC</td><td>${bucketArea(bucket, 'sample', 'pvc').toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td class="money">${rm(bucketCost(bucket, 'sample', 'pvc'))}</td><td class="money">${rm(monthlyTotal)}</td><td>-</td><td>-</td></tr>`,
+          `<tr><td></td><td>Cardboard</td><td>${bucketArea(bucket, 'production', 'cardboard').toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td class="money">${rm(bucketCost(bucket, 'production', 'cardboard'))}</td><td>Cardboard</td><td>${bucketArea(bucket, 'sample', 'cardboard').toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td class="money">${rm(bucketCost(bucket, 'sample', 'cardboard'))}</td><td></td><td class="equivalent-money">${rm(pvcEquivalentCost)}</td><td class="saving-money">${rm(costSaving)}</td></tr>`,
         ];
       }).join('');
 
@@ -639,7 +695,6 @@
 
     function renderCosting() {
       let total = 0;
-      let qtyTotal = 0;
       const displayRows = costingRows
         .map((row, index) => ({ row, index }))
         .sort((a, b) => dateSortValue(b.row.date) - dateSortValue(a.row.date));
@@ -650,9 +705,8 @@
         const usedArea = Math.max(0, num(row.length) * num(row.width) * qty);
         const lineCost = usedArea * factor.costPerArea;
         total += lineCost;
-        qtyTotal += qty;
         return `<tr>
-          <td>${escapeHtml(excelDateText(row.date) || '-')}</td>
+          <td>${escapeHtml(formatDisplayDate(row.date) || '-')}</td>
           <td>${escapeHtml(row.section || '-')}</td>
           <td class="code-link">${escapeHtml(row.styleJob || '-')}</td>
           <td>${escapeHtml(stockText(material.name))}</td>
@@ -660,11 +714,13 @@
           <td>${qty || '-'}</td>
           <td class="money">${rm(lineCost)}</td>
           <td>${escapeHtml(row.remark || '-')}</td>
-          <td><button class="tiny-btn requires-edit" type="button" data-remove-cost-line="${index}"${isAuthenticated() ? '' : ' disabled'}>Remove</button></td>
+          <td><button class="ghost-btn requires-edit" type="button" data-delete-costing="${escapeHtml(row.id || '')}" ${isAuthenticated() ? '' : 'disabled'}>Delete</button></td>
         </tr>`;
       }).join('') || tableEmpty(9, 'Add A Costing Row To Calculate Template Cost.');
-      $('qtyTotal').textContent = qtyTotal.toLocaleString(undefined, { maximumFractionDigits: 0 });
       $('costKpi').textContent = rm(total);
+      const currentDashboard = dashboardData();
+      const totalSaving = currentDashboard.months.reduce((sum, month) => sum + bucketSaving(currentDashboard.buckets.get(month)).costSaving, 0);
+      $('savingKpi').textContent = rm(totalSaving);
       $('costingStatus').textContent = costingRows.length ? `${costingRows.length} Costing Row(s). Total Cost ${rm(total)}.` : 'No Costing Rows Entered.';
       $('dataStatus').textContent = `Source: ${STOCK_DATA.sourceFile} · Excel Tab: Product List · ${TEMPLATE_MATERIALS.length} Costing Factors`;
       renderDashboardMonthOptions();
@@ -677,6 +733,7 @@
         return;
       }
       const row = {
+        id: `TC-${Date.now()}`,
         date: $('entryDate').value,
         section: $('entrySection').value.trim(),
         styleJob: $('entryStyleJob').value.trim(),
@@ -704,6 +761,33 @@
       $('costingStatus').textContent = saveMessage;
     }
 
+    async function deleteCosting(id) {
+      if (!isAuthenticated()) {
+        $('costingStatus').textContent = 'View Only. Login As Gavin Or James To Delete Template Costing.';
+        return;
+      }
+      const row = costingRows.find((item) => String(item.id) === String(id));
+      if (!row) {
+        $('costingStatus').textContent = 'Costing Row Not Found. Refresh Data And Try Again.';
+        return;
+      }
+      if (!String(row.id || '').startsWith('TC-')) {
+        $('costingStatus').textContent = 'This Row Has No Costing ID Yet. Upload The New Workbook Copy And Refresh First.';
+        return;
+      }
+      if (!window.confirm(`Delete ${row.styleJob || 'this'} template costing row from OneDrive?`)) return;
+      $('costingStatus').textContent = 'Deleting Template Costing Row From OneDrive...';
+      try {
+        await deleteCostingRemote(row);
+        costingRows = costingRows.filter((item) => String(item.id) !== String(id));
+        saveCostingRows();
+        renderCosting();
+        $('costingStatus').textContent = 'Template Costing Row Deleted From OneDrive.';
+      } catch (error) {
+        $('costingStatus').textContent = `Delete Failed. ${error.message}`;
+      }
+    }
+
     function tableEmpty(cols, text) { return `<tr><td colspan="${cols}" class="muted">${escapeHtml(text)}</td></tr>`; }
     function escapeHtml(value) { return String(value ?? '').replace(/[&<>"]/g, (ch) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch])); }
 
@@ -711,15 +795,8 @@
       $('addCostRowBtn2').addEventListener('click', addCostRow);
       $('dashboardMonth').addEventListener('change', renderDashboard);
       $('costingRows').addEventListener('click', (event) => {
-        const index = Number(event.target.dataset.removeCostLine);
-        if (!Number.isInteger(index)) return;
-        if (!isAuthenticated()) {
-          $('costingStatus').textContent = 'View Only. Login As Gavin Or James To Remove Template Costing.';
-          return;
-        }
-        costingRows.splice(index, 1);
-        saveCostingRows();
-        renderCosting();
+        const button = event.target.closest('[data-delete-costing]');
+        if (button) deleteCosting(button.dataset.deleteCosting);
       });
     }
 
@@ -803,7 +880,7 @@
         return;
       }
       pendingLoginUser = user;
-      $('passwordModalTitle').textContent = `Enter ${user} Password`;
+      $('passwordModalTitle').textContent = `Enter Password for ${user}`;
       $('modalPasswordInput').value = '';
       $('modalPasswordError').hidden = true;
       $('loginError').hidden = true;
