@@ -30,6 +30,8 @@
     .password-dialog h3 { margin: .25rem 0 1rem; color: #111827; font-size: 1.125rem; line-height: 1.75rem; font-weight: 700; letter-spacing: -.025em; }
     .password-dialog input { width: 100%; border: 1px solid var(--line); border-radius: .75rem; padding: .625rem .75rem; background: var(--surface-soft); color: var(--text); font-size: .875rem; font-weight: 700; outline: none; }
     .password-dialog input:focus { border-color: rgba(49,95,214,.55); box-shadow: 0 0 0 3px rgba(49,95,214,.16); }
+    .confirm-body { display: grid; gap: .35rem; margin: -.25rem 0 .25rem; color: #475569; font-size: .9rem; font-weight: 650; }
+    .confirm-body strong { color: #111827; font-weight: 850; }
     .password-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
     .password-actions .tiny-btn,
     .password-actions .primary-btn { width: auto; min-width: 0; border-radius: 999px; padding: .5rem 1rem; font-size: .75rem; line-height: 1.1; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; }
@@ -207,6 +209,19 @@
         <div class="password-actions">
           <button class="tiny-btn" id="passwordCancelBtn" type="button">Cancel</button>
           <button class="primary-btn" id="passwordSubmitBtn" type="button">Continue</button>
+        </div>
+      </div>
+    </div>
+
+    <div id="confirmModal" class="password-modal hidden" role="dialog" aria-modal="true" aria-labelledby="confirmTitle">
+      <div class="password-backdrop" id="confirmBackdrop"></div>
+      <div class="password-dialog">
+        <p class="eyebrow" id="confirmEyebrow">Confirm Delete</p>
+        <h3 id="confirmTitle">Delete Item</h3>
+        <div class="confirm-body" id="confirmBody"></div>
+        <div class="password-actions">
+          <button class="tiny-btn" id="confirmCancelBtn" type="button">Cancel</button>
+          <button class="primary-btn" id="confirmSubmitBtn" type="button">Delete</button>
         </div>
       </div>
     </div>
@@ -846,7 +861,18 @@
         $('movementStatus').textContent = 'This Row Has No Movement ID Yet. Upload The New Workbook Copy And Refresh First.';
         return;
       }
-      if (!window.confirm(`Delete ${row.sku || 'this'} stock movement from OneDrive?`)) return;
+      const confirmed = await showConfirmDialog({
+        eyebrow: 'Stock Movement',
+        title: 'Delete This Stock Movement?',
+        lines: [
+          ['SKU', row.sku || '-'],
+          ['Description', row.description || '-'],
+          ['Type', row.type || '-'],
+          ['Qty', row.qty || '-'],
+          ['Action', 'This Will Remove The Row From OneDrive After Power Automate Runs.'],
+        ],
+      });
+      if (!confirmed) return;
       $('movementStatus').textContent = 'Deleting Stock Movement From OneDrive...';
       try {
         await deleteMovementRemote(row);
@@ -1004,6 +1030,25 @@
       renderMovements();
     }
 
+    let pendingConfirmResolve = null;
+
+    function showConfirmDialog({ eyebrow = 'Confirm Delete', title = 'Delete Item', lines = [] } = {}) {
+      $('confirmEyebrow').textContent = eyebrow;
+      $('confirmTitle').textContent = title;
+      $('confirmBody').innerHTML = lines.map(([label, value]) => `<div><strong>${escapeHtml(label)}:</strong> ${escapeHtml(value)}</div>`).join('');
+      $('confirmModal').classList.remove('hidden');
+      setTimeout(() => $('confirmSubmitBtn').focus(), 0);
+      return new Promise((resolve) => {
+        pendingConfirmResolve = resolve;
+      });
+    }
+
+    function closeConfirmDialog(result) {
+      $('confirmModal').classList.add('hidden');
+      if (pendingConfirmResolve) pendingConfirmResolve(Boolean(result));
+      pendingConfirmResolve = null;
+    }
+
     function bindLogin() {
       $('loginBtn').addEventListener('click', openPasswordModal);
       $('passwordCancelBtn').addEventListener('click', closePasswordModal);
@@ -1012,6 +1057,13 @@
       $('modalPasswordInput').addEventListener('keydown', (event) => {
         if (event.key === 'Enter') submitPasswordLogin();
         if (event.key === 'Escape') closePasswordModal();
+      });
+      $('confirmCancelBtn').addEventListener('click', () => closeConfirmDialog(false));
+      $('confirmBackdrop').addEventListener('click', () => closeConfirmDialog(false));
+      $('confirmSubmitBtn').addEventListener('click', () => closeConfirmDialog(true));
+      $('confirmModal').addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') closeConfirmDialog(false);
+        if (event.key === 'Enter') closeConfirmDialog(true);
       });
       $('logoutBtn').addEventListener('click', () => {
         sessionStorage.removeItem(AUTH_KEY);
