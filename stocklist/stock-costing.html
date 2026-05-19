@@ -718,6 +718,11 @@
         const qty = Math.max(0, num(row.qty));
         if (row.type === 'out') stockOut += qty;
         else stockIn += qty;
+        const hasSyncedId = isSyncedMovementId(row.id);
+        const canDelete = isAuthenticated() && hasSyncedId;
+        const deleteTitle = canDelete
+          ? 'Delete Stock Movement'
+          : (hasSyncedId ? 'Login To Delete' : 'No Movement ID In Excel Yet');
         return `<tr>
           <td>${escapeHtml(formatDisplayDate(row.date))}</td>
           <td class="code-link">${escapeHtml(row.sku || '-')}</td>
@@ -726,7 +731,7 @@
           <td>${qtyText(qty)}</td>
           <td>${escapeHtml(product?._display?.unit || '-')}</td>
           <td>${escapeHtml(row.remark || '-')}</td>
-          <td><button class="ghost-btn requires-edit" type="button" data-delete-movement="${escapeHtml(row.id || '')}" ${isAuthenticated() ? '' : 'disabled'}>Delete</button></td>
+          <td><button class="ghost-btn ${hasSyncedId ? 'requires-edit' : ''}" type="button" data-delete-movement="${escapeHtml(row.id || '')}" title="${escapeHtml(deleteTitle)}" ${canDelete ? '' : 'disabled'}>${hasSyncedId ? 'Delete' : 'No ID'}</button></td>
         </tr>`;
       }).join('') || tableEmpty(8, 'No Stock Movement Rows For This Month.');
       $('stockInQty').textContent = qtyText(stockIn);
@@ -972,7 +977,7 @@
       $('movementMonth').addEventListener('change', renderMovements);
       $('movementRows').addEventListener('click', (event) => {
         const button = event.target.closest('[data-delete-movement]');
-        if (button) deleteMovement(button.dataset.deleteMovement);
+        if (button && !button.disabled) deleteMovement(button.dataset.deleteMovement);
       });
       $('downloadBalancePdfBtn').addEventListener('click', downloadBalancePdf);
       window.addEventListener('afterprint', () => document.body.classList.remove('printing-balance'));
