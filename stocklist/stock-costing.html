@@ -48,7 +48,8 @@
     .ghost-btn { background: rgba(255,255,255,.75); color: var(--text); }
     .panel, .kpi-card { padding: 1.25rem; }
     .panel h2 { margin: 0 0 .45rem; font-size: 1.45rem; letter-spacing: 0; text-transform: capitalize; }
-    .stock-layout { display: grid; gap: .85rem; }
+    .stock-layout { display: grid; gap: 1rem; align-content: start; }
+    .view-stack { display: grid; gap: 1rem; }
     .page-tabs { display: flex; flex-wrap: wrap; gap: .5rem; }
     .page-tab { border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.72); color: #687286; padding: .75rem 1rem; font-weight: 900; cursor: pointer; }
     .page-tab.is-active { background: var(--accent); color: #fff; border-color: transparent; }
@@ -225,10 +226,10 @@
       </div>
     </section>
 
-    <section class="view" data-view="movement" hidden>
+    <section class="view view-stack" data-view="movement" hidden>
       <article class="panel">
         <h2>Stock In / Out Monthly</h2>
-        <p class="muted">Add One Movement Row When Stock Comes In Or Goes Out. Rows Are Saved In This Browser First.</p>
+        <p class="muted">Add One Movement Row When Stock Comes In Or Goes Out.</p>
         <div class="movement-form" style="margin-top:1rem">
           <div class="field"><label for="movementDate">Date</label><input id="movementDate" type="text" class="date-picker-input" placeholder="m/d/yyyy" autocomplete="off" /></div>
           <div class="field"><label for="movementSku">Product</label><select id="movementSku"></select></div>
