@@ -477,6 +477,11 @@
       };
     }
 
+    function isSyncedMovementId(id) {
+      const value = String(id || '').trim();
+      return value && !value.startsWith('seed-') && !value.startsWith('local-') && !value.startsWith('remote-');
+    }
+
     function applyRemoteStockPayload(payload) {
       const products = Array.isArray(payload?.productList) ? payload.productList : [];
       const remoteMovements = Array.isArray(payload?.stockMovement) ? payload.stockMovement : [];
@@ -857,7 +862,7 @@
         $('movementStatus').textContent = 'Movement Row Not Found. Refresh Data And Try Again.';
         return;
       }
-      if (!String(row.id || '').startsWith('SM-')) {
+      if (!isSyncedMovementId(row.id)) {
         $('movementStatus').textContent = 'This Row Has No Movement ID Yet. Upload The New Workbook Copy And Refresh First.';
         return;
       }
