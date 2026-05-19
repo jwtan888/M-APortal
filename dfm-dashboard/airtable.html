@@ -69,11 +69,11 @@
             </label>
             <label>
               Base
-              <input id="airtable-base-input" value="appW3Ue1ZNAIB7vjd" />
+              <input id="airtable-base-input" value="appIgoUvdgdhmf24V" />
             </label>
             <label>
               Table
-              <input id="airtable-table-input" value="tbluNJZBGnzSBsHrg" />
+              <input id="airtable-table-input" value="tblFoONq2PzRybmz3" />
             </label>
             <label class="checkbox">
               <input id="airtable-cache-images" type="checkbox" checked />
@@ -83,7 +83,9 @@
           <div class="airtable-import-actions">
             <button id="airtable-check-btn" class="ghost-btn" type="button">Check Access</button>
             <button id="airtable-panel-sync-btn" class="primary-btn" type="button">Sync Airtable</button>
-            <button id="airtable-export-btn" class="ghost-btn" type="button">Export Mirror JSON</button>
+            <button id="airtable-load-json-btn" class="ghost-btn" type="button">Load JSON File</button>
+            <input id="airtable-json-file-input" type="file" accept=".json,application/json" hidden />
+            <button id="airtable-export-btn" class="ghost-btn" type="button">Export Browser JSON</button>
             <button id="airtable-clear-btn" class="ghost-btn" type="button">Clear Browser Mirror</button>
           </div>
           <div id="airtable-sync-status" class="airtable-sync-status" role="status" aria-live="polite"></div>
@@ -106,8 +108,9 @@
         const ROWS_KEY = 'dfm-airtable-browser-rows';
         const META_KEY = 'dfm-airtable-browser-meta';
         const PUBLISHED_JSON_URL = './airtable-data.json';
-        const DEFAULT_BASE_ID = 'appW3Ue1ZNAIB7vjd';
-        const DEFAULT_TABLE_ID = 'tbluNJZBGnzSBsHrg';
+        const POWER_AUTOMATE_JSON_URL = 'https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/4a6c5654766d40b2b232aebe34be09f9/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=H4odIwzTr1vSpuEq09BxQI-decF5LTOOUDxSxA-QkL8';
+        const DEFAULT_BASE_ID = 'appIgoUvdgdhmf24V';
+        const DEFAULT_TABLE_ID = 'tblFoONq2PzRybmz3';
         const state = {
           rows: [],
           rawRecords: [],
@@ -129,6 +132,8 @@
           tableWrap: document.getElementById('airtable-table-wrap'),
           panelSyncBtn: document.getElementById('airtable-panel-sync-btn'),
           checkBtn: document.getElementById('airtable-check-btn'),
+          loadJsonBtn: document.getElementById('airtable-load-json-btn'),
+          jsonFileInput: document.getElementById('airtable-json-file-input'),
           exportBtn: document.getElementById('airtable-export-btn'),
           clearBtn: document.getElementById('airtable-clear-btn'),
           tokenInput: document.getElementById('airtable-token-input'),
@@ -335,6 +340,12 @@
           const baseId = el.baseInput.value.trim() || DEFAULT_BASE_ID;
           const tableId = el.tableInput.value.trim() || DEFAULT_TABLE_ID;
           const token = el.tokenInput.value.trim();
+          if (!/^app[A-Za-z0-9]+$/.test(baseId)) {
+            throw new Error('Base must be the Airtable base ID starting with app. Do not paste a table or view ID here.');
+          }
+          if (!/^tbl[A-Za-z0-9]+$/.test(tableId)) {
+            throw new Error('Table must be the Airtable table ID starting with tbl. Do not paste a view ID here.');
+          }
           el.baseInput.value = baseId;
           el.tableInput.value = tableId;
           localStorage.setItem(CONFIG_KEY, JSON.stringify({ baseId, tableId, cacheImages: el.cacheImages.checked }));
@@ -481,6 +492,65 @@
           return [];
         }
 
+        function parseJsonPayloadText(text) {
+          try {
+            return JSON.parse(text);
+          } catch (error) {
+            const start = Math.max(0, Math.min(
+              ...['{', '['].map((char) => {
+                const index = text.indexOf(char);
+                return index < 0 ? Number.MAX_SAFE_INTEGER : index;
+              })
+            ));
+            let depth = 0;
+            let inString = false;
+            let escaped = false;
+            for (let index = start; index < text.length; index += 1) {
+              const char = text[index];
+              if (inString) {
+                if (escaped) {
+                  escaped = false;
+                } else if (char === '\\') {
+                  escaped = true;
+                } else if (char === '"') {
+                  inString = false;
+                }
+                continue;
+              }
+              if (char === '"') inString = true;
+              if (char === '{' || char === '[') depth += 1;
+              if (char === '}' || char === ']') depth -= 1;
+              if (depth === 0 && index > start) {
+                return JSON.parse(text.slice(start, index + 1));
+              }
+            }
+            throw error;
+          }
+        }
+
+        function loadJsonPayload(payload, source = 'Loaded JSON file') {
+          const rows = rowsFromJsonPayload(payload);
+          if (!rows.length) throw new Error('No records found in JSON');
+          state.rows = normalizeRows(rows);
+          state.rawRecords = rows;
+          state.source = payload?.source || source;
+          state.updatedAt = payload?.updatedAt || payload?.lastSync || new Date().toLocaleString();
+          localStorage.setItem(META_KEY, JSON.stringify({ source: state.source, updatedAt: state.updatedAt }));
+          try {
+            localStorage.setItem(ROWS_KEY, JSON.stringify(rows));
+          } catch (error) {
+            localStorage.removeItem(ROWS_KEY);
+          }
+          render();
+          const cache = countImageCache(rows);
+          setSyncStatus(
+            cache.missing
+              ? `Loaded ${state.rows.length} records, but ${cache.missing} image(s) are external links.`
+              : `Loaded ${state.rows.length} records from JSON with images.`,
+            cache.missing ? 'error' : 'ok'
+          );
+        }
+
         function loadBrowserMirror() {
           try {
             const rows = JSON.parse(localStorage.getItem(ROWS_KEY) || '[]');
@@ -506,14 +576,21 @@
 
         async function loadPublishedMirror() {
           try {
-            const response = await fetch(`${PUBLISHED_JSON_URL}?t=${Date.now()}`, { cache: 'no-store' });
+            const response = POWER_AUTOMATE_JSON_URL
+              ? await fetch(POWER_AUTOMATE_JSON_URL, {
+                  method: 'POST',
+                  cache: 'no-store',
+                  headers: { 'Content-Type': 'application/json' },
+                  body: JSON.stringify({ mode: 'read' })
+                })
+              : await fetch(`${PUBLISHED_JSON_URL}?t=${Date.now()}`, { cache: 'no-store' });
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
-            const payload = await response.json();
+            const payload = parseJsonPayloadText(await response.text());
             const rows = rowsFromJsonPayload(payload);
             if (!rows.length) throw new Error('No records in published mirror');
             state.rows = normalizeRows(rows);
             state.rawRecords = rows;
-            state.source = payload.source || 'Published MVC mirror';
+            state.source = payload.source || (POWER_AUTOMATE_JSON_URL ? 'Power Automate DFM mirror' : 'Published MVC mirror');
             state.updatedAt = payload.updatedAt || payload.lastSync || '';
             render();
             const cache = countImageCache(rows);
@@ -525,6 +602,20 @@
             );
             return true;
           } catch (error) {
+            if (POWER_AUTOMATE_JSON_URL) {
+              try {
+                const response = await fetch(`${PUBLISHED_JSON_URL}?t=${Date.now()}`, { cache: 'no-store' });
+                if (!response.ok) throw new Error(`HTTP ${response.status}`);
+                const payload = await response.json();
+                loadJsonPayload(payload, 'Local fallback mirror');
+                setSyncStatus(`Power Automate load failed; loaded local fallback instead. ${error.message}`, 'error');
+                return true;
+              } catch (fallbackError) {
+                render();
+                setSyncStatus(`Power Automate JSON load failed: ${error.message}`, 'error');
+                return false;
+              }
+            }
             render();
             setSyncStatus('No published mirror found yet. Admin can sync Airtable and export airtable-data.json for GitHub.', 'error');
             return false;
@@ -554,7 +645,7 @@
           setSyncStatus(
             cache.missing
               ? `Exported airtable-data.json, but ${cache.missing} image(s) are still temporary Airtable URLs. Sync Airtable again, then export.`
-              : 'Exported airtable-data.json with embedded images. Upload it with the GitHub files so other PCs do not need a token.',
+              : 'Exported embedded browser JSON. If GitHub rejects it as too large, use the server-generated airtable-data.json plus airtable-assets folder instead.',
             cache.missing ? 'error' : 'ok'
           );
         }
@@ -579,12 +670,19 @@
             downloadMirrorJson(records);
           } finally {
             el.exportBtn.disabled = false;
-            el.exportBtn.innerText = 'Export Mirror JSON';
+            el.exportBtn.innerText = 'Export Browser JSON';
           }
         }
 
         async function checkAccess() {
-          const { token, baseId, tableId } = getConfig();
+          let config;
+          try {
+            config = getConfig();
+          } catch (error) {
+            setSyncStatus(error.message, 'error');
+            return;
+          }
+          const { token, baseId, tableId } = config;
           if (!token) {
             setSyncStatus('Paste the Airtable personal access token first.', 'error');
             return;
@@ -604,7 +702,14 @@
         }
 
         async function syncAirtable() {
-          const { token, baseId, tableId } = getConfig();
+          let config;
+          try {
+            config = getConfig();
+          } catch (error) {
+            setSyncStatus(error.message, 'error');
+            return;
+          }
+          const { token, baseId, tableId } = config;
           if (!token) {
             setSyncStatus('Paste the Airtable personal access token first.', 'error');
             return;
@@ -641,8 +746,8 @@
         function loadSettings() {
           try {
             const config = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
-            el.baseInput.value = config.baseId || DEFAULT_BASE_ID;
-            el.tableInput.value = config.tableId || DEFAULT_TABLE_ID;
+            el.baseInput.value = /^app[A-Za-z0-9]+$/.test(config.baseId || '') ? config.baseId : DEFAULT_BASE_ID;
+            el.tableInput.value = /^tbl[A-Za-z0-9]+$/.test(config.tableId || '') ? config.tableId : DEFAULT_TABLE_ID;
             el.cacheImages.checked = config.cacheImages !== false;
           } catch (error) {
             el.baseInput.value = DEFAULT_BASE_ID;
@@ -655,6 +760,19 @@
         function bindEvents() {
           el.panelSyncBtn.addEventListener('click', syncAirtable);
           el.checkBtn.addEventListener('click', checkAccess);
+          el.loadJsonBtn.addEventListener('click', () => el.jsonFileInput.click());
+          el.jsonFileInput.addEventListener('change', async () => {
+            const file = el.jsonFileInput.files?.[0];
+            if (!file) return;
+            try {
+              const payload = JSON.parse(await file.text());
+              loadJsonPayload(payload, file.name);
+            } catch (error) {
+              setSyncStatus(`JSON load failed: ${error.message}`, 'error');
+            } finally {
+              el.jsonFileInput.value = '';
+            }
+          });
           el.exportBtn.addEventListener('click', exportMirrorJson);
           el.clearBtn.addEventListener('click', () => {
             localStorage.removeItem(ROWS_KEY);
@@ -694,7 +812,9 @@
 
         bindEvents();
         loadSettings();
-        if (!loadBrowserMirror()) loadPublishedMirror();
+        loadPublishedMirror().then((loaded) => {
+          if (!loaded) loadBrowserMirror();
+        });
       })();
     </script>
   </body>

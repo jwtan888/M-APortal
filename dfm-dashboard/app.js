@@ -7,6 +7,8 @@
   const MVC_GALLERY_ROWS_KEY = "dfm-airtable-browser-rows";
   const MVC_GALLERY_META_KEY = "dfm-airtable-browser-meta";
   const MVC_GALLERY_DATA_URL = "./airtable-data.json";
+  const MVC_GALLERY_PA_URL =
+    "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/4a6c5654766d40b2b232aebe34be09f9/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=H4odIwzTr1vSpuEq09BxQI-decF5LTOOUDxSxA-QkL8";
   const DATA_RECORD_INITIAL_LIMIT = 240;
   const DATA_RECORD_BATCH_SIZE = 240;
   const SHARED_SESSION_KEY = "ma_admin_session_user";
@@ -809,6 +811,41 @@
     return [];
   }
 
+  function parseMvcJsonText(text) {
+    try {
+      return JSON.parse(text);
+    } catch (error) {
+      const starts = ["{", "["]
+        .map((char) => text.indexOf(char))
+        .filter((index) => index >= 0);
+      const start = starts.length ? Math.min(...starts) : -1;
+      if (start < 0) throw error;
+      let depth = 0;
+      let inString = false;
+      let escaped = false;
+      for (let index = start; index < text.length; index += 1) {
+        const char = text[index];
+        if (inString) {
+          if (escaped) {
+            escaped = false;
+          } else if (char === "\\") {
+            escaped = true;
+          } else if (char === '"') {
+            inString = false;
+          }
+          continue;
+        }
+        if (char === '"') inString = true;
+        if (char === "{" || char === "[") depth += 1;
+        if (char === "}" || char === "]") depth -= 1;
+        if (depth === 0 && index > start) {
+          return JSON.parse(text.slice(start, index + 1));
+        }
+      }
+      throw error;
+    }
+  }
+
   function buildMvcGalleryIndex(rows) {
     const next = new Map();
     const items = [];
@@ -856,11 +893,18 @@
 
   async function loadMvcGalleryFromPublishedMirror() {
     try {
-      const response = await window.fetch(`${MVC_GALLERY_DATA_URL}?t=${Date.now()}`, { cache: "no-store" });
+      const response = MVC_GALLERY_PA_URL
+        ? await window.fetch(MVC_GALLERY_PA_URL, {
+            method: "POST",
+            cache: "no-store",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ mode: "read" }),
+          })
+        : await window.fetch(`${MVC_GALLERY_DATA_URL}?t=${Date.now()}`, { cache: "no-store" });
       if (!response.ok) {
         return false;
       }
-      const payload = await response.json();
+      const payload = parseMvcJsonText(await response.text());
       const rows = rowsFromMvcPayload(payload);
       if (!rows.length) {
         return false;
@@ -870,7 +914,22 @@
       renderConstructionPicker();
       return true;
     } catch (error) {
-      console.warn("Failed to load published MVC gallery mirror", error);
+      console.warn("Failed to load Power Automate MVC gallery mirror", error);
+      if (MVC_GALLERY_PA_URL) {
+        try {
+          const response = await window.fetch(`${MVC_GALLERY_DATA_URL}?t=${Date.now()}`, { cache: "no-store" });
+          if (!response.ok) return false;
+          const payload = parseMvcJsonText(await response.text());
+          const rows = rowsFromMvcPayload(payload);
+          if (!rows.length) return false;
+          buildMvcGalleryIndex(rows);
+          render();
+          renderConstructionPicker();
+          return true;
+        } catch (fallbackError) {
+          console.warn("Failed to load local MVC gallery mirror", fallbackError);
+        }
+      }
       return false;
     }
   }
@@ -2947,9 +3006,9 @@
 
   bindEvents();
   if (page === "dashboard" || page === "data") {
-    if (!loadMvcGalleryFromBrowser()) {
-      loadMvcGalleryFromPublishedMirror();
-    }
+    loadMvcGalleryFromPublishedMirror().then((loaded) => {
+      if (!loaded) loadMvcGalleryFromBrowser();
+    });
   }
   if (page === "dashboard") {
     state.rotation.timerId = window.setInterval(() => {
