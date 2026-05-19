@@ -269,6 +269,7 @@
     let pendingLoginUser = '';
     const PRICE_KEY = 'ma-stock-list-prices-v1';
     const COSTING_KEY = 'ma-template-costing-rows-v1';
+    const REMOTE_CACHE_KEY = 'ma-template-costing-remote-cache-v1';
     const TEMPLATE_MATERIALS = [
       { id: 'blue-mix-white-pvc-08', name: 'BLUE MIX WHITE PVC 0.8MM', size: '80 x 240', cost: 39.00, aliases: ['BLUE MIX WHITE PVC 0.8MM', 'BLUE MIX WHITE PVC 1.2MM'] },
       { id: 'blue-pvc-14', name: 'BLUE PVC 1.4MM', size: '80 x 240', cost: 56.00, aliases: ['BLUE PVC 1.4MM'] },
@@ -283,6 +284,7 @@
     let materialFactorCache = new Map();
     let currentUser = sessionStorage.getItem(AUTH_KEY) || '';
     let appStarted = false;
+    let remoteSyncStarted = false;
 
     const $ = (id) => document.getElementById(id);
     const norm = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -405,6 +407,28 @@
       STOCK_DATA.sourceFile = 'OneDrive MA_Stock_Costing_Sync.xlsx';
     }
 
+    function cacheRemoteStockPayload(payload) {
+      try {
+        localStorage.setItem(REMOTE_CACHE_KEY, JSON.stringify({
+          cachedAt: Date.now(),
+          productList: Array.isArray(payload?.productList) ? payload.productList : [],
+          templateCosting: Array.isArray(payload?.templateCosting) ? payload.templateCosting : [],
+        }));
+      } catch {
+        // Cache is only used to keep the page responsive while the paginated PA flow loads.
+      }
+    }
+
+    function loadCachedRemoteStockPayload() {
+      try {
+        const payload = JSON.parse(localStorage.getItem(REMOTE_CACHE_KEY) || 'null');
+        if (!payload || (!Array.isArray(payload.productList) && !Array.isArray(payload.templateCosting))) return null;
+        return payload;
+      } catch {
+        return null;
+      }
+    }
+
     async function fetchRemoteStockData() {
       if (!STOCK_FETCH_URL) return false;
       $('dataStatus').textContent = 'Loading OneDrive Stock Data...';
@@ -413,11 +437,12 @@
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const payload = await response.json();
         if (!payload?.ok) throw new Error('Power Automate returned no ok flag');
+        cacheRemoteStockPayload(payload);
         applyRemoteStockPayload(payload);
         $('dataStatus').textContent = 'Loaded Latest Stock Data From OneDrive.';
         return true;
       } catch (error) {
-        $('dataStatus').textContent = `OneDrive Stock Sync Failed. Showing Local Fallback. ${error.message}`;
+        $('dataStatus').textContent = `Showing Existing Template Costing Data. OneDrive Sync Failed: ${error.message}`;
         return false;
       }
     }
@@ -988,12 +1013,22 @@
       initDatePicker();
       bind();
       rebuildProductIndex();
-      await fetchRemoteStockData();
+      const cachedPayload = loadCachedRemoteStockPayload();
+      if (cachedPayload) applyRemoteStockPayload(cachedPayload);
       populateEntryMaterial();
       $('entryDate').value = formatPortalDate(new Date());
       renderFactors();
       renderCosting();
       updateAuthView();
+      if (remoteSyncStarted) return;
+      remoteSyncStarted = true;
+      fetchRemoteStockData().then((loaded) => {
+        if (!loaded) return;
+        populateEntryMaterial();
+        renderFactors();
+        renderCosting();
+        updateAuthView();
+      });
     }
 
     bindLogin();
