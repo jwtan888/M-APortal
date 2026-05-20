@@ -5,6 +5,7 @@
   const INVESTMENT_NOTES_KEY = "dfm-dashboard-investment-notes";
   const INVESTMENT_VISIBILITY_KEY = "dfm-dashboard-investment-visibility";
   const MVC_GALLERY_ROWS_KEY = "dfm-airtable-browser-rows";
+  const MVC_GALLERY_CODE_CACHE_KEY = "dfm-airtable-master-code-cache";
   const MVC_GALLERY_META_KEY = "dfm-airtable-browser-meta";
   const MVC_GALLERY_DATA_URL = "./airtable-data.json";
   const MVC_GALLERY_PA_URL =
@@ -80,6 +81,8 @@
     mvcGallery: new Map(),
     mvcGalleryItems: [],
     mvcGalleryLoaded: false,
+    mvcGalleryLoading: false,
+    mvcGalleryError: "",
     constructionPickerSearch: "",
     editingId: null,
     rotation: {
@@ -756,6 +759,10 @@
     return cleanText(value).toUpperCase().replace(/\s+/g, "").replace(/M$/, "");
   }
 
+  function getMasterConstructionCodeSet() {
+    return new Set(state.mvcGalleryItems.map((item) => item.normalized).filter(Boolean));
+  }
+
   function getMvcField(row, patterns) {
     const fields = row?.fields && typeof row.fields === "object" ? row.fields : row || {};
     const key = Object.keys(fields).find((field) => patterns.some((pattern) => pattern.test(field)));
@@ -878,11 +885,35 @@
     state.mvcGalleryLoaded = true;
   }
 
+  function cacheMvcGalleryCodeMaster() {
+    try {
+      const compactItems = state.mvcGalleryItems.map((item) => ({
+        code: item.code,
+        rating: item.rating,
+        complexity: item.complexity,
+        endUse: item.endUse,
+      }));
+      window.localStorage.setItem(
+        MVC_GALLERY_CODE_CACHE_KEY,
+        JSON.stringify({
+          updatedAt: new Date().toISOString(),
+          rows: compactItems,
+        }),
+      );
+    } catch (error) {
+      console.warn("Failed to cache compact MVC master", error);
+    }
+  }
+
   function loadMvcGalleryFromBrowser() {
     try {
       const rows = JSON.parse(window.localStorage.getItem(MVC_GALLERY_ROWS_KEY) || "[]");
       if (Array.isArray(rows) && rows.length) {
         buildMvcGalleryIndex(rows);
+        state.mvcGalleryLoading = false;
+        state.mvcGalleryError = "";
+        render();
+        renderConstructionPicker();
         return true;
       }
     } catch (error) {
@@ -891,7 +922,32 @@
     return false;
   }
 
+  function loadMvcGalleryFromCodeCache() {
+    try {
+      const cached = JSON.parse(window.localStorage.getItem(MVC_GALLERY_CODE_CACHE_KEY) || "{}");
+      const rows = Array.isArray(cached?.rows) ? cached.rows : [];
+      if (rows.length) {
+        buildMvcGalleryIndex(rows);
+        state.mvcGalleryLoading = false;
+        state.mvcGalleryError = "";
+        render();
+        renderConstructionPicker();
+        return true;
+      }
+    } catch (error) {
+      console.warn("Failed to load compact MVC master cache", error);
+    }
+    return false;
+  }
+
+  function loadMvcGalleryFromAnyCache() {
+    return loadMvcGalleryFromBrowser() || loadMvcGalleryFromCodeCache();
+  }
+
   async function loadMvcGalleryFromPublishedMirror() {
+    state.mvcGalleryLoading = true;
+    state.mvcGalleryError = "";
+    render();
     try {
       const response = MVC_GALLERY_PA_URL
         ? await window.fetch(MVC_GALLERY_PA_URL, {
@@ -902,14 +958,22 @@
           })
         : await window.fetch(`${MVC_GALLERY_DATA_URL}?t=${Date.now()}`, { cache: "no-store" });
       if (!response.ok) {
+        state.mvcGalleryLoading = false;
+        state.mvcGalleryError = "Latest Airtable master could not load";
+        render();
         return false;
       }
       const payload = parseMvcJsonText(await response.text());
       const rows = rowsFromMvcPayload(payload);
       if (!rows.length) {
+        state.mvcGalleryLoading = false;
+        state.mvcGalleryError = "Latest Airtable master returned no construction codes";
+        render();
         return false;
       }
       buildMvcGalleryIndex(rows);
+      cacheMvcGalleryCodeMaster();
+      state.mvcGalleryLoading = false;
       render();
       renderConstructionPicker();
       return true;
@@ -918,11 +982,23 @@
       if (MVC_GALLERY_PA_URL) {
         try {
           const response = await window.fetch(`${MVC_GALLERY_DATA_URL}?t=${Date.now()}`, { cache: "no-store" });
-          if (!response.ok) return false;
+          if (!response.ok) {
+            state.mvcGalleryLoading = false;
+            state.mvcGalleryError = "Latest Airtable master could not load";
+            render();
+            return false;
+          }
           const payload = parseMvcJsonText(await response.text());
           const rows = rowsFromMvcPayload(payload);
-          if (!rows.length) return false;
+          if (!rows.length) {
+            state.mvcGalleryLoading = false;
+            state.mvcGalleryError = "Latest Airtable master returned no construction codes";
+            render();
+            return false;
+          }
           buildMvcGalleryIndex(rows);
+          cacheMvcGalleryCodeMaster();
+          state.mvcGalleryLoading = false;
           render();
           renderConstructionPicker();
           return true;
@@ -930,6 +1006,9 @@
           console.warn("Failed to load local MVC gallery mirror", fallbackError);
         }
       }
+      state.mvcGalleryLoading = false;
+      state.mvcGalleryError = "Latest Airtable master could not load";
+      render();
       return false;
     }
   }
@@ -964,13 +1043,15 @@
     `;
   }
 
-  function ensureMvcPreviewLayer() {
+  function ensureMvcPreviewLayer(host = document.body) {
     let layer = document.getElementById("mvc-preview-layer");
     if (!layer) {
       layer = document.createElement("div");
       layer.id = "mvc-preview-layer";
       layer.className = "mvc-preview-layer";
-      document.body.appendChild(layer);
+    }
+    if (layer.parentElement !== host) {
+      host.appendChild(layer);
     }
     return layer;
   }
@@ -978,8 +1059,14 @@
   function positionMvcPreviewLayer(link, layer) {
     const rect = link.getBoundingClientRect();
     const margin = 12;
-    const layerWidth = 280;
-    const layerHeight = Math.min(300, window.innerHeight - margin * 2);
+    const isLarge = layer.classList.contains("mvc-preview-layer--large");
+    const layerWidth = isLarge ? Math.min(720, window.innerWidth - margin * 2) : 280;
+    const layerHeight = isLarge ? Math.min(620, window.innerHeight - margin * 2) : Math.min(300, window.innerHeight - margin * 2);
+    if (isLarge) {
+      layer.style.left = `${Math.max(margin, (window.innerWidth - layerWidth) / 2)}px`;
+      layer.style.top = `${Math.max(margin, (window.innerHeight - layerHeight) / 2)}px`;
+      return;
+    }
     let left = rect.left;
     let top = rect.bottom + 8;
     if (left + layerWidth > window.innerWidth - margin) {
@@ -992,12 +1079,14 @@
     layer.style.top = `${Math.max(margin, top)}px`;
   }
 
-  function showMvcPreview(link) {
+  function showMvcPreview(link, options = {}) {
     const imageUrl = link.dataset.mvcPreview || "";
     if (!imageUrl) {
       return;
     }
-    const layer = ensureMvcPreviewLayer();
+    const host = options.large && elements.dialog?.open ? elements.dialog : document.body;
+    const layer = ensureMvcPreviewLayer(host);
+    layer.classList.toggle("mvc-preview-layer--large", Boolean(options.large));
     layer.innerHTML = `
       <img src="${escapeHtml(imageUrl)}" alt="${escapeHtml(link.dataset.mvcCode || "Construction preview")}" />
       <strong>${escapeHtml(link.dataset.mvcCode || "")}</strong>
@@ -1011,6 +1100,7 @@
     const layer = document.getElementById("mvc-preview-layer");
     if (layer) {
       layer.classList.remove("is-visible");
+      layer.classList.remove("mvc-preview-layer--large");
     }
   }
 
@@ -1026,7 +1116,7 @@
 
     if (!state.mvcGalleryLoaded) {
       elements.constructionPickerResults.innerHTML =
-        '<div class="empty-state">MVC Gallery is loading. If this stays empty, export and upload airtable-data.json.</div>';
+        '<div class="construction-picker-status"><span class="benchmark-status-dot is-loading"></span><span>Loading construction code images from Airtable...</span></div>';
       return;
     }
 
@@ -1041,11 +1131,24 @@
       return;
     }
 
-    elements.constructionPickerResults.innerHTML = items
+    const statusHtml = state.mvcGalleryLoading
+      ? '<div class="construction-picker-status"><span class="benchmark-status-dot is-loading"></span><span>Showing cached construction codes. Refreshing latest Airtable images...</span></div>'
+      : state.mvcGalleryError
+        ? `<div class="construction-picker-status construction-picker-status--error"><span class="benchmark-status-dot"></span><span>${escapeHtml(state.mvcGalleryError)}</span></div>`
+        : "";
+
+    elements.constructionPickerResults.innerHTML = statusHtml + items
       .map((item) => {
         const details = [item.rating, item.complexity, item.endUse].filter(Boolean).join(" | ");
         return `
-          <button class="construction-option" type="button" data-code="${escapeHtml(item.code)}">
+          <button
+            class="construction-option"
+            type="button"
+            data-code="${escapeHtml(item.code)}"
+            ${item.imageUrl ? `data-mvc-preview="${escapeHtml(item.imageUrl)}"` : ""}
+            data-mvc-code="${escapeHtml(item.code)}"
+            data-mvc-details="${escapeHtml(details)}"
+          >
             <span class="construction-option-image">
               ${
                 item.imageUrl
@@ -1412,17 +1515,28 @@
         .sort((a, b) => b.value - a.value || a.label.localeCompare(b.label))
         .slice(0, 40),
       benchmark: (() => {
-        const activeNonMTypeCodes = new Set(
+        const masterCodes = getMasterConstructionCodeSet();
+        const activeNonMTypeCodeSet = new Set(
           records
             .filter((record) => record.modification === "Non-M")
-            .map((record) => record.typeCode || record.constructionCode || "Unknown")
+            .map((record) => normalizeMvcCode(record.typeCode || record.constructionCode))
             .filter(Boolean),
-        ).size;
+        );
+        const activeMasterCodes = masterCodes.size
+          ? Array.from(activeNonMTypeCodeSet).filter((code) => masterCodes.has(code)).length
+          : activeNonMTypeCodeSet.size;
+        const unmatchedActiveCodes = masterCodes.size
+          ? Array.from(activeNonMTypeCodeSet).filter((code) => !masterCodes.has(code)).length
+          : 0;
+        const target = masterCodes.size || activeNonMTypeCodeSet.size;
         return {
-          target: 641,
-          active: activeNonMTypeCodes,
-          inactive: Math.max(0, 641 - activeNonMTypeCodes),
-          over: Math.max(0, activeNonMTypeCodes - 641),
+          target,
+          active: activeMasterCodes,
+          inactive: Math.max(0, target - activeMasterCodes),
+          over: unmatchedActiveCodes,
+          source: masterCodes.size ? "airtable" : "dfm",
+          loading: state.mvcGalleryLoading,
+          error: state.mvcGalleryError,
         };
       })(),
       investmentSeasonLabels,
@@ -1562,22 +1676,31 @@
     const active = Number(benchmark?.active || 0);
     const inactive = Number(benchmark?.inactive || 0);
     const over = Number(benchmark?.over || 0);
+    const isLoading = Boolean(benchmark?.loading);
+    const error = cleanText(benchmark?.error);
+    const sourceLabel = benchmark?.source === "airtable" ? "Latest Airtable master" : "DFM data fallback";
+    const statusClass = error ? "benchmark-status benchmark-status--error" : "benchmark-status";
+    const statusText = error || (isLoading ? "Loading latest Airtable master..." : sourceLabel);
     const utilization = target > 0 ? Math.round((active / target) * 100) : 0;
     const denominator = Math.max(target, active, 1);
     const activeWidth = Math.max(0, (Math.min(active, denominator) / denominator) * 100);
     const inactiveWidth = Math.max(0, (inactive / denominator) * 100);
 
     elements.benchmarkChart.innerHTML = `
+      <div class="${escapeHtml(statusClass)}">
+        <span class="benchmark-status-dot${isLoading ? " is-loading" : ""}"></span>
+        <span>${escapeHtml(statusText)}</span>
+      </div>
       <div class="benchmark-summary">
         <div class="benchmark-current">
           <div class="benchmark-label">Current Active Construction Code (Non-M)</div>
           <div class="benchmark-value">${escapeHtml(formatNumber(active))}<span class="benchmark-value-inline">${escapeHtml(`${utilization}%`)}</span></div>
-          <div class="benchmark-meta">${over > 0 ? `${escapeHtml(formatNumber(over))} above benchmark` : ""}</div>
+          <div class="benchmark-meta">${over > 0 ? `${escapeHtml(formatNumber(over))} active DFM codes not in Nike master` : ""}</div>
         </div>
         <div class="benchmark-current">
           <div class="benchmark-label">Nike Construction Code</div>
           <div class="benchmark-value">${escapeHtml(formatNumber(target))}</div>
-          <div class="benchmark-meta"></div>
+          <div class="benchmark-meta">${escapeHtml(isLoading ? "Updating from Airtable..." : sourceLabel)}</div>
         </div>
       </div>
       <div class="benchmark-track">
@@ -2898,6 +3021,28 @@
       });
     }
     if (elements.constructionPickerResults) {
+      elements.constructionPickerResults.addEventListener("mouseover", (event) => {
+        const option = event.target.closest(".construction-option[data-mvc-preview]");
+        if (option) {
+          showMvcPreview(option, { large: true });
+        }
+      });
+      elements.constructionPickerResults.addEventListener("focusin", (event) => {
+        const option = event.target.closest(".construction-option[data-mvc-preview]");
+        if (option) {
+          showMvcPreview(option, { large: true });
+        }
+      });
+      elements.constructionPickerResults.addEventListener("mouseout", (event) => {
+        if (event.target.closest(".construction-option[data-mvc-preview]")) {
+          hideMvcPreview();
+        }
+      });
+      elements.constructionPickerResults.addEventListener("focusout", (event) => {
+        if (event.target.closest(".construction-option[data-mvc-preview]")) {
+          hideMvcPreview();
+        }
+      });
       elements.constructionPickerResults.addEventListener("click", (event) => {
         const option = event.target.closest(".construction-option[data-code]");
         if (!option) {
@@ -3006,8 +3151,9 @@
 
   bindEvents();
   if (page === "dashboard" || page === "data") {
+    loadMvcGalleryFromAnyCache();
     loadMvcGalleryFromPublishedMirror().then((loaded) => {
-      if (!loaded) loadMvcGalleryFromBrowser();
+      if (!loaded && !state.mvcGalleryLoaded) loadMvcGalleryFromAnyCache();
     });
   }
   if (page === "dashboard") {
