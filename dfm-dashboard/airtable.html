@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DFM Construction Data</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 68 48'%3E%3Cg fill='%230514ff'%3E%3Cpath d='M9 4h7L7 44H0z'/%3E%3Cpath d='M21 4h12L24 44H12z'/%3E%3Cpath d='M44 4h21c2 0 3 2 3 4l-7 28c-1 5-5 8-10 8H34c-4 0-7-3-6-7l7-26c1-4 5-7 9-7z'/%3E%3C/g%3E%3C/svg%3E">
-    <link rel="stylesheet" href="./styles.css?v=20260520e" />
+    <link rel="stylesheet" href="./styles.css?v=20260520f" />
   </head>
   <body data-page="airtable">
     <div class="app-shell">
@@ -101,6 +101,7 @@
       </main>
     </div>
 
+    <script src="./construction-master.js?v=20260520f"></script>
     <script>
       (function () {
         const TOKEN_KEY = 'dfm-airtable-token';
@@ -112,6 +113,7 @@
         const IDB_ROWS_KEY = 'mvc-gallery-rows';
         const PUBLISHED_JSON_URL = './airtable-data.json';
         const POWER_AUTOMATE_JSON_URL = 'https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/4a6c5654766d40b2b232aebe34be09f9/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=H4odIwzTr1vSpuEq09BxQI-decF5LTOOUDxSxA-QkL8';
+        const EMBEDDED_MASTER = window.DFM_CONSTRUCTION_MASTER || { records: [] };
         const MIRROR_REFRESH_MS = 2 * 60 * 1000;
         const MIRROR_TIMEOUT_MS = 25 * 1000;
         const DEFAULT_BASE_ID = 'appIgoUvdgdhmf24V';
@@ -634,6 +636,18 @@
           return false;
         }
 
+        function loadEmbeddedMasterMirror() {
+          const rows = Array.isArray(EMBEDDED_MASTER.records) ? EMBEDDED_MASTER.records : [];
+          if (!rows.length) return false;
+          state.rawRecords = rows;
+          state.rows = normalizeRows(rows);
+          state.source = EMBEDDED_MASTER.source || 'Nike construction master';
+          state.updatedAt = EMBEDDED_MASTER.updatedAt || '';
+          render();
+          setSyncStatus(`Loaded ${state.rows.length} Nike construction master records with local images.`, 'ok');
+          return true;
+        }
+
         async function loadIndexedDbMirror() {
           try {
             const cached = await readMirrorCache();
@@ -660,7 +674,7 @@
         }
 
         async function loadAnyCachedMirror() {
-          return loadBrowserMirror() || (await loadIndexedDbMirror());
+          return loadBrowserMirror() || (await loadIndexedDbMirror()) || loadEmbeddedMasterMirror();
         }
 
         async function loadPublishedMirror() {
