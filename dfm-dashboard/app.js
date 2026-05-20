@@ -13,7 +13,6 @@
   const MVC_GALLERY_DATA_URL = "./airtable-data.json";
   const MVC_GALLERY_PA_URL =
     "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/4a6c5654766d40b2b232aebe34be09f9/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=H4odIwzTr1vSpuEq09BxQI-decF5LTOOUDxSxA-QkL8";
-  const MVC_GALLERY_REFRESH_MS = 2 * 60 * 1000;
   const MVC_GALLERY_TIMEOUT_MS = 25 * 1000;
   const MVC_GALLERY_FIRST_LOAD_TIMEOUT_MS = 45 * 1000;
   const DFM_LIVE_TIMEOUT_MS = 20 * 1000;
@@ -936,7 +935,7 @@
     }
     buildMvcGalleryIndex(fallbackRows, "dfm");
     state.mvcGalleryLoading = false;
-    state.mvcGalleryError = message || "Using DFM construction codes while Airtable master refresh is unavailable.";
+    state.mvcGalleryError = message;
     render();
     renderConstructionPicker();
     return true;
@@ -1090,12 +1089,9 @@
         : await fetchWithTimeout(`${MVC_GALLERY_DATA_URL}?t=${Date.now()}`, { cache: "no-store" }, timeoutMs);
       if (!response.ok) {
         state.mvcGalleryLoading = false;
-        const fallbackMessage = state.mvcGalleryLoaded
-          ? "Using cached Airtable master; live refresh did not return."
-          : "Using DFM construction codes; Power Automate Airtable master did not return.";
-        state.mvcGalleryError = fallbackMessage;
+        state.mvcGalleryError = "";
         if (!state.mvcGalleryLoaded) {
-          buildMvcGalleryIndexFromDfmRecords(fallbackMessage);
+          buildMvcGalleryIndexFromDfmRecords();
         }
         render();
         return false;
@@ -1121,12 +1117,9 @@
     } catch (error) {
       console.warn("Failed to load Power Automate MVC gallery mirror", error);
       state.mvcGalleryLoading = false;
-      const fallbackMessage = state.mvcGalleryLoaded
-        ? "Using cached Airtable master; live refresh timed out."
-        : "Using DFM construction codes; Power Automate Airtable master timed out.";
-      state.mvcGalleryError = fallbackMessage;
+      state.mvcGalleryError = "";
       if (!state.mvcGalleryLoaded) {
-        buildMvcGalleryIndexFromDfmRecords(fallbackMessage);
+        buildMvcGalleryIndexFromDfmRecords();
       }
       render();
       return false;
@@ -3324,7 +3317,6 @@
   document.addEventListener("visibilitychange", () => {
     if (!document.hidden && (page === "dashboard" || page === "data")) {
       refreshFromLatestSeed({ silent: true });
-      refreshMvcGalleryMaster();
     }
   });
   if (page === "dashboard" || page === "data") {
@@ -3334,21 +3326,13 @@
       render();
       const cached = await loadMvcGalleryFromAnyCache();
       if (cached) {
-        state.mvcGalleryLoading = true;
+        state.mvcGalleryLoading = false;
         render();
       } else {
-        buildMvcGalleryIndexFromDfmRecords("Using DFM construction codes while refreshing Airtable master...");
-        state.mvcGalleryLoading = true;
+        buildMvcGalleryIndexFromDfmRecords();
         render();
       }
-      const loaded = await refreshMvcGalleryMaster();
-      if (!loaded && !state.mvcGalleryLoaded) {
-        await loadMvcGalleryFromAnyCache();
-      }
     })();
-    state.mvcGalleryRefreshTimerId = window.setInterval(() => {
-      refreshMvcGalleryMaster();
-    }, MVC_GALLERY_REFRESH_MS);
   }
   if (page === "dashboard") {
     state.rotation.timerId = window.setInterval(() => {
