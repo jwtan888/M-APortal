@@ -6,10 +6,17 @@
   const INVESTMENT_VISIBILITY_KEY = "dfm-dashboard-investment-visibility";
   const MVC_GALLERY_ROWS_KEY = "dfm-airtable-browser-rows";
   const MVC_GALLERY_CODE_CACHE_KEY = "dfm-airtable-master-code-cache";
+  const MVC_GALLERY_IDB_NAME = "dfm-dashboard-cache";
+  const MVC_GALLERY_IDB_STORE = "keyval";
+  const MVC_GALLERY_IDB_ROWS_KEY = "mvc-gallery-rows";
   const MVC_GALLERY_META_KEY = "dfm-airtable-browser-meta";
   const MVC_GALLERY_DATA_URL = "./airtable-data.json";
   const MVC_GALLERY_PA_URL =
     "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/4a6c5654766d40b2b232aebe34be09f9/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=H4odIwzTr1vSpuEq09BxQI-decF5LTOOUDxSxA-QkL8";
+  const MVC_GALLERY_REFRESH_MS = 2 * 60 * 1000;
+  const MVC_GALLERY_TIMEOUT_MS = 25 * 1000;
+  const MVC_GALLERY_FIRST_LOAD_TIMEOUT_MS = 45 * 1000;
+  const DFM_LIVE_TIMEOUT_MS = 20 * 1000;
   const DATA_RECORD_INITIAL_LIMIT = 240;
   const DATA_RECORD_BATCH_SIZE = 240;
   const SHARED_SESSION_KEY = "ma_admin_session_user";
@@ -31,7 +38,7 @@
     "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/8a1ee6b32b44477ab947ff85d3c38881/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=-cqYV3Ac1tBeoECt_zje-s9Yk1B0RZYvDxqV-fP24N8";
   const defectMap = new Map((seedData.defectCatalog || []).map((item) => [item.code, item]));
   const page = document.body.dataset.page || "dashboard";
-  const AUTO_REFRESH_MS = page === "dashboard" ? 60000 : 0;
+  const AUTO_REFRESH_MS = page === "dashboard" || page === "data" ? 60000 : 0;
 
   const elements = {
     seasonDonut: document.getElementById("season-donut"),
@@ -83,6 +90,7 @@
     mvcGalleryLoaded: false,
     mvcGalleryLoading: false,
     mvcGalleryError: "",
+    mvcGallerySource: "",
     constructionPickerSearch: "",
     editingId: null,
     rotation: {
@@ -91,6 +99,9 @@
       tick: 0,
     },
     seedRefreshTimerId: null,
+    seedRefreshPromise: null,
+    mvcGalleryRefreshTimerId: null,
+    mvcGalleryRefreshPromise: null,
     dashboardFrameId: null,
     dashboardDeferredTimeout: null,
     lastDashboardAnalytics: null,
@@ -460,6 +471,17 @@
     return String(value || "").replace(/\s+/g, " ").trim();
   }
 
+  function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
+    const controller = new AbortController();
+    const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
+    return window
+      .fetch(url, {
+        ...options,
+        signal: controller.signal,
+      })
+      .finally(() => window.clearTimeout(timeoutId));
+  }
+
   function normalizeExcelNo(value, sourceRow) {
     const text = cleanText(value);
     if (/^\d+$/.test(text)) {
@@ -763,6 +785,11 @@
     return new Set(state.mvcGalleryItems.map((item) => item.normalized).filter(Boolean));
   }
 
+  function isMvcGallerySoftStatus(message) {
+    const text = cleanText(message);
+    return /^Using cached Airtable master/i.test(text) || /^Using DFM construction codes/i.test(text);
+  }
+
   function getMvcField(row, patterns) {
     const fields = row?.fields && typeof row.fields === "object" ? row.fields : row || {};
     const key = Object.keys(fields).find((field) => patterns.some((pattern) => pattern.test(field)));
@@ -853,7 +880,7 @@
     }
   }
 
-  function buildMvcGalleryIndex(rows) {
+  function buildMvcGalleryIndex(rows, source = "airtable") {
     const next = new Map();
     const items = [];
     rowsFromMvcPayload(rows).forEach((row) => {
@@ -883,12 +910,43 @@
     state.mvcGallery = next;
     state.mvcGalleryItems = items.sort((a, b) => a.code.localeCompare(b.code, undefined, { numeric: true }));
     state.mvcGalleryLoaded = true;
+    state.mvcGallerySource = source;
+  }
+
+  function buildMvcGalleryIndexFromDfmRecords(message = "") {
+    const fallbackRows = [];
+    const seen = new Set();
+    state.records.forEach((record) => {
+      const code = cleanText(record.typeCode || record.constructionCode);
+      const normalized = normalizeMvcCode(code);
+      if (!normalized || seen.has(normalized)) {
+        return;
+      }
+      seen.add(normalized);
+      fallbackRows.push({
+        Name: code,
+        "Construction Code": code,
+        "Nike Value Rating": "",
+        "Complexity Level": "",
+        "Recommended End Use": "",
+      });
+    });
+    if (!fallbackRows.length) {
+      return false;
+    }
+    buildMvcGalleryIndex(fallbackRows, "dfm");
+    state.mvcGalleryLoading = false;
+    state.mvcGalleryError = message || "Using DFM construction codes while Airtable master refresh is unavailable.";
+    render();
+    renderConstructionPicker();
+    return true;
   }
 
   function cacheMvcGalleryCodeMaster() {
     try {
       const compactItems = state.mvcGalleryItems.map((item) => ({
         code: item.code,
+        imageUrl: item.imageUrl,
         rating: item.rating,
         complexity: item.complexity,
         endUse: item.endUse,
@@ -903,6 +961,55 @@
     } catch (error) {
       console.warn("Failed to cache compact MVC master", error);
     }
+  }
+
+  function openMvcGalleryDb() {
+    return new Promise((resolve, reject) => {
+      if (!("indexedDB" in window)) {
+        reject(new Error("IndexedDB is not available"));
+        return;
+      }
+      const request = window.indexedDB.open(MVC_GALLERY_IDB_NAME, 1);
+      request.onupgradeneeded = () => {
+        request.result.createObjectStore(MVC_GALLERY_IDB_STORE);
+      };
+      request.onsuccess = () => resolve(request.result);
+      request.onerror = () => reject(request.error);
+    });
+  }
+
+  async function readMvcGalleryCache() {
+    const db = await openMvcGalleryDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(MVC_GALLERY_IDB_STORE, "readonly");
+      const request = tx.objectStore(MVC_GALLERY_IDB_STORE).get(MVC_GALLERY_IDB_ROWS_KEY);
+      request.onsuccess = () => resolve(request.result || null);
+      request.onerror = () => reject(request.error);
+      tx.oncomplete = () => db.close();
+      tx.onerror = () => db.close();
+    });
+  }
+
+  async function writeMvcGalleryCache(rows) {
+    const db = await openMvcGalleryDb();
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction(MVC_GALLERY_IDB_STORE, "readwrite");
+      tx.objectStore(MVC_GALLERY_IDB_STORE).put(
+        {
+          updatedAt: new Date().toISOString(),
+          rows,
+        },
+        MVC_GALLERY_IDB_ROWS_KEY,
+      );
+      tx.oncomplete = () => {
+        db.close();
+        resolve(true);
+      };
+      tx.onerror = () => {
+        db.close();
+        reject(tx.error);
+      };
+    });
   }
 
   function loadMvcGalleryFromBrowser() {
@@ -940,8 +1047,26 @@
     return false;
   }
 
-  function loadMvcGalleryFromAnyCache() {
-    return loadMvcGalleryFromBrowser() || loadMvcGalleryFromCodeCache();
+  async function loadMvcGalleryFromIndexedDb() {
+    try {
+      const cached = await readMvcGalleryCache();
+      const rows = Array.isArray(cached?.rows) ? cached.rows : [];
+      if (rows.length) {
+        buildMvcGalleryIndex(rows);
+        state.mvcGalleryLoading = false;
+        state.mvcGalleryError = "";
+        render();
+        renderConstructionPicker();
+        return true;
+      }
+    } catch (error) {
+      console.warn("Failed to load IndexedDB MVC gallery cache", error);
+    }
+    return false;
+  }
+
+  async function loadMvcGalleryFromAnyCache() {
+    return loadMvcGalleryFromBrowser() || (await loadMvcGalleryFromIndexedDb()) || loadMvcGalleryFromCodeCache();
   }
 
   async function loadMvcGalleryFromPublishedMirror() {
@@ -949,17 +1074,29 @@
     state.mvcGalleryError = "";
     render();
     try {
+      const timeoutMs = state.mvcGalleryLoaded ? MVC_GALLERY_TIMEOUT_MS : MVC_GALLERY_FIRST_LOAD_TIMEOUT_MS;
       const response = MVC_GALLERY_PA_URL
-        ? await window.fetch(MVC_GALLERY_PA_URL, {
+        ? await fetchWithTimeout(MVC_GALLERY_PA_URL, {
             method: "POST",
             cache: "no-store",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ mode: "read" }),
-          })
-        : await window.fetch(`${MVC_GALLERY_DATA_URL}?t=${Date.now()}`, { cache: "no-store" });
+            headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
+            body: JSON.stringify({
+              mode: "readMaster",
+              compact: true,
+              includeImages: false,
+              requestId: `dfm-master-${Date.now()}`,
+            }),
+          }, timeoutMs)
+        : await fetchWithTimeout(`${MVC_GALLERY_DATA_URL}?t=${Date.now()}`, { cache: "no-store" }, timeoutMs);
       if (!response.ok) {
         state.mvcGalleryLoading = false;
-        state.mvcGalleryError = "Latest Airtable master could not load";
+        const fallbackMessage = state.mvcGalleryLoaded
+          ? "Using cached Airtable master; live refresh did not return."
+          : "Using DFM construction codes; Power Automate Airtable master did not return.";
+        state.mvcGalleryError = fallbackMessage;
+        if (!state.mvcGalleryLoaded) {
+          buildMvcGalleryIndexFromDfmRecords(fallbackMessage);
+        }
         render();
         return false;
       }
@@ -967,50 +1104,43 @@
       const rows = rowsFromMvcPayload(payload);
       if (!rows.length) {
         state.mvcGalleryLoading = false;
-        state.mvcGalleryError = "Latest Airtable master returned no construction codes";
+        state.mvcGalleryError = "Latest Airtable master returned no construction codes.";
+        if (!state.mvcGalleryLoaded) {
+          buildMvcGalleryIndexFromDfmRecords("Using DFM construction codes; Airtable master returned no construction codes.");
+        }
         render();
         return false;
       }
-      buildMvcGalleryIndex(rows);
+      buildMvcGalleryIndex(rows, "airtable");
       cacheMvcGalleryCodeMaster();
+      writeMvcGalleryCache(rows).catch((cacheError) => console.warn("Failed to cache MVC gallery images", cacheError));
       state.mvcGalleryLoading = false;
       render();
       renderConstructionPicker();
       return true;
     } catch (error) {
       console.warn("Failed to load Power Automate MVC gallery mirror", error);
-      if (MVC_GALLERY_PA_URL) {
-        try {
-          const response = await window.fetch(`${MVC_GALLERY_DATA_URL}?t=${Date.now()}`, { cache: "no-store" });
-          if (!response.ok) {
-            state.mvcGalleryLoading = false;
-            state.mvcGalleryError = "Latest Airtable master could not load";
-            render();
-            return false;
-          }
-          const payload = parseMvcJsonText(await response.text());
-          const rows = rowsFromMvcPayload(payload);
-          if (!rows.length) {
-            state.mvcGalleryLoading = false;
-            state.mvcGalleryError = "Latest Airtable master returned no construction codes";
-            render();
-            return false;
-          }
-          buildMvcGalleryIndex(rows);
-          cacheMvcGalleryCodeMaster();
-          state.mvcGalleryLoading = false;
-          render();
-          renderConstructionPicker();
-          return true;
-        } catch (fallbackError) {
-          console.warn("Failed to load local MVC gallery mirror", fallbackError);
-        }
-      }
       state.mvcGalleryLoading = false;
-      state.mvcGalleryError = "Latest Airtable master could not load";
+      const fallbackMessage = state.mvcGalleryLoaded
+        ? "Using cached Airtable master; live refresh timed out."
+        : "Using DFM construction codes; Power Automate Airtable master timed out.";
+      state.mvcGalleryError = fallbackMessage;
+      if (!state.mvcGalleryLoaded) {
+        buildMvcGalleryIndexFromDfmRecords(fallbackMessage);
+      }
       render();
       return false;
     }
+  }
+
+  function refreshMvcGalleryMaster() {
+    if (state.mvcGalleryRefreshPromise) {
+      return state.mvcGalleryRefreshPromise;
+    }
+    state.mvcGalleryRefreshPromise = loadMvcGalleryFromPublishedMirror().finally(() => {
+      state.mvcGalleryRefreshPromise = null;
+    });
+    return state.mvcGalleryRefreshPromise;
   }
 
   function findMvcGalleryItem(code) {
@@ -1134,7 +1264,7 @@
     const statusHtml = state.mvcGalleryLoading
       ? '<div class="construction-picker-status"><span class="benchmark-status-dot is-loading"></span><span>Showing cached construction codes. Refreshing latest Airtable images...</span></div>'
       : state.mvcGalleryError
-        ? `<div class="construction-picker-status construction-picker-status--error"><span class="benchmark-status-dot"></span><span>${escapeHtml(state.mvcGalleryError)}</span></div>`
+        ? `<div class="construction-picker-status${isMvcGallerySoftStatus(state.mvcGalleryError) ? "" : " construction-picker-status--error"}"><span class="benchmark-status-dot"></span><span>${escapeHtml(state.mvcGalleryError)}</span></div>`
         : "";
 
     elements.constructionPickerResults.innerHTML = statusHtml + items
@@ -1173,6 +1303,7 @@
     elements.constructionPicker.hidden = !isOpen;
     if (isOpen) {
       renderConstructionPicker();
+      refreshMvcGalleryMaster();
       window.setTimeout(() => elements.constructionPickerSearch?.focus(), 20);
     }
   }
@@ -1534,7 +1665,7 @@
           active: activeMasterCodes,
           inactive: Math.max(0, target - activeMasterCodes),
           over: unmatchedActiveCodes,
-          source: masterCodes.size ? "airtable" : "dfm",
+          source: masterCodes.size && state.mvcGallerySource !== "dfm" ? "airtable" : "dfm",
           loading: state.mvcGalleryLoading,
           error: state.mvcGalleryError,
         };
@@ -1679,7 +1810,7 @@
     const isLoading = Boolean(benchmark?.loading);
     const error = cleanText(benchmark?.error);
     const sourceLabel = benchmark?.source === "airtable" ? "Latest Airtable master" : "DFM data fallback";
-    const statusClass = error ? "benchmark-status benchmark-status--error" : "benchmark-status";
+    const statusClass = error && !isMvcGallerySoftStatus(error) ? "benchmark-status benchmark-status--error" : "benchmark-status";
     const statusText = error || (isLoading ? "Loading latest Airtable master..." : sourceLabel);
     const utilization = target > 0 ? Math.round((active / target) * 100) : 0;
     const denominator = Math.max(target, active, 1);
@@ -2662,26 +2793,21 @@
   async function fetchLatestSeedData(options = {}) {
     const allowSeedFallback = options.allowSeedFallback !== false;
     let summaryRows = [];
-    try {
-      const [remoteResponse, summaryResponse] = await Promise.all([
-        window.fetch(FETCH_DFM_CHART_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: "{}",
-          cache: "no-store",
-        }),
-        window.fetch(FETCH_DFM_SUMMARY_URL, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: "{}",
-          cache: "no-store",
-        }).catch(() => null),
-      ]);
-      if (summaryResponse && summaryResponse.ok) {
+    let chartError = null;
+
+    const summaryPromise = fetchWithTimeout(FETCH_DFM_SUMMARY_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+      },
+      body: JSON.stringify({ mode: "read", requestId: `dfm-summary-${Date.now()}` }),
+      cache: "no-store",
+    }, DFM_LIVE_TIMEOUT_MS)
+      .then(async (summaryResponse) => {
+        if (!summaryResponse.ok) {
+          return [];
+        }
         const summaryText = await summaryResponse.text();
         let summaryPayload = null;
         try {
@@ -2689,10 +2815,31 @@
         } catch (error) {
           summaryPayload = summaryText;
         }
-        summaryRows = extractRemoteRows(summaryPayload);
-      }
+        return extractRemoteRows(summaryPayload);
+      })
+      .catch((error) => {
+        console.warn("Power Automate DFM summary fetch failed", error);
+        return [];
+      });
 
-      if (remoteResponse.ok) {
+    const chartPromise = fetchWithTimeout(FETCH_DFM_CHART_URL, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        "Cache-Control": "no-store",
+      },
+      body: JSON.stringify({ mode: "read", requestId: `dfm-chart-${Date.now()}` }),
+      cache: "no-store",
+    }, DFM_LIVE_TIMEOUT_MS).catch((error) => {
+      chartError = error;
+      return null;
+    });
+
+    const [remoteResponse, liveSummaryRows] = await Promise.all([chartPromise, summaryPromise]);
+    summaryRows = liveSummaryRows;
+
+    try {
+      if (remoteResponse?.ok) {
         const remoteText = await remoteResponse.text();
         let remotePayload = null;
         try {
@@ -2714,11 +2861,17 @@
         }
       }
     } catch (error) {
-      console.error("Power Automate fetch failed, falling back to seed file", error);
+      chartError = error;
+    }
+
+    if (chartError) {
+      console.warn("Power Automate DFM chart fetch failed, using cached/seed records with live summary", chartError);
     }
 
     if (!allowSeedFallback) {
-      throw new Error("Live Excel fetch returned no usable records.");
+      const error = new Error("Live DFM chart fetch returned no usable records.");
+      error.summaryRows = summaryRows;
+      throw error;
     }
 
     const response = await window.fetch(`./seed-data.js?t=${Date.now()}`, { cache: "no-store" });
@@ -2732,15 +2885,24 @@
       throw new Error("Latest seed payload could not be parsed.");
     }
 
+    const fallbackSeed = JSON.parse(match[1]);
     return {
-      ...JSON.parse(match[1]),
+      ...fallbackSeed,
+      meta: {
+        ...(fallbackSeed.meta || {}),
+        sourceFile: summaryRows.length ? "Cached DFM records + live DFM summary" : fallbackSeed.meta?.sourceFile,
+      },
       summaryRows,
     };
   }
 
   async function refreshFromLatestSeed(options = {}) {
+    if (state.seedRefreshPromise) {
+      return state.seedRefreshPromise;
+    }
+    state.seedRefreshPromise = (async () => {
     try {
-      const latestSeed = await fetchLatestSeedData();
+      const latestSeed = await fetchLatestSeedData({ allowSeedFallback: !state.records.length });
       state.records = normalizeRecords(reconcileStoredRecords(state.records, latestSeed.records || []));
       state.records = normalizeRecords(mergeRemoteWithPending(state.records, state.records));
       if ((latestSeed.summaryRows || []).length) {
@@ -2752,17 +2914,26 @@
       }
       state.latestSource = formatSourceLabel(latestSeed?.meta?.sourceFile);
       state.lastRefreshAt = Date.now();
-      state.syncStatus = "Synced";
+      state.syncStatus = (latestSeed.summaryRows || []).length && /live DFM summary/i.test(latestSeed?.meta?.sourceFile || "")
+        ? "Live summary synced"
+        : "Synced";
       persistRecords();
       if (options.render !== false) {
         render();
       }
     } catch (error) {
       state.syncStatus = "Refresh failed";
+      if (state.records.length) {
+        state.syncStatus = "Using cached data; live refresh failed";
+      }
       if (!options.silent) {
         console.error("Failed to refresh latest seed data", error);
       }
+    } finally {
+      state.seedRefreshPromise = null;
     }
+    })();
+    return state.seedRefreshPromise;
   }
 
   async function hardRefreshFromLatestSeed(options = {}) {
@@ -3150,11 +3321,34 @@
   }
 
   bindEvents();
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden && (page === "dashboard" || page === "data")) {
+      refreshFromLatestSeed({ silent: true });
+      refreshMvcGalleryMaster();
+    }
+  });
   if (page === "dashboard" || page === "data") {
-    loadMvcGalleryFromAnyCache();
-    loadMvcGalleryFromPublishedMirror().then((loaded) => {
-      if (!loaded && !state.mvcGalleryLoaded) loadMvcGalleryFromAnyCache();
-    });
+    (async () => {
+      state.mvcGalleryLoading = true;
+      state.mvcGalleryError = "";
+      render();
+      const cached = await loadMvcGalleryFromAnyCache();
+      if (cached) {
+        state.mvcGalleryLoading = true;
+        render();
+      } else {
+        buildMvcGalleryIndexFromDfmRecords("Using DFM construction codes while refreshing Airtable master...");
+        state.mvcGalleryLoading = true;
+        render();
+      }
+      const loaded = await refreshMvcGalleryMaster();
+      if (!loaded && !state.mvcGalleryLoaded) {
+        await loadMvcGalleryFromAnyCache();
+      }
+    })();
+    state.mvcGalleryRefreshTimerId = window.setInterval(() => {
+      refreshMvcGalleryMaster();
+    }, MVC_GALLERY_REFRESH_MS);
   }
   if (page === "dashboard") {
     state.rotation.timerId = window.setInterval(() => {

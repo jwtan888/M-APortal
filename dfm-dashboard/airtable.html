@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DFM Construction Data</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 68 48'%3E%3Cg fill='%230514ff'%3E%3Cpath d='M9 4h7L7 44H0z'/%3E%3Cpath d='M21 4h12L24 44H12z'/%3E%3Cpath d='M44 4h21c2 0 3 2 3 4l-7 28c-1 5-5 8-10 8H34c-4 0-7-3-6-7l7-26c1-4 5-7 9-7z'/%3E%3C/g%3E%3C/svg%3E">
-    <link rel="stylesheet" href="./styles.css?v=20260424c" />
+    <link rel="stylesheet" href="./styles.css?v=20260520c" />
   </head>
   <body data-page="airtable">
     <div class="app-shell">
@@ -107,8 +107,13 @@
         const CONFIG_KEY = 'dfm-airtable-config';
         const ROWS_KEY = 'dfm-airtable-browser-rows';
         const META_KEY = 'dfm-airtable-browser-meta';
+        const IDB_NAME = 'dfm-dashboard-cache';
+        const IDB_STORE = 'keyval';
+        const IDB_ROWS_KEY = 'mvc-gallery-rows';
         const PUBLISHED_JSON_URL = './airtable-data.json';
         const POWER_AUTOMATE_JSON_URL = 'https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/4a6c5654766d40b2b232aebe34be09f9/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=H4odIwzTr1vSpuEq09BxQI-decF5LTOOUDxSxA-QkL8';
+        const MIRROR_REFRESH_MS = 2 * 60 * 1000;
+        const MIRROR_TIMEOUT_MS = 25 * 1000;
         const DEFAULT_BASE_ID = 'appIgoUvdgdhmf24V';
         const DEFAULT_TABLE_ID = 'tblFoONq2PzRybmz3';
         const state = {
@@ -118,7 +123,9 @@
           source: 'Browser mirror',
           updatedAt: '',
           search: '',
-          field: 'all'
+          field: 'all',
+          refreshing: false,
+          refreshPromise: null
         };
 
         const el = {
@@ -154,6 +161,13 @@
         function setSyncStatus(message = '', mode = '') {
           el.syncStatus.textContent = message;
           el.syncStatus.className = `airtable-sync-status${mode ? ` is-${mode}` : ''}`;
+        }
+
+        function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
+          const controller = new AbortController();
+          const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+          return fetch(url, { ...options, signal: controller.signal })
+            .finally(() => clearTimeout(timeoutId));
         }
 
         function normalizeAttachmentValue(value) {
@@ -481,7 +495,52 @@
             localStorage.setItem(ROWS_KEY, JSON.stringify(stripEmbeddedImageData(records)));
             setSyncStatus('Full image mirror is ready for export, but too large for browser localStorage. Export before reloading this page.', 'ok');
           }
+          writeMirrorCache(records, source, updatedAt).catch((error) => console.warn('Failed to cache MVC Gallery mirror', error));
           render();
+        }
+
+        function openMirrorDb() {
+          return new Promise((resolve, reject) => {
+            if (!('indexedDB' in window)) {
+              reject(new Error('IndexedDB is not available'));
+              return;
+            }
+            const request = indexedDB.open(IDB_NAME, 1);
+            request.onupgradeneeded = () => {
+              request.result.createObjectStore(IDB_STORE);
+            };
+            request.onsuccess = () => resolve(request.result);
+            request.onerror = () => reject(request.error);
+          });
+        }
+
+        async function readMirrorCache() {
+          const db = await openMirrorDb();
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE, 'readonly');
+            const request = tx.objectStore(IDB_STORE).get(IDB_ROWS_KEY);
+            request.onsuccess = () => resolve(request.result || null);
+            request.onerror = () => reject(request.error);
+            tx.oncomplete = () => db.close();
+            tx.onerror = () => db.close();
+          });
+        }
+
+        async function writeMirrorCache(records, source = state.source, updatedAt = state.updatedAt) {
+          if (!Array.isArray(records) || !records.length) return false;
+          const db = await openMirrorDb();
+          return new Promise((resolve, reject) => {
+            const tx = db.transaction(IDB_STORE, 'readwrite');
+            tx.objectStore(IDB_STORE).put({ rows: records, source, updatedAt }, IDB_ROWS_KEY);
+            tx.oncomplete = () => {
+              db.close();
+              resolve(true);
+            };
+            tx.onerror = () => {
+              db.close();
+              reject(tx.error);
+            };
+          });
         }
 
         function rowsFromJsonPayload(payload) {
@@ -541,6 +600,7 @@
           } catch (error) {
             localStorage.removeItem(ROWS_KEY);
           }
+          writeMirrorCache(rows, state.source, state.updatedAt).catch((cacheError) => console.warn('Failed to cache loaded MVC Gallery JSON', cacheError));
           render();
           const cache = countImageCache(rows);
           setSyncStatus(
@@ -574,16 +634,54 @@
           return false;
         }
 
-        async function loadPublishedMirror() {
+        async function loadIndexedDbMirror() {
           try {
+            const cached = await readMirrorCache();
+            const rows = Array.isArray(cached?.rows) ? cached.rows : [];
+            if (rows.length) {
+              state.rawRecords = rows;
+              state.rows = normalizeRows(rows);
+              state.source = cached.source || 'Cached MVC Gallery mirror';
+              state.updatedAt = cached.updatedAt || '';
+              render();
+              const cache = countImageCache(rows);
+              setSyncStatus(
+                cache.missing
+                  ? `Loaded ${state.rows.length} cached records. Refreshing latest images from Power Automate...`
+                  : `Loaded ${state.rows.length} cached MVC records with images. Refreshing latest in background...`,
+                cache.missing ? 'error' : 'ok'
+              );
+              return true;
+            }
+          } catch (error) {
+            console.warn('Failed to load IndexedDB MVC Gallery mirror', error);
+          }
+          return false;
+        }
+
+        async function loadAnyCachedMirror() {
+          return loadBrowserMirror() || (await loadIndexedDbMirror());
+        }
+
+        async function loadPublishedMirror() {
+          if (state.refreshPromise) {
+            try {
+              return await state.refreshPromise;
+            } catch (error) {
+              return false;
+            }
+          }
+          state.refreshing = true;
+          setSyncStatus(state.rows.length ? 'Refreshing latest MVC Gallery from Power Automate...' : 'Loading MVC Gallery from Power Automate...');
+          state.refreshPromise = (async () => {
             const response = POWER_AUTOMATE_JSON_URL
-              ? await fetch(POWER_AUTOMATE_JSON_URL, {
+              ? await fetchWithTimeout(POWER_AUTOMATE_JSON_URL, {
                   method: 'POST',
                   cache: 'no-store',
-                  headers: { 'Content-Type': 'application/json' },
-                  body: JSON.stringify({ mode: 'read' })
-                })
-              : await fetch(`${PUBLISHED_JSON_URL}?t=${Date.now()}`, { cache: 'no-store' });
+                  headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+                  body: JSON.stringify({ mode: 'read', requestId: `mvc-${Date.now()}` })
+                }, MIRROR_TIMEOUT_MS)
+              : await fetchWithTimeout(`${PUBLISHED_JSON_URL}?t=${Date.now()}`, { cache: 'no-store' }, MIRROR_TIMEOUT_MS);
             if (!response.ok) throw new Error(`HTTP ${response.status}`);
             const payload = parseJsonPayloadText(await response.text());
             const rows = rowsFromJsonPayload(payload);
@@ -592,6 +690,7 @@
             state.rawRecords = rows;
             state.source = payload.source || (POWER_AUTOMATE_JSON_URL ? 'Power Automate DFM mirror' : 'Published MVC mirror');
             state.updatedAt = payload.updatedAt || payload.lastSync || '';
+            writeMirrorCache(rows, state.source, state.updatedAt).catch((cacheError) => console.warn('Failed to cache published MVC Gallery mirror', cacheError));
             render();
             const cache = countImageCache(rows);
             setSyncStatus(
@@ -601,24 +700,21 @@
               cache.missing ? 'error' : 'ok'
             );
             return true;
+          })();
+          try {
+            return await state.refreshPromise;
           } catch (error) {
-            if (POWER_AUTOMATE_JSON_URL) {
-              try {
-                const response = await fetch(`${PUBLISHED_JSON_URL}?t=${Date.now()}`, { cache: 'no-store' });
-                if (!response.ok) throw new Error(`HTTP ${response.status}`);
-                const payload = await response.json();
-                loadJsonPayload(payload, 'Local fallback mirror');
-                setSyncStatus(`Power Automate load failed; loaded local fallback instead. ${error.message}`, 'error');
-                return true;
-              } catch (fallbackError) {
-                render();
-                setSyncStatus(`Power Automate JSON load failed: ${error.message}`, 'error');
-                return false;
-              }
-            }
             render();
-            setSyncStatus('No published mirror found yet. Admin can sync Airtable and export airtable-data.json for GitHub.', 'error');
+            setSyncStatus(
+              state.rows.length
+                ? `Using cached MVC Gallery; live Power Automate refresh timed out.`
+                : `Power Automate JSON load failed: ${error.message}`,
+              'error'
+            );
             return false;
+          } finally {
+            state.refreshing = false;
+            state.refreshPromise = null;
           }
         }
 
@@ -777,6 +873,7 @@
           el.clearBtn.addEventListener('click', () => {
             localStorage.removeItem(ROWS_KEY);
             localStorage.removeItem(META_KEY);
+            indexedDB.deleteDatabase(IDB_NAME);
             state.rawRecords = [];
             state.rows = [];
             state.source = 'Browser mirror';
@@ -812,9 +909,22 @@
 
         bindEvents();
         loadSettings();
-        loadPublishedMirror().then((loaded) => {
-          if (!loaded) loadBrowserMirror();
+        (async () => {
+          const cached = await loadAnyCachedMirror();
+          if (!cached) {
+            render();
+          }
+          const loaded = await loadPublishedMirror();
+          if (!loaded && !state.rows.length) {
+            await loadAnyCachedMirror();
+          }
+        })();
+        document.addEventListener('visibilitychange', () => {
+          if (!document.hidden) loadPublishedMirror();
         });
+        window.setInterval(() => {
+          loadPublishedMirror();
+        }, MIRROR_REFRESH_MS);
       })();
     </script>
   </body>
