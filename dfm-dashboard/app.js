@@ -1,5 +1,6 @@
 (function () {
   const seedData = window.DFM_SEED_DATA || { records: [], warnings: [], defectCatalog: [] };
+  const constructionMasterData = window.DFM_CONSTRUCTION_MASTER || { records: [] };
   const STORAGE_KEY = "dfm-dashboard-records";
   const SYNC_META_KEY = "dfm-dashboard-sync-meta";
   const INVESTMENT_NOTES_KEY = "dfm-dashboard-investment-notes";
@@ -1065,7 +1066,20 @@
   }
 
   async function loadMvcGalleryFromAnyCache() {
-    return loadMvcGalleryFromBrowser() || (await loadMvcGalleryFromIndexedDb()) || loadMvcGalleryFromCodeCache();
+    return loadMvcGalleryFromEmbeddedMaster() || loadMvcGalleryFromBrowser() || (await loadMvcGalleryFromIndexedDb()) || loadMvcGalleryFromCodeCache();
+  }
+
+  function loadMvcGalleryFromEmbeddedMaster() {
+    const rows = rowsFromMvcPayload(constructionMasterData);
+    if (!rows.length) {
+      return false;
+    }
+    buildMvcGalleryIndex(rows, "airtable");
+    state.mvcGalleryLoading = false;
+    state.mvcGalleryError = "";
+    render();
+    renderConstructionPicker();
+    return true;
   }
 
   async function loadMvcGalleryFromPublishedMirror() {
@@ -1802,7 +1816,7 @@
     const over = Number(benchmark?.over || 0);
     const isLoading = Boolean(benchmark?.loading);
     const error = cleanText(benchmark?.error);
-    const sourceLabel = benchmark?.source === "airtable" ? "Latest Airtable master" : "DFM data fallback";
+    const sourceLabel = benchmark?.source === "airtable" ? "Nike construction master" : "DFM data fallback";
     const statusClass = error && !isMvcGallerySoftStatus(error) ? "benchmark-status benchmark-status--error" : "benchmark-status";
     const statusText = error || (isLoading ? "Loading latest Airtable master..." : sourceLabel);
     const utilization = target > 0 ? Math.round((active / target) * 100) : 0;
