@@ -29,8 +29,6 @@
     delete:
       "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/52a76b61c7e84e09a8df6eee0ad2a029/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=QslAg0t1-QLN3UvBy_7jBzUaY7YxcfADrJIjm15i-rw",
   };
-  const FETCH_DFM_CHART_URL =
-    "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/777a0c72d4684db68a350132def5fb37/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=4SIb_3sXxhX4jOUhTA6L8-kcgrr37CcmJwDkloVPDv4";
   const FETCH_DFM_SUMMARY_URL =
     "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/ebef663b8a79414cb89579a4b4edf9d6/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=JSZZaLOTkfxWcoDSdb3J7w1rhRQ400g2exl7yrBdKbg";
   const DFM_SUMMARY_UPDATE_URL =
@@ -128,16 +126,17 @@
   }
 
   function loadRecords() {
+    const seedRecords = normalizeRecords(seedData.records || []);
     const raw = window.localStorage.getItem(STORAGE_KEY) || loadLegacyStoredRecords();
     if (!raw) {
-      return normalizeRecords(seedData.records || []);
+      return seedRecords;
     }
 
     try {
-      return normalizeRecords(reconcileStoredRecords(JSON.parse(raw), seedData.records || []));
+      return seedRecords.length ? seedRecords : normalizeRecords(JSON.parse(raw));
     } catch (error) {
       console.error("Failed to parse saved data", error);
-      return normalizeRecords(seedData.records || []);
+      return seedRecords;
     }
   }
 
@@ -2800,9 +2799,7 @@
   }
 
   async function fetchLatestSeedData(options = {}) {
-    const allowSeedFallback = options.allowSeedFallback !== false;
     let summaryRows = [];
-    let chartError = null;
 
     const summaryPromise = fetchWithTimeout(FETCH_DFM_SUMMARY_URL, {
       method: "POST",
@@ -2831,57 +2828,7 @@
         return [];
       });
 
-    const chartPromise = fetchWithTimeout(FETCH_DFM_CHART_URL, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "Cache-Control": "no-store",
-      },
-      body: JSON.stringify({ mode: "read", requestId: `dfm-chart-${Date.now()}` }),
-      cache: "no-store",
-    }, DFM_LIVE_TIMEOUT_MS).catch((error) => {
-      chartError = error;
-      return null;
-    });
-
-    const [remoteResponse, liveSummaryRows] = await Promise.all([chartPromise, summaryPromise]);
-    summaryRows = liveSummaryRows;
-
-    try {
-      if (remoteResponse?.ok) {
-        const remoteText = await remoteResponse.text();
-        let remotePayload = null;
-        try {
-          remotePayload = remoteText ? JSON.parse(remoteText) : null;
-        } catch (error) {
-          remotePayload = remoteText;
-        }
-        const remoteRows = extractRemoteRows(remotePayload);
-        const normalizedRemoteRecords = normalizeRecords(remoteRows.map(normalizeRemoteRecord));
-        if (normalizedRemoteRecords.length) {
-          return {
-            meta: {
-              sourceFile: "Power Automate Fetch DFM chart",
-              recordCount: normalizedRemoteRecords.length,
-            },
-            records: normalizedRemoteRecords,
-            summaryRows,
-          };
-        }
-      }
-    } catch (error) {
-      chartError = error;
-    }
-
-    if (chartError) {
-      console.warn("Power Automate DFM chart fetch failed, using cached/seed records with live summary", chartError);
-    }
-
-    if (!allowSeedFallback) {
-      const error = new Error("Live DFM chart fetch returned no usable records.");
-      error.summaryRows = summaryRows;
-      throw error;
-    }
+    summaryRows = await summaryPromise;
 
     const response = await window.fetch(`./seed-data.js?t=${Date.now()}`, { cache: "no-store" });
     if (!response.ok) {
@@ -2899,7 +2846,7 @@
       ...fallbackSeed,
       meta: {
         ...(fallbackSeed.meta || {}),
-        sourceFile: summaryRows.length ? "Cached DFM records + live DFM summary" : fallbackSeed.meta?.sourceFile,
+        sourceFile: summaryRows.length ? "Published DFM records + live DFM summary" : fallbackSeed.meta?.sourceFile,
       },
       summaryRows,
     };
