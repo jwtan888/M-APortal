@@ -12,6 +12,7 @@ from xml.etree import ElementTree as ET
 ROOT = Path(__file__).resolve().parent.parent
 WORKBOOK_PATH = ROOT / "DFM 2026.xlsx"
 OUTPUT_PATH = ROOT / "seed-data.js"
+HTML_CACHE_TARGETS = ("index.html", "data.html")
 
 NS = {
     "main": "http://schemas.openxmlformats.org/spreadsheetml/2006/main",
@@ -257,13 +258,14 @@ def build_seed_data():
                 }
             )
 
+    generated_at = datetime.now(timezone.utc).isoformat()
     payload = {
         "meta": {
             "sourceFile": WORKBOOK_PATH.name,
             "recordCount": len(records),
             "styleSeasonCount": len(style_fg_values),
             "generatedBy": "scripts/build_seed_data.py",
-            "generatedAt": datetime.now(timezone.utc).isoformat(),
+            "generatedAt": generated_at,
         },
         "records": records,
         "defectCatalog": list(defect_catalog.values()),
@@ -274,6 +276,27 @@ def build_seed_data():
         json.dumps(payload, ensure_ascii=True, separators=(",", ":"))
     )
     OUTPUT_PATH.write_text(js, encoding="utf-8")
+    update_seed_cache_keys(generated_at)
+
+
+def update_seed_cache_keys(generated_at):
+    version = re.sub(r"\D", "", generated_at)[:14]
+    if not version:
+        version = datetime.now(timezone.utc).strftime("%Y%m%d%H%M%S")
+
+    for html_name in HTML_CACHE_TARGETS:
+        html_path = ROOT / html_name
+        if not html_path.exists():
+            continue
+        html = html_path.read_text(encoding="utf-8")
+        updated = re.sub(
+            r'(\./seed-data\.js\?v=)[^"]+',
+            rf"\g<1>{version}",
+            html,
+            count=1,
+        )
+        if updated != html:
+            html_path.write_text(updated, encoding="utf-8")
 
 
 if __name__ == "__main__":

@@ -2912,8 +2912,7 @@
     state.seedRefreshPromise = (async () => {
     try {
       const latestSeed = await fetchLatestSeedData({ allowSeedFallback: !state.records.length });
-      state.records = normalizeRecords(reconcileStoredRecords(state.records, latestSeed.records || []));
-      state.records = normalizeRecords(mergeRemoteWithPending(state.records, state.records));
+      state.records = normalizeRecords(mergeRemoteWithPending(latestSeed.records || [], state.records));
       if ((latestSeed.summaryRows || []).length) {
         state.investmentNotes = buildInvestmentNotesFromSummaryRows(
           latestSeed.summaryRows || [],
