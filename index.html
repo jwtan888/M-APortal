@@ -211,6 +211,64 @@
         .portal-data-table tbody td .qty-input {
             font-size: 10px !important;
         }
+        .patch-compact-table tbody tr {
+            height: 34px;
+        }
+        .patch-compact-table tbody td {
+            padding: 0.32rem 0.45rem !important;
+            vertical-align: middle;
+        }
+        .patch-compact-table tbody .manual-input,
+        .patch-compact-table tbody .qty-input {
+            min-height: 28px;
+            padding: 0.28rem 0.45rem;
+            font-size: 10px !important;
+        }
+        .patch-text-toggle {
+            display: block;
+            width: 100%;
+            max-width: 320px;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            color: #334155;
+            text-align: left;
+            cursor: pointer;
+        }
+        .patch-text-toggle:hover .patch-text-body {
+            color: #1f2937;
+        }
+        .patch-text-toggle .patch-text-body {
+            display: -webkit-box;
+            -webkit-box-orient: vertical;
+            -webkit-line-clamp: 2;
+            overflow: hidden;
+            font-size: 10px;
+            line-height: 1.25;
+            word-break: break-word;
+        }
+        .patch-text-toggle.is-expanded .patch-text-body {
+            display: block;
+            -webkit-line-clamp: unset;
+            overflow: visible;
+        }
+        .patch-row-expanded .patch-text-toggle .patch-text-body {
+            display: block;
+            -webkit-line-clamp: unset;
+            overflow: visible;
+        }
+        .patch-expand-hint {
+            display: inline-block;
+            margin-top: 1px;
+            color: #94a3b8;
+            font-size: 8px;
+            font-weight: 700;
+            letter-spacing: 0.01em;
+            text-transform: none;
+        }
+        .patch-text-toggle:hover .patch-expand-hint {
+            color: #64748b;
+        }
         .down-layer-col {
             min-width: 280px !important;
         }
@@ -228,6 +286,13 @@
             td, th { font-size: 0.65rem !important; padding: 0.35rem 0.5rem !important; }
             .manual-input { width: 80px !important; font-size: 9px !important; }
             .qty-input { width: 48px !important; }
+            .patch-compact-table tbody tr { height: 30px; }
+            .patch-compact-table tbody td { padding: 0.24rem 0.35rem !important; }
+            .patch-text-toggle { max-width: 240px; }
+            .patch-text-toggle .patch-text-body {
+                -webkit-line-clamp: 1;
+                font-size: 9px;
+            }
             nav button { padding: 7px 10px !important; font-size: 9px !important; }
             .portal-header-top {
                 flex-direction: column !important;
@@ -1110,11 +1175,11 @@
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Start Date</label>
-                        <input type="text" id="c_startDate" placeholder="m/d/yyyy hh:mm" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="text" id="c_startDate" placeholder="m/d/yyyy hh:mm or -" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Complete Date</label>
-                        <input type="text" id="c_completeDate" placeholder="m/d/yyyy hh:mm" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="text" id="c_completeDate" placeholder="m/d/yyyy hh:mm or -" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Remark</label>
@@ -1390,7 +1455,7 @@
 
             <!-- Table -->
             <div class="portal-table-shell bg-white rounded-xl shadow-sm border">
-                <table class="portal-wide-table portal-data-table text-left">
+                <table class="portal-wide-table portal-data-table patch-compact-table text-left">
                     <thead class="bg-slate-100 border-b text-[11px] uppercase tracking-wider text-slate-500 font-bold">
                         <tr>
                             <th class="p-3">No.</th>
@@ -1630,6 +1695,9 @@
         let allRecords = [], allTemplates = [], currentUser = sessionStorage.getItem('ma_session_user') || null;
         let templateDataLoaded = false, consumptionDataLoaded = false, quiltingConsumptionSyncing = false;
         let sectionChart = null, volumeChart = null;
+        function isPortalAdmin(user = currentUser) {
+            return user === 'Gavin' || user === 'Joe';
+        }
 
         function loadTemplatePendingUpdates() {
             try {
@@ -1824,6 +1892,14 @@
             const normalized = toExcelDateFormat(typed);
             if (!isNormalizedPortalDate(normalized)) return null;
             return options.dateOnly ? normalized.split(' ')[0] : normalized;
+        }
+
+        function prepareConsumptionDatePayload(inputValue, existingValue = '') {
+            const typed = String(inputValue ?? '').trim();
+            const existing = String(existingValue ?? '').trim();
+            if (typed === '-') return '-';
+            if (!typed && existing === '-') return '-';
+            return preparePortalDatePayload(typed, existing);
         }
 
         function formatPortalDatePayloadFromRaw(rawValue, options = {}) {
@@ -2555,6 +2631,7 @@
 
         // Store laser rows in memory
         let allLaserRows = [];
+        let laserDataLoading = false;
         let laserSearchQuery = '';
         const LASER_CACHE_KEY = 'ma_portal_laser_rows_v2';
         const LASER_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
@@ -2840,8 +2917,10 @@
         async function refreshLaserData(isSilent = false) {
             const st = document.getElementById('laserSyncStatus');
             if (!isSilent && st) { st.innerText = 'Syncing...'; st.classList.add('sync-active'); }
+            laserDataLoading = true;
             try {
                 const rows = await fetchLaserRowsWithRetry();
+                laserDataLoading = false;
                 rows.sort((a, b) => (parseInt(b.Id||b.ID||0)) - (parseInt(a.Id||a.ID||0)));
                 allLaserRows = rows;
                 saveLaserRowsCache(rows);
@@ -2860,6 +2939,7 @@
                 if (dashVisible) requestAnimationFrame(() => renderLaserSLA());
                 if (st) { st.innerText = 'LIVE: ' + new Date().toLocaleTimeString() + ` (${rows.length} rows)`; st.classList.remove('sync-active'); }
             } catch(e) {
+                laserDataLoading = false;
                 console.warn('Laser data refresh failed:', e);
                 if (allLaserRows.length) {
                     renderLaserTable();
@@ -2889,10 +2969,14 @@
         function renderLaserTable() {
             const tbody = document.getElementById('laserTable');
             if (!tbody) return;
-            const isAdmin = (currentUser === 'Gavin');
+            const isAdmin = (isPortalAdmin());
             const laserSearchEl = document.getElementById('laserSearch');
             if (laserSearchEl) laserSearchQuery = laserSearchEl.value.toLowerCase();
             if (!allLaserRows.length) {
+                if (laserDataLoading) {
+                    tbody.innerHTML = '<tr><td colspan="20" class="p-6 text-center text-slate-400 italic text-xs">Loading laser data...</td></tr>';
+                    return;
+                }
                 tbody.innerHTML = '<tr><td colspan="20" class="p-6 text-center text-slate-400 italic text-xs">No laser records found.</td></tr>';
                 return;
             }
@@ -3251,7 +3335,7 @@
                 maPic:          getMAPic(row),
                 consStart:      today,
                 consEnd:        today,
-                consumptionPic: 'Gavin',
+                consumptionPic: currentUser,
                 remark:         getVal(row, ['Remark','Remarks'])
             }, formatPortalDatePayloadFromRaw(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])));
             try {
@@ -3285,7 +3369,7 @@
                 maPic:          getMAPic(row),
                 consStart:      '',
                 consEnd:        today,
-                consumptionPic: 'Gavin',
+                consumptionPic: currentUser,
                 remark:         getVal(row, ['Remark','Remarks'])
             }, formatPortalDatePayloadFromRaw(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])));
             try {
@@ -3301,8 +3385,8 @@
             const row = allLaserRows.find(r => String(getVal(r, ['Id','ID','id'])) === String(rid));
             if (!row) { btn.innerText = 'SAVE'; btn.disabled = false; return; }
             const rowMaPic = getMAPic(row);
-            if (currentUser !== 'Gavin' && String(currentUser || '').trim() !== String(rowMaPic || '').trim()) {
-                alert(`Only ${rowMaPic || 'the assigned M&A PIC'} or Gavin can update this laser row.`);
+            if (!isPortalAdmin() && String(currentUser || '').trim() !== String(rowMaPic || '').trim()) {
+                alert(`Only ${rowMaPic || 'the assigned M&A PIC'}, Gavin or Joe can update this laser row.`);
                 btn.innerText = 'SAVE'; btn.disabled = false; return;
             }
             const existing = keys => getVal(row, keys);
@@ -3321,6 +3405,10 @@
                 alert('Invalid date format. Use m/d/yyyy or m/d/yyyy hh:mm.');
                 btn.innerText = 'SAVE'; btn.disabled = false; return;
             }
+            const consPicRaw = fieldValue('consPic', ['Consumption PIC','ConsumptionPIC','Cons PIC']);
+            const consPicToSave = (consStartNorm || consEndNorm) && (!consPicRaw || consPicRaw === '---')
+                ? currentUser
+                : consPicRaw;
             const payload = withLaserStartDateFields({
                 recordID:       rid,
                 receivedTime:   receivedNorm,
@@ -3339,7 +3427,8 @@
                 maPic:          fieldValue('maPic', ['M&A PIC','MA PIC','M & A PIC','M&APIC','MAPIC']),
                 consStart:      consStartNorm,
                 consEnd:        consEndNorm,
-                consumptionPic: fieldValue('consPic', ['Consumption PIC','ConsumptionPIC','Cons PIC']),
+                consumptionPic: consPicToSave,
+                'Consumption PIC': consPicToSave,
                 consumptionCompleteStatus: document.getElementById(`le-consStatus-${rid}`)?.value || existing(['Consumption Complete Status','ConsumptionCompleteStatus','Cons Complete Status']),
                 'consumption complete status': document.getElementById(`le-consStatus-${rid}`)?.value || existing(['Consumption Complete Status','ConsumptionCompleteStatus','Cons Complete Status']),
                 'Consumption Complete Status': document.getElementById(`le-consStatus-${rid}`)?.value || existing(['Consumption Complete Status','ConsumptionCompleteStatus','Cons Complete Status']),
@@ -3369,8 +3458,8 @@
             if (!row) { btn.innerText = 'SAVE'; btn.disabled = false; return; }
             const existingConsPic = String(getVal(row, ['Consumption PIC','ConsumptionPIC','Cons PIC']) || '').trim();
             const hasLockedConsOwner = !!existingConsPic && existingConsPic !== '---' && existingConsPic.toUpperCase() !== 'N/A';
-            if (hasLockedConsOwner && currentUser !== existingConsPic && currentUser !== 'Gavin') {
-                alert(`This consumption record is locked by ${existingConsPic}. Only ${existingConsPic} or Gavin can edit it.`);
+            if (hasLockedConsOwner && currentUser !== existingConsPic && !isPortalAdmin()) {
+                alert(`This consumption record is locked by ${existingConsPic}. Only ${existingConsPic}, Gavin or Joe can edit it.`);
                 btn.innerText = 'SAVE'; btn.disabled = false; return;
             }
             const consStart = document.getElementById(`le-consStart-${rid}`)?.value.trim() || '';
@@ -3399,6 +3488,7 @@
                 consStart:      consStartNorm,
                 consEnd:        consEndNorm,
                 consumptionPic: currentUser,
+                'Consumption PIC': currentUser,
                 remark:         document.getElementById(`le-remark-${rid}`)?.value.trim() || getVal(row, ['Remark','Remarks'])
             }, formatPortalDatePayloadFromRaw(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])));
             try {
@@ -3602,7 +3692,7 @@
         }
 
         function applyTempFilters(prioritySort = false) {
-            const sv = document.getElementById('tempSearch').value.toLowerCase(), isAdmin = (currentUser === "Gavin");
+            const sv = document.getElementById('tempSearch').value.toLowerCase(), isAdmin = (isPortalAdmin());
             const selMonth = document.getElementById('tempMonthFilter')?.value || '';
             const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             let filtered = allTemplates.filter(t => {
@@ -3716,7 +3806,7 @@
             const tQty = document.getElementById(`qty-${simpleId}`)?.value || "";
             const tDateRaw = document.getElementById(`date-${simpleId}`)?.value || "";
             const tRem = document.getElementById(`remark-${simpleId}`)?.value.trim() || "";
-            const isAdminUser = currentUser === 'Gavin';
+            const isAdminUser = isPortalAdmin();
             const tDateExcel = preserveDateValue(tDateRaw, '');
 
             let tPic = "";
@@ -4873,7 +4963,7 @@
         }
 
         function canManualSyncQuiltingDetails() {
-            return currentUser === 'Gavin' || currentUser === 'Joe';
+            return isPortalAdmin() || currentUser === 'Joe';
         }
 
         function clearConsumptionSyncMessages() {
@@ -4909,7 +4999,7 @@
                 document.getElementById('displayUserName').innerText = currentUser;
                 // Show Reset N/A button only for Gavin
                 const naBtn = document.getElementById('clearNA-btn');
-                if (naBtn) naBtn.classList.toggle('hidden', currentUser !== 'Gavin');
+                if (naBtn) naBtn.classList.toggle('hidden', !isPortalAdmin());
                 const quiltingSyncBtn = document.getElementById('manualQuiltingSyncBtn');
                 if (quiltingSyncBtn) quiltingSyncBtn.classList.toggle('hidden', !canManualSyncQuiltingDetails());
             } else {
@@ -5076,7 +5166,7 @@
                 const remark      = getVal(i, ['Remark','Remarks']);
 
                 const isDone      = completeTime && completeTime !== '---';
-                const isGavin     = currentUser === 'Gavin';
+                const isGavin     = isPortalAdmin();
                 // PIC-restricted: Gavin edits all; others only edit rows where PIC matches them or PIC is blank
                 const rowPic      = pic && pic !== '---' ? pic : null;
                 const canEdit     = !!currentUser && (isGavin || !rowPic || rowPic === currentUser);
@@ -5239,6 +5329,47 @@
             patchSearchQuery = ''; renderPatchTable();
         }
 
+        function escapePatchHtml(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#39;');
+        }
+        function escapePatchAttr(value) {
+            return String(value ?? '')
+                .replace(/&/g, '&amp;')
+                .replace(/"/g, '&quot;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+        }
+        function renderPatchLongText(text, fieldKey) {
+            const clean = text && text !== '---' ? String(text) : '---';
+            const safe = escapePatchHtml(clean);
+            if (clean.length <= 70) return `<span class="text-[10px]">${safe}</span>`;
+            return `<button type="button" class="patch-text-toggle" onclick="togglePatchText(this)" aria-label="Expand ${escapePatchAttr(fieldKey)}">
+                <span class="patch-text-body">${safe}</span>
+                <span class="patch-expand-hint">More</span>
+            </button>`;
+        }
+        function togglePatchText(btn) {
+            const row = btn.closest('tr');
+            const expanded = !(row && row.classList.contains('patch-row-expanded'));
+            if (row) {
+                row.classList.toggle('patch-row-expanded', expanded);
+                row.querySelectorAll('.patch-text-toggle').forEach(toggle => {
+                    toggle.classList.toggle('is-expanded', expanded);
+                    const hint = toggle.querySelector('.patch-expand-hint');
+                    if (hint) hint.textContent = expanded ? 'Less' : 'More';
+                });
+                return;
+            }
+            btn.classList.toggle('is-expanded', expanded);
+            const hint = btn.querySelector('.patch-expand-hint');
+            if (hint) hint.textContent = expanded ? 'Less' : 'More';
+        }
+
         function renderPatchTable() {
             const tbody = document.getElementById('patchTable');
             if (!tbody) return;
@@ -5287,7 +5418,7 @@
                 return;
             }
 
-            const isGavinP = currentUser === 'Gavin';
+            const isGavinP = isPortalAdmin();
             tbody.innerHTML = rows.map(i => {
                 // Use No. (No_x002e_) as the row key — this is what PA's Key Column is set to
                 const noVal     = String(i['No_x002e_'] ?? i['No.'] ?? getVal(i,['No.','No']) ?? '').trim();
@@ -5316,10 +5447,19 @@
                 const pic       = getMAPic(i);
                 const remark    = getVal(i,['Remark','Remarks']);
                 const isDone    = complete && complete !== '---';
-                const isGavinP  = currentUser === 'Gavin';
+                const isGavinP  = isPortalAdmin();
+                const canAssignPatchPic = isPortalAdmin() || currentUser === 'Viki';
                 const rowPic    = pic && pic !== '---' ? pic : null;
                 const canEdit   = !!currentUser && (isGavinP || !rowPic || rowPic === currentUser);
+                const canSavePatchRow = canEdit || canAssignPatchPic;
                 const picDisplay = (!pic||pic==='---') && canEdit ? currentUser : (pic||'---');
+                const patchDescValue = patchDesc !== '---' ? escapePatchAttr(patchDesc) : '';
+                const fabDescValue = fabDesc !== '---' ? escapePatchAttr(fabDesc) : '';
+                const patchPicSelect = `<select id="patch-mapic-${sid}" class="manual-input admin-input" style="width:90px">
+                    <option value="">Assign PIC</option>
+                    ${picList.map(p => `<option value="${p}" ${p === pic ? 'selected' : ''}>${p}</option>`).join('')}
+                    ${pic && pic !== '---' && !picList.includes(pic) ? `<option value="${escapePatchAttr(pic)}" selected>${escapePatchHtml(pic)}</option>` : ''}
+                </select>`;
 
                 return `<tr class="border-b hover:bg-slate-50 ${isDone?'bg-emerald-50/30':''}">
                     <td class="p-3 font-mono text-slate-500 text-[10px]">${noVal}</td>
@@ -5330,9 +5470,9 @@
                     <td class="p-3">${isGavinP ? `<input id="patch-jobno-${sid}" class="manual-input" style="width:80px" value="${jobNo!=='---'?jobNo:''}" placeholder="Job No.">` : `<span class="text-[10px]">${jobNo}</span>`}</td>
                     <td class="p-3 font-bold text-orange-700">${isGavinP ? `<input id="patch-bddpic-${sid}" class="manual-input admin-input" style="width:70px;color:#c2410c;font-weight:bold" value="${bddPic!=='---'?bddPic:''}" placeholder="BDD PIC">` : `<span>${bddPic}</span>`}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-patchitem-${sid}" class="manual-input" style="width:100px" value="${patchItem!=='---'?patchItem:''}" placeholder="Patch Item">` : `<span class="text-[10px]">${patchItem}</span>`}</td>
-                    <td class="p-3" style="min-width:280px;max-width:320px">${isGavinP ? `<input id="patch-patchdesc-${sid}" class="manual-input" style="width:260px" value="${patchDesc!=='---'?patchDesc:''}" placeholder="Patch Description">` : `<span class="text-[10px]">${patchDesc}</span>`}</td>
+                    <td class="p-3" style="min-width:220px;max-width:320px">${isGavinP ? `<input id="patch-patchdesc-${sid}" class="manual-input" style="width:240px" value="${patchDescValue}" placeholder="Patch Description">` : renderPatchLongText(patchDesc, 'Patch Description')}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-fabitem-${sid}" class="manual-input" style="width:100px" value="${fabItem!=='---'?fabItem:''}" placeholder="Fabric Item">` : `<span class="text-[10px]">${fabItem}</span>`}</td>
-                    <td class="p-3" style="min-width:260px;max-width:300px">${isGavinP ? `<input id="patch-fabdesc-${sid}" class="manual-input" style="width:240px" value="${fabDesc!=='---'?fabDesc:''}" placeholder="Fabric Desc">` : `<span class="text-[10px]">${fabDesc}</span>`}</td>
+                    <td class="p-3" style="min-width:220px;max-width:300px">${isGavinP ? `<input id="patch-fabdesc-${sid}" class="manual-input" style="width:220px" value="${fabDescValue}" placeholder="Fabric Desc">` : renderPatchLongText(fabDesc, 'Fabric Description')}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-threadtype-${sid}" class="manual-input" style="width:80px" value="${threadType!=='---'?threadType:''}" placeholder="Thread Type">` : `<span class="text-[10px]">${threadType}</span>`}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-threadcolor-${sid}" class="manual-input" style="width:80px" value="${threadColor!=='---'?threadColor:''}" placeholder="Thread Color">` : `<span class="text-[10px]">${threadColor}</span>`}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-sampletype-${sid}" class="manual-input" style="width:90px" value="${sampleType!=='---'?sampleType:''}" placeholder="Sample Type">` : `<span class="text-[10px]">${sampleType}</span>`}</td>
@@ -5343,9 +5483,9 @@
                     <td class="p-3 text-[10px]">${month}</td>
                     <td class="p-3 date-cell">${canEdit ? `<input id="patch-startdate-${sid}" class="manual-input admin-input" value="${startDate!=='---'?startDate:''}" placeholder="m/d/yyyy hh:mm">` : (startDate!=='---'?startDate:'---')}</td>
                     <td class="p-3 date-cell ${isDone?'text-emerald-600 font-bold':'text-slate-400'}">${canEdit ? `<input id="patch-complete-${sid}" class="manual-input admin-input" value="${isDone?complete:''}" placeholder="m/d/yyyy hh:mm">` : (isDone?complete:'---')}</td>
-                    <td class="p-3 font-bold ${(!pic||pic==='---')?'text-blue-600':''}">${picDisplay}</td>
+                    <td class="p-3 font-bold ${(!pic||pic==='---')?'text-blue-600':''}">${canAssignPatchPic ? patchPicSelect : picDisplay}</td>
                     <td class="p-3">${canEdit ? `<input id="patch-remark-${sid}" class="manual-input" value="${remark==='---'?'':remark}" placeholder="Remark">` : `<span class="italic text-slate-400 text-[10px]">${remark}</span>`}</td>
-                    <td class="p-3">${canEdit ? `<button onclick="savePatchRow('${sid}',event)" class="bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-blue-700">SAVE</button>` : ''}</td>
+                    <td class="p-3">${canSavePatchRow ? `<button onclick="savePatchRow('${sid}',event)" class="bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-blue-700">SAVE</button>` : ''}</td>
                 </tr>`;
             }).join('');
         }
@@ -5400,7 +5540,12 @@
                 'Machine No.':         g('patch-machine')             ?? getVal(existingRow,['Machine No.','Machine No','MachineNo','Machine']),
                 'Start Date m/d/yyyy': patchStart,
                 'Complete Date m/d/yyyy': patchComplete,
-                'M&A PIC':             (() => { const p = getMAPic(existingRow); return (!p||p==='---') ? currentUser : p; })(),
+                'M&A PIC':             (() => {
+                    const selectedPic = g('patch-mapic');
+                    if (selectedPic) return selectedPic;
+                    const p = getMAPic(existingRow);
+                    return (!p || p === '---') ? currentUser : p;
+                })(),
                 'Remark':              g('patch-remark')              ?? getVal(existingRow,['Remark','Remarks'])
             };
 
@@ -5451,20 +5596,37 @@
         // DOWN FILLING PAGE
         // ══════════════════════════════════════════════════════════════
         let allDownRows = [], downSearchQuery = '', downMonthQuery = '';
+        let downDataLoading = false;
 
         function updateDownPicDisplay() {
             const el = document.getElementById('d_picDisplay');
             if (el) el.innerText = currentUser || 'Not logged in';
         }
 
+        async function fetchDownRowsWithRetry() {
+            let lastError = null;
+            for (let attempt = 1; attempt <= 3; attempt++) {
+                try {
+                    const res = await postPortalJson(downFetchURL, { '$top': 5000 }, attempt === 1 ? 25000 : 40000);
+                    if (!res.ok) throw new Error(`HTTP ${res.status}`);
+                    const rows = extractRows(await res.json());
+                    if (!Array.isArray(rows)) throw new Error('Down filling response did not contain rows.');
+                    return rows;
+                } catch (err) {
+                    lastError = err;
+                    if (attempt < 3) await delay(attempt * 1500);
+                }
+            }
+            throw lastError || new Error('Down filling data request failed.');
+        }
+
         async function refreshDownData(isSilent = false) {
             const st = document.getElementById('downSyncStatus');
             if (!isSilent && st) { st.innerText = 'Syncing...'; st.classList.add('sync-active'); }
+            downDataLoading = true;
             try {
-                const _ctrl = new AbortController(); const _t = setTimeout(() => _ctrl.abort(), 25000);
-                const r = await fetch(downFetchURL + '&cb=' + Date.now(), { method: 'POST', body: JSON.stringify({ '$top': 5000 }), signal: _ctrl.signal }); clearTimeout(_t);
-                if (!r.ok) throw new Error(`HTTP ${r.status}`);
-                const rows = extractRows(await r.json());
+                const rows = await fetchDownRowsWithRetry();
+                downDataLoading = false;
                 rows.sort((a,b) => (parseInt(getVal(b,['Id','ID','id']))||0) - (parseInt(getVal(a,['Id','ID','id']))||0));
                 allDownRows = rows;
                 writeDashboardSnapshot();
@@ -5477,9 +5639,23 @@
                 renderDownDashboard();
                     if (st) { st.innerText = 'LIVE: ' + new Date().toLocaleTimeString() + ` (${rows.length} rows)`; st.classList.remove('sync-active'); }
             } catch(e) {
+                downDataLoading = false;
+                console.warn('Down filling data refresh failed:', e);
+                if (allDownRows.length) {
+                    renderDownTable();
+                    renderDownDashboard();
+                    if (st) { st.innerText = `PA slow - showing cached ${allDownRows.length} rows`; st.classList.remove('sync-active'); }
+                    return;
+                }
+                const hydrated = hydrateDashboardFromSnapshot();
+                if (hydrated && allDownRows.length) {
+                    if (st) { st.innerText = `PA slow - showing cached ${allDownRows.length} rows`; st.classList.remove('sync-active'); }
+                    return;
+                }
                 const tbody = document.getElementById('downTable');
-                if (tbody) tbody.innerHTML = '<tr><td colspan="25" class="p-6 text-center text-red-400 italic text-xs">Failed to load down filling data. Check the Power Automate flow.</td></tr>';
-                if (st) { st.innerText = 'Error'; st.classList.remove('sync-active'); }
+                if (tbody) tbody.innerHTML = '<tr><td colspan="25" class="p-6 text-center text-amber-500 italic text-xs">Down filling data is still syncing. Retrying automatically...</td></tr>';
+                if (st) { st.innerText = 'Retrying...'; st.classList.remove('sync-active'); }
+                if (!isSilent) setTimeout(() => safeRun(() => refreshDownData(true)), 15000);
             }
         }
 
@@ -5491,6 +5667,10 @@
             const downMonthEl = document.getElementById('downMonthFilter');
             if (downMonthEl) downMonthQuery = downMonthEl.value || '';
             if (!allDownRows.length) {
+                if (downDataLoading) {
+                    tbody.innerHTML = '<tr><td colspan="25" class="p-6 text-center text-slate-400 italic text-xs">Loading down filling data...</td></tr>';
+                    return;
+                }
                 tbody.innerHTML = '<tr><td colspan="25" class="p-6 text-center text-slate-400 italic text-xs">No down filling records found.</td></tr>';
                 return;
             }
@@ -5535,7 +5715,7 @@
                 const completeTime = convertExcelDate(getVal(row, ['Complete Time','CompleteTime','Complete Time m/d/yyyy']));
                 const remark = getVal(row, ['Remark','Remarks']);
                 const rid = String(row['__PowerAppsId__'] || id).replace(/['"]/g,'');
-                const isAdminDown = currentUser === 'Gavin';
+                const isAdminDown = isPortalAdmin();
                 return `<tr class="border-b hover:bg-slate-50">
                     <td class="p-3 font-mono text-[10px]">${id}</td>
                     <td class="p-3 date-cell">${isAdminDown ? `<input id="dw-dateUpdate-${rid}" class="manual-input admin-input" value="${dateUpdate==='---'?'':dateUpdate}" placeholder="m/d/yyyy hh:mm">` : dateUpdate}</td>
@@ -5661,7 +5841,7 @@
         }
 
         async function saveDownRow(rid, event) {
-            if (currentUser !== 'Gavin') return alert('Only Gavin can edit down filling records.');
+            if (!isPortalAdmin()) return alert('Only Gavin or Joe can edit down filling records.');
             const btn = event.target; btn.innerText = 'SAVING...'; btn.disabled = true;
             const g = (field) => document.getElementById(`dw-${field}-${rid}`)?.value.trim() || '';
             const existingRow = allDownRows.find(r => String(getVal(r, ['ID','Id','id'])) === String(rid));
@@ -6013,7 +6193,7 @@
             const consumptionMonthEl = document.getElementById('consumptionMonthFilter');
             if (consumptionMonthEl) consumptionMonthQuery = consumptionMonthEl.value || '';
             const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-            const isAdmin = currentUser === 'Gavin';
+            const isAdmin = isPortalAdmin();
 
             const rows = allConsumptionRows.filter(r => {
                 // Month filter by Received Time
@@ -6059,7 +6239,9 @@
                 const completeDt = convertExcelDate(getVal(i, ['Complete Date m/d/yyyy','Complete Date','CompleteDate']));
                 const pic      = getMAPic(i);
                 const remark   = getVal(i, ['Remark','Remarks']);
-                const isDone   = completeDt && completeDt !== '---';
+                const isNoAction = completeDt === '-' || startDt === '-';
+                const isDone   = completeDt && completeDt !== '---' && !isNoAction;
+                const completeDisplayValue = completeDt !== '---' ? completeDt : '';
                 const isQuiltingDetails = String(reqType || '').toLowerCase().includes('quilting');
                 const picOptions = `<select id="con-pic-${sid}" class="manual-input admin-input" style="width:90px">
                     <option value="">Assign PIC</option>
@@ -6069,7 +6251,7 @@
                 const rowPic   = pic && pic !== '---' ? pic : null;
                 const canEdit  = !!currentUser && (isAdmin || rowPic === currentUser || (!rowPic && !isQuiltingDetails));
 
-                return `<tr class="border-b hover:bg-slate-50 ${isDone ? 'bg-emerald-50/20' : ''}">
+                return `<tr class="border-b hover:bg-slate-50 ${isDone ? 'bg-emerald-50/20' : isNoAction ? 'bg-slate-50/60' : ''}">
                     <td class="p-3 font-mono text-slate-400 text-[10px]">${rowId}</td>
                     <td class="p-3 text-slate-500 text-[10px]">${received}</td>
                     <td class="p-3 text-[10px]">${season}</td>
@@ -6079,11 +6261,11 @@
                     <td class="p-3 font-semibold text-purple-700">${proto}</td>
                     <td class="p-3 text-orange-700 text-[10px] font-bold">${reqType}</td>
                     <td class="p-3 text-[10px]">${canEdit
-                        ? `<input id="con-start-${sid}" class="manual-input admin-input" value="${startDt !== '---' ? startDt : ''}" placeholder="m/d/yyyy hh:mm">`
+                        ? `<input id="con-start-${sid}" class="manual-input admin-input" value="${startDt !== '---' ? startDt : ''}" placeholder="m/d/yyyy hh:mm or -">`
                         : startDt}</td>
-                    <td class="p-3 ${isDone ? 'text-emerald-600 font-bold' : 'text-slate-400'}">${canEdit
-                        ? `<input id="con-complete-${sid}" class="manual-input admin-input" value="${isDone ? completeDt : ''}" placeholder="m/d/yyyy hh:mm">`
-                        : (isDone ? completeDt : '---')}</td>
+                    <td class="p-3 ${isDone ? 'text-emerald-600 font-bold' : isNoAction ? 'text-slate-500 font-bold' : 'text-slate-400'}">${canEdit
+                        ? `<input id="con-complete-${sid}" class="manual-input admin-input" value="${completeDisplayValue}" placeholder="m/d/yyyy hh:mm or -">`
+                        : (completeDisplayValue || '---')}</td>
                     <td class="p-3 font-bold ${(!pic||pic==='---') ? 'text-blue-600' : ''}">${
                         isAdmin
                         ? picOptions
@@ -6103,6 +6285,14 @@
         async function addConsumptionRow() {
             if (!currentUser) return alert('Please login first.');
             const receivedTime = document.getElementById('c_receivedTime').value.trim() || nowAsLaserDate();
+            const startInput = document.getElementById('c_startDate').value.trim();
+            const completeInput = document.getElementById('c_completeDate').value.trim();
+            const startNorm = prepareConsumptionDatePayload(startInput);
+            const completeNorm = prepareConsumptionDatePayload(completeInput);
+            if ([startNorm, completeNorm].some(v => v === null)) {
+                alert('Invalid date format. Use m/d/yyyy, m/d/yyyy hh:mm, or - for no action.');
+                return;
+            }
             const payload = {
                 receivedTime:  toExcelDateFormat(receivedTime),
                 season:        document.getElementById('c_season').value.trim(),
@@ -6111,8 +6301,8 @@
                 requestBy:     document.getElementById('c_requestBy').value.trim() || currentUser,
                 protoStage:    document.getElementById('c_protoStage').value.trim(),
                 requestType:   document.getElementById('c_requestType').value.trim(),
-                startDate:     toExcelDateFormat(document.getElementById('c_startDate').value.trim()),
-                completeDate:  toExcelDateFormat(document.getElementById('c_completeDate').value.trim()),
+                startDate:     startNorm,
+                completeDate:  completeNorm,
                 pic:           currentUser,
                 remark:        document.getElementById('c_remark').value.trim()
             };
@@ -6157,14 +6347,14 @@
             });
             const existingPic = existing ? getMAPic(existing) : '---';
             const selectedPic = document.getElementById(`con-pic-${sid}`)?.value.trim() || '';
-            const picToSave = currentUser === 'Gavin'
+            const picToSave = isPortalAdmin()
                 ? selectedPic
                 : ((!existingPic || existingPic === '---') ? currentUser : existingPic);
-            const startNorm = preparePortalDatePayload(startVal, convertExcelDate(getVal(existing, ['Start Date m/d/yyyy','Start Date','StartDate'])));
-            const completeNorm = preparePortalDatePayload(completeVal, convertExcelDate(getVal(existing, ['Complete Date m/d/yyyy','Complete Date','CompleteDate'])));
+            const startNorm = prepareConsumptionDatePayload(startVal, convertExcelDate(getVal(existing, ['Start Date m/d/yyyy','Start Date','StartDate'])));
+            const completeNorm = prepareConsumptionDatePayload(completeVal, convertExcelDate(getVal(existing, ['Complete Date m/d/yyyy','Complete Date','CompleteDate'])));
             if ([startNorm, completeNorm].some(v => v === null)) {
                 btn.innerText = 'ERROR'; btn.disabled = false;
-                alert('Invalid date format. Use m/d/yyyy or m/d/yyyy hh:mm.');
+                alert('Invalid date format. Use m/d/yyyy, m/d/yyyy hh:mm, or - for no action.');
                 return;
             }
             const payload = {
