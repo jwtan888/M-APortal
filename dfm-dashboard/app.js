@@ -35,7 +35,7 @@
     "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/8a1ee6b32b44477ab947ff85d3c38881/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=-cqYV3Ac1tBeoECt_zje-s9Yk1B0RZYvDxqV-fP24N8";
   const defectMap = new Map((seedData.defectCatalog || []).map((item) => [item.code, item]));
   const page = document.body.dataset.page || "dashboard";
-  const AUTO_REFRESH_MS = page === "dashboard" || page === "data" ? 60000 : 0;
+  const AUTO_REFRESH_MS = page === "dashboard" || page === "data" ? 30000 : 0;
 
   const elements = {
     seasonDonut: document.getElementById("season-donut"),
@@ -1817,19 +1817,22 @@
     const over = Number(benchmark?.over || 0);
     const isLoading = Boolean(benchmark?.loading);
     const error = cleanText(benchmark?.error);
-    const sourceLabel = benchmark?.source === "airtable" ? "Nike construction master" : "DFM data fallback";
     const statusClass = error && !isMvcGallerySoftStatus(error) ? "benchmark-status benchmark-status--error" : "benchmark-status";
-    const statusText = error || (isLoading ? "Loading latest Airtable master..." : sourceLabel);
+    const statusText = error || (isLoading ? "Loading latest construction data..." : "");
     const utilization = target > 0 ? Math.round((active / target) * 100) : 0;
     const denominator = Math.max(target, active, 1);
     const activeWidth = Math.max(0, (Math.min(active, denominator) / denominator) * 100);
     const inactiveWidth = Math.max(0, (inactive / denominator) * 100);
 
     elements.benchmarkChart.innerHTML = `
-      <div class="${escapeHtml(statusClass)}">
-        <span class="benchmark-status-dot${isLoading ? " is-loading" : ""}"></span>
-        <span>${escapeHtml(statusText)}</span>
-      </div>
+      ${
+        statusText
+          ? `<div class="${escapeHtml(statusClass)}">
+              <span class="benchmark-status-dot${isLoading ? " is-loading" : ""}"></span>
+              <span>${escapeHtml(statusText)}</span>
+            </div>`
+          : ""
+      }
       <div class="benchmark-summary">
         <div class="benchmark-current">
           <div class="benchmark-label">Current Active Construction Code (Non-M)</div>
@@ -1839,7 +1842,7 @@
         <div class="benchmark-current">
           <div class="benchmark-label">Nike Construction Code</div>
           <div class="benchmark-value">${escapeHtml(formatNumber(target))}</div>
-          <div class="benchmark-meta">${escapeHtml(isLoading ? "Updating from Airtable..." : sourceLabel)}</div>
+          <div class="benchmark-meta">${escapeHtml(isLoading ? "Updating..." : "")}</div>
         </div>
       </div>
       <div class="benchmark-track">
