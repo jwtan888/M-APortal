@@ -18,6 +18,7 @@ TOKEN = os.environ.get("AIRTABLE_TOKEN", "").strip()
 ROOT = Path(__file__).resolve().parents[1]
 ASSET_DIR = ROOT / "construction-assets"
 MASTER_PATH = ROOT / "construction-master.js"
+AIRTABLE_HTML_PATH = ROOT / "airtable.html"
 
 FIELDS = [
     "Construction Code",
@@ -152,6 +153,16 @@ def write_master(rows):
         + ";\n",
         encoding="utf-8",
     )
+    if AIRTABLE_HTML_PATH.exists():
+        version = re.sub(r"\D", "", updated)[:14]
+        html = AIRTABLE_HTML_PATH.read_text(encoding="utf-8")
+        html = re.sub(
+            r'(\./construction-master\.js\?v=)[^"]+',
+            rf"\g<1>{version}",
+            html,
+            count=1,
+        )
+        AIRTABLE_HTML_PATH.write_text(html, encoding="utf-8")
 
 
 def main():
