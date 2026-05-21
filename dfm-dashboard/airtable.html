@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>DFM Construction Data</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 68 48'%3E%3Cg fill='%230514ff'%3E%3Cpath d='M9 4h7L7 44H0z'/%3E%3Cpath d='M21 4h12L24 44H12z'/%3E%3Cpath d='M44 4h21c2 0 3 2 3 4l-7 28c-1 5-5 8-10 8H34c-4 0-7-3-6-7l7-26c1-4 5-7 9-7z'/%3E%3C/g%3E%3C/svg%3E">
-    <link rel="stylesheet" href="./styles.css?v=20260520f" />
+    <link rel="stylesheet" href="./styles.css?v=20260521a" />
   </head>
   <body data-page="airtable">
     <div class="app-shell">
@@ -53,13 +53,13 @@
 
         <details class="panel airtable-sync-panel">
           <summary class="airtable-sync-summary">
-            <span>Airtable Sync</span>
-            <span class="panel-note">Open only when refreshing data</span>
+            <span>Admin Browser Sync</span>
+            <span class="panel-note">Optional browser cache only</span>
           </summary>
           <div class="panel-heading panel-heading--stack">
             <div>
-              <h2>Airtable Sync</h2>
-              <p class="panel-note">Normal users load the published mirror automatically. Admin sync is only for refreshing data from Airtable.</p>
+              <h2>Admin Browser Sync</h2>
+              <p class="panel-note">Normal users load the static GitHub construction master. This panel is only for optional browser-cache exports.</p>
             </div>
           </div>
           <div class="filters airtable-sync-controls">
@@ -82,7 +82,7 @@
           </div>
           <div class="airtable-import-actions">
             <button id="airtable-check-btn" class="ghost-btn" type="button">Check Access</button>
-            <button id="airtable-panel-sync-btn" class="primary-btn" type="button">Sync Airtable</button>
+            <button id="airtable-panel-sync-btn" class="primary-btn" type="button">Sync Browser Cache</button>
             <button id="airtable-load-json-btn" class="ghost-btn" type="button">Load JSON File</button>
             <input id="airtable-json-file-input" type="file" accept=".json,application/json" hidden />
             <button id="airtable-export-btn" class="ghost-btn" type="button">Export Browser JSON</button>
@@ -101,7 +101,7 @@
       </main>
     </div>
 
-    <script src="./construction-master.js?v=20260520f"></script>
+    <script src="./construction-master.js?v=20260521a"></script>
     <script>
       (function () {
         const TOKEN_KEY = 'dfm-airtable-token';
@@ -112,9 +112,8 @@
         const IDB_STORE = 'keyval';
         const IDB_ROWS_KEY = 'mvc-gallery-rows';
         const PUBLISHED_JSON_URL = './airtable-data.json';
-        const POWER_AUTOMATE_JSON_URL = 'https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/4a6c5654766d40b2b232aebe34be09f9/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=H4odIwzTr1vSpuEq09BxQI-decF5LTOOUDxSxA-QkL8';
+        const POWER_AUTOMATE_JSON_URL = '';
         const EMBEDDED_MASTER = window.DFM_CONSTRUCTION_MASTER || { records: [] };
-        const MIRROR_REFRESH_MS = 2 * 60 * 1000;
         const MIRROR_TIMEOUT_MS = 25 * 1000;
         const DEFAULT_BASE_ID = 'appIgoUvdgdhmf24V';
         const DEFAULT_TABLE_ID = 'tblFoONq2PzRybmz3';
@@ -625,7 +624,7 @@
               render();
               const cache = countImageCache(rows);
               if (cache.missing) {
-                setSyncStatus(`${cache.missing} image(s) in this browser mirror still use temporary Airtable URLs. Sync Airtable again, then export.`, 'error');
+                setSyncStatus(`${cache.missing} image(s) in this browser mirror still use temporary Airtable URLs. Sync browser cache again, then export.`, 'error');
               }
               return true;
             }
@@ -661,8 +660,8 @@
               const cache = countImageCache(rows);
               setSyncStatus(
                 cache.missing
-                  ? `Loaded ${state.rows.length} cached records. Refreshing latest images from Power Automate...`
-                  : `Loaded ${state.rows.length} cached MVC records with images. Refreshing latest in background...`,
+                  ? `Loaded ${state.rows.length} cached records. Some images may still use temporary Airtable URLs.`
+                  : `Loaded ${state.rows.length} cached MVC records with images.`,
                 cache.missing ? 'error' : 'ok'
               );
               return true;
@@ -674,7 +673,7 @@
         }
 
         async function loadAnyCachedMirror() {
-          return loadBrowserMirror() || (await loadIndexedDbMirror()) || loadEmbeddedMasterMirror();
+          return loadEmbeddedMasterMirror() || loadBrowserMirror() || (await loadIndexedDbMirror());
         }
 
         async function loadPublishedMirror() {
@@ -686,7 +685,7 @@
             }
           }
           state.refreshing = true;
-          setSyncStatus(state.rows.length ? 'Refreshing latest MVC Gallery from Power Automate...' : 'Loading MVC Gallery from Power Automate...');
+          setSyncStatus(state.rows.length ? 'Refreshing latest MVC Gallery mirror...' : 'Loading MVC Gallery mirror...');
           state.refreshPromise = (async () => {
             const response = POWER_AUTOMATE_JSON_URL
               ? await fetchWithTimeout(POWER_AUTOMATE_JSON_URL, {
@@ -702,7 +701,7 @@
             if (!rows.length) throw new Error('No records in published mirror');
             state.rows = normalizeRows(rows);
             state.rawRecords = rows;
-            state.source = payload.source || (POWER_AUTOMATE_JSON_URL ? 'Power Automate DFM mirror' : 'Published MVC mirror');
+            state.source = payload.source || 'Published MVC mirror';
             state.updatedAt = payload.updatedAt || payload.lastSync || '';
             writeMirrorCache(rows, state.source, state.updatedAt).catch((cacheError) => console.warn('Failed to cache published MVC Gallery mirror', cacheError));
             render();
@@ -721,8 +720,8 @@
             render();
             setSyncStatus(
               state.rows.length
-                ? `Using cached MVC Gallery; live Power Automate refresh timed out.`
-                : `Power Automate JSON load failed: ${error.message}`,
+                ? `Using cached MVC Gallery; live mirror refresh failed.`
+                : `Published JSON load failed: ${error.message}`,
               'error'
             );
             return false;
@@ -735,7 +734,7 @@
         function downloadMirrorJson(records) {
           const cache = countImageCache(records);
           if (!records.length) {
-            setSyncStatus('Sync Airtable first, then export the mirror JSON.', 'error');
+            setSyncStatus('Sync browser cache first, then export the mirror JSON.', 'error');
             return;
           }
           const payload = {
@@ -754,7 +753,7 @@
           URL.revokeObjectURL(url);
           setSyncStatus(
             cache.missing
-              ? `Exported airtable-data.json, but ${cache.missing} image(s) are still temporary Airtable URLs. Sync Airtable again, then export.`
+              ? `Exported airtable-data.json, but ${cache.missing} image(s) are still temporary Airtable URLs. Sync browser cache again, then export.`
               : 'Exported embedded browser JSON. If GitHub rejects it as too large, use the server-generated airtable-data.json plus airtable-assets folder instead.',
             cache.missing ? 'error' : 'ok'
           );
@@ -765,7 +764,7 @@
             ? state.rawRecords
             : JSON.parse(localStorage.getItem(ROWS_KEY) || '[]');
           if (!records.length) {
-            setSyncStatus('Sync Airtable first, then export the mirror JSON.', 'error');
+            setSyncStatus('Sync browser cache first, then export the mirror JSON.', 'error');
             return;
           }
           const cache = countImageCache(records);
@@ -849,7 +848,7 @@
             setSyncStatus(`Airtable sync failed: ${error.message}`, 'error');
           } finally {
             el.panelSyncBtn.disabled = false;
-            el.panelSyncBtn.innerText = 'Sync Airtable';
+            el.panelSyncBtn.innerText = 'Sync Browser Cache';
           }
         }
 
@@ -924,21 +923,9 @@
         bindEvents();
         loadSettings();
         (async () => {
-          const cached = await loadAnyCachedMirror();
-          if (!cached) {
-            render();
-          }
-          const loaded = await loadPublishedMirror();
-          if (!loaded && !state.rows.length) {
-            await loadAnyCachedMirror();
-          }
+          const loaded = await loadAnyCachedMirror();
+          if (!loaded) render();
         })();
-        document.addEventListener('visibilitychange', () => {
-          if (!document.hidden) loadPublishedMirror();
-        });
-        window.setInterval(() => {
-          loadPublishedMirror();
-        }, MIRROR_REFRESH_MS);
       })();
     </script>
   </body>
