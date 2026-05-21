@@ -385,6 +385,10 @@
         length: parts ? parts[1] : '',
         width: parts ? parts[2] : '',
         qty: excelNumber(row['PVC Qty Per Job']) || '1',
+        unitCostPvc: excelNumber(row['Unit Cost PVC']),
+        costPerCm2: excelNumber(row['Cost Per cm2']),
+        usedAreaCm2: excelNumber(row['Used Area cm2']),
+        finalCost: excelNumber(row['Final Cost']),
         remark: String(row.Remark || '').trim(),
       };
     }
@@ -551,6 +555,23 @@
       return factor;
     }
 
+    function hasExcelValue(value) {
+      return value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
+    }
+
+    function costingLineValue(row) {
+      const material = TEMPLATE_MATERIALS.find((m) => m.id === row.materialId) || TEMPLATE_MATERIALS[0];
+      const factor = materialFactor(material);
+      const qty = Math.max(0, num(row.qty));
+      const length = Math.max(0, num(row.length));
+      const width = Math.max(0, num(row.width));
+      const calculatedArea = length * width * qty;
+      const usedArea = hasExcelValue(row.usedAreaCm2) ? Math.max(0, num(row.usedAreaCm2)) : Math.max(0, calculatedArea);
+      const costPerArea = hasExcelValue(row.costPerCm2) ? Math.max(0, num(row.costPerCm2)) : factor.costPerArea;
+      const finalCost = hasExcelValue(row.finalCost) ? Math.max(0, num(row.finalCost)) : usedArea * costPerArea;
+      return { material, factor, qty, length, width, usedArea, costPerArea, finalCost };
+    }
+
     function monthKeyFromDate(value) {
       const parsed = parsePortalDate(excelDateText(value));
       if (!parsed) return '';
@@ -617,17 +638,13 @@
     }
 
     function dashboardLine(row) {
-      const material = TEMPLATE_MATERIALS.find((m) => m.id === row.materialId) || TEMPLATE_MATERIALS[0];
-      const factor = materialFactor(material);
-      const qty = Math.max(0, num(row.qty));
-      const usedArea = Math.max(0, num(row.length) * num(row.width) * qty);
-      const cost = usedArea * factor.costPerArea;
+      const line = costingLineValue(row);
       return {
         month: monthKeyFromDate(row.date),
         section: sectionGroup(row.section),
-        material: materialGroup(material),
-        area: usedArea,
-        cost,
+        material: materialGroup(line.material),
+        area: line.usedArea,
+        cost: line.finalCost,
         styleJob: row.styleJob || '-',
       };
     }
@@ -740,20 +757,16 @@
         .map((row, index) => ({ row, index }))
         .sort((a, b) => dateSortValue(b.row.date) - dateSortValue(a.row.date));
       $('costingRows').innerHTML = displayRows.map(({ row, index }) => {
-        const material = TEMPLATE_MATERIALS.find((m) => m.id === row.materialId) || TEMPLATE_MATERIALS[0];
-        const factor = materialFactor(material);
-        const qty = Math.max(0, num(row.qty));
-        const usedArea = Math.max(0, num(row.length) * num(row.width) * qty);
-        const lineCost = usedArea * factor.costPerArea;
-        total += lineCost;
+        const line = costingLineValue(row);
+        total += line.finalCost;
         return `<tr>
           <td>${escapeHtml(formatDisplayDate(row.date) || '-')}</td>
           <td>${escapeHtml(row.section || '-')}</td>
           <td class="code-link">${escapeHtml(row.styleJob || '-')}</td>
-          <td>${escapeHtml(stockText(material.name))}</td>
-          <td>${num(row.length) || '-'} x ${num(row.width) || '-'} <span class="muted">(${usedArea ? usedArea.toLocaleString(undefined, { maximumFractionDigits: 1 }) : 0} cm2)</span></td>
-          <td>${qty || '-'}</td>
-          <td class="money">${rm(lineCost)}</td>
+          <td>${escapeHtml(stockText(line.material.name))}</td>
+          <td>${line.length || '-'} x ${line.width || '-'} <span class="muted">(${line.usedArea ? line.usedArea.toLocaleString(undefined, { maximumFractionDigits: 1 }) : 0} cm2)</span></td>
+          <td>${line.qty || '-'}</td>
+          <td class="money">${rm(line.finalCost)}</td>
           <td>${escapeHtml(row.remark || '-')}</td>
           <td><button class="ghost-btn requires-edit" type="button" data-delete-costing="${escapeHtml(row.id || '')}" ${isAuthenticated() ? '' : 'disabled'}>Delete</button></td>
         </tr>`;

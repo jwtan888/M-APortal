@@ -68,7 +68,9 @@
     .field input, .field select { width: 100%; border: 1px solid var(--line); border-radius: .9rem; background: rgba(255,255,255,.86); color: var(--text); padding: .9rem 1rem; font-weight: 700; outline: none; }
     .grid-2 { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1rem; }
     .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem; }
+    .grid-5 { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1rem; }
     .metric-value { font-size: clamp(2rem, 4vw, 3rem); line-height: 1; letter-spacing: -.04em; font-weight: 850; }
+    .grid-5 .metric-value { font-size: clamp(1.45rem, 2.1vw, 2.3rem); letter-spacing: -.035em; white-space: nowrap; }
     .metric-value.is-blue { color: var(--accent); } .metric-value.is-green { color: var(--success); } .metric-value.is-orange { color: #d97621; } .metric-value.is-purple { color: var(--purple); }
     .is-green { color: var(--success); } .is-orange { color: #d97621; }
     .table-wrap { overflow: auto; border: 1px solid var(--line); border-radius: 1rem; background: rgba(255,255,255,.7); }
@@ -130,6 +132,7 @@
       body.printing-balance .view[data-view="movement"] > article:not(.balance-print-panel),
       body.printing-balance .grid-2,
       body.printing-balance .grid-3,
+      body.printing-balance .grid-5,
       body.printing-balance .movement-form,
       body.printing-balance #movementRows,
       body.printing-balance #movementStatus,
@@ -164,7 +167,8 @@
     }
     @media (min-width: 900px) { .login-layout { flex-direction: row; align-items: center; justify-content: space-between; } .login-grid, .login-status { justify-content: flex-end; } }
     @media (max-width: 1100px) { .movement-form { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-    @media (max-width: 900px) { .hero, .toolbar, .movement-form, .grid-2, .grid-3 { grid-template-columns: 1fr; } .topbar { flex-direction: column; align-items: stretch; gap: .85rem; } .nav-tabs { display: flex; width: 100%; flex-wrap: wrap; } .nav-tab { flex: 1 1 calc(33.333% - .45rem); text-align: center; font-size: .82rem; } .hero-actions { justify-content: stretch; } .primary-btn, .ghost-btn { width: 100%; } }
+    @media (max-width: 1100px) { .grid-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+    @media (max-width: 900px) { .hero, .toolbar, .movement-form, .grid-2, .grid-3, .grid-5 { grid-template-columns: 1fr; } .topbar { flex-direction: column; align-items: stretch; gap: .85rem; } .nav-tabs { display: flex; width: 100%; flex-wrap: wrap; } .nav-tab { flex: 1 1 calc(33.333% - .45rem); text-align: center; font-size: .82rem; } .hero-actions { justify-content: stretch; } .primary-btn, .ghost-btn { width: 100%; } }
   </style>
 </head>
 <body class="edit-locked">
@@ -237,10 +241,12 @@
       <div class="live-status status-line" id="dataStatus" style="margin-top:.75rem"></div>
     </section>
 
-    <section class="grid-3 view" data-view="movement" aria-label="Monthly stock summary" hidden>
+    <section class="grid-5 view" data-view="movement" aria-label="Monthly stock summary" hidden>
       <article class="kpi-card"><p class="eyebrow">Stock In</p><div class="metric-value is-green" id="stockInQty">0</div><p class="muted">Selected Month Qty</p></article>
       <article class="kpi-card"><p class="eyebrow">Stock Out</p><div class="metric-value is-orange" id="stockOutQty">0</div><p class="muted">Selected Month Qty</p></article>
       <article class="kpi-card"><p class="eyebrow">Net Movement</p><div class="metric-value is-blue" id="netMovementQty">0</div><p class="muted">In Minus Out</p></article>
+      <article class="kpi-card"><p class="eyebrow">Stock In Cost</p><div class="metric-value is-green" id="stockInCost">RM0.00</div><p class="muted">Selected Month Amount</p></article>
+      <article class="kpi-card"><p class="eyebrow">Stock Out Cost</p><div class="metric-value is-orange" id="stockOutCost">RM0.00</div><p class="muted">Selected Month Amount</p></article>
     </section>
 
     <section class="panel view" data-view="products">
@@ -324,7 +330,7 @@
     const $ = (id) => document.getElementById(id);
     const norm = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
     const num = (value) => Number.isFinite(Number(value)) ? Number(value) : 0;
-    const rm = (value) => `RM${num(value).toFixed(2)}`;
+    const rm = (value) => `RM${num(value).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
     const qtyText = (value, maximumFractionDigits = 2) => num(value).toLocaleString(undefined, { maximumFractionDigits });
     const stockText = (value) => String(value ?? '').trim().toLowerCase().replace(/[a-z]+/g, (word) => {
       const upper = word.toUpperCase();
@@ -336,6 +342,10 @@
     function excelNumber(value) {
       const clean = String(value ?? '').replace(/RM/gi, '').replace(/,/g, '').trim();
       return clean && Number.isFinite(Number(clean)) ? Number(clean) : null;
+    }
+
+    function hasExcelValue(value) {
+      return value !== null && value !== undefined && value !== '' && Number.isFinite(Number(value));
     }
 
     function datePickerToInputDate(dateObj) {
@@ -445,6 +455,8 @@
         sku: String(row.SKU || row.Sku || '').trim(),
         type: normalizeType(row.Type),
         qty: excelNumber(row.Quantity) || 0,
+        unitCost: excelNumber(row['Unit Cost']),
+        amount: excelNumber(row.Amount),
         remark: String(row.Remark || '').trim(),
       };
     }
@@ -457,8 +469,19 @@
         sku: row[2],
         type: row[3],
         qty: num(row[4]),
+        unitCost: null,
+        amount: null,
         remark: row[5] || '',
       })).filter((row) => row.sku && row.month && row.qty);
+    }
+
+    function movementLineAmount(row, product) {
+      const qty = Math.max(0, num(row.qty));
+      if (hasExcelValue(row.amount)) return Math.max(0, num(row.amount));
+      const unitCost = hasExcelValue(row.unitCost)
+        ? num(row.unitCost)
+        : (Object.prototype.hasOwnProperty.call(priceOverrides, row.sku) ? num(priceOverrides[row.sku]) : num(product?.cost));
+      return qty * unitCost;
     }
 
     function movementDedupeKey(row) {
@@ -758,11 +781,19 @@
       const rows = filteredMovements();
       let stockIn = 0;
       let stockOut = 0;
+      let stockInCost = 0;
+      let stockOutCost = 0;
       $('movementRows').innerHTML = rows.map((row) => {
         const product = productBySku(row.sku);
         const qty = Math.max(0, num(row.qty));
-        if (row.type === 'out') stockOut += qty;
-        else stockIn += qty;
+        const amount = movementLineAmount(row, product);
+        if (row.type === 'out') {
+          stockOut += qty;
+          stockOutCost += amount;
+        } else {
+          stockIn += qty;
+          stockInCost += amount;
+        }
         const hasSyncedId = isSyncedMovementId(row.id);
         const canDelete = isAuthenticated() && hasSyncedId;
         const deleteTitle = canDelete
@@ -782,6 +813,8 @@
       $('stockInQty').textContent = qtyText(stockIn);
       $('stockOutQty').textContent = qtyText(stockOut);
       $('netMovementQty').textContent = qtyText(stockIn - stockOut);
+      $('stockInCost').textContent = rm(stockInCost);
+      $('stockOutCost').textContent = rm(stockOutCost);
       const selectedMonth = $('movementMonth').value;
       $('movementStatus').textContent = rows.length ? `${rows.length} Movement Row(s) Shown For ${selectedMonth ? movementMonthLabel(selectedMonth) : 'All Available Months'}.` : 'No Stock Movement Rows Entered.';
       renderBalance();
