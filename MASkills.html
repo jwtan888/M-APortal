@@ -838,6 +838,7 @@ let picLevelMap  = {}; // { PIC: { 1:n, 2:n, 3:n, 4:n, 5:n } }
 let chartRefs    = {};
 let currentView  = 'cards';
 let showMark     = false; // Mark is hidden by default (not full-time on template)
+let liveSkillRows = 0;
 
 // ── Toggle Mark visibility ───────────────────────────────────────────────────
 function toggleMark() {
@@ -892,18 +893,21 @@ async function fetchAllPages(baseUrl, signal) {
 
 function fetchLiveInBackground() {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 12000);
+  const timeoutId = setTimeout(() => controller.abort(), 45000);
 
   fetchAllPages(TEMPLATE_FETCH_URL, controller.signal)
     .then(rows => {
       clearTimeout(timeoutId);
-      allTemplates = rows.filter(r => {
-        const dateFields = ['Start time','Start Time','Required Date','RequiredDate','Complete Date','Complete Date m/d/yyyy'];
-        return !dateFields.some(k => String(r[k] ?? '').trim() === '-');
-      });
-      document.getElementById('syncStatus').textContent = `● Live  ${new Date().toLocaleTimeString()}  (${allTemplates.length} rows)`;
-      document.getElementById('syncStatus').style.color = '#10b981';
+      allTemplates = rows;
       buildPicMap();
+      const syncStatus = document.getElementById('syncStatus');
+      if (liveSkillRows > 0) {
+        syncStatus.textContent = `● Live ${new Date().toLocaleTimeString()} (${rows.length} rows · ${liveSkillRows} completed skill rows)`;
+        syncStatus.style.color = '#10b981';
+      } else {
+        syncStatus.textContent = `⚠ Live ${new Date().toLocaleTimeString()} (${rows.length} rows · no completed skill rows matched)`;
+        syncStatus.style.color = '#f59e0b';
+      }
       render();
     })
     .catch(e => {
@@ -946,10 +950,15 @@ function getVal(row, keys) {
 }
 function getMAPic(row) { return getVal(row, ['M&A PIC','MA PIC','MAPIC','PIC']); }
 function getComplexity(row) { return getVal(row, ['Complexity Level','ComplexityLevel','Complexity']); }
-function getCompleteDate(row) { return getVal(row, ['Complete Date m/d/yyyy','Complete Date','CompleteDate','completeDateDisplay']); }
+function getCompleteDate(row) { return getVal(row, ['Complete Date m/d/yyyy','Complete Date\nm/d/yyyy','Complete Date','CompleteDate','completeDateDisplay']); }
 function getSection(row) { return getVal(row, ['Section','section']); }
+function isUsableValue(value) {
+  const v = String(value ?? '').trim();
+  return v !== '' && v !== '---' && v !== '-';
+}
 
 function buildPicMap() {
+  liveSkillRows = 0;
   if (!allTemplates.length) {
     // No live data — use seed data as placeholder
     picLevelMap = JSON.parse(JSON.stringify(SEED_DATA));
@@ -961,19 +970,15 @@ function buildPicMap() {
     const pic   = getMAPic(row);
     const cxRaw = getComplexity(row);
     const cd    = getCompleteDate(row);
-    if (pic === '---' || !cd || cd === '---') return; // only count completed jobs
+    if (!isUsableValue(pic) || !isUsableValue(cd)) return; // only count completed jobs
     // Extract level number from complexity string e.g. "Level 3", "L3", "3"
     const m = String(cxRaw).match(/(\d)/);
     const level = m ? parseInt(m[1]) : null;
     if (!level || level < 1 || level > 5) return;
     if (!picLevelMap[pic]) picLevelMap[pic] = {1:0,2:0,3:0,4:0,5:0};
     picLevelMap[pic][level]++;
+    liveSkillRows++;
   });
-  // If live data returned rows but zero matched our criteria, show seed as last resort
-  if (!Object.keys(picLevelMap).length) {
-    picLevelMap = JSON.parse(JSON.stringify(SEED_DATA));
-    console.warn('MASkills: live rows found but none matched PIC+Complexity+CompleteDate — showing seed data. Check column names in Excel.');
-  }
 }
 
 // ── Filters ──────────────────────────────────────────────────────────────────
