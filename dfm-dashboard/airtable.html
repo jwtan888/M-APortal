@@ -53,41 +53,17 @@
 
         <details class="panel airtable-sync-panel">
           <summary class="airtable-sync-summary">
-            <span>Admin Browser Sync</span>
-            <span class="panel-note">Optional browser cache only</span>
+            <span>Admin GitHub Sync</span>
+            <span class="panel-note">Refresh published master</span>
           </summary>
           <div class="panel-heading panel-heading--stack">
             <div>
-              <h2>Admin Browser Sync</h2>
-              <p class="panel-note">Normal users load the static GitHub construction master. This panel is only for optional browser-cache exports.</p>
+              <h2>Admin GitHub Sync</h2>
+              <p class="panel-note">Normal users load the static GitHub construction master. Admin refresh starts the secure GitHub Actions sync.</p>
             </div>
-          </div>
-          <div class="filters airtable-sync-controls">
-            <label>
-              Personal Access Token
-              <input id="airtable-token-input" type="password" placeholder="pat..." autocomplete="off" />
-            </label>
-            <label>
-              Base
-              <input id="airtable-base-input" value="appIgoUvdgdhmf24V" />
-            </label>
-            <label>
-              Table
-              <input id="airtable-table-input" value="tblFoONq2PzRybmz3" />
-            </label>
-            <label class="checkbox">
-              <input id="airtable-cache-images" type="checkbox" checked />
-              Embed image data for GitHub mirror
-            </label>
           </div>
           <div class="airtable-import-actions">
             <button id="airtable-github-sync-btn" class="primary-btn" type="button">Refresh GitHub Master</button>
-            <button id="airtable-check-btn" class="ghost-btn" type="button">Check Access</button>
-            <button id="airtable-panel-sync-btn" class="primary-btn" type="button">Sync Browser Cache</button>
-            <button id="airtable-load-json-btn" class="ghost-btn" type="button">Load JSON File</button>
-            <input id="airtable-json-file-input" type="file" accept=".json,application/json" hidden />
-            <button id="airtable-export-btn" class="ghost-btn" type="button">Export Browser JSON</button>
-            <button id="airtable-clear-btn" class="ghost-btn" type="button">Clear Browser Mirror</button>
           </div>
           <div id="airtable-sync-status" class="airtable-sync-status" role="status" aria-live="polite"></div>
         </details>
@@ -141,16 +117,6 @@
           tableSummary: document.getElementById('airtable-table-summary'),
           tableWrap: document.getElementById('airtable-table-wrap'),
           githubSyncBtn: document.getElementById('airtable-github-sync-btn'),
-          panelSyncBtn: document.getElementById('airtable-panel-sync-btn'),
-          checkBtn: document.getElementById('airtable-check-btn'),
-          loadJsonBtn: document.getElementById('airtable-load-json-btn'),
-          jsonFileInput: document.getElementById('airtable-json-file-input'),
-          exportBtn: document.getElementById('airtable-export-btn'),
-          clearBtn: document.getElementById('airtable-clear-btn'),
-          tokenInput: document.getElementById('airtable-token-input'),
-          baseInput: document.getElementById('airtable-base-input'),
-          tableInput: document.getElementById('airtable-table-input'),
-          cacheImages: document.getElementById('airtable-cache-images'),
           syncStatus: document.getElementById('airtable-sync-status')
         };
 
@@ -762,99 +728,6 @@
           );
         }
 
-        async function exportMirrorJson() {
-          let records = state.rawRecords?.length
-            ? state.rawRecords
-            : JSON.parse(localStorage.getItem(ROWS_KEY) || '[]');
-          if (!records.length) {
-            setSyncStatus('Sync browser cache first, then export the mirror JSON.', 'error');
-            return;
-          }
-          const cache = countImageCache(records);
-          el.exportBtn.disabled = true;
-          el.exportBtn.innerText = cache.missing ? 'Embedding...' : 'Exporting...';
-          try {
-            if (cache.missing) {
-              setSyncStatus(`Embedding ${cache.missing} image(s) into airtable-data.json before export...`);
-              records = await cacheAttachmentImages(records);
-              saveBrowserMirror(records, state.source || 'Airtable browser sync');
-            }
-            downloadMirrorJson(records);
-          } finally {
-            el.exportBtn.disabled = false;
-            el.exportBtn.innerText = 'Export Browser JSON';
-          }
-        }
-
-        async function checkAccess() {
-          let config;
-          try {
-            config = getConfig();
-          } catch (error) {
-            setSyncStatus(error.message, 'error');
-            return;
-          }
-          const { token, baseId, tableId } = config;
-          if (!token) {
-            setSyncStatus('Paste the Airtable personal access token first.', 'error');
-            return;
-          }
-          el.checkBtn.disabled = true;
-          el.checkBtn.innerText = 'Checking...';
-          setSyncStatus('Checking Airtable records access...');
-          try {
-            const payload = await fetchAirtablePage(token, baseId, tableId);
-            setSyncStatus(`Access OK. ${payload.records?.length || 0} records can be read from ${tableId}.`, 'ok');
-          } catch (error) {
-            setSyncStatus(`Airtable access failed: ${error.message}`, 'error');
-          } finally {
-            el.checkBtn.disabled = false;
-            el.checkBtn.innerText = 'Check Access';
-          }
-        }
-
-        async function syncAirtable() {
-          let config;
-          try {
-            config = getConfig();
-          } catch (error) {
-            setSyncStatus(error.message, 'error');
-            return;
-          }
-          const { token, baseId, tableId } = config;
-          if (!token) {
-            setSyncStatus('Paste the Airtable personal access token first.', 'error');
-            return;
-          }
-          el.panelSyncBtn.disabled = true;
-          el.panelSyncBtn.innerText = 'Syncing...';
-          setSyncStatus('Syncing Airtable records into this browser...');
-          try {
-            const records = await fetchAllRecords(token, baseId, tableId);
-            let mirrored = records;
-            let note = '';
-            setSyncStatus(`Synced ${records.length} rows. Embedding images for the GitHub mirror...`, 'ok');
-            try {
-              mirrored = await cacheAttachmentImages(records);
-              const cache = countImageCache(mirrored);
-              note = cache.missing
-                ? ` ${cache.embedded} image(s) embedded; ${cache.missing} still use Airtable URLs.`
-                : ' Image data embedded for the mirror.';
-            } catch (error) {
-              note = ' Image embedding skipped by browser/network.';
-            }
-            saveBrowserMirror(mirrored, `Airtable browser sync: ${tableId}`);
-            el.tokenInput.value = '';
-            el.tokenInput.placeholder = 'Saved in this browser';
-            setSyncStatus(`Synced ${records.length} rows from Airtable.${note}`, 'ok');
-          } catch (error) {
-            setSyncStatus(`Airtable sync failed: ${error.message}`, 'error');
-          } finally {
-            el.panelSyncBtn.disabled = false;
-            el.panelSyncBtn.innerText = 'Sync Browser Cache';
-          }
-        }
-
         async function triggerGithubMasterSync() {
           if (!GITHUB_MASTER_SYNC_URL) {
             setSyncStatus('GitHub master sync URL is not configured.', 'error');
@@ -886,49 +759,8 @@
           }
         }
 
-        function loadSettings() {
-          try {
-            const config = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
-            el.baseInput.value = /^app[A-Za-z0-9]+$/.test(config.baseId || '') ? config.baseId : DEFAULT_BASE_ID;
-            el.tableInput.value = /^tbl[A-Za-z0-9]+$/.test(config.tableId || '') ? config.tableId : DEFAULT_TABLE_ID;
-            el.cacheImages.checked = config.cacheImages !== false;
-          } catch (error) {
-            el.baseInput.value = DEFAULT_BASE_ID;
-            el.tableInput.value = DEFAULT_TABLE_ID;
-            el.cacheImages.checked = true;
-          }
-          if (localStorage.getItem(TOKEN_KEY)) el.tokenInput.placeholder = 'Saved in this browser';
-        }
-
         function bindEvents() {
           el.githubSyncBtn.addEventListener('click', triggerGithubMasterSync);
-          el.panelSyncBtn.addEventListener('click', syncAirtable);
-          el.checkBtn.addEventListener('click', checkAccess);
-          el.loadJsonBtn.addEventListener('click', () => el.jsonFileInput.click());
-          el.jsonFileInput.addEventListener('change', async () => {
-            const file = el.jsonFileInput.files?.[0];
-            if (!file) return;
-            try {
-              const payload = JSON.parse(await file.text());
-              loadJsonPayload(payload, file.name);
-            } catch (error) {
-              setSyncStatus(`JSON load failed: ${error.message}`, 'error');
-            } finally {
-              el.jsonFileInput.value = '';
-            }
-          });
-          el.exportBtn.addEventListener('click', exportMirrorJson);
-          el.clearBtn.addEventListener('click', () => {
-            localStorage.removeItem(ROWS_KEY);
-            localStorage.removeItem(META_KEY);
-            indexedDB.deleteDatabase(IDB_NAME);
-            state.rawRecords = [];
-            state.rows = [];
-            state.source = 'Browser mirror';
-            state.updatedAt = '';
-            render();
-            setSyncStatus('Browser mirror cleared.', 'ok');
-          });
           let searchTimer = 0;
           el.search.addEventListener('input', () => {
             clearTimeout(searchTimer);
@@ -956,7 +788,6 @@
         }
 
         bindEvents();
-        loadSettings();
         (async () => {
           const loaded = await loadAnyCachedMirror();
           if (!loaded) render();

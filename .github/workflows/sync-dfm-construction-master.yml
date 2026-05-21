@@ -29,5 +29,6 @@ jobs:
             echo "No construction master changes to commit."
           else
             git commit -m "Refresh DFM construction master from Airtable"
+            git pull --rebase origin main
             git push
           fi
