@@ -881,7 +881,7 @@
                 <div class="overflow-x-auto rounded-lg border">
                     <table class="w-full text-left text-[11px]">
                         <thead class="bg-slate-50 border-b font-bold text-slate-500">
-                            <tr><th class="p-3 w-28">M&A PIC</th><th class="p-3">Pending Items</th></tr>
+                            <tr><th class="p-3 w-32">M&A PIC</th><th class="p-3">Pending Styles</th></tr>
                         </thead>
                         <tbody id="db-patch-pic-table"></tbody>
                     </table>
@@ -3588,11 +3588,58 @@
             document.getElementById('logTable').innerHTML = filtered.map(r => `<tr class="border-b hover:bg-slate-50"><td class="p-3 text-slate-400 font-mono text-[10px]">${r.id||'—'}</td><td class="p-3 font-bold text-blue-700">${r.machine}</td><td class="p-3">${r.pic}</td><td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${r.type==='NEW REQUEST'?'bg-orange-100 text-orange-600':'bg-blue-100 text-blue-600'}">${r.type}</span></td><td class="p-3">${r.file}</td><td class="p-3">${r.size||'—'}</td><td class="p-3 date-cell text-slate-500">${r.startDate||'—'}</td><td class="p-3 date-cell ${r.completeDate&&r.completeDate!=='---'?'text-emerald-600 font-bold':'text-slate-400'}">${r.completeDate&&r.completeDate!=='---'?r.completeDate:'—'}</td></tr>`).join('');
         }
 
-        function drillDown(query) { switchTab('template'); document.getElementById('tempSearch').value = query; applyTempFilters(true); }
+        function scrollToMatchedRow(tableSelector, query) {
+            setTimeout(() => {
+                const rows = document.querySelectorAll(`${tableSelector} tr`);
+                const needle = String(query || '').toLowerCase();
+                let target = null;
+                for (const row of rows) {
+                    if (!needle || row.innerText.toLowerCase().includes(needle)) {
+                        target = row;
+                        break;
+                    }
+                }
+                if (!target && rows.length) target = rows[0];
+                if (target) {
+                    target.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    target.classList.add('bg-yellow-50');
+                    setTimeout(() => target.classList.remove('bg-yellow-50'), 2000);
+                }
+            }, 250);
+        }
+
+        function drillDown(query) {
+            switchTab('template');
+            const search = document.getElementById('tempSearch');
+            if (search) search.value = query;
+            applyTempFilters(true);
+            scrollToMatchedRow('#tempTable', query);
+        }
         function drillDownPatch(picName) {
             switchTab('patch');
             const search = document.getElementById('patchSearch');
             if (search) { search.value = picName; applyPatchFilter(); }
+            scrollToMatchedRow('#patchTable', picName);
+        }
+        function drillDownConsumption(query) {
+            switchTab('consumption');
+            const search = document.getElementById('consumptionSearch');
+            if (search) {
+                search.value = query;
+                consumptionSearchQuery = String(query || '').toLowerCase();
+                renderConsumptionTable();
+            }
+            setTimeout(() => {
+                const rows = document.querySelectorAll('#consumptionTable tr');
+                for (const row of rows) {
+                    if (row.innerText.toLowerCase().includes(String(query || '').toLowerCase())) {
+                        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        row.classList.add('bg-amber-50');
+                        setTimeout(() => row.classList.remove('bg-amber-50'), 2000);
+                        break;
+                    }
+                }
+            }, 250);
         }
 
         function sanitizeTemplateValue(value) {
@@ -4271,9 +4318,11 @@
                         const pic = getMAPic(r);
                         const start = convertExcelDate(getVal(r,['Start Date m/d/yyyy','Start Date','StartDate']));
                         const complete = convertExcelDate(getVal(r,['Complete Date m/d/yyyy','Complete Date','CompleteDate']));
+                        const safeStyle = escapePatchHtml(style);
+                        const clickStyle = String(style || '').replace(/'/g,"\\'");
                         return `
                             <tr class="border-b hover:bg-amber-50/40 transition-colors">
-                                <td class="p-2 font-bold text-slate-800">${style}</td>
+                                <td class="p-2 font-bold text-blue-700 cursor-pointer hover:underline" onclick="drillDownConsumption('${clickStyle}')" title="Click to find in Consumption">${safeStyle}</td>
                                 <td class="p-2">${proto}</td>
                                 <td class="p-2">${season}</td>
                                 <td class="p-2">${reqBy}</td>
@@ -4464,11 +4513,11 @@
             const picTbl = el('db-patch-pic-table');
             if (picTbl) picTbl.innerHTML = Object.keys(picPend).length
                 ? Object.entries(picPend).map(([name,items]) => `
-                    <tr class="border-b hover:bg-indigo-50 cursor-pointer" onclick="drillDownPatch('${name}')">
-                        <td class="p-3 font-bold border-r bg-slate-50/50 text-indigo-700">${name}
+                    <tr class="border-b hover:bg-blue-50 cursor-pointer transition-colors" onclick="drillDownPatch('${String(name).replace(/'/g,"\\'")}')">
+                        <td class="p-4 font-bold border-r bg-slate-50/50 text-indigo-700">${escapePatchHtml(name)}
                             <div class="text-[9px] font-normal text-slate-400 mt-0.5">${items.length} pending</div>
                         </td>
-                        <td class="p-3 flex flex-wrap gap-2">${items.map(s=>`<span class="px-2 py-0.5 bg-amber-100 text-amber-700 text-[10px] font-bold rounded cursor-pointer hover:bg-amber-200">${s}</span>`).join('')}</td>
+                        <td class="p-3 flex flex-wrap gap-2">${items.map(s=>`<div class="flex items-center gap-1.5 border rounded-lg px-2.5 py-1.5 bg-white shadow-sm"><span class="w-2 h-2 rounded-full bg-amber-400"></span><span class="font-bold text-slate-800 text-[10px]">${escapePatchHtml(s)}</span></div>`).join('')}</td>
                     </tr>`).join('')
                 : '<tr><td colspan="2" class="p-6 text-center italic text-slate-400">All patches completed!</td></tr>';
         }
@@ -6255,7 +6304,7 @@
                     <td class="p-3 font-mono text-slate-400 text-[10px]">${rowId}</td>
                     <td class="p-3 text-slate-500 text-[10px]">${received}</td>
                     <td class="p-3 text-[10px]">${season}</td>
-                    <td class="p-3 font-bold text-blue-700">${style}</td>
+                    <td class="p-3 font-bold text-blue-700 cursor-pointer hover:underline" onclick="drillDownConsumption('${String(style || '').replace(/'/g,"\\'")}')" title="Click to filter this consumption style">${escapePatchHtml(style)}</td>
                     <td class="p-3 text-[10px]">${jobNo}</td>
                     <td class="p-3 text-[10px]">${reqBy}</td>
                     <td class="p-3 font-semibold text-purple-700">${proto}</td>
