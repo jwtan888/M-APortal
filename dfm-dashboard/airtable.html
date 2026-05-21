@@ -81,6 +81,7 @@
             </label>
           </div>
           <div class="airtable-import-actions">
+            <button id="airtable-github-sync-btn" class="primary-btn" type="button">Refresh GitHub Master</button>
             <button id="airtable-check-btn" class="ghost-btn" type="button">Check Access</button>
             <button id="airtable-panel-sync-btn" class="primary-btn" type="button">Sync Browser Cache</button>
             <button id="airtable-load-json-btn" class="ghost-btn" type="button">Load JSON File</button>
@@ -113,6 +114,7 @@
         const IDB_ROWS_KEY = 'mvc-gallery-rows';
         const PUBLISHED_JSON_URL = './airtable-data.json';
         const POWER_AUTOMATE_JSON_URL = '';
+        const GITHUB_MASTER_SYNC_URL = 'https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/e7ddc487556049b89a7139cc04bb46d7/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=eFB8y73kvZVJF7jAXehpUFkCKDzWJ9Hr95mIBHMp9cg';
         const EMBEDDED_MASTER = window.DFM_CONSTRUCTION_MASTER || { records: [] };
         const MIRROR_TIMEOUT_MS = 25 * 1000;
         const DEFAULT_BASE_ID = 'appIgoUvdgdhmf24V';
@@ -138,6 +140,7 @@
           filterSummary: document.getElementById('airtable-filter-summary'),
           tableSummary: document.getElementById('airtable-table-summary'),
           tableWrap: document.getElementById('airtable-table-wrap'),
+          githubSyncBtn: document.getElementById('airtable-github-sync-btn'),
           panelSyncBtn: document.getElementById('airtable-panel-sync-btn'),
           checkBtn: document.getElementById('airtable-check-btn'),
           loadJsonBtn: document.getElementById('airtable-load-json-btn'),
@@ -852,6 +855,37 @@
           }
         }
 
+        async function triggerGithubMasterSync() {
+          if (!GITHUB_MASTER_SYNC_URL) {
+            setSyncStatus('GitHub master sync URL is not configured.', 'error');
+            return;
+          }
+          el.githubSyncBtn.disabled = true;
+          el.githubSyncBtn.innerText = 'Starting Sync...';
+          setSyncStatus('Starting GitHub construction master sync...');
+          try {
+            const response = await fetchWithTimeout(GITHUB_MASTER_SYNC_URL, {
+              method: 'POST',
+              cache: 'no-store',
+              headers: { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' },
+              body: JSON.stringify({
+                requestedBy: localStorage.getItem('ma_admin_session_user') || 'DFM dashboard',
+                source: 'dfm-dashboard-airtable-page',
+                requestedAt: new Date().toISOString()
+              })
+            }, 30000);
+            if (!response.ok) {
+              throw new Error(`Sync trigger failed: HTTP ${response.status}`);
+            }
+            setSyncStatus('GitHub construction master sync started. Wait for GitHub Actions to finish, then refresh this page.', 'ok');
+          } catch (error) {
+            setSyncStatus(error.message, 'error');
+          } finally {
+            el.githubSyncBtn.disabled = false;
+            el.githubSyncBtn.innerText = 'Refresh GitHub Master';
+          }
+        }
+
         function loadSettings() {
           try {
             const config = JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}');
@@ -867,6 +901,7 @@
         }
 
         function bindEvents() {
+          el.githubSyncBtn.addEventListener('click', triggerGithubMasterSync);
           el.panelSyncBtn.addEventListener('click', syncAirtable);
           el.checkBtn.addEventListener('click', checkAccess);
           el.loadJsonBtn.addEventListener('click', () => el.jsonFileInput.click());

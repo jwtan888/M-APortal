@@ -1,0 +1,33 @@
+name: Sync DFM Construction Master
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Build construction master from Airtable
+        env:
+          AIRTABLE_TOKEN: ${{ secrets.AIRTABLE_TOKEN }}
+          AIRTABLE_BASE_ID: appIgoUvdgdhmf24V
+          AIRTABLE_TABLE_ID: tblFoONq2PzRybmz3
+        run: python3 dfm-dashboard/scripts/sync_airtable_construction_master.py
+
+      - name: Commit refreshed construction master
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add dfm-dashboard/construction-master.js
+          if git diff --cached --quiet; then
+            echo "No construction master changes to commit."
+          else
+            git commit -m "Refresh DFM construction master from Airtable"
+            git push
+          fi

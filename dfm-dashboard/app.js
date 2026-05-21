@@ -12,8 +12,7 @@
   const MVC_GALLERY_IDB_ROWS_KEY = "mvc-gallery-rows";
   const MVC_GALLERY_META_KEY = "dfm-airtable-browser-meta";
   const MVC_GALLERY_DATA_URL = "./airtable-data.json";
-  const MVC_GALLERY_PA_URL =
-    "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/4a6c5654766d40b2b232aebe34be09f9/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=H4odIwzTr1vSpuEq09BxQI-decF5LTOOUDxSxA-QkL8";
+  const MVC_GALLERY_PA_URL = "";
   const MVC_GALLERY_TIMEOUT_MS = 25 * 1000;
   const MVC_GALLERY_FIRST_LOAD_TIMEOUT_MS = 45 * 1000;
   const DFM_LIVE_TIMEOUT_MS = 20 * 1000;
@@ -1083,6 +1082,9 @@
   }
 
   async function loadMvcGalleryFromPublishedMirror() {
+    if (loadMvcGalleryFromEmbeddedMaster()) {
+      return true;
+    }
     state.mvcGalleryLoading = true;
     state.mvcGalleryError = "";
     render();
