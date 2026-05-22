@@ -1619,8 +1619,8 @@
         .filter((item) => item.value > 0),
       categoryBars: Array.from(categoryMap.entries())
         .map(([label, value]) => ({ label, value }))
-        .sort((a, b) => b.value - a.value)
-        .slice(0, 5),
+        .filter((item) => item.value > 0)
+        .sort((a, b) => b.value - a.value),
       seasonTiles: Array.from(seasonStyleMap.entries())
         .map(([label, value]) => ({
           label,
