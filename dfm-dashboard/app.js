@@ -1156,11 +1156,12 @@
     return state.mvcGallery.get(normalized) || state.mvcGallery.get(cleanText(code).toUpperCase().replace(/\s+/g, "")) || null;
   }
 
-  function renderInvestmentCodeCell(code, index) {
+  function renderInvestmentCodeCell(code, index, rankValue = null) {
     const item = findMvcGalleryItem(code);
+    const rankNumber = Number(rankValue) || index + 1;
     const rankClass =
-      index === 0 ? "investment-rank--1" : index === 1 ? "investment-rank--2" : index === 2 ? "investment-rank--3" : "";
-    const rank = `<span class="investment-rank ${rankClass}">Top ${index + 1}</span>`;
+      rankNumber === 1 ? "investment-rank--1" : rankNumber === 2 ? "investment-rank--2" : rankNumber === 3 ? "investment-rank--3" : "";
+    const rank = `<span class="investment-rank ${rankClass}">Top ${rankNumber}</span>`;
     if (!item || !item.imageUrl) {
       return `${rank}<span class="investment-code-text">${escapeHtml(code)}</span>`;
     }
@@ -1504,16 +1505,17 @@
     });
     const totalModTypes = mTypeCodes.size + nonMTypeCodes.size + otherTypeCodes.size;
 
-    const summaryDrivenRows = Object.entries(state.investmentNotes)
+    const includeInactiveInvestmentRows = page === "data";
+    const rankedSummaryRows = Object.entries(state.investmentNotes)
       .map(([label, manual]) => ({
         label,
         manual,
         rank: Number(manual.currentRank || 0),
         active: cleanText(manual.activeTop20).toLowerCase() === "yes",
       }))
-      .filter((item) => item.active && item.rank > 0)
-      .sort((a, b) => a.rank - b.rank || a.label.localeCompare(b.label))
-      .slice(0, 20)
+      .filter((item) => item.rank > 0 && (includeInactiveInvestmentRows || item.active))
+      .sort((a, b) => a.rank - b.rank || a.label.localeCompare(b.label));
+    const summaryDrivenRows = (includeInactiveInvestmentRows ? rankedSummaryRows : rankedSummaryRows.slice(0, 20))
       .map(({ label, manual }) => {
         const seasonCounts = Array.from(nonMCodeSeasonMap.entries())
           .filter(([code]) => codeMatchesSummaryLabel(code, label))
@@ -1543,6 +1545,8 @@
             manual.improvementValue,
           ),
           investmentDecision: cleanText(manual.investmentDecision),
+          currentRank: cleanText(manual.currentRank),
+          activeTop20: cleanText(manual.activeTop20),
           updatedAt: manual.updatedAt || null,
         };
       });
@@ -1837,7 +1841,7 @@
         <div class="benchmark-current">
           <div class="benchmark-label">Current Active Construction Code (Non-M)</div>
           <div class="benchmark-value">${escapeHtml(formatNumber(active))}<span class="benchmark-value-inline">${escapeHtml(`${utilization}%`)}</span></div>
-          <div class="benchmark-meta">${over > 0 ? `${escapeHtml(formatNumber(over))} active DFM codes not in Nike master` : ""}</div>
+          <div class="benchmark-meta"></div>
         </div>
         <div class="benchmark-current">
           <div class="benchmark-label">Nike Construction Code</div>
@@ -1889,6 +1893,21 @@
         type: "select",
       },
     ];
+
+    if (page === "data") {
+      columns.unshift(
+        {
+          key: "currentRank",
+          label: "Current Rank",
+          displayOnly: true,
+        },
+        {
+          key: "activeTop20",
+          label: "Active Top 20",
+          displayOnly: true,
+        },
+      );
+    }
 
     if (editable) {
       return columns;
@@ -1962,7 +1981,7 @@
             .map(
               (row, index) => `
                 <tr data-code="${escapeHtml(row.label)}" data-editing="${state.investmentEditingCode === row.label ? "true" : "false"}">
-                  <td class="investment-code">${renderInvestmentCodeCell(row.label, index)}</td>
+                  <td class="investment-code">${renderInvestmentCodeCell(row.label, index, row.currentRank)}</td>
                   ${
                     seasonLabels.length
                       ? row.seasonVolumes
@@ -2845,13 +2864,31 @@
     }
 
     const fallbackSeed = JSON.parse(match[1]);
+    const fallbackSummaryRows = Array.isArray(fallbackSeed.summaryRows) ? fallbackSeed.summaryRows : [];
+    const mergedSummaryRows = (() => {
+      const byCode = new Map();
+      const rankOf = (row) => Number(normalizeSummaryRow(row).currentRank || Number.MAX_SAFE_INTEGER);
+      fallbackSummaryRows.forEach((row) => {
+        const code = cleanText(normalizeSummaryRow(row).constructionCode);
+        if (code) {
+          byCode.set(code, row);
+        }
+      });
+      summaryRows.forEach((row) => {
+        const code = cleanText(normalizeSummaryRow(row).constructionCode);
+        if (code) {
+          byCode.set(code, row);
+        }
+      });
+      return Array.from(byCode.values()).sort((a, b) => rankOf(a) - rankOf(b));
+    })();
     return {
       ...fallbackSeed,
       meta: {
         ...(fallbackSeed.meta || {}),
         sourceFile: summaryRows.length ? "Published DFM records + live DFM summary" : fallbackSeed.meta?.sourceFile,
       },
-      summaryRows,
+      summaryRows: mergedSummaryRows,
     };
   }
 
