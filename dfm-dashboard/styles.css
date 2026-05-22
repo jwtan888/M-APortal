@@ -359,7 +359,8 @@ textarea {
 }
 
 .airtable-card {
-  overflow: hidden;
+  position: relative;
+  overflow: visible;
   border: 1px solid var(--line);
   border-radius: 0.8rem;
   background: rgba(255, 255, 255, 0.9);
@@ -367,11 +368,15 @@ textarea {
 }
 
 .airtable-card-image {
+  position: relative;
+  z-index: 1;
   display: grid;
   place-items: center;
   width: 100%;
   aspect-ratio: 16 / 11;
+  overflow: visible;
   border-bottom: 1px solid var(--line);
+  border-radius: 0.8rem 0.8rem 0 0;
   background: #ffffff;
   color: var(--muted);
   text-decoration: none;
@@ -381,6 +386,25 @@ textarea {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  transform-origin: center center;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.airtable-card:hover {
+  z-index: 20;
+}
+
+.airtable-card-image:hover,
+.airtable-card-image:focus-visible {
+  z-index: 30;
+}
+
+.airtable-card-image:hover img,
+.airtable-card-image:focus-visible img {
+  transform: scale(2.15);
+  border-radius: 0.45rem;
+  background: #fff;
+  box-shadow: 0 18px 44px rgba(48, 59, 86, 0.28);
 }
 
 .airtable-card-body {
@@ -437,24 +461,6 @@ textarea {
 
 .airtable-card-chip.is-high {
   background: #f7bfd0;
-}
-
-.airtable-card-details {
-  border-top: 1px solid var(--line);
-  padding-top: 0.55rem;
-  color: var(--muted);
-  font-size: 0.78rem;
-}
-
-.airtable-card-details summary {
-  cursor: pointer;
-  color: var(--text);
-  font-weight: 800;
-}
-
-.airtable-card-details p {
-  margin: 0.55rem 0 0;
-  overflow-wrap: anywhere;
 }
 
 .airtable-data-table {

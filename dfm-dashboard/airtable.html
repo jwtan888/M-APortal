@@ -51,7 +51,7 @@
           </div>
         </section>
 
-        <details class="panel airtable-sync-panel">
+        <details id="airtable-github-sync-panel" class="panel airtable-sync-panel" hidden>
           <summary class="airtable-sync-summary">
             <span>Admin GitHub Sync</span>
             <span class="panel-note">Refresh published master</span>
@@ -78,7 +78,7 @@
       </main>
     </div>
 
-    <script src="./construction-master.js?v=20260522113030"></script>
+    <script src="./construction-master.js?v=20260522154034"></script>
     <script>
       (function () {
         const TOKEN_KEY = 'dfm-airtable-token';
@@ -92,6 +92,8 @@
         const POWER_AUTOMATE_JSON_URL = '';
         const GITHUB_MASTER_SYNC_URL = 'https://github.com/jwtan888/M-APortal/actions/workflows/sync-dfm-construction-master.yml';
         const EMBEDDED_MASTER = window.DFM_CONSTRUCTION_MASTER || { records: [] };
+        const SHARED_SESSION_KEY = 'ma_admin_session_user';
+        const DFM_LOGIN_USERS = ['Gavin', 'Joe'];
         const MIRROR_TIMEOUT_MS = 25 * 1000;
         const DEFAULT_BASE_ID = 'appIgoUvdgdhmf24V';
         const DEFAULT_TABLE_ID = 'tblFoONq2PzRybmz3';
@@ -116,6 +118,7 @@
           filterSummary: document.getElementById('airtable-filter-summary'),
           tableSummary: document.getElementById('airtable-table-summary'),
           tableWrap: document.getElementById('airtable-table-wrap'),
+          githubSyncPanel: document.getElementById('airtable-github-sync-panel'),
           githubSyncBtn: document.getElementById('airtable-github-sync-btn'),
           syncStatus: document.getElementById('airtable-sync-status')
         };
@@ -131,6 +134,19 @@
         function setSyncStatus(message = '', mode = '') {
           el.syncStatus.textContent = message;
           el.syncStatus.className = `airtable-sync-status${mode ? ` is-${mode}` : ''}`;
+        }
+
+        function getSharedSessionUser() {
+          try {
+            return (window.sessionStorage.getItem(SHARED_SESSION_KEY) || '').trim();
+          } catch (error) {
+            return '';
+          }
+        }
+
+        function applyGithubSyncAccess() {
+          if (!el.githubSyncPanel) return;
+          el.githubSyncPanel.hidden = !DFM_LOGIN_USERS.includes(getSharedSessionUser());
         }
 
         function fetchWithTimeout(url, options = {}, timeoutMs = 30000) {
@@ -284,7 +300,6 @@
               ${rows.map((row) => {
                 const images = getRowImages(row, columns);
                 const title = valueText(row[codeColumn]) || valueText(row.Name) || valueText(row._rowNo);
-                const detailColumns = columns.filter((column) => !excluded.has(column) && !getRowImages({ [column]: row[column] }, [column]).length);
                 return `
                   <article class="airtable-card">
                     <a class="airtable-card-image" href="${escapeHtml(images[0] || '#')}" target="_blank" rel="noopener">
@@ -295,13 +310,6 @@
                       ${ratingColumn ? `<div class="airtable-card-field"><span>${escapeHtml(ratingColumn)}</span><div>${renderChips(row[ratingColumn])}</div></div>` : ''}
                       ${complexityColumn ? `<div class="airtable-card-field"><span>${escapeHtml(complexityColumn)}</span><div>${renderChips(row[complexityColumn])}</div></div>` : ''}
                       ${endUseColumn ? `<div class="airtable-card-field"><span>${escapeHtml(endUseColumn)}</span><div>${renderChips(row[endUseColumn])}</div></div>` : ''}
-                      <details class="airtable-card-details">
-                        <summary>Details</summary>
-                        ${detailColumns.slice(0, 10).map((column) => {
-                          const text = valueText(row[column]);
-                          return text ? `<p><strong>${escapeHtml(column)}</strong><br />${escapeHtml(text)}</p>` : '';
-                        }).join('')}
-                      </details>
                     </div>
                   </article>
                 `;
@@ -738,7 +746,9 @@
         }
 
         function bindEvents() {
-          el.githubSyncBtn.addEventListener('click', triggerGithubMasterSync);
+          if (el.githubSyncBtn) el.githubSyncBtn.addEventListener('click', triggerGithubMasterSync);
+          window.addEventListener('storage', applyGithubSyncAccess);
+          window.addEventListener('ma-admin-session-changed', applyGithubSyncAccess);
           let searchTimer = 0;
           el.search.addEventListener('input', () => {
             clearTimeout(searchTimer);
@@ -765,6 +775,7 @@
           }
         }
 
+        applyGithubSyncAccess();
         bindEvents();
         (async () => {
           const loaded = await loadAnyCachedMirror();
