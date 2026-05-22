@@ -1130,7 +1130,7 @@
                 <div class="mt-4 overflow-x-auto border rounded-lg">
                     <table class="w-full portal-data-table text-left">
                         <thead class="bg-slate-100 border-b text-[11px] uppercase tracking-wider text-slate-500 font-bold">
-                            <tr><th class="p-3">Id</th><th class="p-3">Machine ID</th><th class="p-3">PIC</th><th class="p-3">Type</th><th class="p-3">File Name</th><th class="p-3">Size</th><th class="p-3 date-col">Start Date</th><th class="p-3 date-col">Complete Date</th></tr>
+                            <tr><th class="p-3">Id</th><th class="p-3">Machine ID</th><th class="p-3">PIC</th><th class="p-3">Type</th><th class="p-3">File Name</th><th class="p-3">Size</th><th class="p-3 date-col">Start Date</th><th class="p-3 date-col">Complete Date</th><th class="p-3">Action</th></tr>
                         </thead>
                         <tbody id="logTable" class="text-slate-700"></tbody>
                     </table>
@@ -1626,6 +1626,7 @@
         // --- API URL Constants ---
         const postURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/8467b362b45c4408a5c3b36138d34d8d/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=kYDfwYnTE9IU71pqIibsp0QU2WYzQ0zORaGj2bjaDAs";
         const fetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/47006a48f8764a49ab01dbb665617acf/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=2eqeoBWF-80BETYDfV2HdHZeqJW7-fDYjd3GXri1wNo";
+        const settingUpdateURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/59aefa52cc1d47b28056944b315198a1/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=hXk74JxLUeOxaesX1sV-rEBBcQE3nbKhYBT51m85SUE";
         const templateFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/81581050d13a4df09275905e9e05e2df/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=yWugYHV-OyqB2yVi3eSd94XXEA2CgOngdaCVf83xBtA";
         const updateURL        = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/a37c891f30994fef90aac14c55e2388e/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=6ostk6jCT6jb4Nx4lBi6fO_56axOeQPPm9Oo1_hcw7c";
         const supportUpdateURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/5caccabc64ae4738b3875a4635d3bd31/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=bh4SdKl4N38Yc4Ofnvo0Yez6gJciG6raPEmNzEgj6fg";
@@ -1714,6 +1715,7 @@
         const TEMPLATE_PENDING_TTL = 10 * 60 * 1000;
         const TEMPLATE_PENDING_MERGE_MS = 3 * 60 * 1000;
         let allRecords = [], allTemplates = [], currentUser = sessionStorage.getItem('ma_session_user') || null;
+        let editingSettingRowId = null;
         let templateDataLoaded = false, consumptionDataLoaded = false, quiltingConsumptionSyncing = false;
         let sectionChart = null, volumeChart = null;
         function isPortalAdmin(user = currentUser) {
@@ -3532,7 +3534,24 @@
                 const _ctrl_ll = new AbortController(); const _t_ll = setTimeout(() => _ctrl_ll.abort(), 20000);
                 const r = await fetch(fetchURL + "&cb=" + Date.now(), { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}), signal: _ctrl_ll.signal }); clearTimeout(_t_ll);
                 const d = await r.json();
-                allRecords = d.map(i => ({ id: getVal(i, ['Id','ID','id']), machine: getVal(i, ['Machine ID','MachineID','Machine']), pic: getVal(i, ['PIC']), type: getVal(i, ['Type']), file: getVal(i, ['File Name','FileName']), size: getVal(i, ['Size']), startDate: convertExcelDate(getVal(i, ['Start Date m/d/yyyy','Start Date','StartDate'])), completeDate: convertExcelDate(getVal(i, ['Complete Date m/d/yyyy','Complete Date','CompleteDate'])), raw: getVal(i, ['Id','ID','id']) })).sort((a,b)=> Number(b.raw||0) - Number(a.raw||0));
+                allRecords = d.map(i => {
+                    const startRaw = getVal(i, ['Start Date m/d/yyyy','Start Date','StartDate']);
+                    const completeRaw = getVal(i, ['Complete Date m/d/yyyy','Complete Date','CompleteDate']);
+                    return {
+                        id: getVal(i, ['Id','ID','id']),
+                        machine: getVal(i, ['Machine ID','MachineID','Machine']),
+                        pic: getVal(i, ['PIC']),
+                        type: getVal(i, ['Type']),
+                        file: getVal(i, ['File Name','FileName']),
+                        size: getVal(i, ['Size']),
+                        startDate: convertExcelDate(startRaw),
+                        completeDate: convertExcelDate(completeRaw),
+                        startRaw,
+                        completeRaw,
+                        raw: getVal(i, ['Id','ID','id']),
+                        source: i
+                    };
+                }).sort((a,b)=> Number(b.raw||0) - Number(a.raw||0));
                 if(st) { st.innerText = "LIVE: " + new Date().toLocaleTimeString(); st.classList.remove('sync-active'); }
                 applyFilters();
             } catch (e) {}
@@ -3603,10 +3622,171 @@
             applyFilters();
         }
 
+        function settingRowId(row) {
+            return String(row.id || row.raw || '').trim();
+        }
+
+        function settingDomKey(rowId) {
+            return String(rowId || '').replace(/[^a-zA-Z0-9_-]/g, '_');
+        }
+
+        function escapeHtml(value) {
+            return String(value ?? '').replace(/[&<>"']/g, ch => ({
+                '&': '&amp;',
+                '<': '&lt;',
+                '>': '&gt;',
+                '"': '&quot;',
+                "'": '&#39;'
+            }[ch]));
+        }
+
+        function canEditSettingRow(row) {
+            const pic = String(row.pic || '').trim();
+            return !!currentUser && (isPortalAdmin() || !pic || pic === '---' || pic === currentUser);
+        }
+
+        function settingMachineOptions(selected) {
+            return Object.keys(machineSpecs).map(machine => (
+                `<option value="${escapeHtml(machine)}" ${machine === selected ? 'selected' : ''}>${escapeHtml(machine)}</option>`
+            )).join('');
+        }
+
+        function settingTypeOptions(selected) {
+            return ['SETTING', 'NEW REQUEST'].map(type => (
+                `<option value="${type}" ${type === selected ? 'selected' : ''}>${type}</option>`
+            )).join('');
+        }
+
+        function editSettingRow(rowId, event) {
+            if (event) event.stopPropagation();
+            editingSettingRowId = String(rowId || '');
+            applyFilters();
+        }
+
+        function cancelSettingEdit(event) {
+            if (event) event.stopPropagation();
+            editingSettingRowId = null;
+            applyFilters();
+        }
+
+        async function saveSettingRow(rowId, domKey, event) {
+            if (event) event.stopPropagation();
+            const row = allRecords.find(item => settingRowId(item) === String(rowId || ''));
+            if (!row) return alert('Setting row not found. Please refresh and try again.');
+            if (!canEditSettingRow(row)) return alert('You can only edit your own setting row.');
+            if (!settingUpdateURL) {
+                return alert('Setting update flow URL is not configured yet. Please provide the Power Automate update URL for Settings.');
+            }
+
+            const button = event?.currentTarget;
+            if (button) {
+                button.disabled = true;
+                button.innerText = 'SAVING...';
+            }
+
+            const machine = document.getElementById(`set-machine-${domKey}`)?.value || row.machine;
+            const type = document.getElementById(`set-type-${domKey}`)?.value || row.type;
+            const file = document.getElementById(`set-file-${domKey}`)?.value.trim() || '';
+            const size = document.getElementById(`set-size-${domKey}`)?.value.trim() || '';
+            const startDate = toExcelDateFormat(document.getElementById(`set-start-${domKey}`)?.value.trim() || '');
+            const completeDate = toExcelDateFormat(document.getElementById(`set-complete-${domKey}`)?.value.trim() || '');
+            const pic = String(row.pic || '').trim() || currentUser;
+
+            try {
+                const response = await fetch(settingUpdateURL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'update',
+                        id: rowId,
+                        recordID: rowId,
+                        Id: rowId,
+                        'Machine ID': machine,
+                        machine,
+                        PIC: pic,
+                        pic,
+                        Type: type,
+                        type,
+                        'File Name': file,
+                        file,
+                        Size: size,
+                        size,
+                        'Start Date m/d/yyyy': startDate,
+                        startDate,
+                        'Complete Date m/d/yyyy': completeDate,
+                        completeDate,
+                        updatedBy: currentUser,
+                        'Updated By': currentUser
+                    })
+                });
+                if (!response.ok) {
+                    const text = await response.text();
+                    throw new Error(`HTTP ${response.status}: ${text.slice(0, 260)}`);
+                }
+                editingSettingRowId = null;
+                await refreshLiveLogs(true);
+            } catch (error) {
+                alert(`Setting update failed: ${error.message}`);
+            } finally {
+                if (button) {
+                    button.disabled = false;
+                    button.innerText = 'SAVE';
+                }
+            }
+        }
+
         function applyFilters() {
-            const s = document.getElementById('fileSearch').value.toLowerCase();
-            const filtered = allRecords.filter(r => (curF==='ALL' || r.machine===curF) && (String(r.file).toLowerCase().includes(s) || String(r.pic).toLowerCase().includes(s) || String(r.size||'').toLowerCase().includes(s)));
-            document.getElementById('logTable').innerHTML = filtered.map(r => `<tr class="border-b hover:bg-slate-50"><td class="p-3 text-slate-400 font-mono text-[10px]">${r.id||'—'}</td><td class="p-3 font-bold text-blue-700">${r.machine}</td><td class="p-3">${r.pic}</td><td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${r.type==='NEW REQUEST'?'bg-orange-100 text-orange-600':'bg-blue-100 text-blue-600'}">${r.type}</span></td><td class="p-3">${r.file}</td><td class="p-3">${r.size||'—'}</td><td class="p-3 date-cell text-slate-500">${r.startDate||'—'}</td><td class="p-3 date-cell ${r.completeDate&&r.completeDate!=='---'?'text-emerald-600 font-bold':'text-slate-400'}">${r.completeDate&&r.completeDate!=='---'?r.completeDate:'—'}</td></tr>`).join('');
+            const searchBox = document.getElementById('fileSearch');
+            const tableBody = document.getElementById('logTable');
+            if (!searchBox || !tableBody) return;
+            const s = searchBox.value.toLowerCase();
+            const filtered = allRecords.filter(r => (
+                curF === 'ALL' || r.machine === curF
+            ) && (
+                String(r.file).toLowerCase().includes(s) ||
+                String(r.pic).toLowerCase().includes(s) ||
+                String(r.size || '').toLowerCase().includes(s) ||
+                String(r.machine || '').toLowerCase().includes(s) ||
+                String(r.type || '').toLowerCase().includes(s)
+            ));
+            tableBody.innerHTML = filtered.map(r => {
+                const rowId = settingRowId(r);
+                const domKey = settingDomKey(rowId);
+                const canEdit = canEditSettingRow(r);
+                const startValue = r.startDate && r.startDate !== '---' ? r.startDate : '';
+                const completeValue = r.completeDate && r.completeDate !== '---' ? r.completeDate : '';
+                const inlineEditable = canEdit && rowId;
+
+                if (inlineEditable) {
+                    return `<tr class="border-b bg-blue-50/30">
+                        <td class="p-3 text-slate-400 font-mono text-[10px]">${escapeHtml(r.id || '—')}</td>
+                        <td class="p-3"><select id="set-machine-${domKey}" class="w-28 p-2 border rounded-lg bg-white text-xs font-bold text-blue-700">${settingMachineOptions(r.machine)}</select></td>
+                        <td class="p-3">${escapeHtml(r.pic || currentUser || '—')}</td>
+                        <td class="p-3"><select id="set-type-${domKey}" class="w-32 p-2 border rounded-lg bg-white text-xs font-bold">${settingTypeOptions(r.type)}</select></td>
+                        <td class="p-3"><input id="set-file-${domKey}" value="${escapeHtml(r.file || '')}" class="w-56 p-2 border rounded-lg bg-white text-xs font-bold"></td>
+                        <td class="p-3"><input id="set-size-${domKey}" value="${escapeHtml(r.size || '')}" class="w-24 p-2 border rounded-lg bg-white text-xs font-bold"></td>
+                        <td class="p-3"><input id="set-start-${domKey}" value="${escapeHtml(startValue)}" class="w-36 p-2 border rounded-lg bg-white text-xs font-bold"></td>
+                        <td class="p-3"><input id="set-complete-${domKey}" value="${escapeHtml(completeValue)}" class="w-36 p-2 border rounded-lg bg-white text-xs font-bold"></td>
+                        <td class="p-3 whitespace-nowrap"><button onclick='saveSettingRow(${JSON.stringify(rowId)}, ${JSON.stringify(domKey)}, event)' class="px-3 py-1 rounded-full bg-blue-600 text-white text-[10px] font-bold tracking-wider">SAVE</button></td>
+                    </tr>`;
+                }
+
+                const actionCell = canEdit
+                    ? `<span class="text-slate-300">NO ID</span>`
+                    : `<span class="text-slate-300">—</span>`;
+
+                return `<tr class="border-b hover:bg-slate-50">
+                    <td class="p-3 text-slate-400 font-mono text-[10px]">${escapeHtml(r.id || '—')}</td>
+                    <td class="p-3 font-bold text-blue-700">${escapeHtml(r.machine)}</td>
+                    <td class="p-3">${escapeHtml(r.pic)}</td>
+                    <td class="p-3"><span class="px-2 py-0.5 rounded-full text-[10px] font-bold ${r.type==='NEW REQUEST'?'bg-orange-100 text-orange-600':'bg-blue-100 text-blue-600'}">${escapeHtml(r.type)}</span></td>
+                    <td class="p-3">${escapeHtml(r.file)}</td>
+                    <td class="p-3">${escapeHtml(r.size || '—')}</td>
+                    <td class="p-3 date-cell text-slate-500">${escapeHtml(r.startDate || '—')}</td>
+                    <td class="p-3 date-cell ${r.completeDate&&r.completeDate!=='---'?'text-emerald-600 font-bold':'text-slate-400'}">${escapeHtml(r.completeDate&&r.completeDate!=='---'?r.completeDate:'—')}</td>
+                    <td class="p-3 whitespace-nowrap">${actionCell}</td>
+                </tr>`;
+            }).join('');
         }
 
         function scrollToMatchedRow(tableSelector, query) {
@@ -5049,6 +5229,7 @@
         function login() {
             currentUser = document.getElementById('userSelect').value;
             editingDownRowId = null;
+            editingSettingRowId = null;
             sessionStorage.setItem('ma_session_user', currentUser);
             updateSessionUI();
             updateLaserPicDisplay();
@@ -5060,10 +5241,12 @@
             renderPatchTable();
             renderDownTable();
             renderConsumptionTable();
+            applyFilters();
         }
         function logout() {
             currentUser = null;
             editingDownRowId = null;
+            editingSettingRowId = null;
             sessionStorage.removeItem('ma_session_user');
             updateSessionUI();
             updateLaserPicDisplay();
@@ -5075,6 +5258,7 @@
             renderPatchTable();
             renderDownTable();
             renderConsumptionTable();
+            applyFilters();
             clearConsumptionSyncMessages();
             setTimeout(clearConsumptionSyncMessages, 1500);
         }
