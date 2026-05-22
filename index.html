@@ -3657,6 +3657,19 @@
             )).join('');
         }
 
+        function ensureSettingEditLists() {
+            if (document.getElementById('settingMachineList')) return;
+            document.body.insertAdjacentHTML('beforeend', `
+                <datalist id="settingMachineList">
+                    ${Object.keys(machineSpecs).map(machine => `<option value="${escapeHtml(machine)}"></option>`).join('')}
+                </datalist>
+                <datalist id="settingTypeList">
+                    <option value="SETTING"></option>
+                    <option value="NEW REQUEST"></option>
+                </datalist>
+            `);
+        }
+
         function editSettingRow(rowId, event) {
             if (event) event.stopPropagation();
             editingSettingRowId = String(rowId || '');
@@ -3739,6 +3752,7 @@
             const searchBox = document.getElementById('fileSearch');
             const tableBody = document.getElementById('logTable');
             if (!searchBox || !tableBody) return;
+            ensureSettingEditLists();
             const s = searchBox.value.toLowerCase();
             const filtered = allRecords.filter(r => (
                 curF === 'ALL' || r.machine === curF
@@ -3760,9 +3774,9 @@
                 if (inlineEditable) {
                     return `<tr class="border-b bg-blue-50/30">
                         <td class="p-3 text-slate-400 font-mono text-[10px]">${escapeHtml(r.id || '—')}</td>
-                        <td class="p-3"><select id="set-machine-${domKey}" class="w-28 p-2 border rounded-lg bg-white text-xs font-bold text-blue-700">${settingMachineOptions(r.machine)}</select></td>
+                        <td class="p-3"><input id="set-machine-${domKey}" list="settingMachineList" value="${escapeHtml(r.machine || '')}" class="w-28 p-2 border rounded-lg bg-white text-xs font-bold text-blue-700"></td>
                         <td class="p-3">${escapeHtml(r.pic || currentUser || '—')}</td>
-                        <td class="p-3"><select id="set-type-${domKey}" class="w-32 p-2 border rounded-lg bg-white text-xs font-bold">${settingTypeOptions(r.type)}</select></td>
+                        <td class="p-3"><input id="set-type-${domKey}" list="settingTypeList" value="${escapeHtml(r.type || 'SETTING')}" class="w-32 p-2 border rounded-lg bg-white text-xs font-bold"></td>
                         <td class="p-3"><input id="set-file-${domKey}" value="${escapeHtml(r.file || '')}" class="w-56 p-2 border rounded-lg bg-white text-xs font-bold"></td>
                         <td class="p-3"><input id="set-size-${domKey}" value="${escapeHtml(r.size || '')}" class="w-24 p-2 border rounded-lg bg-white text-xs font-bold"></td>
                         <td class="p-3"><input id="set-start-${domKey}" value="${escapeHtml(startValue)}" class="w-36 p-2 border rounded-lg bg-white text-xs font-bold"></td>
