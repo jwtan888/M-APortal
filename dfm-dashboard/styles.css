@@ -339,13 +339,13 @@ textarea {
 }
 
 .airtable-table-panel {
-  overflow: hidden;
+  overflow: visible;
 }
 
 .airtable-table-wrap {
   width: 100%;
-  overflow: auto;
-  max-height: 70vh;
+  overflow: visible;
+  max-height: none;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -391,17 +391,19 @@ textarea {
 }
 
 .airtable-card:hover {
-  z-index: 20;
+  z-index: 80;
 }
 
 .airtable-card-image:hover,
 .airtable-card-image:focus-visible {
-  z-index: 30;
+  z-index: 90;
 }
 
 .airtable-card-image:hover img,
 .airtable-card-image:focus-visible img {
-  transform: scale(2.15);
+  position: relative;
+  z-index: 100;
+  transform: scale(2.8);
   border-radius: 0.45rem;
   background: #fff;
   box-shadow: 0 18px 44px rgba(48, 59, 86, 0.28);
@@ -1577,12 +1579,14 @@ textarea {
 }
 
 .construction-option-image {
+  position: relative;
+  z-index: 1;
   display: grid;
   place-items: center;
   width: 100%;
   min-height: 158px;
   aspect-ratio: 4 / 3;
-  overflow: hidden;
+  overflow: visible;
   border-radius: 0.7rem;
   background: #fff;
   color: var(--muted);
@@ -1594,6 +1598,27 @@ textarea {
   width: 100%;
   height: 100%;
   object-fit: contain;
+  transform-origin: center center;
+  transition: transform 0.16s ease, box-shadow 0.16s ease;
+}
+
+.construction-option:hover {
+  z-index: 80;
+}
+
+.construction-option-image:hover,
+.construction-option-image:focus-visible {
+  z-index: 90;
+}
+
+.construction-option-image:hover img,
+.construction-option-image:focus-visible img {
+  position: relative;
+  z-index: 100;
+  transform: scale(2.8);
+  border-radius: 0.45rem;
+  background: #fff;
+  box-shadow: 0 18px 44px rgba(48, 59, 86, 0.28);
 }
 
 .construction-option-body {
