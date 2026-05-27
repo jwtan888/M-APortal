@@ -3832,9 +3832,12 @@
         }
         function drillDownPatch(picName) {
             switchTab('patch');
+            const cleanPic = String(picName || '').trim();
+            const isUnassigned = !cleanPic || cleanPic === '---' || cleanPic.toLowerCase() === 'unassigned';
+            patchUnassignedOnly = isUnassigned;
             const search = document.getElementById('patchSearch');
-            if (search) { search.value = picName; applyPatchFilter(); }
-            scrollToMatchedRow('#patchTable', picName);
+            if (search) { search.value = isUnassigned ? '' : cleanPic; applyPatchFilter(); }
+            scrollToMatchedRow('#patchTable', isUnassigned ? '' : cleanPic);
         }
         function drillDownConsumption(query) {
             switchTab('consumption');
@@ -4722,8 +4725,10 @@
                 const picDisplay = (!pic || pic === '---') ? 'Unassigned' : pic;
                 const style = getVal(r,['Style Number','StyleNumber']);
                 const tmpl  = getVal(r,['Template No.','Template No','TemplateNo']);
+                const cleanStyle = style && style !== '---' ? String(style).trim() : '';
+                const cleanTmpl = tmpl && tmpl !== '---' ? String(tmpl).trim() : '';
                 if (!picPend[picDisplay]) picPend[picDisplay] = [];
-                picPend[picDisplay].push(`${style}${tmpl!=='---'?' ('+tmpl+')':''}`);
+                picPend[picDisplay].push(`${cleanStyle || '---'}${cleanTmpl ? ' (' + cleanTmpl + ')' : ''}`);
             });
             const picTbl = el('db-patch-pic-table');
             if (picTbl) picTbl.innerHTML = Object.keys(picPend).length
@@ -5573,7 +5578,7 @@
 
         // ── PATCH PAGE ──────────────────────────────────────────────────────────
         const patchFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/578c605e308e41e0a92bff040fbee0fd/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=3ACOFx4gywYqLicKRU56fVHlclF4aE1HNrdO21CgriQ";
-        let allPatchRows = [], patchSearchQuery = '';
+        let allPatchRows = [], patchSearchQuery = '', patchUnassignedOnly = false;
 
         async function refreshPatchData(isSilent = false) {
             const st = document.getElementById('patchSyncStatus');
@@ -5605,12 +5610,15 @@
 
         function applyPatchFilter() {
             patchSearchQuery = document.getElementById('patchSearch')?.value.toLowerCase() || '';
+            if (patchSearchQuery) patchUnassignedOnly = false;
             renderPatchTable();
         }
         function getPatchMonthFilter() { return document.getElementById('patchMonthFilter')?.value || ''; }
         function clearPatchSearch() {
             const el = document.getElementById('patchSearch'); if (el) el.value = '';
-            patchSearchQuery = ''; renderPatchTable();
+            patchSearchQuery = '';
+            patchUnassignedOnly = false;
+            renderPatchTable();
         }
 
         function escapePatchHtml(value) {
@@ -5668,6 +5676,11 @@
                     const d = rawToLocalDate(cd);
                     if (!d) return false;
                     if (`${months_p[d.getMonth()]}-${d.getFullYear()}` !== patchMF) return false;
+                }
+                if (patchUnassignedOnly) {
+                    const pic = getMAPic(r);
+                    const cleanPic = String(pic || '').trim();
+                    if (cleanPic && cleanPic !== '---') return false;
                 }
                 if (!patchSearchQuery) return true;;
                 const vals = [
