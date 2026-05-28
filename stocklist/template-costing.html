@@ -99,6 +99,28 @@
     .money { color: var(--cost); font-weight: 850; white-space: nowrap; }
     .equivalent-money { color: rgba(43,48,59,.62); font-weight: 850; white-space: nowrap; }
     .saving-money { color: var(--success); font-weight: 900; white-space: nowrap; }
+    .comparison-table { table-layout: fixed; min-width: 1120px; }
+    .comparison-table col.month-col { width: 8.5rem; }
+    .comparison-table col.type-col { width: 10rem; }
+    .comparison-table col.area-col { width: 9.5rem; }
+    .comparison-table col.cost-col { width: 8.8rem; }
+    .comparison-table col.summary-col { width: 7.4rem; }
+    .comparison-table th.group-head { text-align: center; font-size: .76rem; letter-spacing: .16em; }
+    .comparison-table th.production-group,
+    .comparison-table td.production-cell { background: rgba(49,95,214,.055); }
+    .comparison-table th.sample-group,
+    .comparison-table td.sample-cell { background: rgba(240,161,43,.075); }
+    .comparison-table th.saving-group,
+    .comparison-table td.saving-cell { background: rgba(28,151,96,.075); }
+    .comparison-table th.production-group { color: var(--accent); border-left: 1px solid rgba(49,95,214,.16); border-right: 1px solid rgba(49,95,214,.16); }
+    .comparison-table th.sample-group { color: #b45f1d; border-left: 1px solid rgba(240,161,43,.18); border-right: 1px solid rgba(240,161,43,.18); }
+    .comparison-table th.saving-group { color: var(--success); border-left: 1px solid rgba(28,151,96,.16); border-right: 1px solid rgba(28,151,96,.16); }
+    .comparison-table td.production-cell:first-of-type,
+    .comparison-table td.sample-cell:first-of-type,
+    .comparison-table td.saving-cell:first-of-type { border-left: 1px solid rgba(91,104,138,.12); }
+    .material-pill { display: inline-flex; align-items: center; min-width: 5.6rem; justify-content: center; border-radius: 999px; padding: .28rem .58rem; font-size: .72rem; font-weight: 900; letter-spacing: .08em; text-transform: uppercase; }
+    .material-pill.is-pvc { color: var(--accent); background: rgba(49,95,214,.12); }
+    .material-pill.is-cardboard { color: #b45f1d; background: rgba(240,161,43,.14); }
     .code-link { color: var(--accent); font-weight: 850; }
     .entry-input, .entry-select { width: 100%; border: 1px solid var(--line); border-radius: .65rem; padding: .55rem .65rem; background: #fff; color: var(--text); font-weight: 800; }
     .entry-number { min-width: 5.4rem; }
@@ -218,7 +240,7 @@
           <h2>Monthly Material Summary</h2>
         </div>
       </div>
-      <div class="table-wrap"><table><thead><tr><th>Month</th><th>Production Type</th><th>Production Total Area</th><th>Production Cost</th><th>Sample Type</th><th>Sample Total Area</th><th>Sample Cost</th><th>Monthly Total</th><th>PVC Equivalent Cost</th><th>Cost Saving</th></tr></thead><tbody id="dashboardRows"></tbody></table></div>
+      <div class="table-wrap"><table class="comparison-table"><colgroup><col class="month-col"><col class="type-col"><col class="area-col"><col class="cost-col"><col class="type-col"><col class="area-col"><col class="cost-col"><col class="summary-col"><col class="summary-col"><col class="summary-col"></colgroup><thead><tr><th rowspan="2">Month</th><th class="group-head production-group" colspan="3">Production</th><th class="group-head sample-group" colspan="3">Sample</th><th rowspan="2">Monthly Total</th><th class="saving-group" rowspan="2">PVC Equivalent Cost</th><th class="saving-group" rowspan="2">Cost Saving</th></tr><tr><th class="production-group">Type</th><th class="production-group">Total Area</th><th class="production-group">Cost</th><th class="sample-group">Type</th><th class="sample-group">Total Area</th><th class="sample-group">Cost</th></tr></thead><tbody id="dashboardRows"></tbody></table></div>
     </section>
 
     <section class="view-stack">
@@ -753,8 +775,8 @@
         const monthlyTotal = bucketTotal(bucket, 'production') + bucketTotal(bucket, 'sample');
         const { pvcEquivalentCost, costSaving } = bucketSaving(bucket);
         return [
-          `<tr><td class="code-link">${escapeHtml(monthName(month))}</td><td>PVC</td><td>${bucketArea(bucket, 'production', 'pvc').toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td class="money">${rm(bucketCost(bucket, 'production', 'pvc'))}</td><td>PVC</td><td>${bucketArea(bucket, 'sample', 'pvc').toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td class="money">${rm(bucketCost(bucket, 'sample', 'pvc'))}</td><td class="money">${rm(monthlyTotal)}</td><td>-</td><td>-</td></tr>`,
-          `<tr><td></td><td>Cardboard</td><td>${bucketArea(bucket, 'production', 'cardboard').toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td class="money">${rm(bucketCost(bucket, 'production', 'cardboard'))}</td><td>Cardboard</td><td>${bucketArea(bucket, 'sample', 'cardboard').toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td class="money">${rm(bucketCost(bucket, 'sample', 'cardboard'))}</td><td></td><td class="equivalent-money">${rm(pvcEquivalentCost)}</td><td class="saving-money">${rm(costSaving)}</td></tr>`,
+          `<tr><td class="code-link">${escapeHtml(monthName(month))}</td><td class="production-cell"><span class="material-pill is-pvc">PVC</span></td><td class="production-cell">${bucketArea(bucket, 'production', 'pvc').toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td class="production-cell money">${rm(bucketCost(bucket, 'production', 'pvc'))}</td><td class="sample-cell"><span class="material-pill is-pvc">PVC</span></td><td class="sample-cell">${bucketArea(bucket, 'sample', 'pvc').toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td class="sample-cell money">${rm(bucketCost(bucket, 'sample', 'pvc'))}</td><td class="money">${rm(monthlyTotal)}</td><td class="saving-cell">-</td><td class="saving-cell">-</td></tr>`,
+          `<tr><td></td><td class="production-cell"><span class="material-pill is-cardboard">Cardboard</span></td><td class="production-cell">${bucketArea(bucket, 'production', 'cardboard').toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td class="production-cell money">${rm(bucketCost(bucket, 'production', 'cardboard'))}</td><td class="sample-cell"><span class="material-pill is-cardboard">Cardboard</span></td><td class="sample-cell">${bucketArea(bucket, 'sample', 'cardboard').toLocaleString(undefined, { maximumFractionDigits: 1 })}</td><td class="sample-cell money">${rm(bucketCost(bucket, 'sample', 'cardboard'))}</td><td></td><td class="saving-cell equivalent-money">${rm(pvcEquivalentCost)}</td><td class="saving-cell saving-money">${rm(costSaving)}</td></tr>`,
         ];
       }).join('');
 
