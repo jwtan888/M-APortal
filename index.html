@@ -343,6 +343,21 @@
                 flex-wrap: wrap;
             }
         }
+        .portal-logo-link {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            height: 38px;
+            min-width: 38px;
+            flex-shrink: 0;
+            cursor: pointer;
+            text-decoration: none;
+        }
+        .portal-logo-link:focus-visible {
+            outline: 3px solid rgba(37, 99, 235, 0.24);
+            outline-offset: 4px;
+            border-radius: 12px;
+        }
     </style>
 </head>
 <body class="p-3 md:p-5 font-sans" style="background:var(--bg);min-height:100vh">
@@ -351,18 +366,18 @@
             <!-- Top row: logo + title -->
             <div class="portal-header-top flex items-center justify-between gap-4 px-5 pt-4 pb-3" style="background:rgba(255,255,255,0.92);backdrop-filter:blur(20px)">
                 <div class="portal-brand-row flex items-center gap-4 min-w-0">
-                <div class="flex-shrink-0 flex items-center justify-center" style="height:38px;min-width:38px">
-                    <img src="logo.png" alt="M&A Logo" id="headerLogo"
-                        style="height:38px;width:auto;object-fit:contain;display:block"
-                        onerror="this.style.display='none';document.getElementById('logoFallback').style.display='flex'">
-                    <div id="logoFallback" style="display:none;height:38px;width:38px;background:var(--accent);border-radius:10px;align-items:center;justify-content:center">
-                        <span style="color:#fff;font-size:13px;font-weight:900;letter-spacing:-1px">M&A</span>
+                    <a href="./index.html" class="portal-logo-link" aria-label="Refresh M&A Portal">
+                        <img src="logo.png" alt="M&A Logo" id="headerLogo"
+                            style="height:38px;width:auto;object-fit:contain;display:block"
+                            onerror="this.style.display='none';document.getElementById('logoFallback').style.display='flex'">
+                        <div id="logoFallback" style="display:none;height:38px;width:38px;background:var(--accent);border-radius:10px;align-items:center;justify-content:center">
+                            <span style="color:#fff;font-size:13px;font-weight:900;letter-spacing:-1px">M&A</span>
+                        </div>
+                    </a>
+                    <div class="min-w-0">
+                        <h1 class="text-xl md:text-2xl font-bold leading-tight truncate" style="color:var(--text-1);letter-spacing:-0.02em" id="mainTitle">M&A Portal</h1>
+                        <p style="color:var(--text-3);font-size:9px;font-weight:700;letter-spacing:0.2em" class="uppercase mt-0.5">Modernization & Automation</p>
                     </div>
-                </div>
-                <div class="min-w-0">
-                    <h1 class="text-xl md:text-2xl font-bold leading-tight truncate" style="color:var(--text-1);letter-spacing:-0.02em" id="mainTitle">M&A Portal</h1>
-                    <p style="color:var(--text-3);font-size:9px;font-weight:700;letter-spacing:0.2em" class="uppercase mt-0.5">Modernization & Automation</p>
-                </div>
                 </div>
                 <div class="portal-shortcut-row flex items-center gap-2 flex-shrink-0">
                     <a href="./template-ai/index.html" data-site-href="template-ai/index.html" target="_self"
