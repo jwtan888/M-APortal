@@ -221,7 +221,7 @@ if (els.importTrainingButton && els.trainingInput) {
     const imported = JSON.parse(await file.text());
     const examples = Array.isArray(imported) ? imported : imported.examples;
     if (!Array.isArray(examples)) return;
-    state.trainingExamples = examples;
+    state.trainingExamples = examples.map(normalizeTrainingExample);
     saveTrainingExamples(state.trainingExamples);
     updateTrainingMasterJson();
     await syncTrainingMasterJson();
@@ -633,7 +633,7 @@ function isShapeEntity(entity) {
 function generatePatchTemplate(entities, formula) {
   const outline = selectPatchOutline(entities, formula);
   if (!outline) return [];
-  const basePatch = rotatePoints(centerPoints(outline.points, 0, 0), formula.patchRotation);
+  const basePatchParts = centeredPatchParts(outline, formula.patchRotation);
   const startX = 70;
   const gap = formula.boardWidth + 16;
   const startY = 0;
@@ -650,38 +650,68 @@ function generatePatchTemplate(entities, formula) {
   generated.push({
     type: "LWPOLYLINE",
     layer: "AI_SOURCE_PATCH",
-    points: movePoints(basePatch, startX, sourcePreviewY),
+    points: movePoints(basePatchParts[0], startX, sourcePreviewY),
     closed: true,
     previewOnly: true,
+  });
+  basePatchParts.slice(1).forEach((part) => {
+    generated.push({
+      type: "LWPOLYLINE",
+      layer: "AI_SOURCE_PATCH",
+      points: movePoints(part, startX, sourcePreviewY),
+      closed: true,
+      previewOnly: true,
+    });
   });
 
   for (let layer = 1; layer <= 4; layer += 1) {
     const origin = { x: startX + (layer - 1) * gap, y: startY };
     const board = templateBoard(origin, formula);
-    const patch = movePoints(basePatch, origin.x + formula.patchRelX, origin.y + formula.patchRelY);
-    const offsetPatch = offsetOrthogonalPolygon(patch, formula.offset, "outward");
+    const patchParts = basePatchParts.map((part) => movePoints(part, origin.x + formula.patchRelX, origin.y + formula.patchRelY));
+    const offsetParts = unionOffsetParts(
+      patchParts
+        .map((part) => offsetOrthogonalPolygon(part, formula.offset, "outward"))
+        .filter((part) => part.length >= 3),
+    );
     const slotCenter = needleSlotCenter(origin, formula);
     generated.push(
       { type: "TEXT", layer: "AI_LABEL", text: String(layer), point: { x: origin.x, y: origin.y + formula.boardHeight / 2 + 18 }, height: 8 },
       { type: "LWPOLYLINE", layer: `AI_LAYER_${layer}_BOARD`, points: board, closed: true },
-      { type: "LWPOLYLINE", layer: `AI_LAYER_${layer}_PATCH`, points: patch, closed: true },
       { type: "LWPOLYLINE", layer: `AI_LAYER_${layer}_NEEDLE_SLOT`, points: pillPoints(slotCenter.x, slotCenter.y, formula.slotWidth, formula.slotHeight), closed: true },
     );
-    if (layer === 1) {
+    patchParts.forEach((patch, index) => {
+      generated.push({ type: "LWPOLYLINE", layer: `AI_LAYER_${layer}_PATCH${index ? `_${index + 1}` : ""}`, points: patch, closed: true });
+    });
+    if (layer === 4) {
       generated.push({
         type: "TEXT",
-        layer: "AI_LAYER_1_TEMPLATE_NUMBER",
+        layer: "AI_LAYER_4_TEMPLATE_NUMBER",
         text: formula.templateNumber,
         point: { x: (origin.x - formula.boardWidth / 2 + slotCenter.x - formula.slotWidth / 2) / 2, y: slotCenter.y },
         height: 3.5,
         anchor: "middle",
       });
     }
-    if (layer >= 2 && offsetPatch.length >= 3) {
-      generated.push({ type: "LWPOLYLINE", layer: `AI_LAYER_${layer}_PATCH_OFFSET_7MM`, points: offsetPatch, closed: true });
+    if (layer >= 2) {
+      offsetParts.forEach((offsetPatch, index) => {
+        generated.push({ type: "LWPOLYLINE", layer: `AI_LAYER_${layer}_PATCH_OFFSET_7MM${index ? `_${index + 1}` : ""}`, points: offsetPatch, closed: true });
+      });
     }
   }
   return generated;
+}
+
+function unionOffsetParts(parts) {
+  if (parts.length < 2) return parts;
+  const union = polygonUnionBoundary(parts);
+  return union.length >= 3 ? [union] : parts;
+}
+
+function centeredPatchParts(outline, rotationDeg) {
+  const parts = outline.parts?.length ? outline.parts.map((part) => part.points) : [outline.points];
+  const box = bounds(parts.map((points) => ({ points })));
+  const center = { x: (box.minX + box.maxX) / 2, y: (box.minY + box.maxY) / 2 };
+  return parts.map((points) => rotatePoints(movePoints(points, -center.x, -center.y), rotationDeg));
 }
 
 function selectPatchOutline(entities, formula) {
@@ -692,11 +722,56 @@ function selectPatchOutline(entities, formula) {
     .filter((item) => !isBoardSized(item.box, formula))
     .sort((a, b) => b.area - a.area);
   const unique = uniqueShapeCandidates(candidates);
+  const group = selectPatchCandidateGroup(unique);
+  if (group?.length > 1) {
+    return {
+      type: "MULTIPATCH",
+      layer: "AI_MULTI_PATCH_SOURCE",
+      parts: group.map((candidate) => candidate.entity),
+      points: group.flatMap((candidate) => candidate.entity.points),
+      closed: true,
+    };
+  }
   const hatchUnion = combineOverlappingHatches(unique);
   if (hatchUnion) return hatchUnion;
   const joined = joinConnectedPatchCandidates(unique);
   if (joined) return joined;
   return unique.filter((item) => !isNeedleSlotSized(item.box, formula))[0]?.entity || largestClosedShape(entities);
+}
+
+function selectPatchCandidateGroup(candidates) {
+  if (candidates.length < 2) return null;
+  const clusters = [];
+  candidates.forEach((candidate) => {
+    let cluster = clusters.find((items) => items.some((item) => candidateDistance(item, candidate) <= 12));
+    if (!cluster) {
+      cluster = [];
+      clusters.push(cluster);
+    }
+    cluster.push(candidate);
+  });
+  const usable = clusters
+    .filter((cluster) => cluster.length > 1)
+    .map((cluster) => ({
+      cluster,
+      box: bounds(cluster.map((candidate) => candidate.entity)),
+      area: cluster.reduce((sum, candidate) => sum + Math.abs(candidate.area), 0),
+    }))
+    .filter((item) => item.box.maxX - item.box.minX <= 120 && item.box.maxY - item.box.minY <= 120)
+    .sort((a, b) => {
+      const centerA = { x: (a.box.minX + a.box.maxX) / 2, y: (a.box.minY + a.box.maxY) / 2 };
+      const centerB = { x: (b.box.minX + b.box.maxX) / 2, y: (b.box.minY + b.box.maxY) / 2 };
+      return Math.hypot(centerA.x, centerA.y) - Math.hypot(centerB.x, centerB.y) || b.area - a.area;
+    });
+  return usable[0]?.cluster || null;
+}
+
+function candidateDistance(a, b) {
+  const ac = { x: (a.box.minX + a.box.maxX) / 2, y: (a.box.minY + a.box.maxY) / 2 };
+  const bc = { x: (b.box.minX + b.box.maxX) / 2, y: (b.box.minY + b.box.maxY) / 2 };
+  const gapX = Math.max(0, Math.max(a.box.minX, b.box.minX) - Math.min(a.box.maxX, b.box.maxX));
+  const gapY = Math.max(0, Math.max(a.box.minY, b.box.minY) - Math.min(a.box.maxY, b.box.maxY));
+  return Math.hypot(gapX, gapY) || Math.hypot(ac.x - bc.x, ac.y - bc.y) * 0.05;
 }
 
 function uniqueShapeCandidates(candidates) {
@@ -969,7 +1044,8 @@ function saveLearnedProfile(profile) {
 
 function loadTrainingExamples() {
   try {
-    return JSON.parse(localStorage.getItem("patchTemplateTrainingExamples") || "[]");
+    const examples = JSON.parse(localStorage.getItem("patchTemplateTrainingExamples") || "[]");
+    return Array.isArray(examples) ? examples.map(normalizeTrainingExample) : [];
   } catch {
     return [];
   }
@@ -977,10 +1053,32 @@ function loadTrainingExamples() {
 
 function saveTrainingExamples(examples) {
   try {
-    localStorage.setItem("patchTemplateTrainingExamples", JSON.stringify(examples));
+    localStorage.setItem("patchTemplateTrainingExamples", JSON.stringify(examples.map(normalizeTrainingExample)));
   } catch {
     // localStorage is unavailable in some automated checks.
   }
+}
+
+function normalizeTrainingExample(example) {
+  if (!example || typeof example !== "object") return example;
+  const formula = example.formula || {};
+  const output = example.output || {};
+  const templateNumberLayer = Number(formula.templateNumberLayer || output.templateNumberLayer || 4);
+  return {
+    ...example,
+    formula: {
+      ...formula,
+      templateNumberLayer,
+      templateNumberPlacement: formula.templateNumberPlacement || {
+        layer: templateNumberLayer,
+        reference: "between_template_left_edge_and_needle_slot",
+      },
+    },
+    output: {
+      ...output,
+      templateNumberLayer,
+    },
+  };
 }
 
 function loadTrainingMeta() {
@@ -1020,7 +1118,8 @@ function buildTrainingExample() {
   const formula = getFormula();
   const outline = selectPatchOutline(state.entities, formula);
   if (!outline) return null;
-  const outlineBox = bounds([outline]);
+  const outlineParts = outline.parts?.length ? outline.parts : [outline];
+  const outlineBox = bounds(outlineParts);
   const types = state.entities.reduce((acc, entity) => {
     acc[entity.type] = (acc[entity.type] || 0) + 1;
     return acc;
@@ -1036,10 +1135,11 @@ function buildTrainingExample() {
     selectedPatch: {
       layer: outline.layer,
       type: outline.type,
-      pointCount: outline.points.length,
+      partCount: outlineParts.length,
+      pointCount: outlineParts.reduce((sum, part) => sum + part.points.length, 0),
       widthMm: round(outlineBox.maxX - outlineBox.minX),
       heightMm: round(outlineBox.maxY - outlineBox.minY),
-      areaMm2: round(polygonArea(outline.points)),
+      areaMm2: round(outlineParts.reduce((sum, part) => sum + Math.abs(polygonArea(part.points)), 0)),
     },
     formula: {
       boardWidthMm: formula.boardWidth,
@@ -1059,9 +1159,15 @@ function buildTrainingExample() {
       patchRelY: formula.patchRelY,
       patchRotationDeg: formula.patchRotation,
       templateNumber: formula.templateNumber,
+      templateNumberLayer: 4,
+      templateNumberPlacement: {
+        layer: 4,
+        reference: "between_template_left_edge_and_needle_slot",
+      },
     },
     output: {
       templateLayers: 4,
+      templateNumberLayer: 4,
       generatedEntityCount: state.generated.length || generatePatchTemplate(state.entities, formula).length,
       ruleSet: "patch-template-4-layer-v1",
     },
@@ -1150,7 +1256,7 @@ async function loadTrainingMasterJsonFromPowerAutomate(options = {}) {
     if (!payload || !Array.isArray(payload.examples)) {
       throw new Error("Training JSON does not contain an examples array.");
     }
-    state.trainingExamples = payload.examples;
+    state.trainingExamples = payload.examples.map(normalizeTrainingExample);
     state.trainingMeta = {
       revision: Number(payload.revision) || state.trainingMeta.revision || 0,
       updatedAt: payload.updatedAt || payload.exportedAt || state.trainingMeta.updatedAt || "",
@@ -1523,6 +1629,12 @@ function selectedSourcePreviewEntities() {
   if (!state.entities.length) return [];
   const outline = selectPatchOutline(state.entities, getFormula());
   if (!outline) return state.entities;
+  if (outline.parts?.length) {
+    return outline.parts.map((part, index) => ({
+      ...part,
+      layer: `AI_SELECTED_SOURCE_PREVIEW_${index + 1}`,
+    }));
+  }
   return [{ ...outline, layer: "AI_SELECTED_SOURCE_PREVIEW" }];
 }
 
