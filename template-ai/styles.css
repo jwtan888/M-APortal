@@ -143,6 +143,10 @@ button:disabled {
   color: var(--text);
 }
 
+.portal-return-button {
+  text-decoration: none;
+}
+
 .actions .primary-button,
 .actions .secondary-button,
 .actions .training-pill,

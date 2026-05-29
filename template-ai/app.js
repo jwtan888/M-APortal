@@ -25,6 +25,9 @@ const DEFAULT_FORMULA = {
   patchRotation: 0,
 };
 
+const INITIAL_TEMPLATE_NUMBER = getTemplateNumberFromQuery() || DEFAULT_FORMULA.templateNumber;
+DEFAULT_FORMULA.templateNumber = INITIAL_TEMPLATE_NUMBER;
+
 const els = {
   dxfInput: document.querySelector("#dxfInput"),
   clearButton: document.querySelector("#clearButton"),
@@ -66,6 +69,16 @@ const els = {
   zoomOutButton: document.querySelector("#zoomOutButton"),
   zoomResetButton: document.querySelector("#zoomResetButton"),
 };
+
+function getTemplateNumberFromQuery() {
+  const params = new URLSearchParams(window.location.search);
+  const value = params.get("templateNo") || params.get("templateNumber") || params.get("template");
+  return value ? value.trim() : "";
+}
+
+if (els.templateNumber) {
+  els.templateNumber.value = INITIAL_TEMPLATE_NUMBER;
+}
 
 if (state.learnedProfile) applyLearnedProfileToControls(state.learnedProfile);
 loadTrainingMasterJsonFromPowerAutomate();
