@@ -20,6 +20,7 @@ const DEFAULT_FORMULA = {
   cornerRadius: 12,
   slotWidth: 30,
   slotHeight: 11,
+  slotRightEdge: 11.5,
   offset: 7,
   templateNumber: "AMS0000",
   patchRelX: 0,
@@ -62,6 +63,7 @@ const els = {
   cornerRadius: document.querySelector("#cornerRadius"),
   slotWidth: document.querySelector("#slotWidth"),
   slotHeight: document.querySelector("#slotHeight"),
+  slotRightEdge: document.querySelector("#slotRightEdge"),
   offset: document.querySelector("#offset"),
   templateNumber: document.querySelector("#templateNumber"),
   patchRelX: document.querySelector("#patchRelX"),
@@ -153,6 +155,7 @@ function resetParameters() {
   els.cornerRadius.value = DEFAULT_FORMULA.cornerRadius;
   els.slotWidth.value = DEFAULT_FORMULA.slotWidth;
   els.slotHeight.value = DEFAULT_FORMULA.slotHeight;
+  els.slotRightEdge.value = DEFAULT_FORMULA.slotRightEdge;
   els.offset.value = DEFAULT_FORMULA.offset;
   els.templateNumber.value = DEFAULT_FORMULA.templateNumber;
   els.patchRelX.value = DEFAULT_FORMULA.patchRelX;
@@ -234,7 +237,7 @@ els.zoomResetButton.addEventListener("click", () => {
   renderPreview();
 });
 
-[els.boardWidth, els.boardHeight, els.cornerRadius, els.slotWidth, els.slotHeight, els.offset, els.templateNumber, els.patchRelX, els.patchRelY, els.patchRotation].forEach((el) => {
+[els.boardWidth, els.boardHeight, els.cornerRadius, els.slotWidth, els.slotHeight, els.slotRightEdge, els.offset, els.templateNumber, els.patchRelX, els.patchRelY, els.patchRotation].forEach((el) => {
   el.addEventListener("input", () => {
     if (!state.entities.length) return;
     state.generated = generatePatchTemplate(state.entities, getFormula());
@@ -269,6 +272,7 @@ function getFormula() {
     cornerRadius: Number(els.cornerRadius.value) || DEFAULT_FORMULA.cornerRadius,
     slotWidth: Number(els.slotWidth.value) || DEFAULT_FORMULA.slotWidth,
     slotHeight: Number(els.slotHeight.value) || DEFAULT_FORMULA.slotHeight,
+    slotRightEdge: Number(els.slotRightEdge.value) || DEFAULT_FORMULA.slotRightEdge,
     offset: Number(els.offset.value) || DEFAULT_FORMULA.offset,
     templateNumber: (els.templateNumber.value || DEFAULT_FORMULA.templateNumber).trim() || DEFAULT_FORMULA.templateNumber,
     patchRelX: Number(els.patchRelX.value) || DEFAULT_FORMULA.patchRelX,
@@ -915,6 +919,7 @@ function inferReferenceProfile(entities, fallback) {
         boardHeight: board.height,
         slotWidth: Math.max(slot.width, slot.height),
         slotHeight: Math.min(slot.width, slot.height),
+        slotRightEdge: board.box.maxX - slot.box.maxX,
         slotRelX: slot.cx - board.cx,
         slotRelY: slot.cy - board.cy,
         patchRelX: patch.cx - board.cx,
@@ -929,6 +934,7 @@ function inferReferenceProfile(entities, fallback) {
     boardHeight: round(avg(samples.map((sample) => sample.boardHeight))),
     slotWidth: round(avg(samples.map((sample) => sample.slotWidth))),
     slotHeight: round(avg(samples.map((sample) => sample.slotHeight))),
+    slotRightEdge: round(avg(samples.map((sample) => sample.slotRightEdge))),
     slotRelX: round(avg(samples.map((sample) => sample.slotRelX))),
     slotRelY: round(avg(samples.map((sample) => sample.slotRelY))),
     patchRelX: round(avg(samples.map((sample) => sample.patchRelX))),
@@ -1041,6 +1047,13 @@ function buildTrainingExample() {
       cornerRadiusMm: formula.cornerRadius,
       needleSlotWidthMm: formula.slotWidth,
       needleSlotHeightMm: formula.slotHeight,
+      needleSlotRightEdgeMm: formula.slotRightEdge,
+      needleSlot: {
+        referenceEdge: "right",
+        edgeDistanceMm: formula.slotRightEdge,
+        widthMm: formula.slotWidth,
+        heightMm: formula.slotHeight,
+      },
       outwardOffsetMm: formula.offset,
       patchRelX: formula.patchRelX,
       patchRelY: formula.patchRelY,
@@ -1200,6 +1213,7 @@ function applyLearnedProfileToControls(profile) {
   els.boardHeight.value = profile.boardHeight;
   els.slotWidth.value = profile.slotWidth;
   els.slotHeight.value = profile.slotHeight;
+  if (profile.slotRightEdge != null) els.slotRightEdge.value = profile.slotRightEdge;
   els.patchRelX.value = profile.patchRelX ?? 0;
   els.patchRelY.value = profile.patchRelY ?? -32.4;
   els.patchRotation.value = profile.patchRotation ?? 0;
@@ -1250,7 +1264,7 @@ function pillPoints(cx, cy, width, height) {
 
 function needleSlotCenter(origin, formula) {
   return {
-    x: origin.x + formula.boardWidth / 2 - 11.5 - formula.slotWidth / 2,
+    x: origin.x + formula.boardWidth / 2 - formula.slotRightEdge - formula.slotWidth / 2,
     y: origin.y + formula.boardHeight / 2 - 50 - formula.slotHeight / 2,
   };
 }
@@ -1477,7 +1491,7 @@ function renderIssues() {
         "Layers 2, 3, and 4 add a 7mm outward offset line.",
         `Patch transform is shared by all 4 templates: X ${getFormula().patchRelX}mm, Y ${getFormula().patchRelY}mm, rotate ${getFormula().patchRotation}deg.`,
         "Template is generated around 150mm x 180mm unless changed.",
-        "Needle slot top edge is 50mm from template top edge and right edge is 11.5mm from template right edge.",
+        `Needle slot top edge is 50mm from template top edge and right edge is ${getFormula().slotRightEdge}mm from template right edge.`,
         state.learnedProfile
           ? `Learned reference profile active from ${state.learnedProfile.sampleCount} board sample(s).`
           : "No reference profile learned yet. Import the PIC artwork once to learn placement.",
