@@ -1,0 +1,122 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AI Generative Patch Template</title>
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 68 48'%3E%3Cg fill='%230514ff'%3E%3Cpath d='M9 4h7L7 44H0z'/%3E%3Cpath d='M21 4h12L24 44H12z'/%3E%3Cpath d='M44 4h21c2 0 3 2 3 4l-7 28c-1 5-5 8-10 8H34c-4 0-7-3-6-7l7-26c1-4 5-7 9-7z'/%3E%3C/g%3E%3C/svg%3E">
+    <link rel="stylesheet" href="styles.css">
+  </head>
+  <body>
+    <main class="app-shell">
+      <header class="topbar">
+        <div>
+          <h1 class="topbar-title">AI Generative Patch Template</h1>
+        </div>
+        <div class="actions">
+          <div class="secondary-button training-pill" aria-label="Training data">
+            <span>Training data</span>
+            <strong id="trainingCount">0</strong>
+            <p id="trainingSummary">0 approved examples saved locally.</p>
+          </div>
+          <button id="clearButton" class="secondary-button" type="button" disabled>Clear</button>
+          <label class="primary-button" for="dxfInput">Import DXF</label>
+          <input id="dxfInput" type="file" accept=".dxf,text/plain">
+          <button id="exportButton" type="button" disabled>Export DXF</button>
+        </div>
+      </header>
+
+      <section class="layout">
+        <aside class="panel controls">
+          <h2>Parameter</h2>
+          <label>
+            Template width, mm
+            <input id="boardWidth" type="number" min="80" max="1000" step="1" value="150">
+          </label>
+          <label>
+            Template height, mm
+            <input id="boardHeight" type="number" min="100" max="1000" step="1" value="180">
+          </label>
+          <label>
+            Bottom corner radius, mm
+            <input id="cornerRadius" type="number" min="0" max="40" step="1" value="12">
+          </label>
+          <label>
+            Needle slot width, mm
+            <input id="slotWidth" type="number" min="10" max="80" step="1" value="30">
+          </label>
+          <label>
+            Needle slot height, mm
+            <input id="slotHeight" type="number" min="4" max="30" step="1" value="11">
+          </label>
+          <label>
+            Layer 2-4 outward offset, mm
+            <input id="offset" type="number" min="0" max="30" step="0.5" value="7">
+          </label>
+          <label>
+            Template number
+            <input id="templateNumber" type="text" value="AMS0000">
+          </label>
+          <div class="control-group">
+            <h3>Global patch position</h3>
+            <div class="split-inputs">
+              <label>
+                X Position, MM
+                <input id="patchRelX" type="number" min="-75" max="75" step="0.5" value="0">
+              </label>
+              <label>
+                Y Position, MM
+                <input id="patchRelY" type="number" min="-90" max="90" step="0.5" value="-32.4">
+              </label>
+            </div>
+            <label>
+              Rotation, degrees
+              <input id="patchRotation" type="number" min="-180" max="180" step="1" value="0">
+            </label>
+          </div>
+          <button id="applyButton" type="button" disabled>Apply Patch Rules</button>
+        </aside>
+
+        <section class="panel preview-panel">
+          <div class="preview-header">
+            <div>
+              <h2>Artboard</h2>
+              <p id="fileSummary">Import patch DXF to auto generate template</p>
+            </div>
+            <div class="zoom-stack">
+              <div class="zoom-actions">
+                <button id="zoomOutButton" type="button" disabled>-</button>
+                <button id="zoomResetButton" type="button" disabled>Reset</button>
+                <button id="zoomInButton" type="button" disabled>+</button>
+              </div>
+              <div class="artboard-measurement">
+                <span>DXF size</span>
+                <strong id="dxfSize">0 x 0 mm</strong>
+                <p id="dxfSizeSummary"></p>
+              </div>
+            </div>
+          </div>
+          <svg id="preview" viewBox="0 0 100 60" role="img" aria-label="Patch template preview"></svg>
+        </section>
+
+      </section>
+    </main>
+    <div id="exportModal" class="password-modal hidden" role="dialog" aria-modal="true" aria-labelledby="exportModalTitle">
+      <div class="password-backdrop" id="exportModalBackdrop"></div>
+      <div class="password-dialog">
+        <p class="eyebrow">Training data</p>
+        <h3 id="exportModalTitle">Is this result correct?</h3>
+        <div class="confirm-body">
+          <p>This can be saved as an approved example to improve accuracy of template generation</p>
+        </div>
+        <div class="password-actions">
+          <button class="tiny-btn" id="exportCancelButton" type="button">Cancel</button>
+          <button class="tiny-btn" id="exportOnlyButton" type="button">Need Modification</button>
+          <button class="primary-btn" id="exportAndRecordButton" type="button">Yes</button>
+        </div>
+      </div>
+    </div>
+    <script src="config.js"></script>
+    <script src="app.js?v=20260529-export-modal-2"></script>
+  </body>
+</html>
