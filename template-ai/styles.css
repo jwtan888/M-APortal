@@ -30,7 +30,8 @@ body {
 }
 
 button,
-input {
+input,
+select {
   font: inherit;
 }
 
@@ -228,7 +229,8 @@ label {
   text-transform: uppercase;
 }
 
-input {
+input,
+select {
   width: 100%;
   min-height: 2.55rem;
   border: 1px solid var(--line);
@@ -240,7 +242,8 @@ input {
   outline: none;
 }
 
-input:focus {
+input:focus,
+select:focus {
   border-color: rgba(49, 95, 214, 0.55);
   box-shadow: 0 0 0 3px rgba(49, 95, 214, 0.16);
   background: #fff;
@@ -274,6 +277,38 @@ input:focus {
 .preview-header {
   justify-content: space-between;
   margin-bottom: 0.9rem;
+}
+
+.artboard-simple-shape {
+  display: flex;
+  align-items: end;
+  gap: 0.55rem;
+  margin-left: auto;
+}
+
+.artboard-simple-shape select,
+.artboard-simple-shape input {
+  min-height: 2.35rem;
+  border-radius: 999px;
+  padding: 0.48rem 0.72rem;
+  font-size: 0.84rem;
+}
+
+.artboard-simple-shape select {
+  width: 7.6rem;
+}
+
+.artboard-simple-shape label {
+  width: 6.4rem;
+  gap: 0.18rem;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
+}
+
+.artboard-simple-shape button {
+  min-height: 2.35rem;
+  padding: 0.48rem 0.85rem;
+  font-size: 0.84rem;
 }
 
 .preview-header p {

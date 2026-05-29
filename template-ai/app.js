@@ -1,5 +1,7 @@
 const state = {
   fileName: "",
+  sourceType: "dxf",
+  simpleShape: null,
   entities: [],
   generated: [],
   learnedProfile: loadLearnedProfile(),
@@ -70,6 +72,12 @@ const els = {
   patchRelX: document.querySelector("#patchRelX"),
   patchRelY: document.querySelector("#patchRelY"),
   patchRotation: document.querySelector("#patchRotation"),
+  simpleShapeType: document.querySelector("#simpleShapeType"),
+  simpleShapeWidth: document.querySelector("#simpleShapeWidth"),
+  simpleShapeHeight: document.querySelector("#simpleShapeHeight"),
+  simpleShapeWidthLabel: document.querySelector("#simpleShapeWidthLabel"),
+  simpleShapeHeightWrap: document.querySelector("#simpleShapeHeightWrap"),
+  createSimpleShapeButton: document.querySelector("#createSimpleShapeButton"),
   zoomInButton: document.querySelector("#zoomInButton"),
   zoomOutButton: document.querySelector("#zoomOutButton"),
   zoomResetButton: document.querySelector("#zoomResetButton"),
@@ -97,6 +105,9 @@ els.dxfInput.addEventListener("change", async (event) => {
 });
 
 els.clearButton.addEventListener("click", clearArtboard);
+els.createSimpleShapeButton.addEventListener("click", createSimplePatchTemplate);
+els.simpleShapeType.addEventListener("change", updateSimpleShapeControls);
+updateSimpleShapeControls();
 
 els.applyButton.addEventListener("click", () => {
   state.generated = generatePatchTemplate(state.entities, getFormula());
@@ -128,7 +139,7 @@ function exportCurrentDxf() {
   const url = URL.createObjectURL(blob);
   const link = document.createElement("a");
   link.href = url;
-  link.download = state.fileName.replace(/\.dxf$/i, "") + "-patch-template.dxf";
+  link.download = (state.fileName || "simple-patch").replace(/\.dxf$/i, "") + "-patch-template.dxf";
   document.body.appendChild(link);
   link.click();
   link.remove();
@@ -137,6 +148,8 @@ function exportCurrentDxf() {
 
 function clearArtboard() {
   state.fileName = "";
+  state.sourceType = "dxf";
+  state.simpleShape = null;
   state.entities = [];
   state.generated = [];
   state.baseViewBox = null;
@@ -148,6 +161,73 @@ function clearArtboard() {
   els.exportButton.disabled = true;
   closeExportModal();
   render();
+}
+
+function updateSimpleShapeControls() {
+  const shape = getSimpleShapeType();
+  if (shape === "circle") {
+    els.simpleShapeWidthLabel.textContent = "Diameter, mm";
+    els.simpleShapeHeightWrap.classList.add("hidden");
+    return;
+  }
+  els.simpleShapeWidthLabel.textContent = "Width, mm";
+  els.simpleShapeHeightWrap.classList.remove("hidden");
+}
+
+function getSimpleShapeType() {
+  return els.simpleShapeType.value || "rectangle";
+}
+
+function createSimplePatchTemplate() {
+  const shapeType = getSimpleShapeType();
+  const width = Math.max(1, Number(els.simpleShapeWidth.value) || 1);
+  const height = shapeType === "circle" ? width : Math.max(1, Number(els.simpleShapeHeight.value) || 1);
+  const entity = simpleShapeEntity(shapeType, width, height);
+  state.sourceType = "simple-shape";
+  state.simpleShape = {
+    type: shapeType,
+    widthMm: round(width),
+    heightMm: round(height),
+    diameterMm: shapeType === "circle" ? round(width) : null,
+  };
+  state.fileName = simpleShapeFileName(state.simpleShape);
+  state.entities = [entity];
+  state.generated = generatePatchTemplate(state.entities, getFormula());
+  resetView();
+  els.applyButton.disabled = false;
+  els.clearButton.disabled = false;
+  els.exportButton.disabled = state.generated.length === 0;
+  render();
+}
+
+function simpleShapeEntity(shapeType, width, height) {
+  if (shapeType === "circle") {
+    return { type: "CIRCLE", layer: "AI_SIMPLE_PATCH_SOURCE", points: circlePoints(0, 0, width / 2), closed: true };
+  }
+  return {
+    type: "LWPOLYLINE",
+    layer: "AI_SIMPLE_PATCH_SOURCE",
+    points: rectanglePoints(width, height),
+    closed: true,
+  };
+}
+
+function rectanglePoints(width, height) {
+  const left = -width / 2;
+  const right = width / 2;
+  const top = height / 2;
+  const bottom = -height / 2;
+  return [
+    { x: left, y: top },
+    { x: right, y: top },
+    { x: right, y: bottom },
+    { x: left, y: bottom },
+  ];
+}
+
+function simpleShapeFileName(shape) {
+  if (shape.type === "circle") return `simple-circle-${shape.diameterMm}mm.dxf`;
+  return `simple-rectangle-${shape.widthMm}x${shape.heightMm}mm.dxf`;
 }
 
 function resetParameters() {
@@ -162,6 +242,10 @@ function resetParameters() {
   els.patchRelX.value = DEFAULT_FORMULA.patchRelX;
   els.patchRelY.value = DEFAULT_FORMULA.patchRelY;
   els.patchRotation.value = DEFAULT_FORMULA.patchRotation;
+  els.simpleShapeType.value = "rectangle";
+  els.simpleShapeWidth.value = 50;
+  els.simpleShapeHeight.value = 35;
+  updateSimpleShapeControls();
 }
 
 function openExportModal() {
@@ -255,6 +339,8 @@ els.preview.addEventListener("keydown", handlePreviewKeyPan);
 
 function loadDxf(text, fileName) {
   state.fileName = fileName;
+  state.sourceType = "dxf";
+  state.simpleShape = null;
   state.entities = parseDxf(text);
   const learned = inferReferenceProfile(state.entities, getFormula());
   if (learned) {
@@ -721,6 +807,8 @@ function centeredPatchParts(outline, rotationDeg) {
 }
 
 function selectPatchOutline(entities, formula) {
+  const simpleShape = entities.find((entity) => entity.layer === "AI_SIMPLE_PATCH_SOURCE" && isShapeEntity(entity) && entity.points.length >= 3);
+  if (simpleShape) return simpleShape;
   const candidates = entities
     .filter((entity) => isShapeEntity(entity) && entity.points.length >= 3)
     .map((entity) => ({ entity, box: bounds([entity]), area: polygonArea(entity.points) }))
@@ -1134,9 +1222,11 @@ function buildTrainingExample() {
     schema: "patch-template-example-v1",
     savedAt: new Date().toISOString(),
     input: {
+      sourceType: state.sourceType || "dxf",
       fileName: state.fileName,
       entityCount: state.entities.length,
       entityTypes: types,
+      simpleShape: state.simpleShape,
     },
     selectedPatch: {
       layer: outline.layer,
@@ -1576,9 +1666,19 @@ function render() {
   }
   if (els.saveTrainingButton) els.saveTrainingButton.disabled = !state.entities.length;
   if (els.exportTrainingButton) els.exportTrainingButton.disabled = state.trainingExamples.length === 0;
-  els.fileSummary.textContent = state.entities.length ? `${state.fileName}: ${state.entities.length} entities parsed` : "No supported DXF entities found.";
+  if (state.entities.length && state.sourceType === "simple-shape") {
+    els.fileSummary.textContent = `${simpleShapeLabel(state.simpleShape)}: simple shape generated`;
+  } else {
+    els.fileSummary.textContent = state.entities.length ? `${state.fileName}: ${state.entities.length} entities parsed` : "Import patch DXF to auto generate template";
+  }
   if (els.issueList) renderIssues();
   renderPreview();
+}
+
+function simpleShapeLabel(shape) {
+  if (!shape) return "Simple patch";
+  if (shape.type === "circle") return `Circle ${shape.diameterMm}mm`;
+  return `Rectangle ${shape.widthMm} x ${shape.heightMm}mm`;
 }
 
 function renderDxfSize() {

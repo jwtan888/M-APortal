@@ -87,6 +87,21 @@
               <h2>Artboard</h2>
               <p id="fileSummary">Import patch DXF to auto generate template</p>
             </div>
+            <div class="simple-shape-panel artboard-simple-shape">
+              <select id="simpleShapeType" aria-label="Simple patch shape">
+                <option value="rectangle">Rectangle</option>
+                <option value="circle">Circle</option>
+              </select>
+              <label>
+                <span id="simpleShapeWidthLabel">Width, mm</span>
+                <input id="simpleShapeWidth" type="number" min="1" max="1000" step="0.5" value="50">
+              </label>
+              <label id="simpleShapeHeightWrap">
+                Height, mm
+                <input id="simpleShapeHeight" type="number" min="1" max="1000" step="0.5" value="35">
+              </label>
+              <button id="createSimpleShapeButton" class="secondary-button" type="button">Create Template</button>
+            </div>
             <div class="zoom-stack">
               <div class="zoom-actions">
                 <button id="zoomOutButton" type="button" disabled>-</button>
@@ -121,6 +136,6 @@
       </div>
     </div>
     <script src="config.js"></script>
-    <script src="app.js?v=20260529-artboard-pan-1"></script>
+    <script src="app.js?v=20260529-simple-shape-dropdown-1"></script>
   </body>
 </html>
