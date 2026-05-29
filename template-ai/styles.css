@@ -159,7 +159,7 @@ button:disabled {
 }
 
 .actions .training-pill {
-  width: 9rem;
+  width: 10rem;
 }
 
 .training-pill {
@@ -176,6 +176,7 @@ button:disabled {
 }
 
 .training-pill span {
+  min-width: 0;
   color: var(--text);
   font-size: 0.84rem;
   font-weight: 900;
@@ -184,13 +185,10 @@ button:disabled {
 }
 
 .training-pill strong {
+  flex: 0 0 auto;
   color: var(--text);
   font-size: 0.84rem;
   letter-spacing: 0;
-}
-
-.training-pill p {
-  display: none;
 }
 
 .primary-button:hover,
