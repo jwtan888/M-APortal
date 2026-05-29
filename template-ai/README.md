@@ -15,17 +15,15 @@ Local web MVP for generating patch templates from imported DXF outlines.
 
 ## Run
 
-macOS:
+From the project folder:
 
 ```bash
-cd /Users/jwtan/Downloads/Codex/template-ai
 python3 -m http.server 8769
 ```
 
-Windows:
+Windows alternative:
 
 ```powershell
-cd C:\path\to\template-ai
 py -m http.server 8769
 ```
 
