@@ -365,9 +365,9 @@
                 </div>
                 </div>
                 <div class="portal-shortcut-row flex items-center gap-2 flex-shrink-0">
-                    <a href="./task-scheduling.html" target="_self"
+                    <a href="./template-ai/index.html" data-site-href="template-ai/index.html" target="_self"
                        class="inline-flex items-center justify-center text-[10px] font-bold rounded-[10px] px-3 py-2 border transition-all whitespace-nowrap" style="color:#b45309;border-color:rgba(180,83,9,0.28);background:rgba(180,83,9,0.06)">
-                        Schedule
+                        Template AI
                     </a>
                     <a href="./attendance.html" data-site-href="attendance.html" target="_self"
                        class="inline-flex items-center justify-center text-[10px] font-bold rounded-[10px] px-3 py-2 border transition-all whitespace-nowrap" style="color:#0f766e;border-color:rgba(15,118,110,0.28);background:rgba(15,118,110,0.06)">
@@ -5636,6 +5636,15 @@
                 .replace(/</g, '&lt;')
                 .replace(/>/g, '&gt;');
         }
+        function getPatchAiUrl(templateNo) {
+            const cleanTemplateNo = String(templateNo || '').trim();
+            const params = new URLSearchParams();
+            if (cleanTemplateNo && cleanTemplateNo !== '---') {
+                params.set('templateNo', cleanTemplateNo);
+            }
+            const query = params.toString();
+            return `./template-ai/index.html${query ? `?${query}` : ''}`;
+        }
         function renderPatchLongText(text, fieldKey) {
             const clean = text && text !== '---' ? String(text) : '---';
             const safe = escapePatchHtml(clean);
@@ -5752,6 +5761,9 @@
                 const picDisplay = (!pic||pic==='---') && canEdit ? currentUser : (pic||'---');
                 const patchDescValue = patchDesc !== '---' ? escapePatchAttr(patchDesc) : '';
                 const fabDescValue = fabDesc !== '---' ? escapePatchAttr(fabDesc) : '';
+                const savePatchButton = canSavePatchRow ? `<button onclick="savePatchRow('${sid}',event)" class="bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-blue-700">SAVE</button>` : '';
+                const patchAiButton = !isDone ? `<a href="${escapePatchAttr(getPatchAiUrl(tmplNo))}" target="_self" class="inline-flex items-center justify-center bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-blue-700">PATCH</a>` : '';
+                const patchActionCell = savePatchButton || patchAiButton ? `<div class="flex flex-wrap items-center gap-1.5">${savePatchButton}${patchAiButton}</div>` : '';
                 const patchPicSelect = `<select id="patch-mapic-${sid}" class="manual-input admin-input" style="width:90px">
                     <option value="">Assign PIC</option>
                     ${picList.map(p => `<option value="${p}" ${p === pic ? 'selected' : ''}>${p}</option>`).join('')}
@@ -5782,7 +5794,7 @@
                     <td class="p-3 date-cell ${isDone?'text-emerald-600 font-bold':'text-slate-400'}">${canEdit ? `<input id="patch-complete-${sid}" class="manual-input admin-input" value="${isDone?complete:''}" placeholder="m/d/yyyy hh:mm">` : (isDone?complete:'---')}</td>
                     <td class="p-3 font-bold ${(!pic||pic==='---')?'text-blue-600':''}">${canAssignPatchPic ? patchPicSelect : picDisplay}</td>
                     <td class="p-3">${canEdit ? `<input id="patch-remark-${sid}" class="manual-input" value="${remark==='---'?'':remark}" placeholder="Remark">` : `<span class="italic text-slate-400 text-[10px]">${remark}</span>`}</td>
-                    <td class="p-3">${canSavePatchRow ? `<button onclick="savePatchRow('${sid}',event)" class="bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-blue-700">SAVE</button>` : ''}</td>
+                    <td class="p-3">${patchActionCell}</td>
                 </tr>`;
             }).join('');
         }
