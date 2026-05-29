@@ -5,6 +5,8 @@ const state = {
   learnedProfile: loadLearnedProfile(),
   trainingExamples: loadTrainingExamples(),
   trainingMeta: loadTrainingMeta(),
+  trainingStatus: "Loading training data...",
+  trainingSyncing: false,
   baseViewBox: null,
   viewBox: null,
 };
@@ -81,6 +83,7 @@ if (els.templateNumber) {
 }
 
 if (state.learnedProfile) applyLearnedProfileToControls(state.learnedProfile);
+render();
 loadTrainingMasterJsonFromPowerAutomate();
 syncArtboardHeightToParameter();
 
@@ -109,8 +112,8 @@ els.exportOnlyButton.addEventListener("click", () => {
   closeExportModal();
   exportCurrentDxf();
 });
-els.exportAndRecordButton.addEventListener("click", () => {
-  recordSatisfiedExportExample();
+els.exportAndRecordButton.addEventListener("click", async () => {
+  await recordSatisfiedExportExample();
   closeExportModal();
   exportCurrentDxf();
 });
@@ -181,11 +184,13 @@ function syncArtboardHeightToParameter() {
 }
 
 if (els.saveTrainingButton) {
-  els.saveTrainingButton.addEventListener("click", () => {
+  els.saveTrainingButton.addEventListener("click", async () => {
     const example = buildTrainingExample();
     if (!example) return;
     state.trainingExamples.push(example);
     saveTrainingExamples(state.trainingExamples);
+    updateTrainingMasterJson();
+    await syncTrainingMasterJson();
     render();
   });
 }
@@ -215,6 +220,8 @@ if (els.importTrainingButton && els.trainingInput) {
     if (!Array.isArray(examples)) return;
     state.trainingExamples = examples;
     saveTrainingExamples(state.trainingExamples);
+    updateTrainingMasterJson();
+    await syncTrainingMasterJson();
     render();
     event.target.value = "";
   });
@@ -986,7 +993,7 @@ function saveTrainingMeta(meta) {
   }
 }
 
-function recordSatisfiedExportExample() {
+async function recordSatisfiedExportExample() {
   if (!state.generated.length) return;
   const example = buildTrainingExample();
   if (!example) return;
@@ -998,7 +1005,7 @@ function recordSatisfiedExportExample() {
   state.trainingExamples.push(example);
   saveTrainingExamples(state.trainingExamples);
   updateTrainingMasterJson();
-  syncTrainingMasterJson();
+  await syncTrainingMasterJson();
   render();
 }
 
@@ -1076,30 +1083,60 @@ function updateTrainingMasterJson() {
 }
 
 async function syncTrainingMasterJson() {
-  if (!POWER_AUTOMATE_TRAINING_URL) return;
+  if (!POWER_AUTOMATE_TRAINING_URL) {
+    state.trainingStatus = "OneDrive save URL is not configured.";
+    render();
+    return false;
+  }
+  state.trainingSyncing = true;
+  state.trainingStatus = "Uploading training data to OneDrive...";
+  render();
   try {
-    await fetch(POWER_AUTOMATE_TRAINING_URL, {
+    const response = await fetch(POWER_AUTOMATE_TRAINING_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(trainingPayload()),
     });
-    loadTrainingMasterJsonFromPowerAutomate();
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(message || `HTTP ${response.status}`);
+    }
+    state.trainingStatus = "Training data uploaded. Reloading OneDrive copy...";
+    state.trainingSyncing = false;
+    render();
+    await loadTrainingMasterJsonFromPowerAutomate({ keepStatusOnSuccess: false });
+    return true;
   } catch {
-    // Keep local JSON as the source of truth if the network sync fails.
+    state.trainingSyncing = false;
+    state.trainingStatus = "Upload failed. Local training data is still kept in this browser.";
+    render();
+    return false;
   }
 }
 
-async function loadTrainingMasterJsonFromPowerAutomate() {
-  if (!POWER_AUTOMATE_READ_URL) return;
+async function loadTrainingMasterJsonFromPowerAutomate(options = {}) {
+  if (!POWER_AUTOMATE_READ_URL) {
+    state.trainingStatus = "OneDrive read URL is not configured.";
+    render();
+    return false;
+  }
+  state.trainingSyncing = true;
+  state.trainingStatus = "Loading training data from OneDrive...";
+  render();
   try {
     const response = await fetch(POWER_AUTOMATE_READ_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ request: "patch-template-training-data" }),
     });
-    if (!response.ok) return;
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(message || `HTTP ${response.status}`);
+    }
     const payload = normalizeTrainingPayload(await response.json());
-    if (!payload || !Array.isArray(payload.examples)) return;
+    if (!payload || !Array.isArray(payload.examples)) {
+      throw new Error("Training JSON does not contain an examples array.");
+    }
     state.trainingExamples = payload.examples;
     state.trainingMeta = {
       revision: Number(payload.revision) || state.trainingMeta.revision || 0,
@@ -1109,14 +1146,30 @@ async function loadTrainingMasterJsonFromPowerAutomate() {
     saveTrainingExamples(state.trainingExamples);
     saveTrainingMeta(state.trainingMeta);
     saveLearnedProfile(state.learnedProfile);
+    state.trainingSyncing = false;
+    if (!options.keepStatusOnSuccess) {
+      const updated = state.trainingMeta.updatedAt ? ` · ${formatTrainingDate(state.trainingMeta.updatedAt)}` : "";
+      state.trainingStatus = `Loaded from OneDrive${updated}.`;
+    }
     render();
+    return true;
   } catch {
-    // Keep local data when the PA read flow is unavailable.
+    state.trainingSyncing = false;
+    state.trainingStatus = "Load failed. Showing local browser training data.";
+    render();
+    return false;
   }
 }
 
 function normalizeTrainingPayload(responseBody) {
   if (!responseBody) return null;
+  if (typeof responseBody === "string") {
+    try {
+      return JSON.parse(responseBody);
+    } catch {
+      return null;
+    }
+  }
   if (Array.isArray(responseBody.examples)) return responseBody;
   const possibleContent = responseBody.body || responseBody.content || responseBody.fileContent || responseBody.value;
   if (typeof possibleContent === "string") {
@@ -1128,6 +1181,18 @@ function normalizeTrainingPayload(responseBody) {
   }
   if (possibleContent && Array.isArray(possibleContent.examples)) return possibleContent;
   return null;
+}
+
+function formatTrainingDate(value) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return String(value);
+  return date.toLocaleString("en-MY", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
 }
 
 function applyLearnedProfileToControls(profile) {
@@ -1381,7 +1446,7 @@ function render() {
   if (els.trainingCount) els.trainingCount.textContent = String(state.trainingExamples.length);
   if (els.trainingSummary) {
     const revision = state.trainingMeta.revision || 0;
-    els.trainingSummary.textContent = `Rev ${revision} master JSON, ${state.trainingExamples.length} approved.`;
+    els.trainingSummary.textContent = state.trainingStatus || `Rev ${revision} master JSON, ${state.trainingExamples.length} approved.`;
   }
   if (els.saveTrainingButton) els.saveTrainingButton.disabled = !state.entities.length;
   if (els.exportTrainingButton) els.exportTrainingButton.disabled = state.trainingExamples.length === 0;
