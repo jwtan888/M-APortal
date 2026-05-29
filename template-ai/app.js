@@ -9,6 +9,7 @@ const state = {
   trainingSyncing: false,
   baseViewBox: null,
   viewBox: null,
+  pan: null,
 };
 
 const APP_CONFIG = window.PATCH_TEMPLATE_CONFIG || {};
@@ -236,6 +237,11 @@ els.zoomResetButton.addEventListener("click", () => {
   state.viewBox = state.baseViewBox ? { ...state.baseViewBox } : null;
   renderPreview();
 });
+els.preview.addEventListener("pointerdown", startPreviewPan);
+els.preview.addEventListener("pointermove", movePreviewPan);
+els.preview.addEventListener("pointerup", endPreviewPan);
+els.preview.addEventListener("pointercancel", endPreviewPan);
+els.preview.addEventListener("keydown", handlePreviewKeyPan);
 
 [els.boardWidth, els.boardHeight, els.cornerRadius, els.slotWidth, els.slotHeight, els.slotRightEdge, els.offset, els.templateNumber, els.patchRelX, els.patchRelY, els.patchRotation].forEach((el) => {
   el.addEventListener("input", () => {
@@ -1679,6 +1685,8 @@ function svgEl(tag, attrs) {
 function resetView() {
   state.baseViewBox = null;
   state.viewBox = null;
+  state.pan = null;
+  els.preview.classList.remove("is-panning");
 }
 
 function zoomPreview(factor) {
@@ -1689,6 +1697,66 @@ function zoomPreview(factor) {
   const height = state.viewBox.height * factor;
   state.viewBox = { x: cx - width / 2, y: cy - height / 2, width, height };
   renderPreview();
+}
+
+function startPreviewPan(event) {
+  if (!state.viewBox) return;
+  els.preview.setPointerCapture?.(event.pointerId);
+  state.pan = {
+    pointerId: event.pointerId,
+    clientX: event.clientX,
+    clientY: event.clientY,
+    viewBox: { ...state.viewBox },
+  };
+  els.preview.classList.add("is-panning");
+}
+
+function movePreviewPan(event) {
+  if (!state.pan || state.pan.pointerId !== event.pointerId || !state.viewBox) return;
+  const rect = els.preview.getBoundingClientRect();
+  if (!rect.width || !rect.height) return;
+  const dx = (event.clientX - state.pan.clientX) * (state.pan.viewBox.width / rect.width);
+  const dy = (event.clientY - state.pan.clientY) * (state.pan.viewBox.height / rect.height);
+  state.viewBox = clampViewBox({
+    ...state.pan.viewBox,
+    x: state.pan.viewBox.x - dx,
+    y: state.pan.viewBox.y - dy,
+  });
+  els.preview.setAttribute("viewBox", `${state.viewBox.x} ${state.viewBox.y} ${state.viewBox.width} ${state.viewBox.height}`);
+}
+
+function endPreviewPan(event) {
+  if (state.pan?.pointerId && state.pan.pointerId !== event.pointerId) return;
+  state.pan = null;
+  els.preview.classList.remove("is-panning");
+}
+
+function handlePreviewKeyPan(event) {
+  if (!state.viewBox) return;
+  const stepX = state.viewBox.width * 0.08;
+  const stepY = state.viewBox.height * 0.08;
+  const next = { ...state.viewBox };
+  if (event.key === "ArrowLeft") next.x -= stepX;
+  else if (event.key === "ArrowRight") next.x += stepX;
+  else if (event.key === "ArrowUp") next.y -= stepY;
+  else if (event.key === "ArrowDown") next.y += stepY;
+  else return;
+  event.preventDefault();
+  state.viewBox = clampViewBox(next);
+  renderPreview();
+}
+
+function clampViewBox(viewBox) {
+  if (!state.baseViewBox) return viewBox;
+  const minX = state.baseViewBox.x;
+  const maxX = state.baseViewBox.x + state.baseViewBox.width - viewBox.width;
+  const minY = state.baseViewBox.y;
+  const maxY = state.baseViewBox.y + state.baseViewBox.height - viewBox.height;
+  return {
+    ...viewBox,
+    x: maxX >= minX ? Math.min(maxX, Math.max(minX, viewBox.x)) : viewBox.x,
+    y: maxY >= minY ? Math.min(maxY, Math.max(minY, viewBox.y)) : viewBox.y,
+  };
 }
 
 function setZoomButtons(enabled) {

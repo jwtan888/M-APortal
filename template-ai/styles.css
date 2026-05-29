@@ -328,6 +328,18 @@ input:focus {
     linear-gradient(var(--grid) 1px, transparent 1px),
     linear-gradient(180deg, #fff 0%, #f7f9fd 100%);
   background-size: 20px 20px;
+  cursor: grab;
+  touch-action: none;
+  outline: none;
+}
+
+#preview.is-panning {
+  cursor: grabbing;
+}
+
+#preview:focus-visible {
+  border-color: rgba(49, 95, 214, 0.55);
+  box-shadow: 0 0 0 3px rgba(49, 95, 214, 0.12);
 }
 
 .metric-grid {
