@@ -2,6 +2,7 @@ const state = {
   fileName: "",
   sourceType: "dxf",
   simpleShape: null,
+  rawEntityTypes: {},
   entities: [],
   generated: [],
   learnedProfile: loadLearnedProfile(),
@@ -150,6 +151,7 @@ function clearArtboard() {
   state.fileName = "";
   state.sourceType = "dxf";
   state.simpleShape = null;
+  state.rawEntityTypes = {};
   state.entities = [];
   state.generated = [];
   state.baseViewBox = null;
@@ -341,6 +343,7 @@ function loadDxf(text, fileName) {
   state.fileName = fileName;
   state.sourceType = "dxf";
   state.simpleShape = null;
+  state.rawEntityTypes = countDxfEntityTypes(text);
   state.entities = parseDxf(text);
   const learned = inferReferenceProfile(state.entities, getFormula());
   if (learned) {
@@ -351,9 +354,25 @@ function loadDxf(text, fileName) {
   state.generated = [];
   resetView();
   els.applyButton.disabled = state.entities.length === 0;
-  els.clearButton.disabled = state.entities.length === 0;
+  els.clearButton.disabled = false;
   els.exportButton.disabled = true;
   render();
+}
+
+function countDxfEntityTypes(text) {
+  const pairs = text.replace(/\r/g, "").split("\n").map((line) => line.trim());
+  const counts = {};
+  let inEntities = false;
+  for (let i = 0; i < pairs.length - 3; i += 2) {
+    if (pairs[i] === "0" && pairs[i + 1] === "SECTION" && pairs[i + 2] === "2" && pairs[i + 3] === "ENTITIES") {
+      inEntities = true;
+      i += 2;
+      continue;
+    }
+    if (inEntities && pairs[i] === "0" && pairs[i + 1] === "ENDSEC") break;
+    if (inEntities && pairs[i] === "0") counts[pairs[i + 1]] = (counts[pairs[i + 1]] || 0) + 1;
+  }
+  return counts;
 }
 
 function getFormula() {
@@ -1158,6 +1177,10 @@ function normalizeTrainingExample(example) {
   const formula = example.formula || {};
   const output = example.output || {};
   const templateNumberLayer = Number(formula.templateNumberLayer || output.templateNumberLayer || 4);
+  const offsetGeneration = output.offsetGeneration || {
+    outwardOffsetMm: formula.outwardOffsetMm ?? formula.offset ?? 7,
+    strategy: "legacy-unspecified",
+  };
   return {
     ...example,
     formula: {
@@ -1171,6 +1194,7 @@ function normalizeTrainingExample(example) {
     output: {
       ...output,
       templateNumberLayer,
+      offsetGeneration,
     },
   };
 }
@@ -1214,6 +1238,7 @@ function buildTrainingExample() {
   if (!outline) return null;
   const outlineParts = outline.parts?.length ? outline.parts : [outline];
   const outlineBox = bounds(outlineParts);
+  const offsetGeneration = describeOffsetGeneration(outline, formula);
   const types = state.entities.reduce((acc, entity) => {
     acc[entity.type] = (acc[entity.type] || 0) + 1;
     return acc;
@@ -1264,9 +1289,43 @@ function buildTrainingExample() {
     output: {
       templateLayers: 4,
       templateNumberLayer: 4,
+      offsetGeneration,
       generatedEntityCount: state.generated.length || generatePatchTemplate(state.entities, formula).length,
       ruleSet: "patch-template-4-layer-v1",
     },
+  };
+}
+
+function describeOffsetGeneration(outline, formula) {
+  const baseParts = centeredPatchParts(outline, formula.patchRotation);
+  const partStrategies = baseParts.map((points, index) => {
+    const box = bounds([{ points }]);
+    const width = box.maxX - box.minX;
+    const height = box.maxY - box.minY;
+    const area = polygonArea(points);
+    const compactRounded = Boolean(offsetCompactRoundedShape(points, formula.offset, "outward"));
+    const circular = !compactRounded && Boolean(offsetCircularShape(points, formula.offset, "outward"));
+    return {
+      partIndex: index + 1,
+      strategy: compactRounded ? "compact-rounded-convex-offset" : circular ? "circular-radial-offset" : "line-joined-offset",
+      pointCount: points.length,
+      widthMm: round(width),
+      heightMm: round(height),
+      areaMm2: round(area),
+      fillRatio: width > 0 && height > 0 ? round(area / (width * height)) : 0,
+    };
+  });
+  const rawOffsetParts = baseParts
+    .map((points) => offsetOrthogonalPolygon(points, formula.offset, "outward"))
+    .filter((points) => points.length >= 3);
+  const unionedOffsetParts = unionOffsetParts(rawOffsetParts);
+  return {
+    outwardOffsetMm: formula.offset,
+    sourcePartCount: baseParts.length,
+    rawOffsetPartCount: rawOffsetParts.length,
+    outputOffsetPartCount: unionedOffsetParts.length,
+    unionApplied: rawOffsetParts.length > 1 && unionedOffsetParts.length < rawOffsetParts.length,
+    partStrategies,
   };
 }
 
@@ -1474,6 +1533,12 @@ function needleSlotCenter(origin, formula) {
 function offsetOrthogonalPolygon(points, amount, direction = "inward") {
   const circularOffset = offsetCircularShape(points, amount, direction);
   if (circularOffset) return circularOffset;
+  const compactOffset = offsetCompactRoundedShape(points, amount, direction);
+  if (compactOffset) return compactOffset;
+  return offsetLineJoinedPolygon(points, amount, direction);
+}
+
+function offsetLineJoinedPolygon(points, amount, direction = "inward") {
   const area = signedArea(points);
   const inwardSign = area >= 0 ? 1 : -1;
   const directionSign = direction === "outward" ? -1 : 1;
@@ -1498,6 +1563,92 @@ function offsetOrthogonalPolygon(points, amount, direction = "inward") {
     result.push(lineIntersection(prev.p1, prev.p2, curr.p1, curr.p2) || curr.p1);
   }
   return cleanSelfIntersectingOffset(result.filter((point) => Number.isFinite(point.x) && Number.isFinite(point.y)));
+}
+
+function offsetCompactRoundedShape(points, amount, direction) {
+  if (direction !== "outward" || points.length < 7) return null;
+  const box = bounds([{ points }]);
+  const width = box.maxX - box.minX;
+  const height = box.maxY - box.minY;
+  if (width <= 0 || height <= 0) return null;
+  const ratio = Math.max(width, height) / Math.min(width, height);
+  const fillRatio = polygonArea(points) / (width * height);
+  const largeOffsetForShape = amount / Math.min(width, height) > 0.18;
+  if (ratio > (largeOffsetForShape ? 2.2 : 1.25)) return null;
+  if (!largeOffsetForShape && fillRatio < 0.62) return null;
+  const hull = convexHull(points);
+  if (hull.length < 3 || hull.length > points.length * (largeOffsetForShape ? 0.95 : 0.7)) return null;
+  return roundOffsetConvexPolygon(hull, amount, direction);
+}
+
+function convexHull(points) {
+  const unique = [];
+  const seen = new Set();
+  points.forEach((point) => {
+    const key = `${round(point.x)}:${round(point.y)}`;
+    if (seen.has(key)) return;
+    seen.add(key);
+    unique.push(point);
+  });
+  unique.sort((a, b) => a.x - b.x || a.y - b.y);
+  if (unique.length <= 3) return unique;
+  const lower = [];
+  unique.forEach((point) => {
+    while (lower.length >= 2 && cross(lower[lower.length - 2], lower[lower.length - 1], point) <= 0) lower.pop();
+    lower.push(point);
+  });
+  const upper = [];
+  [...unique].reverse().forEach((point) => {
+    while (upper.length >= 2 && cross(upper[upper.length - 2], upper[upper.length - 1], point) <= 0) upper.pop();
+    upper.push(point);
+  });
+  lower.pop();
+  upper.pop();
+  return [...lower, ...upper];
+}
+
+function cross(a, b, c) {
+  return (b.x - a.x) * (c.y - a.y) - (b.y - a.y) * (c.x - a.x);
+}
+
+function roundOffsetConvexPolygon(points, amount, direction) {
+  const area = signedArea(points);
+  const inwardSign = area >= 0 ? 1 : -1;
+  const directionSign = direction === "outward" ? -1 : 1;
+  const offsetEdges = [];
+  for (let i = 0; i < points.length; i += 1) {
+    const p1 = points[i];
+    const p2 = points[(i + 1) % points.length];
+    const dx = p2.x - p1.x;
+    const dy = p2.y - p1.y;
+    const len = Math.hypot(dx, dy) || 1;
+    const nx = (-dy / len) * inwardSign * directionSign;
+    const ny = (dx / len) * inwardSign * directionSign;
+    offsetEdges.push({
+      start: { x: p1.x + nx * amount, y: p1.y + ny * amount },
+      end: { x: p2.x + nx * amount, y: p2.y + ny * amount },
+    });
+  }
+  const result = [];
+  for (let i = 0; i < points.length; i += 1) {
+    const prev = offsetEdges[(i - 1 + offsetEdges.length) % offsetEdges.length];
+    const curr = offsetEdges[i];
+    result.push(...arcJoinPoints(points[i], prev.end, curr.start, amount));
+  }
+  return cleanCurvePoints(result);
+}
+
+function arcJoinPoints(center, start, end, radius) {
+  let startAngle = Math.atan2(start.y - center.y, start.x - center.x);
+  let endAngle = Math.atan2(end.y - center.y, end.x - center.x);
+  let sweep = endAngle - startAngle;
+  while (sweep > Math.PI) sweep -= Math.PI * 2;
+  while (sweep < -Math.PI) sweep += Math.PI * 2;
+  const steps = Math.max(3, Math.ceil(Math.abs(sweep) / (Math.PI / 18)));
+  return Array.from({ length: steps + 1 }, (_, index) => {
+    const angle = startAngle + (sweep * index) / steps;
+    return { x: center.x + Math.cos(angle) * radius, y: center.y + Math.sin(angle) * radius };
+  });
 }
 
 function offsetCircularShape(points, amount, direction) {
@@ -1668,6 +1819,13 @@ function render() {
   if (els.exportTrainingButton) els.exportTrainingButton.disabled = state.trainingExamples.length === 0;
   if (state.entities.length && state.sourceType === "simple-shape") {
     els.fileSummary.textContent = `${simpleShapeLabel(state.simpleShape)}: simple shape generated`;
+  } else if (state.fileName && !state.entities.length) {
+    const unsupported = Object.entries(state.rawEntityTypes || {})
+      .map(([type, count]) => `${type} ${count}`)
+      .join(", ");
+    els.fileSummary.textContent = unsupported
+      ? `${state.fileName}: no patch vector found (${unsupported})`
+      : `${state.fileName}: no supported patch vector found`;
   } else {
     els.fileSummary.textContent = state.entities.length ? `${state.fileName}: ${state.entities.length} entities parsed` : "Import patch DXF to auto generate template";
   }
