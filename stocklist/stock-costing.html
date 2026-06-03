@@ -3,22 +3,22 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>M&A Stock List</title>
+  <title>M&A Inventory</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 68 48'%3E%3Cg fill='%230514ff'%3E%3Cpath d='M9 4h7L7 44H0z'/%3E%3Cpath d='M21 4h12L24 44H12z'/%3E%3Cpath d='M44 4h21c2 0 3 2 3 4l-7 28c-1 5-5 8-10 8H34c-4 0-7-3-6-7l7-26c1-4 5-7 9-7z'/%3E%3C/g%3E%3C/svg%3E">
   <style>
     :root { --bg: #dfe1ea; --panel: rgba(255,255,255,.9); --surface-soft: #f8fafc; --text: #1a1d25; --muted: #7d8598; --line: rgba(91,104,138,.12); --accent: #315fd6; --accent-soft: #e9efff; --success: #1c9a6b; --warning: #d65a3a; --cost: #b45f1d; --teal: #2f938b; --purple: #7047e8; --shadow: 0 20px 50px rgba(48, 59, 86, .08); font-family: "Inter", "Aptos", "Segoe UI Variable", "Segoe UI", "Helvetica Neue", Arial, sans-serif; }
     * { box-sizing: border-box; }
     body { margin: 0; background: radial-gradient(circle at top left, rgba(255,255,255,.55), transparent 26rem), linear-gradient(180deg, #dfe1ea 0%, #d9dbe6 100%); color: var(--text); }
     button, input, select { font: inherit; }
-    .login-shell { padding: 1rem 1.25rem; background: var(--panel); border: 1px solid var(--line); border-radius: 1.35rem; box-shadow: var(--shadow); }
+    .login-shell { min-height: 5rem; padding: 1.05rem 1.35rem; background: var(--panel); border: 1px solid var(--line); border-radius: 1.35rem; box-shadow: var(--shadow); }
     .login-shell[hidden] { display: none; }
     .login-layout { display: flex; flex-direction: column; gap: 1rem; }
     .login-title { margin: .25rem 0 0; font-size: 1.25rem; font-weight: 700; line-height: 1.1; letter-spacing: -.025em; color: #0f172a; }
     .login-grid { display: flex; flex-wrap: wrap; gap: .75rem; align-items: center; justify-content: flex-start; }
-    .login-grid .field { min-width: 180px; }
+    .login-grid .field { min-width: 190px; }
     .login-grid .field label { display: none; }
-    .login-grid input, .login-grid select { border-radius: 10px; padding: .55rem .75rem; background: var(--surface-soft); color: var(--text); font-size: .875rem; font-weight: 600; border: 1px solid var(--line); }
-    .login-grid .primary-btn { background: #111827; padding: .62rem 1rem; font-size: .75rem; text-transform: uppercase; letter-spacing: .12em; }
+    .login-grid input, .login-grid select { min-height: 2.7rem; border-radius: 10px; padding: .58rem .78rem; background: var(--surface-soft); color: var(--text); font-size: .875rem; font-weight: 600; border: 1px solid var(--line); }
+    .login-grid .primary-btn { min-height: 2.7rem; background: #111827; padding: .72rem 1.15rem; font-size: .75rem; text-transform: uppercase; letter-spacing: .12em; }
     .login-status { display: flex; flex-wrap: wrap; align-items: center; gap: .75rem; color: var(--muted); font-size: .875rem; }
     .login-status-pill { display: inline-flex; align-items: center; min-height: 2.5rem; border-radius: 999px; background: #f1f5f9; padding: .5rem 1rem; color: #475569; font-weight: 600; white-space: nowrap; }
     .login-source-status { color: #94a3b8; font-size: .75rem; font-weight: 800; letter-spacing: .14em; text-transform: uppercase; }
@@ -38,8 +38,8 @@
     .password-actions .primary-btn { background: #111827; color: #fff; border-color: transparent; }
     .password-actions .primary-btn:hover { background: #374151; }
     .password-actions .tiny-btn { color: #475569; background: rgba(255,255,255,.9); }
-    .app-shell { width: min(1440px, calc(100vw - 2rem)); margin: 0 auto; padding: 1rem 0; }
-    .topbar { display: flex; justify-content: space-between; gap: 1rem; align-items: end; margin-bottom: 1rem; }
+    .app-shell { width: min(1500px, calc(100vw - 3rem)); margin: 0 auto; padding: 1.5rem 0; }
+    .topbar { display: flex; justify-content: space-between; gap: 1rem; align-items: center; margin-bottom: 1.25rem; }
     .topbar-title { margin: .2rem 0 0; font-size: clamp(1.6rem, 3vw, 2.5rem); line-height: 1; letter-spacing: -.03em; font-weight: 700; }
     .eyebrow { margin: 0; color: #94a3b8; font-size: .6875rem; letter-spacing: .16em; text-transform: uppercase; font-weight: 700; }
     .nav-tabs { display: inline-flex; gap: .45rem; align-items: center; padding: .35rem; border-radius: 999px; background: rgba(255,255,255,.7); border: 1px solid var(--line); }
@@ -53,9 +53,10 @@
     .primary-btn, .ghost-btn { border-radius: 999px; padding: .9rem 1.25rem; font-weight: 900; letter-spacing: .03em; border: 1px solid var(--line); cursor: pointer; }
     .primary-btn { background: var(--accent); color: #fff; border-color: transparent; }
     .ghost-btn { background: rgba(255,255,255,.75); color: var(--text); }
-    .panel, .kpi-card { padding: 1.25rem; }
+    .panel, .kpi-card { padding: 1.35rem; }
     .panel h2 { margin: 0 0 .45rem; font-size: 1.45rem; letter-spacing: 0; text-transform: capitalize; }
-    .stock-layout { display: grid; gap: 1rem; align-content: start; }
+    .stock-layout { display: grid; gap: 1.25rem; align-content: start; }
+    .stock-layout > * { width: 100%; min-width: 0; }
     .view-stack { display: grid; gap: 1rem; }
     .page-tabs { display: flex; flex-wrap: wrap; gap: .5rem; }
     .page-tab { border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.72); color: #687286; padding: .75rem 1rem; font-weight: 900; cursor: pointer; }
@@ -165,21 +166,21 @@
       body.printing-balance .table-wrap { overflow: visible; margin-top: 0 !important; }
       body.printing-balance .tag { padding: 0; background: transparent; border: 0; font-size: 5.7px; border-radius: 0; white-space: nowrap; }
     }
-    @media (min-width: 900px) { .login-layout { flex-direction: row; align-items: center; justify-content: space-between; } .login-grid, .login-status { justify-content: flex-end; } }
+    @media (min-width: 900px) { .login-layout { display: grid; grid-template-columns: minmax(220px, .85fr) auto minmax(300px, 1fr); align-items: center; } .login-grid { justify-content: center; flex-wrap: nowrap; } .login-status { justify-content: flex-end; } }
     @media (max-width: 1100px) { .movement-form { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
     @media (max-width: 1100px) { .grid-5 { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
-    @media (max-width: 900px) { .hero, .toolbar, .movement-form, .grid-2, .grid-3, .grid-5 { grid-template-columns: 1fr; } .topbar { flex-direction: column; align-items: stretch; gap: .85rem; } .nav-tabs { display: flex; width: 100%; flex-wrap: wrap; } .nav-tab { flex: 1 1 calc(33.333% - .45rem); text-align: center; font-size: .82rem; } .hero-actions { justify-content: stretch; } .primary-btn, .ghost-btn { width: 100%; } }
+    @media (max-width: 900px) { .app-shell { width: min(1500px, calc(100vw - 1rem)); padding: .75rem 0; } .login-shell, .panel, .kpi-card { padding: 1rem; } .login-layout { display: flex; flex-direction: column; align-items: stretch; } .login-grid, .login-status { justify-content: flex-start; } .hero, .toolbar, .movement-form, .grid-2, .grid-3, .grid-5 { grid-template-columns: 1fr; } .topbar { flex-direction: column; align-items: stretch; gap: .85rem; } .nav-tabs { display: flex; width: 100%; flex-wrap: wrap; } .nav-tab { flex: 1 1 calc(33.333% - .45rem); text-align: center; font-size: .82rem; } .hero-actions { justify-content: stretch; } .primary-btn, .ghost-btn { width: 100%; } }
   </style>
 </head>
 <body class="edit-locked">
   <main class="app-shell stock-layout">
     <header class="topbar">
       <div>
-        <h1 class="topbar-title">M&A Stock List</h1>
+        <h1 class="topbar-title">M&A Inventory</h1>
       </div>
       <nav class="nav-tabs" aria-label="Navigation">
         <a class="nav-tab" href="../index.html" data-site-href="index.html">M&A Portal</a>
-        <a class="nav-tab is-active" href="./stock-costing.html" data-site-href="stocklist/stock-costing.html">Stock List</a>
+        <a class="nav-tab is-active" href="./stock-costing.html" data-site-href="stocklist/stock-costing.html">Inventory</a>
         <a class="nav-tab" href="./template-costing.html" data-site-href="stocklist/template-costing.html">Template Costing</a>
       </nav>
     </header>
@@ -188,7 +189,7 @@
       <div class="login-layout">
         <div>
           <p class="eyebrow">Session</p>
-          <h1 class="login-title">Stock List Admin</h1>
+          <h1 class="login-title">Inventory Admin</h1>
         </div>
         <div class="login-grid" id="loginControls">
           <div class="field" id="loginUserField"><label for="loginUser">PIC</label><select id="loginUser"><option value="">Select PIC...</option><option value="Gavin">Gavin</option><option value="James">James</option></select></div>
@@ -206,7 +207,7 @@
     <div id="passwordModal" class="password-modal hidden" role="dialog" aria-modal="true" aria-labelledby="passwordModalTitle">
       <div class="password-backdrop" id="passwordBackdrop"></div>
       <div class="password-dialog">
-        <p class="eyebrow">Stock List Admin</p>
+        <p class="eyebrow">Inventory Admin</p>
         <h3 id="passwordModalTitle">Enter Password</h3>
         <input id="modalPasswordInput" type="password" placeholder="Password" autocomplete="current-password" />
         <p class="login-error" id="modalPasswordError" hidden>Invalid PIC Or Password.</p>
@@ -232,21 +233,21 @@
 
     <section class="panel">
       <div class="tab-panel-head">
-        <div class="page-tabs" role="tablist" aria-label="Stock views">
+        <div class="page-tabs" role="tablist" aria-label="Inventory views">
           <button class="page-tab is-active" type="button" data-view-tab="products">Product List</button>
-          <button class="page-tab" type="button" data-view-tab="movement">Stock In / Out Monthly</button>
+          <button class="page-tab" type="button" data-view-tab="movement">Inventory In / Out Monthly</button>
         </div>
-        <button class="primary-btn requires-edit" id="saveStockDataBtn" type="button">Save Stock Data</button>
+        <button class="primary-btn requires-edit" id="saveStockDataBtn" type="button">Save Inventory Data</button>
       </div>
       <div class="live-status status-line" id="dataStatus" style="margin-top:.75rem"></div>
     </section>
 
-    <section class="grid-5 view" data-view="movement" aria-label="Monthly stock summary" hidden>
-      <article class="kpi-card"><p class="eyebrow">Stock In</p><div class="metric-value is-green" id="stockInQty">0</div><p class="muted">Selected Month Qty</p></article>
-      <article class="kpi-card"><p class="eyebrow">Stock Out</p><div class="metric-value is-orange" id="stockOutQty">0</div><p class="muted">Selected Month Qty</p></article>
+    <section class="grid-5 view" data-view="movement" aria-label="Monthly inventory summary" hidden>
+      <article class="kpi-card"><p class="eyebrow">Inventory In</p><div class="metric-value is-green" id="stockInQty">0</div><p class="muted">Selected Month Qty</p></article>
+      <article class="kpi-card"><p class="eyebrow">Inventory Out</p><div class="metric-value is-orange" id="stockOutQty">0</div><p class="muted">Selected Month Qty</p></article>
       <article class="kpi-card"><p class="eyebrow">Net Movement</p><div class="metric-value is-blue" id="netMovementQty">0</div><p class="muted">In Minus Out</p></article>
-      <article class="kpi-card"><p class="eyebrow">Stock In Cost</p><div class="metric-value is-green" id="stockInCost">RM0.00</div><p class="muted">Selected Month Amount</p></article>
-      <article class="kpi-card"><p class="eyebrow">Stock Out Cost</p><div class="metric-value is-orange" id="stockOutCost">RM0.00</div><p class="muted">Selected Month Amount</p></article>
+      <article class="kpi-card"><p class="eyebrow">Inventory In Cost</p><div class="metric-value is-green" id="stockInCost">RM0.00</div><p class="muted">Selected Month Amount</p></article>
+      <article class="kpi-card"><p class="eyebrow">Inventory Out Cost</p><div class="metric-value is-orange" id="stockOutCost">RM0.00</div><p class="muted">Selected Month Amount</p></article>
     </section>
 
     <section class="panel view" data-view="products">
@@ -257,11 +258,11 @@
 
     <section class="view view-stack" data-view="movement" hidden>
       <article class="panel">
-        <h2>Stock In / Out Monthly</h2>
+        <h2>Inventory In / Out Monthly</h2>
         <div class="movement-form" style="margin-top:1rem">
           <div class="field"><label for="movementDate">Date</label><input id="movementDate" type="text" class="date-picker-input" placeholder="m/d/yyyy" autocomplete="off" /></div>
           <div class="field"><label for="movementSku">Product</label><select id="movementSku"></select></div>
-          <div class="field"><label for="movementType">Type</label><select id="movementType"><option value="in">Stock In</option><option value="out">Stock Out</option></select></div>
+          <div class="field"><label for="movementType">Type</label><select id="movementType"><option value="in">Inventory In</option><option value="out">Inventory Out</option></select></div>
           <div class="field"><label for="movementQty">Qty</label><input id="movementQty" type="number" min="0" step="0.01" placeholder="0" /></div>
           <div class="field"><label for="movementRemark">Remark</label><input id="movementRemark" type="text" placeholder="Optional" /></div>
           <button class="primary-btn requires-edit" id="addMovementBtn" type="button">Add</button>
@@ -273,24 +274,24 @@
           <div class="field"><label for="movementMonth">Filter Month</label><select id="movementMonth"><option value="">All Available Months</option></select></div>
         </div>
         <div class="table-wrap" style="margin-top:1rem"><table><thead><tr><th>Date</th><th>SKU</th><th>Description</th><th>Type</th><th>Qty</th><th>Unit</th><th>Remark</th><th>Action</th></tr></thead><tbody id="movementRows"></tbody></table></div>
-        <p class="muted" id="movementStatus" style="margin-top:.85rem">No Stock Movement Rows Entered.</p>
+        <p class="muted" id="movementStatus" style="margin-top:.85rem">No Inventory Movement Rows Entered.</p>
       </article>
 
       <article class="panel balance-print-panel">
         <div class="panel-head">
           <div>
             <h2>Current Balance</h2>
-            <p class="muted" id="balanceCaption">Target Stock Level Is 3 Months.</p>
+            <p class="muted" id="balanceCaption">Target Inventory Level Is 3 Months.</p>
           </div>
           <button class="ghost-btn no-print" id="downloadBalancePdfBtn" type="button">Download PDF</button>
         </div>
-        <h2 class="pdf-title" id="balancePrintTitle">M&A Stock Balance</h2>
-        <div class="table-wrap" style="margin-top:1rem"><table><thead><tr><th>SKU</th><th>Description</th><th>Opening/ Balance Stock</th><th>Total In</th><th>Total Out</th><th>Avg Monthly Usage</th><th>Current Balance</th><th>Stock Level</th><th>Unit</th></tr></thead><tbody id="balanceRows"></tbody></table></div>
+        <h2 class="pdf-title" id="balancePrintTitle">M&A Inventory Balance</h2>
+        <div class="table-wrap" style="margin-top:1rem"><table><thead><tr><th>SKU</th><th>Description</th><th>Opening/ Balance Inventory</th><th>Total In</th><th>Total Out</th><th>Avg Monthly Usage</th><th>Current Balance</th><th>Inventory Level</th><th>Unit</th></tr></thead><tbody id="balanceRows"></tbody></table></div>
       </article>
     </section>
 
     <section class="view" data-view="products">
-      <article class="panel"><h2>Product List</h2><div class="table-wrap"><table class="product-table"><thead><tr><th>SKU</th><th>Description</th><th>Unit</th><th>Size</th><th>Weight</th><th>Remark</th><th>Opening/ Balance Stock</th><th>Workbook Cost</th><th>Current Price</th></tr></thead><tbody id="productRows"></tbody></table></div></article>
+      <article class="panel"><h2>Product List</h2><div class="table-wrap"><table class="product-table"><thead><tr><th>SKU</th><th>Description</th><th>Unit</th><th>Size</th><th>Weight</th><th>Remark</th><th>Opening/ Balance Inventory</th><th>Workbook Cost</th><th>Current Price</th></tr></thead><tbody id="productRows"></tbody></table></div></article>
     </section>
   </main>
   <div id="datePickerPopover" class="date-picker-popover hidden" role="dialog" aria-label="Select date">
@@ -316,10 +317,12 @@
     const AUTH_USERS = Object.keys(AUTH_PASSWORDS);
     let pendingLoginUser = '';
     const PRICE_KEY = 'ma-stock-list-prices-v1';
+    const PRICE_HISTORY_KEY = 'ma-stock-list-price-history-v1';
     const MOVEMENT_KEY = 'ma-stock-monthly-movements-v1';
     const OPENING_KEY = 'ma-stock-opening-balance-v1';
     const REMOTE_CACHE_KEY = 'ma-stock-remote-cache-v1';
     let priceOverrides = loadPrices();
+    let priceHistory = loadPriceHistory();
     let movements = loadMovements();
     let openingBalances = loadOpeningBalances();
     let currentUser = sessionStorage.getItem(AUTH_KEY) || '';
@@ -441,6 +444,10 @@
         weight: String(row.Weight || '').trim(),
         cost,
         rawCost: cost == null ? '' : String(cost),
+        previousPrice: excelNumber(row['Previous Price']),
+        priceUpdatedAt: String(row['Price Updated At'] || '').trim(),
+        priceUpdatedBy: String(row['Price Updated By'] || '').trim(),
+        priceHistory: String(row['Price History'] || '').trim(),
       };
     }
 
@@ -509,7 +516,7 @@
         month: row.month || monthKeyFromDate(row.date),
         sku: row.sku,
         description: product?._display?.description || product?.description || '',
-        type: row.type === 'out' ? 'Stock Out' : 'Stock In',
+        type: row.type === 'out' ? 'Inventory Out' : 'Inventory In',
         quantity,
         unit: product?._display?.unit || product?.unit || '',
         unitCost,
@@ -571,7 +578,7 @@
 
     async function fetchRemoteStockData() {
       if (!STOCK_FETCH_URL) return false;
-      $('dataStatus').textContent = 'Loading OneDrive Stock Data...';
+      $('dataStatus').textContent = 'Loading OneDrive Inventory Data...';
       try {
         const response = await fetch(STOCK_FETCH_URL, { method: 'POST' });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
@@ -579,10 +586,10 @@
         if (!payload?.ok) throw new Error('Power Automate returned no ok flag');
         cacheRemoteStockPayload(payload);
         applyRemoteStockPayload(payload);
-        $('dataStatus').textContent = 'Loaded Latest Stock Data From OneDrive.';
+        $('dataStatus').textContent = 'Loaded Latest Inventory Data From OneDrive.';
         return true;
       } catch (error) {
-        $('dataStatus').textContent = `Showing Existing Stock Data. OneDrive Sync Failed: ${error.message}`;
+        $('dataStatus').textContent = `Showing Existing Inventory Data. OneDrive Sync Failed: ${error.message}`;
         return false;
       }
     }
@@ -613,7 +620,37 @@
       return true;
     }
 
-    function productUpdatePayload(product) {
+    function productCurrentPrice(product) {
+      if (!product) return 0;
+      return Object.prototype.hasOwnProperty.call(priceOverrides, product.sku)
+        ? num(priceOverrides[product.sku])
+        : num(product.cost);
+    }
+
+    function productBasePrice(product) {
+      return product?.cost == null ? 0 : num(product.cost);
+    }
+
+    function formatAuditDate(iso) {
+      const date = new Date(iso);
+      if (Number.isNaN(date.getTime())) return iso;
+      return date.toLocaleString('en-GB', {
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: false,
+      });
+    }
+
+    function productPriceHistory(product, audit) {
+      if (audit?.history) return audit.history;
+      return priceHistory[product.sku] || product.priceHistory || '';
+    }
+
+    function productUpdatePayload(product, audit = null) {
+      const currentPrice = productCurrentPrice(product);
       return {
         sku: product.sku,
         description: product._display?.description || product.description || '',
@@ -621,20 +658,24 @@
         size: product._display?.size || product.size || '',
         weight: product.weight || '',
         remark: product._display?.remark || product.remark || '',
-        workbookCost: product.cost == null ? 0 : num(product.cost),
-        currentPrice: Object.prototype.hasOwnProperty.call(priceOverrides, product.sku) ? num(priceOverrides[product.sku]) : num(product.cost),
+        workbookCost: productBasePrice(product),
+        currentPrice,
+        previousPrice: audit ? audit.oldPrice : (product.previousPrice ?? ''),
+        priceUpdatedAt: audit ? audit.updatedAt : (product.priceUpdatedAt || ''),
+        priceUpdatedBy: audit ? audit.updatedBy : (product.priceUpdatedBy || ''),
+        priceHistory: productPriceHistory(product, audit),
         openingStock: Object.prototype.hasOwnProperty.call(openingBalances, product.sku) ? num(openingBalances[product.sku]) : 0,
         active: true,
         lastUpdated: new Date().toISOString(),
       };
     }
 
-    async function saveProductRemote(product) {
+    async function saveProductRemote(product, audit = null) {
       if (!PRODUCT_UPDATE_URL) return true;
       const response = await fetch(PRODUCT_UPDATE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(productUpdatePayload(product)),
+        body: JSON.stringify(productUpdatePayload(product, audit)),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const payload = await response.json().catch(() => ({}));
@@ -659,6 +700,11 @@
       catch { return {}; }
     }
 
+    function loadPriceHistory() {
+      try { return JSON.parse(localStorage.getItem(PRICE_HISTORY_KEY) || '{}') || {}; }
+      catch { return {}; }
+    }
+
     function loadMovements() {
       try { return JSON.parse(localStorage.getItem(MOVEMENT_KEY) || '[]') || []; }
       catch { return []; }
@@ -675,16 +721,38 @@
 
     async function saveStockData() {
       if (!isAuthenticated()) {
-        $('dataStatus').textContent = 'View Only. Login As Gavin Or James To Edit Stock Data.';
+        $('dataStatus').textContent = 'View Only. Login As Gavin Or James To Edit Inventory Data.';
         return;
       }
       const touchedSkus = new Set();
+      const priceAudits = {};
+      const updatedAt = new Date().toISOString();
       document.querySelectorAll('[data-price-sku]').forEach((input) => {
         const sku = input.dataset.priceSku;
+        const product = STOCK_DATA.products.find((item) => item.sku === sku);
+        const oldPrice = productCurrentPrice(product);
         touchedSkus.add(sku);
         const value = input.value.trim();
-        if (!value) delete priceOverrides[sku];
-        else priceOverrides[sku] = Number(value);
+        let newPrice = productBasePrice(product);
+        if (!value) {
+          delete priceOverrides[sku];
+        } else {
+          newPrice = Number(value);
+          priceOverrides[sku] = newPrice;
+        }
+        if (product && Number.isFinite(newPrice) && Math.abs(newPrice - oldPrice) > 0.0001) {
+          const entry = `${formatAuditDate(updatedAt)} ${currentUser}: ${rm(oldPrice)} -> ${rm(newPrice)}`;
+          const existingHistory = priceHistory[sku] || product.priceHistory || '';
+          const history = existingHistory ? `${existingHistory}\n${entry}` : entry;
+          priceHistory[sku] = history;
+          priceAudits[sku] = {
+            oldPrice,
+            newPrice,
+            updatedAt,
+            updatedBy: currentUser,
+            history,
+          };
+        }
       });
       document.querySelectorAll('[data-opening-sku]').forEach((input) => {
         const sku = input.dataset.openingSku;
@@ -694,6 +762,7 @@
         else openingBalances[sku] = Number(value);
       });
       localStorage.setItem(PRICE_KEY, JSON.stringify(priceOverrides));
+      localStorage.setItem(PRICE_HISTORY_KEY, JSON.stringify(priceHistory));
       localStorage.setItem(OPENING_KEY, JSON.stringify(openingBalances));
       const productsToUpdate = [...touchedSkus].map((sku) => productBySku(sku)).filter(Boolean);
       let remoteSaved = 0;
@@ -702,7 +771,7 @@
         $('dataStatus').textContent = `Updating ${productsToUpdate.length} product row(s) in OneDrive...`;
         try {
           for (const product of productsToUpdate) {
-            await saveProductRemote(product);
+            await saveProductRemote(product, priceAudits[product.sku] || null);
             remoteSaved += 1;
           }
         } catch (error) {
@@ -713,7 +782,7 @@
       renderBalance();
       $('dataStatus').textContent = remoteError
         ? `Saved locally. OneDrive product update stopped after ${remoteSaved} row(s): ${remoteError}`
-        : `Saved ${Object.keys(priceOverrides).length} price override(s), ${Object.keys(openingBalances).length} opening/balance stock value(s), and updated ${remoteSaved} OneDrive row(s).`;
+        : `Saved ${Object.keys(priceOverrides).length} price override(s), ${Object.keys(openingBalances).length} opening/balance inventory value(s), and updated ${remoteSaved} OneDrive row(s).`;
     }
 
     function filteredProducts() {
@@ -797,26 +866,26 @@
         const hasSyncedId = isSyncedMovementId(row.id);
         const canDelete = isAuthenticated() && hasSyncedId;
         const deleteTitle = canDelete
-          ? 'Delete Stock Movement'
+          ? 'Delete Inventory Movement'
           : (hasSyncedId ? 'Login To Delete' : 'No Movement ID In Excel Yet');
         return `<tr>
           <td>${escapeHtml(formatDisplayDate(row.date))}</td>
           <td class="code-link">${escapeHtml(row.sku || '-')}</td>
           <td>${escapeHtml(product?._display?.description || '-')}</td>
-          <td><span class="tag ${row.type === 'out' ? 'is-out' : 'is-in'}">${row.type === 'out' ? 'Stock Out' : 'Stock In'}</span></td>
+          <td><span class="tag ${row.type === 'out' ? 'is-out' : 'is-in'}">${row.type === 'out' ? 'Inventory Out' : 'Inventory In'}</span></td>
           <td>${qtyText(qty)}</td>
           <td>${escapeHtml(product?._display?.unit || '-')}</td>
           <td>${escapeHtml(row.remark || '-')}</td>
           <td><button class="ghost-btn ${hasSyncedId ? 'requires-edit' : ''}" type="button" data-delete-movement="${escapeHtml(row.id || '')}" title="${escapeHtml(deleteTitle)}" ${canDelete ? '' : 'disabled'}>${hasSyncedId ? 'Delete' : 'No ID'}</button></td>
         </tr>`;
-      }).join('') || tableEmpty(8, 'No Stock Movement Rows For This Month.');
+      }).join('') || tableEmpty(8, 'No Inventory Movement Rows For This Month.');
       $('stockInQty').textContent = qtyText(stockIn);
       $('stockOutQty').textContent = qtyText(stockOut);
       $('netMovementQty').textContent = qtyText(stockIn - stockOut);
       $('stockInCost').textContent = rm(stockInCost);
       $('stockOutCost').textContent = rm(stockOutCost);
       const selectedMonth = $('movementMonth').value;
-      $('movementStatus').textContent = rows.length ? `${rows.length} Movement Row(s) Shown For ${selectedMonth ? movementMonthLabel(selectedMonth) : 'All Available Months'}.` : 'No Stock Movement Rows Entered.';
+      $('movementStatus').textContent = rows.length ? `${rows.length} Movement Row(s) Shown For ${selectedMonth ? movementMonthLabel(selectedMonth) : 'All Available Months'}.` : 'No Inventory Movement Rows Entered.';
       renderBalance();
     }
 
@@ -865,7 +934,7 @@
         const stockLevelMonths = avgMonthlyUsage ? balance / avgMonthlyUsage : null;
         return { product, opening, inQty: total.in, outQty: total.out, avgMonthlyUsage, balance, stockLevelMonths };
       }).filter((row) => row.opening || row.inQty || row.outQty || row.avgMonthlyUsage || row.balance);
-      $('balanceCaption').textContent = 'Target Stock Level Is 3 Months.';
+      $('balanceCaption').textContent = 'Target Inventory Level Is 3 Months.';
       $('balancePrintTitle').textContent = balanceReportName();
       $('balanceRows').innerHTML = rows.map((row) => `<tr>
         <td class="code-link">${escapeHtml(row.product.sku)}</td>
@@ -877,7 +946,7 @@
         <td class="${row.balance < 0 ? 'is-orange' : 'code-link'}">${qtyText(row.balance)}</td>
         <td>${row.stockLevelMonths == null ? '<span class="muted">No Usage</span>' : `<span class="tag ${row.stockLevelMonths < 3 ? 'is-low' : 'is-ok'}">${qtyText(row.stockLevelMonths)} Months</span>`}</td>
         <td>${escapeHtml(row.product._display.unit)}</td>
-      </tr>`).join('') || tableEmpty(9, 'No Opening/Balance Stock Or Movement Rows Yet.');
+      </tr>`).join('') || tableEmpty(9, 'No Opening/Balance Inventory Or Movement Rows Yet.');
     }
 
     function downloadBalancePdf() {
@@ -894,17 +963,17 @@
 
     function balanceReportName() {
       const month = selectedMovementMonth();
-      return `M&AStockBalance-${month ? compactMonthLabel(month) : 'AllMonths'}`;
+      return `M&AInventoryBalance-${month ? compactMonthLabel(month) : 'AllMonths'}`;
     }
 
     async function addMovement() {
       if (!isAuthenticated()) {
-        $('movementStatus').textContent = 'View Only. Login As Gavin Or James To Add Stock Movement.';
+        $('movementStatus').textContent = 'View Only. Login As Gavin Or James To Add Inventory Movement.';
         return;
       }
       const qty = num($('movementQty').value);
       if (!qty) {
-        $('movementStatus').textContent = 'Qty Is Required Before Adding Stock Movement.';
+        $('movementStatus').textContent = 'Qty Is Required Before Adding Inventory Movement.';
         return;
       }
       const row = {
@@ -916,12 +985,12 @@
         qty,
         remark: $('movementRemark').value.trim(),
       };
-      $('movementStatus').textContent = 'Saving Stock Movement To OneDrive...';
+      $('movementStatus').textContent = 'Saving Inventory Movement To OneDrive...';
       try {
         const payload = await saveMovementRemote(row);
         row.id = String(payload.movementId || payload.id || payload.ID || row.id);
         movements.unshift(row);
-        $('movementStatus').textContent = 'Stock Movement Saved To OneDrive.';
+        $('movementStatus').textContent = 'Inventory Movement Saved To OneDrive.';
       } catch (error) {
         row.id = `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
         movements.unshift(row);
@@ -938,7 +1007,7 @@
 
     async function deleteMovement(id) {
       if (!isAuthenticated()) {
-        $('movementStatus').textContent = 'View Only. Login As Gavin Or James To Delete Stock Movement.';
+        $('movementStatus').textContent = 'View Only. Login As Gavin Or James To Delete Inventory Movement.';
         return;
       }
       const row = movements.find((item) => String(item.id) === String(id));
@@ -951,8 +1020,8 @@
         return;
       }
       const confirmed = await showConfirmDialog({
-        eyebrow: 'Stock Movement',
-        title: 'Delete This Stock Movement?',
+        eyebrow: 'Inventory Movement',
+        title: 'Delete This Inventory Movement?',
         lines: [
           ['SKU', row.sku || '-'],
           ['Description', row.description || '-'],
@@ -962,7 +1031,7 @@
         ],
       });
       if (!confirmed) return;
-      $('movementStatus').textContent = 'Deleting Stock Movement From OneDrive...';
+      $('movementStatus').textContent = 'Deleting Inventory Movement From OneDrive...';
       try {
         await deleteMovementRemote(row);
         movements = movements.filter((item) => String(item.id) !== String(id));
@@ -970,7 +1039,7 @@
         renderMovementMonthOptions();
         renderMovements();
         renderBalance();
-        $('movementStatus').textContent = 'Stock Movement Deleted From OneDrive.';
+        $('movementStatus').textContent = 'Inventory Movement Deleted From OneDrive.';
       } catch (error) {
         $('movementStatus').textContent = `Delete Failed. ${error.message}`;
       }
