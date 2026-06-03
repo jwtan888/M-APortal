@@ -398,7 +398,7 @@
                     </a>
                     <a href="./stocklist/stock-costing.html" data-site-href="stocklist/stock-costing.html" target="_self"
                        class="inline-flex items-center justify-center text-[10px] font-bold rounded-[10px] px-3 py-2 border transition-all whitespace-nowrap" style="color:#b45f1d;border-color:rgba(180,95,29,0.28);background:rgba(180,95,29,0.06)">
-                        Stock
+                        Inventory
                     </a>
                 </div>
             </div>
@@ -672,20 +672,20 @@
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Requests by Section</h3>
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Requests by Section</h3>
                     <div class="h-[300px]"><canvas id="sectionChart"></canvas></div>
                 </div>
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Completion Trends (Daily)</h3>
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Completion Trends (Daily)</h3>
                     <div class="h-[300px]"><canvas id="volumeChart"></canvas></div>
                 </div>
             </div>
             <div class="bg-white p-6 rounded-xl border shadow-sm">
-                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">PIC Unfinished Work</h3>
+                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Pending Template Styles By PIC</h3>
                 <div class="overflow-x-auto rounded-lg border">
                     <table class="w-full text-left text-[11px]">
                         <thead class="bg-slate-50 border-b font-bold text-slate-500">
-                            <tr><th class="p-3 w-32">M&A PIC</th><th class="p-3">Pending Styles</th></tr>
+                            <tr><th class="p-3 w-32">M&A PIC</th><th class="p-3">Pending Items</th></tr>
                         </thead>
                         <tbody id="pic-workload-table"></tbody>
                     </table>
@@ -724,18 +724,18 @@
             <!-- Laser Charts: Volume + SLA side by side (same size) -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Laser Cut Loading (Daily)</h3>
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Laser Cut Loading (Daily)</h3>
                     <div class="h-[300px]"><canvas id="laserTrendChart"></canvas></div>
                 </div>
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Sample Dev — Completion Rate (6hr SLA)</h3>
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Completion Rate (Within 6hr)</h3>
                     <div class="h-[300px]"><canvas id="laserSLAChart"></canvas></div>
                 </div>
             </div>
 
             <!-- Pending Laser Cut Styles -->
             <div class="bg-white p-6 rounded-xl border shadow-sm mb-6">
-                <h3 class="text-xs font-bold text-blue-500 uppercase tracking-widest mb-4">Pending Laser Cut Styles</h3>
+                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Pending Laser Cut Styles</h3>
                 <div class="overflow-y-auto max-h-[300px] rounded-lg border">
                     <table class="w-full text-left text-[11px] table-fixed">
                         <colgroup>
@@ -765,7 +765,7 @@
 
             <!-- Pending Consumption Styles -->
             <div class="bg-white p-6 rounded-xl border shadow-sm mb-6">
-                <h3 class="text-xs font-bold text-amber-500 uppercase tracking-widest mb-4">Pending Consumption Styles</h3>
+                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Pending Consumption Styles</h3>
                 <div class="overflow-y-auto max-h-[300px] rounded-lg border">
                     <table class="w-full text-left text-[11px] table-fixed">
                         <colgroup>
@@ -849,11 +849,11 @@
             <!-- Support Charts Row -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Requests by Section</h3>
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Requests by Section</h3>
                     <div class="h-[280px]"><canvas id="supSectionChart"></canvas></div>
                 </div>
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Support Volume Trend (Daily)</h3>
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Support Volume Trend (Daily)</h3>
                     <div class="h-[280px]"><canvas id="supVolumeChart"></canvas></div>
                 </div>
             </div>
@@ -862,16 +862,16 @@
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <!-- Risk Type Breakdown -->
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Avg Elapsed by Support Type (hrs)</h3>
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Avg Elapsed by Support Type (hrs)</h3>
                     <div class="h-[220px]"><canvas id="supTypeChart"></canvas></div>
                 </div>
                 <!-- PIC Workload -->
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">PIC Pending Support</h3>
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Pending Support Requests By PIC</h3>
                     <div class="overflow-x-auto rounded-lg border">
                         <table class="w-full text-left text-[11px]">
                             <thead class="bg-slate-50 border-b font-bold text-slate-500">
-                                <tr><th class="p-3 w-28">M&A PIC</th><th class="p-3">Pending Requests</th></tr>
+                                <tr><th class="p-3 w-32">M&A PIC</th><th class="p-3">Pending Items</th></tr>
                             </thead>
                             <tbody id="ds-pic-table"></tbody>
                         </table>
@@ -903,21 +903,21 @@
             <!-- Patch Charts -->
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                 <div class="bg-white p-6 rounded-xl border shadow-sm lg:col-span-2">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Patch Completion Volume (Daily)</h3>
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Patch Completion Volume (Daily)</h3>
                     <div class="h-[260px]"><canvas id="patchMonthChart"></canvas></div>
                 </div>
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Patch by Season</h3>
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Patch by Season</h3>
                     <div class="h-[260px]"><canvas id="patchSeasonChart"></canvas></div>
                 </div>
             </div>
             <!-- Patch PIC Workload -->
             <div class="bg-white p-6 rounded-xl border shadow-sm mb-6">
-                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">Pending Patches by PIC</h3>
+                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Pending Patch Styles By PIC</h3>
                 <div class="overflow-x-auto rounded-lg border">
                     <table class="w-full text-left text-[11px]">
                         <thead class="bg-slate-50 border-b font-bold text-slate-500">
-                            <tr><th class="p-3 w-32">M&A PIC</th><th class="p-3">Pending Styles</th></tr>
+                            <tr><th class="p-3 w-32">M&A PIC</th><th class="p-3">Pending Items</th></tr>
                         </thead>
                         <tbody id="db-patch-pic-table"></tbody>
                     </table>
@@ -954,18 +954,18 @@
             <!-- Consumption Charts -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Volume Trend (Daily)</h3>
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Volume Trend (Daily)</h3>
                     <div class="h-[240px]"><canvas id="conVolumeChart"></canvas></div>
                 </div>
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Requests by Proto Stage</h3>
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Requests by Proto Stage</h3>
                     <div class="h-[240px]"><canvas id="conProtoChart"></canvas></div>
                 </div>
             </div>
 
             <!-- Pending Consumption Styles -->
             <div class="bg-white p-6 rounded-xl border shadow-sm mb-6">
-                <h3 class="text-xs font-bold text-amber-500 uppercase tracking-widest mb-4">Pending Consumption Styles</h3>
+                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Pending Consumption Styles</h3>
                 <div class="overflow-y-auto max-h-[300px] rounded-lg border">
                     <table class="w-full text-left text-[11px]">
                         <thead class="bg-slate-50 border-b font-bold text-slate-500 sticky top-0">
@@ -1014,22 +1014,22 @@
             <!-- Down Filling Charts -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Volume Trend (by Date Update)</h3>
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Volume Trend (by Date Update)</h3>
                     <div class="h-[240px]"><canvas id="downVolumeChart"></canvas></div>
                 </div>
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Records by Season</h3>
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Records by Season</h3>
                     <div class="h-[240px]"><canvas id="downSeasonChart"></canvas></div>
                 </div>
             </div>
 
             <!-- Down Filling PIC Workload -->
             <div class="bg-white p-6 rounded-xl border shadow-sm mb-6">
-                <h3 class="text-xs font-bold text-slate-400 uppercase tracking-widest mb-4">In-Progress Jobs by M&A PIC</h3>
+                <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Pending Down Filling Jobs By PIC</h3>
                 <div class="overflow-x-auto rounded-lg border">
                     <table class="w-full text-left text-[11px]">
                         <thead class="bg-slate-50 border-b font-bold text-slate-500">
-                            <tr><th class="p-3 w-28">M&A PIC</th><th class="p-3">Pending Items</th></tr>
+                            <tr><th class="p-3 w-32">M&A PIC</th><th class="p-3">Pending Items</th></tr>
                         </thead>
                         <tbody id="dd-pic-table"></tbody>
                     </table>
@@ -1658,6 +1658,8 @@
         const consumptionUpdateURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/f0612d5d6e1645c1a3a44c2201299a93/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=Q_RMUTXSecFlsNb_o2HhIcjrpN_LyunPb4bkvcUJCpI";
         const consumptionAddURL    = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/116473b95bb84850832555a76351ddd1/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=ZzA8AD1K6CBOYFBNxzSJv3p2aKFgxvfuD_Q3VJifGGM";
         const attendanceFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/9f7d2b43fe80443ea830ec0ef1631183/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=0geeH4paQU60TyHlrF0_6_CGqXBmke3BEmk5IiwTxZ0";
+        const actualSplitFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/893a170849f34a6092a1f2f57748e3f5/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=JkzXcmLThFEf9LJWakfp0mn_P0EQ3IWbT2g-KegNm5E";
+        const actualSplitCacheKey = 'ma_attendance2_final_split_rows_cache';
         // Down Filling URLs
         const downFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/925d86d436044eda8ba9dc7b0d628f8d/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=WW4a2zXKZfD-IDWzdX_8XYcGa0Qgh1lGxnbz5WHcE3k";
         const downAddURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/89d23341800c48d69fcdedb837093895/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=aIsZsbMmBRBx2wABXahBVB6b_EuDe9Dv8mEFm3lAIq8";
@@ -2619,23 +2621,46 @@
                     if (!isUnassigned(a) && isUnassigned(b)) return -1;
                     return a.localeCompare(b);
                 })
-                .map(([name, tasks]) => `
-                <tr class="border-b hover:bg-blue-50 cursor-pointer transition-colors" onclick="drillDown('${name}')">
-                    <td class="p-4 font-bold border-r bg-slate-50/50">${name}
-                        <div class="text-[9px] font-normal text-slate-400 mt-0.5">${tasks.filter(t=>t.status==='DELAYED').length} delayed · ${tasks.filter(t=>t.status==='PENDING').length} pending</div>
+                .map(([name, tasks]) => {
+                    const delayedCount = tasks.filter(t => t.status === 'DELAYED').length;
+                    const pendingCount = tasks.filter(t => t.status === 'PENDING').length;
+                    const metaText = [
+                        delayedCount ? `${delayedCount} delayed` : '',
+                        pendingCount ? `${pendingCount} pending` : ''
+                    ].filter(Boolean).join(' · ') || `${tasks.length} pending`;
+                    return `
+                <tr class="border-b hover:bg-slate-50 cursor-pointer transition-colors" onclick="drillDown('${String(name).replace(/'/g,"\\'")}')">
+                    <td class="px-3 py-3 font-bold border-r bg-slate-50/50 text-slate-800">${escapeHtml(name)}
+                        <div class="text-[10px] font-semibold text-slate-400 mt-0.5">${metaText}</div>
                     </td>
-                    <td class="p-3 flex flex-wrap gap-2">
-                        ${tasks.map(task => `<div class="flex items-center gap-1.5 border rounded-lg px-2.5 py-1.5 bg-white shadow-sm"><span class="w-2 h-2 rounded-full ${task.status === 'DELAYED' ? 'bg-red-500 animate-pulse' : 'bg-amber-400'}"></span><span class="font-bold text-[11px] text-slate-800 leading-none">${task.style}</span><span class="font-bold text-[11px] text-slate-800 leading-none">${task.job}</span></div>`).join('')}
+                    <td class="px-3 py-3 flex flex-wrap gap-2">
+                        ${tasks.map(task => `<div class="inline-flex min-h-[30px] items-center gap-2 border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white shadow-sm"><span class="w-2.5 h-2.5 rounded-full shrink-0 ${task.status === 'DELAYED' ? 'bg-red-500 animate-pulse' : 'bg-amber-400'}"></span><span class="font-black text-[11px] text-blue-700 leading-tight">${escapeHtml(task.style)}</span>${task.job ? `<span class="font-black text-[11px] text-blue-700 leading-tight">${escapeHtml(task.job)}</span>` : ''}</div>`).join('')}
                     </td>
-                </tr>`).join('') || '<tr><td colspan="2" class="p-10 text-center italic">All clear!</td></tr>';
+                </tr>`;
+                }).join('') || '<tr><td colspan="2" class="p-10 text-center italic">All clear!</td></tr>';
             
             const secStats = {};
             filteredByMonth.forEach(t => { secStats[t.section] = (secStats[t.section] || 0) + 1; });
+            const secTotal = Object.values(secStats).reduce((sum, count) => sum + count, 0);
             if(sectionChart) sectionChart.destroy();
             sectionChart = new Chart(document.getElementById('sectionChart'), {
                 type: 'bar',
                 data: { labels: Object.keys(secStats), datasets: [{ label: 'Requests', data: Object.values(secStats), backgroundColor: '#3b82f6' }] },
-                options: { responsive: true, maintainAspectRatio: false }
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        tooltip: {
+                            callbacks: {
+                                label: ctx => {
+                                    const value = Number(ctx.raw) || 0;
+                                    const pct = secTotal ? Math.round(value / secTotal * 100) : 0;
+                                    return `${value} requests (${pct}%)`;
+                                }
+                            }
+                        }
+                    }
+                }
             });
             // Volume Trends — group COMPLETED jobs by their Complete Date (daily within selected month)
             const volStats = {};
@@ -2648,11 +2673,21 @@
                 const [ma,da,ya] = a.split('/'), [mb,db,yb] = b.split('/');
                 return new Date(parseInt(ya),parseInt(ma)-1,parseInt(da)) - new Date(parseInt(yb),parseInt(mb)-1,parseInt(db));
             });
+            const completionValues = sortedDates.map(d => volStats[d]);
+            const completionAvg = completionValues.length
+                ? completionValues.reduce((sum, count) => sum + count, 0) / completionValues.length
+                : 0;
             if(volumeChart) volumeChart.destroy();
             volumeChart = new Chart(document.getElementById('volumeChart'), {
                 type: 'line',
-                data: { labels: sortedDates, datasets: [{ label: 'Completed', data: sortedDates.map(d => volStats[d]), borderColor: '#10b981', tension: 0.3, fill: true, backgroundColor: 'rgba(16,185,129,0.07)', pointRadius: 4 }] },
-                options: { responsive: true, maintainAspectRatio: false }
+                data: {
+                    labels: sortedDates,
+                    datasets: [
+                        { label: 'Completed', data: completionValues, borderColor: '#10b981', tension: 0.3, fill: true, backgroundColor: 'rgba(16,185,129,0.07)', pointRadius: 4 },
+                        { label: `Average ${completionAvg.toFixed(1)}`, data: sortedDates.map(() => completionAvg), borderColor: '#94a3b8', tension: 0, fill: false, pointRadius: 0, borderWidth: 1, pointStyle: 'line' }
+                    ]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { usePointStyle: true } } } }
             });
             // Render laser section whenever dashboard tab is opened/refreshed
             renderLaserDashboard();
@@ -2689,20 +2724,38 @@
             renderLaserTable();
         }
 
-        function drillDownLaser(style) {
+        function drillDownLaser(style, id = '') {
+            const modal = document.getElementById('slaModal');
+            if (modal) modal.classList.add('hidden');
             switchTab('laser');
             const el = document.getElementById('laserSearch');
             if (el) { el.value = style; laserSearchQuery = style.toLowerCase(); }
             renderLaserTable();
             setTimeout(() => {
-                // Scroll to first matching row (not table top)
-                const rows = document.querySelectorAll('#laserTable tr');
+                const flashRow = (row) => {
+                    if (!row) return;
+                    row.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    const prevBg = row.style.backgroundColor;
+                    const prevShadow = row.style.boxShadow;
+                    row.style.backgroundColor = '#fef3c7';
+                    row.style.boxShadow = 'inset 4px 0 0 #f59e0b';
+                    setTimeout(() => {
+                        row.style.backgroundColor = prevBg;
+                        row.style.boxShadow = prevShadow;
+                    }, 2400);
+                };
+                if (id) {
+                    const exactRow = document.getElementById(`lrow-${id}`);
+                    if (exactRow) {
+                        flashRow(exactRow);
+                        return;
+                    }
+                }
+                const rows = document.querySelectorAll('#laserTable tr[id^="lrow-"]');
                 for (const row of rows) {
-                    if (row.innerText.toLowerCase().includes(style.toLowerCase())) {
-                        row.scrollIntoView({ behavior: 'smooth', block: 'center' });
-                        row.classList.add('bg-yellow-50');
-                        setTimeout(() => row.classList.remove('bg-yellow-50'), 2000);
-                        break;
+                    if (row.innerText.toLowerCase().includes(String(style).toLowerCase())) {
+                        flashRow(row);
+                        return;
                     }
                 }
             }, 250);
@@ -2885,6 +2938,10 @@
                 const [ma,da,ya] = a.split('/'), [mb,db,yb] = b.split('/');
                 return new Date(parseInt(ya),parseInt(ma)-1,parseInt(da)) - new Date(parseInt(yb),parseInt(mb)-1,parseInt(db));
             });
+            const laserTrendValues = sortedDays.map(d => dayCounts[d]);
+            const laserTrendAvg = laserTrendValues.length
+                ? laserTrendValues.reduce((sum, count) => sum + count, 0) / laserTrendValues.length
+                : 0;
             if (laserTrendChart) laserTrendChart.destroy();
             const ctx = document.getElementById('laserTrendChart');
             if (ctx) {
@@ -2892,9 +2949,29 @@
                     type: 'line',
                     data: {
                         labels: sortedDays,
-                        datasets: [{ label: 'Laser Jobs', data: sortedDays.map(d => dayCounts[d]), borderColor: '#10b981', tension: 0.3, fill: true, backgroundColor: 'rgba(16,185,129,0.07)' }]
+                        datasets: [
+                            {
+                                label: 'Laser Jobs',
+                                data: laserTrendValues,
+                                borderColor: '#10b981',
+                                tension: 0.3,
+                                fill: true,
+                                backgroundColor: 'rgba(16,185,129,0.07)',
+                                pointRadius: 4
+                            },
+                            {
+                                label: `Average ${laserTrendAvg.toFixed(1)}`,
+                                data: sortedDays.map(() => laserTrendAvg),
+                                borderColor: '#94a3b8',
+                                borderWidth: 1,
+                                tension: 0,
+                                fill: false,
+                                pointRadius: 0,
+                                pointStyle: 'line'
+                            }
+                        ]
                     },
-                    options: { responsive: true, maintainAspectRatio: false }
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { usePointStyle: true } } } }
                 });
             }
         }
@@ -3154,7 +3231,7 @@
                 } else {
                     // Regular users: once a row has a Consumption PIC owner, only that PIC or Gavin can edit it
                     const canEditCons = !!currentUser && (!hasLockedConsOwner || canEditExistingConsOwner);
-                    return `<tr class="border-b hover:bg-slate-50">
+                    return `<tr class="border-b hover:bg-slate-50" id="lrow-${rid}">
                         <td class="p-3 font-mono text-slate-400">${id}</td>
                         <td class="p-3 text-slate-500 date-cell">${received}</td>
                         <td class="p-3 font-bold">${season}</td>
@@ -4373,27 +4450,166 @@
         
         // Store over-6hr rows for modal drill-down
         let slaOverRows = [];
+        let actualSplitRowsForDashboard = [];
+        let actualSplitFetchStarted = false;
+
+        function normalizeActualSplitValue(value) {
+            return String(value || '').trim().toLowerCase().replace(/[^a-z0-9]+/g, '');
+        }
+
+        function readActualSplitCache() {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(actualSplitCacheKey) || '[]');
+                return Array.isArray(parsed) ? parsed : [];
+            } catch {
+                return [];
+            }
+        }
+
+        function writeActualSplitCache(rows) {
+            try {
+                localStorage.setItem(actualSplitCacheKey, JSON.stringify(Array.isArray(rows) ? rows : []));
+            } catch {
+                // Cache may be unavailable or full; the dashboard can still use the live response.
+            }
+        }
+
+        function extractActualSplitRows(data) {
+            if (Array.isArray(data)) return data;
+            if (Array.isArray(data?.rows)) return data.rows;
+            return [];
+        }
+
+        async function ensureActualSplitRowsForDashboard() {
+            if (actualSplitFetchStarted) return;
+            actualSplitFetchStarted = true;
+            const cached = readActualSplitCache();
+            if (cached.length) actualSplitRowsForDashboard = cached;
+            try {
+                const sep = actualSplitFetchURL.includes('?') ? '&' : '?';
+                const res = await fetch(`${actualSplitFetchURL}${sep}cb=${Date.now()}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: '{}'
+                });
+                if (!res.ok) throw new Error(`Actual split fetch failed: ${res.status}`);
+                const rows = extractActualSplitRows(await res.json());
+                if (rows.length) {
+                    actualSplitRowsForDashboard = rows;
+                    writeActualSplitCache(rows);
+                    renderLaserSLA();
+                    if (!document.getElementById('slaModal')?.classList.contains('hidden')) showSLAModal();
+                    if (typeof renderUtilization === 'function') renderUtilization();
+                }
+            } catch (e) {
+                console.warn('Actual working hour split data unavailable for laser SLA filter:', e.message || e);
+            }
+        }
+
+        function splitRowSource(row) {
+            const direct = row?.sourceTable || row?.source || row?.process || '';
+            if (direct) return normalizeActualSplitValue(direct);
+            const remark = String(row?.remark || row?.remarks || row?.note || '').trim();
+            const sourceMatch = remark.match(/\b(laser|consumption|support|patch|down(?:\s+filling)?)\s+source\s+row\b/i);
+            return sourceMatch ? normalizeActualSplitValue(sourceMatch[1]) : '';
+        }
+
+        function splitRowSourceIdForDashboard(row) {
+            const direct = row?.sourceRowId || row?.sourceId || row?.rowId || row?.id || row?.recordID || row?.['Request ID'] || '';
+            if (direct) return normalizeActualSplitValue(direct);
+            const remark = String(row?.remark || row?.remarks || row?.note || '').trim();
+            const sourceMatch = remark.match(/\b(?:laser|consumption|support|patch|down(?:\s+filling)?)\s+source\s+row\s+([a-z0-9._-]+)/i);
+            return normalizeActualSplitValue(sourceMatch ? sourceMatch[1] : '');
+        }
+
+        function sourceIdForDashboard(row) {
+            return normalizeActualSplitValue(getVal(row, ['__PowerAppsId__', 'ID', 'Id', 'id', 'No.', 'No', 'Row ID', 'Request ID', 'RequestID']));
+        }
+
+        function rowValueForActualSplit(row, keys, fallback = '') {
+            const value = keys && keys.length ? getVal(row, keys) : fallback;
+            return normalizeActualSplitValue(value && value !== '---' ? value : fallback);
+        }
+
+        function splitRowMinutesForDashboard(row) {
+            const hours = getPositiveNumber(row?.netHours ?? row?.hours ?? row?.actualHours ?? row?.finalHours);
+            if (hours > 0) return hours * 60;
+            const minutes = getPositiveNumber(row?.netMinutes ?? row?.minutes ?? row?.actualMinutes ?? row?.totalMinutes);
+            return minutes > 0 ? minutes : 0;
+        }
+
+        function actualSplitRowsForSource(row, sourceNames, options = {}) {
+            if (!actualSplitRowsForDashboard.length) {
+                const cached = readActualSplitCache();
+                if (cached.length) actualSplitRowsForDashboard = cached;
+            }
+            if (!actualSplitRowsForDashboard.length) return [];
+            const wantedSources = (Array.isArray(sourceNames) ? sourceNames : [sourceNames])
+                .map(normalizeActualSplitValue)
+                .filter(Boolean);
+            const rowId = sourceIdForDashboard(row);
+            const style = rowValueForActualSplit(row, options.styleKeys || ['Style Number', 'StyleNumber', 'Style'], options.style);
+            const job = rowValueForActualSplit(row, options.jobKeys || ['Job Number', 'JobNo', 'Job No', 'Job'], options.job);
+            const pic = normalizeActualSplitValue(options.pic || getMAPic(row));
+            return actualSplitRowsForDashboard.filter(split => {
+                const source = splitRowSource(split);
+                if (!wantedSources.some(name => source === name)) return false;
+                const splitId = splitRowSourceIdForDashboard(split);
+                if (rowId && splitId && rowId === splitId) return true;
+                const splitStyle = normalizeActualSplitValue(split?.style || split?.task || split?.styleTask);
+                const splitJob = normalizeActualSplitValue(split?.job || split?.jobNo || split?.jobNumber);
+                const splitPic = normalizeActualSplitValue(split?.pic);
+                if (!style || splitStyle !== style) return false;
+                if (pic && splitPic && splitPic !== pic) return false;
+                if (!job || !splitJob || splitJob === job) return true;
+                return splitJob.includes(job) || splitJob.includes(style) || job.includes(splitStyle);
+            });
+        }
+
+        function actualSplitMinutesForSource(row, sourceNames, options = {}) {
+            return actualSplitRowsForSource(row, sourceNames, options).reduce((total, split) => total + splitRowMinutesForDashboard(split), 0);
+        }
+
+        function actualSplitRowsForLaser(row) {
+            return actualSplitRowsForSource(row, ['laser', 'lasertracking'], {
+                styleKeys: ['Style Number', 'StyleNumber', 'Style'],
+                jobKeys: ['Job Number', 'JobNo', 'Job No', 'Job']
+            });
+        }
+
+        function actualSplitMinutesForLaser(row) {
+            return actualSplitRowsForLaser(row).reduce((total, split) => total + splitRowMinutesForDashboard(split), 0);
+        }
+
+        function hasFinalActualHoursForLaser(row) {
+            return actualSplitMinutesForLaser(row) > 0;
+        }
 
         function renderLaserSLA() {
+            ensureActualSplitRowsForDashboard();
             const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             const sharedMonthVal = document.getElementById('monthFilter')?.value || 'ALL';
             let slaWithin = 0, slaOver = 0;
-            slaOverRows = [];
-            allLaserRows.forEach(r => {
+            const getSlaRows = () => allLaserRows.reduce((rows, r) => {
                 const received  = rawToLocalDate(getVal(r, ['Received Time','ReceivedTime','Received']));
                 // Try multiple Complete Date field name variants
                 const cdRaw = getVal(r, ['Complete Date','CompleteDate','Complete Date m/d/yyyy']);
                 const completed = rawToLocalDate(cdRaw);
-                if (!received || !completed) return;
+                if (!received || !completed) return rows;
                 // SLA applies to Sample Development section only
                 const sec = String(getVal(r, ['Section'])).toLowerCase();
-                if (!sec.includes('sample')) return;
+                if (!sec.includes('sample')) return rows;
+                if (hasFinalActualHoursForLaser(r)) return rows;
                 const cMonth = `${months[completed.getMonth()]}-${completed.getFullYear()}`;
-                if (sharedMonthVal !== 'ALL' && cMonth !== sharedMonthVal) return;
+                if (sharedMonthVal !== 'ALL' && cMonth !== sharedMonthVal) return rows;
                 const hrs = (completed - received) / 3600000;
-                if (hrs <= 6) slaWithin++;
-                else { slaOver++; slaOverRows.push({ r, hrs }); }
-            });
+                rows.push({ r, hrs });
+                return rows;
+            }, []);
+            const slaRows = getSlaRows();
+            slaWithin = slaRows.filter(item => item.hrs <= 6).length;
+            slaOverRows = slaRows.filter(item => item.hrs > 6);
+            slaOver = slaOverRows.length;
             const slaTotal = slaWithin + slaOver;
             const slaLabel = sharedMonthVal === 'ALL' ? 'All Time' : sharedMonthVal;
             const slaCtx = document.getElementById('laserSLAChart');
@@ -4435,6 +4651,8 @@
         }
 
         function showSLAModal() {
+            ensureActualSplitRowsForDashboard();
+            renderLaserSLA();
             const tbody = document.getElementById('slaModalTable');
             if (!tbody) return;
             tbody.innerHTML = slaOverRows.length
@@ -4448,7 +4666,10 @@
                         const received = convertExcelDate(getVal(r, ['Received Time','ReceivedTime','Received']));
                         const complete = convertExcelDate(getVal(r, ['Complete Date','CompleteDate']));
                         const hrsStr   = hrs < 24 ? `${hrs.toFixed(1)} hrs` : `${(hrs/24).toFixed(1)} days`;
-                        return `<tr class="border-b hover:bg-amber-50 cursor-pointer" onclick="drillDownLaser('${style.replace(/'/g,"\\'")}')">
+                        const rowId    = String(getVal(r, ['Id','ID','id']) || '');
+                        const safeStyle = String(style || '').replace(/'/g,"\\'");
+                        const safeRowId = rowId.replace(/'/g,"\\'");
+                        return `<tr class="border-b hover:bg-amber-50 cursor-pointer" onclick="drillDownLaser('${safeStyle}', '${safeRowId}')">
                             <td class="p-2 font-bold text-blue-700">${style}</td>
                             <td class="p-2">${season}</td>
                             <td class="p-2">${section}</td>
@@ -4526,9 +4747,14 @@
             });
             if (conVolumeChart) conVolumeChart.destroy();
             const cvc = document.getElementById('conVolumeChart');
+            const conVolumeValues = sortedDays.map(d => dayMap[d]);
+            const conVolumeAvg = conVolumeValues.length ? conVolumeValues.reduce((sum, count) => sum + count, 0) / conVolumeValues.length : 0;
             if (cvc) conVolumeChart = new Chart(cvc, {
-                type:'line', data:{labels:sortedDays, datasets:[{label:'Requests', data:sortedDays.map(d=>dayMap[d]), borderColor:'#6366f1', backgroundColor:'rgba(99,102,241,0.07)', tension:0.3, fill:true}]},
-                options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
+                type:'line', data:{labels:sortedDays, datasets:[
+                    {label:'Requests', data:conVolumeValues, borderColor:'#6366f1', backgroundColor:'rgba(99,102,241,0.07)', tension:0.3, fill:true},
+                    {label:`Average ${conVolumeAvg.toFixed(1)}`, data:sortedDays.map(()=>conVolumeAvg), borderColor:'#94a3b8', borderWidth:1, tension:0, fill:false, pointRadius:0, pointStyle:'line'}
+                ]},
+                options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{usePointStyle:true}}}}
             });
             const protoMap = {};
             filtered.forEach(r => { const p=getVal(r,['Proto Stage','ProtoStage'])||'—'; protoMap[p]=(protoMap[p]||0)+1; });
@@ -4609,9 +4835,14 @@
             });
             if (downVolumeChart) downVolumeChart.destroy();
             const dvc = document.getElementById('downVolumeChart');
+            const downVolumeValues = sortedDays.map(d => dayMap[d]);
+            const downVolumeAvg = downVolumeValues.length ? downVolumeValues.reduce((sum, count) => sum + count, 0) / downVolumeValues.length : 0;
             if (dvc) downVolumeChart = new Chart(dvc, {
-                type:'line', data:{labels:sortedDays, datasets:[{label:'Records', data:sortedDays.map(d=>dayMap[d]), borderColor:'#0ea5e9', backgroundColor:'rgba(14,165,233,0.07)', tension:0.3, fill:true}]},
-                options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}}}
+                type:'line', data:{labels:sortedDays, datasets:[
+                    {label:'Records', data:downVolumeValues, borderColor:'#0ea5e9', backgroundColor:'rgba(14,165,233,0.07)', tension:0.3, fill:true},
+                    {label:`Average ${downVolumeAvg.toFixed(1)}`, data:sortedDays.map(()=>downVolumeAvg), borderColor:'#94a3b8', borderWidth:1, tension:0, fill:false, pointRadius:0, pointStyle:'line'}
+                ]},
+                options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{usePointStyle:true}}}}
             });
             // Season breakdown
             const seasonMap = {};
@@ -4636,9 +4867,9 @@
             if (picTbody) {
                 picTbody.innerHTML = Object.keys(picPending).length
                     ? Object.entries(picPending).map(([name, items]) => `
-                        <tr class="border-b hover:bg-sky-50 cursor-pointer transition-colors" onclick="switchTab('downfilling')">
-                            <td class="p-3 font-bold border-r bg-slate-50/50">${name}<div class="text-[9px] font-normal text-slate-400 mt-0.5">${items.length} item(s)</div></td>
-                            <td class="p-3 flex flex-wrap gap-2">${items.map(s=>`<div class="flex items-center gap-1.5 border rounded-lg px-2.5 py-1.5 bg-white shadow-sm"><span class="w-2 h-2 rounded-full bg-sky-400"></span><span class="font-bold text-slate-800 text-[10px]">${s}</span></div>`).join('')}</td>
+                        <tr class="border-b hover:bg-slate-50 cursor-pointer transition-colors" onclick="switchTab('downfilling')">
+                            <td class="px-3 py-2.5 font-bold border-r bg-slate-50/50 text-slate-800">${escapeHtml(name)}<div class="text-[9px] font-semibold text-slate-400 mt-0">${items.length} pending</div></td>
+                            <td class="px-3 py-2.5 flex flex-wrap gap-1.5">${items.map(s=>`<div class="inline-flex items-center gap-1.5 border border-slate-200 rounded-lg px-2 py-1 bg-white shadow-sm"><span class="w-2 h-2 rounded-full bg-sky-400"></span><span class="font-black text-blue-700 text-[10px] leading-none">${escapeHtml(s)}</span></div>`).join('')}</td>
                         </tr>`).join('')
                     : '<tr><td colspan="2" class="p-6 text-center italic text-slate-400">All down filling jobs completed!</td></tr>';
             }
@@ -4694,24 +4925,38 @@
             });
             if (patchMonthChart) patchMonthChart.destroy();
             const pmCtx = el('patchMonthChart');
+            const patchCompletionValues = sortedDays.map(d => dayCompletions[d]);
+            const patchCompletionAvg = patchCompletionValues.length ? patchCompletionValues.reduce((sum, count) => sum + count, 0) / patchCompletionValues.length : 0;
             if (pmCtx) patchMonthChart = new Chart(pmCtx, {
                 type: 'line',
                 data: {
                     labels: sortedDays,
-                    datasets: [{
-                        label: 'Patches Completed',
-                        data: sortedDays.map(d => dayCompletions[d]),
-                        borderColor: '#6366f1',
-                        backgroundColor: 'rgba(99,102,241,0.08)',
-                        tension: 0.35,
-                        fill: true,
-                        pointRadius: 3,
-                        pointHoverRadius: 5
-                    }]
+                    datasets: [
+                        {
+                            label: 'Patches Completed',
+                            data: patchCompletionValues,
+                            borderColor: '#6366f1',
+                            backgroundColor: 'rgba(99,102,241,0.08)',
+                            tension: 0.35,
+                            fill: true,
+                            pointRadius: 3,
+                            pointHoverRadius: 5
+                        },
+                        {
+                            label: `Average ${patchCompletionAvg.toFixed(1)}`,
+                            data: sortedDays.map(() => patchCompletionAvg),
+                            borderColor: '#94a3b8',
+                            borderWidth: 1,
+                            tension: 0,
+                            fill: false,
+                            pointRadius: 0,
+                            pointStyle: 'line'
+                        }
+                    ]
                 },
                 options: {
                     responsive: true, maintainAspectRatio: false,
-                    plugins: { legend: { display: false } },
+                    plugins: { legend: { labels: { usePointStyle: true } } },
                     scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } }, x: { ticks: { maxTicksLimit: 12, font: { size: 9 } } } }
                 }
             });
@@ -4732,6 +4977,18 @@
             });
 
             // Pending by PIC table — exclude cancelled ("-") rows
+            const getPatchMaterialReceived = r => getVal(r, [
+                'Patch & Fabric Receive Date & Time m/d/yyyy',
+                'Patch & Fabric Receive Date & Time',
+                'Patch & Fabric Receive Date',
+                'Patch Fabric Receive Date',
+                'ReceiveDate',
+                'Receive Date'
+            ]);
+            const isPatchPendingMaterial = r => {
+                const received = String(getPatchMaterialReceived(r) || '').trim();
+                return !received || received === '---' || received === '-' || /pending/i.test(received);
+            };
             const picPend = {};
             activePatch.forEach(r => {
                 const cd = getVal(r,['Complete Date m/d/yyyy','Complete Date','CompleteDate']);
@@ -4740,19 +4997,23 @@
                 const picDisplay = (!pic || pic === '---') ? 'Unassigned' : pic;
                 const style = getVal(r,['Style Number','StyleNumber']);
                 const tmpl  = getVal(r,['Template No.','Template No','TemplateNo']);
+                const pendingMaterial = isPatchPendingMaterial(r);
                 const cleanStyle = style && style !== '---' ? String(style).trim() : '';
                 const cleanTmpl = tmpl && tmpl !== '---' ? String(tmpl).trim() : '';
                 if (!picPend[picDisplay]) picPend[picDisplay] = [];
-                picPend[picDisplay].push(`${cleanStyle || '---'}${cleanTmpl ? ' (' + cleanTmpl + ')' : ''}`);
+                picPend[picDisplay].push({
+                    label: pendingMaterial ? (cleanStyle || '---') : `${cleanStyle || '---'}${cleanTmpl ? ' (' + cleanTmpl + ')' : ''}`,
+                    pendingMaterial
+                });
             });
             const picTbl = el('db-patch-pic-table');
             if (picTbl) picTbl.innerHTML = Object.keys(picPend).length
                 ? Object.entries(picPend).map(([name,items]) => `
-                    <tr class="border-b hover:bg-blue-50 cursor-pointer transition-colors" onclick="drillDownPatch('${String(name).replace(/'/g,"\\'")}')">
-                        <td class="p-4 font-bold border-r bg-slate-50/50 text-indigo-700">${escapePatchHtml(name)}
-                            <div class="text-[9px] font-normal text-slate-400 mt-0.5">${items.length} pending</div>
+                    <tr class="border-b hover:bg-slate-50 cursor-pointer transition-colors" onclick="drillDownPatch('${String(name).replace(/'/g,"\\'")}')">
+                        <td class="px-3 py-2.5 font-bold border-r bg-slate-50/50 text-slate-800">${escapePatchHtml(name)}
+                            <div class="text-[9px] font-semibold text-slate-400 mt-0">${items.length} pending</div>
                         </td>
-                        <td class="p-3 flex flex-wrap gap-2">${items.map(s=>`<div class="flex items-center gap-1.5 border rounded-lg px-2.5 py-1.5 bg-white shadow-sm"><span class="w-2 h-2 rounded-full bg-amber-400"></span><span class="font-bold text-slate-800 text-[10px]">${escapePatchHtml(s)}</span></div>`).join('')}</td>
+                        <td class="px-3 py-2.5 flex flex-wrap gap-1.5">${items.map(item=>`<div class="inline-flex items-center gap-1.5 border border-slate-200 rounded-lg px-2 py-1 shadow-sm bg-white"><span class="w-2 h-2 rounded-full ${item.pendingMaterial ? 'bg-amber-400' : 'bg-slate-300'}"></span><span class="font-black text-blue-700 text-[10px] leading-none">${escapePatchHtml(item.label)}</span>${item.pendingMaterial ? '<span class="text-[9px] font-black text-amber-800 bg-amber-100 border border-amber-300 rounded-md px-1.5 py-0.5 uppercase tracking-wide">Pending Material</span>' : ''}</div>`).join('')}</td>
                     </tr>`).join('')
                 : '<tr><td colspan="2" class="p-6 text-center italic text-slate-400">All patches completed!</td></tr>';
         }
@@ -4786,6 +5047,7 @@
         }
 
         function calculateAverageSAMByProcess() {
+            ensureActualSplitRowsForDashboard();
             const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             const selectedMonth = document.getElementById('monthFilter')?.value || 'ALL';
             const inSelectedMonth = (dateObj) => {
@@ -4819,19 +5081,26 @@
                     getPositiveNumber(getVal(r, ['Laser Part Count','LaserPartCount','Laser Parts'])) +
                     getPositiveNumber(getVal(r, ['Ironing Part Count','IroningPartCount','Iron Parts'])) +
                     getPositiveNumber(getVal(r, ['Laser Trim Part Count','LaserTrimPartCount','Trim Parts']));
-                addMetric('Laser Tracking', minutesBetween(received, completed), parts, 'minutes / (laser + ironing + trim parts)');
+                const actualMinutes = actualSplitMinutesForLaser(r);
+                const laserMinutes = actualMinutes > 0 ? actualMinutes : minutesBetween(received, completed);
+                addMetric('Laser Tracking', laserMinutes, parts, actualMinutes > 0 ? 'actual split minutes / (laser + ironing + trim parts)' : 'minutes / (laser + ironing + trim parts)');
             });
 
             allSupportRows.forEach(r => {
                 const start = rawToLocalDate(getVal(r, ['Start Time','StartTime']));
                 const completed = rawToLocalDate(getVal(r, ['Complete Time','CompleteTime']));
                 if (!inSelectedMonth(completed)) return;
-                let minutes = minutesBetween(start, completed);
+                let minutes = actualSplitMinutesForSource(r, ['support', 'masupport'], {
+                    styleKeys: ['Style', 'Style Number', 'StyleNumber'],
+                    jobKeys: ['Job', 'Job Number', 'JobNo', 'Job No']
+                });
+                const usedActual = minutes > 0;
+                if (!minutes) minutes = minutesBetween(start, completed);
                 if (!minutes) {
                     const elapsedHrs = getPositiveNumber(getVal(r, ['Job Elapsed Calendar Hrs','ElapsedHrs','Elapsed','Job Elapsed']));
                     minutes = elapsedHrs * 60;
                 }
-                addMetric('M&A Support', minutes, 1, 'minutes / completed job');
+                addMetric('M&A Support', minutes, 1, usedActual ? 'actual split minutes / completed job' : 'minutes / completed job');
             });
 
             allPatchRows.forEach(r => {
@@ -4839,22 +5108,36 @@
                 const completed = rawToLocalDate(getVal(r, ['Complete Date m/d/yyyy','Complete Date','CompleteDate']));
                 if (!inSelectedMonth(completed)) return;
                 const qty = getPositiveNumber(getVal(r, ['Quantity','Qty']));
-                addMetric('Patch', minutesBetween(start, completed), qty || 1, qty ? 'minutes / quantity' : 'minutes / completed job');
+                const actualMinutes = actualSplitMinutesForSource(r, ['patch'], {
+                    styleKeys: ['Style Number', 'StyleNumber', 'Style'],
+                    jobKeys: ['Job Number', 'JobNo', 'Job No', 'Job']
+                });
+                const minutes = actualMinutes > 0 ? actualMinutes : minutesBetween(start, completed);
+                addMetric('Patch', minutes, qty || 1, actualMinutes > 0 ? (qty ? 'actual split minutes / quantity' : 'actual split minutes / completed job') : (qty ? 'minutes / quantity' : 'minutes / completed job'));
             });
 
             allConsumptionRows.forEach(r => {
                 const start = parseDayFirstDateTime(getVal(r, ['Start Date m/d/yyyy','Start Date','StartDate']));
                 const completed = parseDayFirstDateTime(getVal(r, ['Complete Date m/d/yyyy','Complete Date','CompleteDate']));
-                if (!start || !completed || completed <= start) return;
                 if (!inSelectedMonth(completed)) return;
-                addMetric('Consumption', minutesBetween(start, completed), 1, 'calendar minutes / completed job');
+                const actualMinutes = actualSplitMinutesForSource(r, ['consumption'], {
+                    styleKeys: ['Style Number', 'StyleNumber', 'Style'],
+                    jobKeys: ['Job Number', 'JobNo', 'Job No', 'Job']
+                });
+                const minutes = actualMinutes > 0 ? actualMinutes : minutesBetween(start, completed);
+                addMetric('Consumption', minutes, 1, actualMinutes > 0 ? 'actual split minutes / completed job' : 'calendar minutes / completed job');
             });
 
             allDownRows.forEach(r => {
                 const start = rawToLocalDate(getVal(r, ['Start Time','StartTime','Start Time m/d/yyyy']));
                 const completed = rawToLocalDate(getVal(r, ['Complete Time','CompleteTime','Complete Time m/d/yyyy']));
                 if (!inSelectedMonth(completed)) return;
-                addMetric('Down Filling', minutesBetween(start, completed), 1, 'minutes / completed job');
+                const actualMinutes = actualSplitMinutesForSource(r, ['down', 'downfilling'], {
+                    styleKeys: ['Style', 'Style Number', 'StyleNumber'],
+                    jobKeys: ['Job', 'Job Number', 'JobNo', 'Job No']
+                });
+                const minutes = actualMinutes > 0 ? actualMinutes : minutesBetween(start, completed);
+                addMetric('Down Filling', minutes, 1, actualMinutes > 0 ? 'actual split minutes / completed job' : 'minutes / completed job');
             });
 
             const rows = Object.values(metrics)
@@ -4864,6 +5147,7 @@
         }
 
         function renderUtilization(monthOverride = null) {
+            ensureActualSplitRowsForDashboard();
             const months  = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             const sharedMonth = monthOverride || document.getElementById('monthFilter')?.value || 'ALL';
 
@@ -4931,22 +5215,23 @@
             // Collect all known PICs across all sources
             const allPICs = new Set([...ATT_MEMBERS, ...picList]); // seed from all known members
 
-            // ── Laser hrs per PIC (Received Time → Complete Date) ─────────────
+            // ── Laser hrs per PIC (actual split first, then Received Time → Complete Date) ─────────────
             const laserHrs = {};
             allLaserRows.forEach(r => {
                 const cdRaw = getVal(r, ['Complete Date','CompleteDate']);
                 if (!inMonth(cdRaw)) return;
                 const received  = rawToLocalDate(getVal(r, ['Received Time','ReceivedTime','Received']));
                 const completed = rawToLocalDate(cdRaw);
-                if (!received || !completed) return;
-                const hrs = Math.max(0, (completed - received) / 3600000);
+                const actualMinutes = actualSplitMinutesForLaser(r);
+                if (!actualMinutes && (!received || !completed)) return;
+                const hrs = actualMinutes > 0 ? actualMinutes / 60 : Math.max(0, (completed - received) / 3600000);
                 const pic = getMAPic(r);
                 if (!pic || pic === '---') return;
                 allPICs.add(pic);
                 laserHrs[pic] = (laserHrs[pic] || 0) + hrs;
             });
 
-            // ── Support hrs per PIC (Start Time → Complete Time) ─────────────
+            // ── Support hrs per PIC (actual split first, then Start Time → Complete Time) ─────────────
             // Falls back to Job Elapsed Calendar Hrs if Complete Time is missing
             const supportHrs = {};
             allSupportRows.forEach(r => {
@@ -4955,21 +5240,23 @@
                 const pic = getMAPic(r);
                 if (!pic || pic === '---') return;
                 allPICs.add(pic);
-                // Primary: Start Time → Complete Time (actual elapsed)
-                // Fallback: Job Elapsed Calendar Hrs (from Excel — used when dates not parseable)
-                let hrs = 0;
+                const actualMinutes = actualSplitMinutesForSource(r, ['support', 'masupport'], {
+                    styleKeys: ['Style Number', 'StyleNumber', 'Style'],
+                    jobKeys: ['Job Number', 'JobNo', 'Job No', 'Job']
+                });
+                let hrs = actualMinutes > 0 ? actualMinutes / 60 : 0;
                 const startDate = rawToLocalDate(getVal(r, ['Start Time','StartTime']));
                 const endDate   = rawToLocalDate(getVal(r, ['Complete Time','CompleteTime']));
-                if (startDate && endDate && endDate > startDate) {
+                if (!hrs && startDate && endDate && endDate > startDate) {
                     hrs = (endDate - startDate) / 3600000;
-                } else {
+                } else if (!hrs) {
                     const jobElapsed = parseFloat(getVal(r, ['Job Elapsed Calendar Hrs','ElapsedHrs','Elapsed','Job Elapsed']));
                     if (!isNaN(jobElapsed) && jobElapsed > 0) hrs = jobElapsed;
                 }
                 if (hrs > 0) supportHrs[pic] = (supportHrs[pic] || 0) + hrs;
             });
 
-            // ── Consumption hrs per PIC (Start Date → Complete Date) ──────────
+            // ── Consumption hrs per PIC (actual split first, then Start Date → Complete Date) ──────────
             const consumptionHrs = {};
             allConsumptionRows.forEach(r => {
                 const rcvRaw = getVal(r, ['Received Time m/d/yyyy','Received Time','ReceivedTime']);
@@ -4977,12 +5264,17 @@
                 const pic = getMAPic(r);
                 if (!pic || pic === '---') return;
                 allPICs.add(pic);
+                const actualMinutes = actualSplitMinutesForSource(r, ['consumption'], {
+                    styleKeys: ['Style Number', 'StyleNumber', 'Style'],
+                    jobKeys: ['Job Number', 'JobNo', 'Job No', 'Job']
+                });
+                let hrs = actualMinutes > 0 ? actualMinutes / 60 : 0;
                 const startDate = rawToLocalDate(getVal(r, ['Start Date m/d/yyyy','Start Date','StartDate']));
                 const endDate   = rawToLocalDate(getVal(r, ['Complete Date m/d/yyyy','Complete Date','CompleteDate']));
-                if (startDate && endDate && endDate > startDate) {
-                    const hrs = (endDate - startDate) / 3600000;
-                    if (hrs > 0) consumptionHrs[pic] = (consumptionHrs[pic] || 0) + hrs;
+                if (!hrs && startDate && endDate && endDate > startDate) {
+                    hrs = (endDate - startDate) / 3600000;
                 }
+                if (hrs > 0) consumptionHrs[pic] = (consumptionHrs[pic] || 0) + hrs;
             });
 
             // Template excluded from utilization — tracked separately
@@ -5157,10 +5449,15 @@
             });
             if (supVolumeChart) supVolumeChart.destroy();
             const svc = document.getElementById('supVolumeChart');
+            const supportVolumeValues = sortedDays.map(d => dayStats[d]);
+            const supportVolumeAvg = supportVolumeValues.length ? supportVolumeValues.reduce((sum, count) => sum + count, 0) / supportVolumeValues.length : 0;
             if (svc) supVolumeChart = new Chart(svc, {
                 type: 'line',
-                data: { labels: sortedDays, datasets: [{ label: 'Requests', data: sortedDays.map(d => dayStats[d]), borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.07)', tension: 0.3, fill: true }] },
-                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } } }
+                data: { labels: sortedDays, datasets: [
+                    { label: 'Requests', data: supportVolumeValues, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.07)', tension: 0.3, fill: true },
+                    { label: `Average ${supportVolumeAvg.toFixed(1)}`, data: sortedDays.map(() => supportVolumeAvg), borderColor: '#94a3b8', borderWidth: 1, tension: 0, fill: false, pointRadius: 0, pointStyle: 'line' }
+                ] },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { usePointStyle: true } } } }
             });
 
             // Chart 3: Avg elapsed by support type (horizontal bar)
@@ -5202,13 +5499,15 @@
             if (picTbody) {
                 picTbody.innerHTML = Object.keys(picPending).length
                     ? Object.entries(picPending).map(([name, jobs]) => `
-                        <tr class="border-b hover:bg-purple-50 cursor-pointer transition-colors" onclick="switchTab('support')">
-                            <td class="p-3 font-bold border-r bg-slate-50/50">${name}</td>
-                            <td class="p-3 flex flex-wrap gap-2">
-                                ${jobs.map(j => `<div class="flex items-center gap-1.5 border rounded-lg px-2.5 py-1.5 bg-white shadow-sm">
+                        <tr class="border-b hover:bg-slate-50 cursor-pointer transition-colors" onclick="switchTab('support')">
+                            <td class="px-3 py-2.5 font-bold border-r bg-slate-50/50 text-slate-800">${escapeHtml(name)}
+                                <div class="text-[9px] font-semibold text-slate-400 mt-0">${jobs.length} pending</div>
+                            </td>
+                            <td class="px-3 py-2.5 flex flex-wrap gap-1.5">
+                                ${jobs.map(j => `<div class="inline-flex items-center gap-1.5 border border-slate-200 rounded-lg px-2 py-1 bg-white shadow-sm">
                                     <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-                                    <span class="font-bold text-slate-800 text-[10px]">${j.machineNo}</span>
-                                    <span class="text-slate-500 text-[9px]">${j.type}</span>
+                                    <span class="font-black text-blue-700 text-[10px] leading-none">${escapeHtml(j.machineNo || j.rid || '---')}</span>
+                                    <span class="font-black text-blue-700 text-[10px] leading-none">${escapeHtml(j.type || '')}</span>
                                 </div>`).join('')}
                             </td>
                         </tr>`).join('')
@@ -5779,6 +6078,11 @@
                 const savePatchButton = canSavePatchRow ? `<button onclick="savePatchRow('${sid}',event)" class="bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-blue-700">SAVE</button>` : '';
                 const patchAiButton = !isDone ? `<a href="${escapePatchAttr(getPatchAiUrl(tmplNo))}" target="_self" class="inline-flex items-center justify-center bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-blue-700">PATCH</a>` : '';
                 const patchActionCell = savePatchButton || patchAiButton ? `<div class="flex flex-wrap items-center gap-1.5">${savePatchButton}${patchAiButton}</div>` : '';
+                const pendingMaterial = !received || received === '---' || received === '-';
+                const pendingMaterialBadge = pendingMaterial ? '<span class="inline-flex items-center rounded-md border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-amber-800">Pending Material</span>' : '';
+                const receivedCell = canEdit
+                    ? `<div class="flex flex-col gap-1.5"><input id="patch-received-${sid}" class="manual-input admin-input" value="${received==='---'?'':received}" placeholder="m/d/yyyy hh:mm">${pendingMaterialBadge}</div>`
+                    : (pendingMaterial ? pendingMaterialBadge : received);
                 const patchPicSelect = `<select id="patch-mapic-${sid}" class="manual-input admin-input" style="width:90px">
                     <option value="">Assign PIC</option>
                     ${picList.map(p => `<option value="${p}" ${p === pic ? 'selected' : ''}>${p}</option>`).join('')}
@@ -5801,7 +6105,7 @@
                     <td class="p-3">${isGavinP ? `<input id="patch-threadcolor-${sid}" class="manual-input" style="width:80px" value="${threadColor!=='---'?threadColor:''}" placeholder="Thread Color">` : `<span class="text-[10px]">${threadColor}</span>`}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-sampletype-${sid}" class="manual-input" style="width:90px" value="${sampleType!=='---'?sampleType:''}" placeholder="Sample Type">` : `<span class="text-[10px]">${sampleType}</span>`}</td>
                     <td class="p-3 text-center">${isGavinP ? `<input id="patch-qty-${sid}" class="manual-input qty-input" style="width:55px" value="${qty!=='---'?qty:''}" placeholder="Qty">` : `<span class="font-bold">${qty}</span>`}</td>
-                    <td class="p-3 text-amber-700 text-[10px] date-cell">${canEdit ? `<input id="patch-received-${sid}" class="manual-input admin-input" value="${received==='---'?'':received}" placeholder="m/d/yyyy hh:mm">` : received}</td>
+                    <td class="p-3 text-amber-700 text-[10px] date-cell">${receivedCell}</td>
                     <td class="p-3 font-bold text-blue-700">${canEdit ? `<input id="patch-tmplno-${sid}" class="manual-input admin-input" value="${tmplNo==='---'?'':tmplNo}" placeholder="e.g. S0019C">` : tmplNo}</td>
                     <td class="p-3">${canEdit ? `<input id="patch-machine-${sid}" class="manual-input admin-input" value="${machine==='---'?'':machine}" placeholder="e.g. AQM0001">` : machine}</td>
                     <td class="p-3 text-[10px]">${month}</td>
