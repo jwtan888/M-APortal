@@ -99,6 +99,220 @@
         @keyframes pulse-green { 0%{opacity:1}50%{opacity:0.5}100%{opacity:1} }
         .sync-active { animation: pulse-green 2s infinite; }
 
+        .dashboard-report-btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 40px;
+            padding: 0 1.1rem;
+            border-radius: var(--radius-sm);
+            background: #1d1d1f;
+            color: #fff;
+            font-size: 11px;
+            font-weight: 900;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            box-shadow: var(--shadow-sm);
+            transition: transform 0.15s ease, background 0.15s ease, opacity 0.15s ease;
+        }
+        .dashboard-report-btn:hover { background: var(--accent); transform: translateY(-1px); }
+        .dashboard-report-btn:disabled { opacity: 0.58; cursor: wait; transform: none; }
+        .dashboard-report-btn.hidden { display: none !important; }
+        .dashboard-report-progress {
+            display: inline-flex;
+            align-items: center;
+            min-height: 34px;
+            padding: 0 12px;
+            border-radius: 999px;
+            background: rgba(226, 232, 240, 0.72);
+            color: var(--text-2);
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            white-space: nowrap;
+            max-width: min(360px, 42vw);
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .dashboard-report-progress.hidden { display: none !important; }
+        .ma-report-capture-host {
+            position: fixed;
+            left: -12000px;
+            top: 0;
+            width: 794px;
+            background: #fff;
+            color: #1d1d1f;
+            pointer-events: none;
+            z-index: -1;
+        }
+        .ma-report-page {
+            width: 794px;
+            height: 1123px;
+            min-height: 1123px;
+            padding: 28px;
+            background: #fff;
+            color: #1d1d1f;
+            font-family: -apple-system, BlinkMacSystemFont, 'SF Pro Text', 'Helvetica Neue', Arial, sans-serif;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        .ma-report-page + .ma-report-page { margin-top: 24px; }
+        .ma-report-page-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 16px;
+            padding-bottom: 14px;
+            margin-bottom: 18px;
+            border-bottom: 1px solid rgba(0,0,0,0.1);
+        }
+        .ma-report-page-title {
+            font-size: 22px;
+            line-height: 1.1;
+            font-weight: 900;
+            color: #1d1d1f;
+            letter-spacing: 0;
+        }
+        .ma-report-page-meta {
+            font-size: 10px;
+            line-height: 1.4;
+            font-weight: 800;
+            color: #8b95a8;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            text-align: right;
+            white-space: nowrap;
+        }
+        .ma-report-page-body {
+            transform-origin: top left;
+            width: 100%;
+        }
+        .ma-report-page button,
+        .ma-report-page .portal-scroll-controls,
+        .ma-report-page #slaModal,
+        .ma-report-page .fixed {
+            display: none !important;
+        }
+        .ma-report-page .sticky { position: static !important; }
+        .ma-report-page .overflow-y-auto,
+        .ma-report-page .overflow-x-auto {
+            max-height: none !important;
+            overflow: hidden !important;
+        }
+        .ma-report-page .shadow-sm { box-shadow: none !important; }
+        .ma-report-page table {
+            width: 100% !important;
+            min-width: 0 !important;
+            table-layout: auto !important;
+        }
+        .ma-report-page th,
+        .ma-report-page td {
+            font-size: 9px !important;
+            line-height: 1.25 !important;
+            padding: 6px 7px !important;
+        }
+        .ma-report-page canvas,
+        .ma-report-page .ma-report-chart {
+            max-width: 100% !important;
+            height: auto !important;
+        }
+        .ma-report-page .h-\[300px\] {
+            height: auto !important;
+            min-height: 210px;
+        }
+        .ma-report-kpi-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 10px;
+            margin-bottom: 14px;
+        }
+        .ma-report-kpi-card {
+            border: 1px solid rgba(148,163,184,0.28);
+            border-radius: 12px;
+            padding: 12px;
+            background: #fff;
+        }
+        .ma-report-kpi-label {
+            font-size: 8px;
+            line-height: 1.2;
+            font-weight: 900;
+            color: #94a3b8;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin-bottom: 6px;
+        }
+        .ma-report-kpi-value {
+            font-size: 24px;
+            line-height: 1;
+            font-weight: 900;
+            color: #1f2937;
+            letter-spacing: 0;
+        }
+        .ma-report-chart-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-bottom: 14px;
+        }
+        .ma-report-panel {
+            border: 1px solid rgba(148,163,184,0.28);
+            border-radius: 14px;
+            background: #fff;
+            padding: 12px;
+            overflow: hidden;
+        }
+        .ma-report-panel-title {
+            font-size: 9px;
+            line-height: 1.2;
+            font-weight: 900;
+            color: #64748b;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+        .ma-report-panel .ma-report-chart {
+            display: block;
+            width: 100%;
+            max-height: 230px;
+            object-fit: contain;
+        }
+        .ma-report-compact-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9px;
+            line-height: 1.3;
+        }
+        .ma-report-compact-table th {
+            text-align: left;
+            color: #64748b;
+            background: #f8fafc;
+            border-bottom: 1px solid rgba(148,163,184,0.28);
+            font-size: 8px !important;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+        }
+        .ma-report-compact-table td {
+            border-bottom: 1px solid rgba(148,163,184,0.2);
+            color: #1f2937;
+            vertical-align: top;
+        }
+        .ma-report-pill {
+            display: inline-block;
+            margin: 0 4px 4px 0;
+            padding: 3px 6px;
+            border-radius: 6px;
+            background: #eef4ff;
+            color: #2457d6;
+            font-size: 8px;
+            font-weight: 900;
+            white-space: nowrap;
+        }
+        .ma-report-muted {
+            color: #94a3b8;
+            font-weight: 800;
+        }
+
         /* Table cells */
         td { font-size: 0.8rem; line-height: 1.2rem; }
         /* Date/time cells must never wrap — add whitespace-nowrap to any td with date data */
@@ -560,7 +774,13 @@
         </div>
 
         <div id="content-dashboard" class="tab-content hidden">
-            <div class="mb-4 flex justify-end">
+            <div class="mb-4 flex items-center justify-between gap-3">
+                <div class="flex items-center gap-2 min-h-[38px]">
+                    <button id="dailyReportPdfBtn" onclick="generateDashboardDailyReport()" class="dashboard-report-btn hidden">
+                        Daily Report PDF
+                    </button>
+                    <span id="dailyReportPdfProgress" class="dashboard-report-progress hidden"></span>
+                </div>
                 <div class="flex items-center gap-2 px-4 py-2 rounded-[var(--radius-md)]" style="background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow-sm)">
                     <span style="font-size:10px;font-weight:700;color:var(--text-3);letter-spacing:0.08em;text-transform:uppercase">Filter Month:</span>
                     <select id="monthFilter" onchange="updateDashboard()" class="text-xs font-bold outline-none cursor-pointer" style="border:none;background:transparent;color:var(--accent)">
@@ -596,78 +816,78 @@
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-6">
                 <!-- Sample Development KPI -->
-                <div id="kpi-sample-card" class="bg-white rounded-xl shadow-sm overflow-hidden border-l-4 transition-all" style="border-left-color:#10b981;border-top:1px solid #e2e8f0;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0">
-                    <div id="kpi-sample-header" class="px-5 py-4 flex items-center justify-between bg-gradient-to-r from-slate-50 to-white border-b">
+                <div id="kpi-sample-card" class="bg-white rounded-xl shadow-sm overflow-hidden border-l-4 border-red-500 transition-all" style="border-left-color:#ef4444;border-top:1px solid #e2e8f0;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0">
+                    <div id="kpi-sample-header" class="px-4 py-3 flex items-center justify-between bg-red-50/60 border-b" style="background:linear-gradient(90deg,#fef2f2,#fff)">
                         <div>
                             <p class="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Sample Development</p>
                             <h3 class="text-sm font-black text-slate-800 tracking-tight">Delivery KPI</h3>
                         </div>
                         <div class="text-right">
-                            <div id="kpi-sample-badge" class="text-3xl font-black leading-none" style="color:#10b981">—</div>
-                            <div class="text-[8px] font-bold text-slate-400 uppercase mt-0.5">On-Time Rate</div>
+                            <div id="kpi-sample-badge" class="text-3xl font-black text-red-500 leading-none">0%</div>
+                            <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">On-Time Rate</div>
                         </div>
                     </div>
-                    <div class="grid grid-cols-3 divide-x">
-                        <div class="p-4 text-center">
-                            <p class="text-[8px] font-bold text-slate-400 uppercase tracking-wide mb-1">Completed</p>
-                            <h2 id="kpi-sample-total" class="text-2xl font-black text-slate-800">0</h2>
+                    <div class="grid grid-cols-3 border-b">
+                        <div class="p-3 text-center bg-white border-r">
+                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Completed</p>
+                            <h2 id="kpi-sample-total" class="text-3xl font-black text-slate-800">0</h2>
                         </div>
-                        <div class="p-4 text-center bg-emerald-50/60">
-                            <p class="text-[8px] font-bold text-emerald-600 uppercase tracking-wide mb-1">✓ On Time</p>
-                            <h2 id="kpi-sample-ontime" class="text-2xl font-black text-emerald-700">0</h2>
+                        <div class="p-3 text-center bg-emerald-50/60 border-r">
+                            <p class="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">✓ On Time</p>
+                            <h2 id="kpi-sample-ontime" class="text-3xl font-black text-emerald-700">0</h2>
                         </div>
-                        <div class="p-4 text-center bg-red-50/60">
-                            <p class="text-[8px] font-bold text-red-500 uppercase tracking-wide mb-1">⚠ Late</p>
-                            <h2 id="kpi-sample-late" class="text-2xl font-black text-red-600">0</h2>
-                        </div>
-                    </div>
-                    <div class="px-5 py-3 bg-slate-50/50 border-t">
-                        <div class="flex justify-between text-[9px] font-bold text-slate-400 mb-1.5">
-                            <span class="uppercase tracking-wider">On-Time Rate</span>
-                            <span id="kpi-sample-pct" class="font-black text-slate-700">0%</span>
-                        </div>
-                        <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
-                            <div id="kpi-sample-bar" class="h-2.5 rounded-full transition-all duration-700 ease-out" style="width:0%;background:linear-gradient(90deg,#10b981,#34d399)"></div>
+                        <div class="p-3 text-center bg-red-50/60">
+                            <p class="text-[9px] font-black text-red-500 uppercase tracking-widest mb-1">⚠ Late</p>
+                            <h2 id="kpi-sample-late" class="text-3xl font-black text-red-600">0</h2>
                         </div>
                     </div>
-                    <div id="kpi-sample-pic" class="px-5 pb-4 pt-2 space-y-1.5"></div>
+                    <div class="px-4 py-3 bg-slate-50/50">
+                        <div class="flex justify-between text-[10px] font-black text-slate-400 mb-2">
+                            <span class="uppercase tracking-widest">On-Time Rate</span>
+                            <span id="kpi-sample-pct" class="text-red-500 text-[12px]">0%</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                            <div id="kpi-sample-bar" class="h-full rounded-full transition-all duration-700 ease-out" style="width:0%;background:linear-gradient(90deg,#ef4444,#f87171)"></div>
+                        </div>
+                        <div id="kpi-sample-pic" class="mt-3 space-y-1.5"></div>
+                    </div>
                 </div>
                 <!-- Production KPI -->
-                <div id="kpi-prod-card" class="bg-white rounded-xl shadow-sm overflow-hidden border-l-4 transition-all" style="border-left-color:#10b981;border-top:1px solid #e2e8f0;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0">
-                    <div id="kpi-prod-header" class="px-5 py-4 flex items-center justify-between bg-gradient-to-r from-slate-50 to-white border-b">
+                <div id="kpi-prod-card" class="bg-white rounded-xl shadow-sm overflow-hidden border-l-4 border-red-500 transition-all" style="border-left-color:#ef4444;border-top:1px solid #e2e8f0;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0">
+                    <div id="kpi-prod-header" class="px-4 py-3 flex items-center justify-between bg-red-50/60 border-b" style="background:linear-gradient(90deg,#fef2f2,#fff)">
                         <div>
                             <p class="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Production</p>
                             <h3 class="text-sm font-black text-slate-800 tracking-tight">Delivery KPI</h3>
                         </div>
                         <div class="text-right">
-                            <div id="kpi-prod-badge" class="text-3xl font-black leading-none" style="color:#10b981">—</div>
-                            <div class="text-[8px] font-bold text-slate-400 uppercase mt-0.5">On-Time Rate</div>
+                            <div id="kpi-prod-badge" class="text-3xl font-black text-red-500 leading-none">0%</div>
+                            <div class="text-[9px] font-black text-slate-400 uppercase tracking-widest mt-1">On-Time Rate</div>
                         </div>
                     </div>
-                    <div class="grid grid-cols-3 divide-x">
-                        <div class="p-4 text-center">
-                            <p class="text-[8px] font-bold text-slate-400 uppercase tracking-wide mb-1">Completed</p>
-                            <h2 id="kpi-prod-total" class="text-2xl font-black text-slate-800">0</h2>
+                    <div class="grid grid-cols-3 border-b">
+                        <div class="p-3 text-center bg-white border-r">
+                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1">Completed</p>
+                            <h2 id="kpi-prod-total" class="text-3xl font-black text-slate-800">0</h2>
                         </div>
-                        <div class="p-4 text-center bg-emerald-50/60">
-                            <p class="text-[8px] font-bold text-emerald-600 uppercase tracking-wide mb-1">✓ On Time</p>
-                            <h2 id="kpi-prod-ontime" class="text-2xl font-black text-emerald-700">0</h2>
+                        <div class="p-3 text-center bg-emerald-50/60 border-r">
+                            <p class="text-[9px] font-black text-emerald-600 uppercase tracking-widest mb-1">✓ On Time</p>
+                            <h2 id="kpi-prod-ontime" class="text-3xl font-black text-emerald-700">0</h2>
                         </div>
-                        <div class="p-4 text-center bg-red-50/60">
-                            <p class="text-[8px] font-bold text-red-500 uppercase tracking-wide mb-1">⚠ Late</p>
-                            <h2 id="kpi-prod-late" class="text-2xl font-black text-red-600">0</h2>
-                        </div>
-                    </div>
-                    <div class="px-5 py-3 bg-slate-50/50 border-t">
-                        <div class="flex justify-between text-[9px] font-bold text-slate-400 mb-1.5">
-                            <span class="uppercase tracking-wider">On-Time Rate</span>
-                            <span id="kpi-prod-pct" class="font-black text-slate-700">0%</span>
-                        </div>
-                        <div class="w-full bg-slate-200 rounded-full h-2.5 overflow-hidden">
-                            <div id="kpi-prod-bar" class="h-2.5 rounded-full transition-all duration-700 ease-out" style="width:0%;background:linear-gradient(90deg,#10b981,#34d399)"></div>
+                        <div class="p-3 text-center bg-red-50/60">
+                            <p class="text-[9px] font-black text-red-500 uppercase tracking-widest mb-1">⚠ Late</p>
+                            <h2 id="kpi-prod-late" class="text-3xl font-black text-red-600">0</h2>
                         </div>
                     </div>
-                    <div id="kpi-prod-pic" class="px-5 pb-4 pt-2 space-y-1.5"></div>
+                    <div class="px-4 py-3 bg-slate-50/50">
+                        <div class="flex justify-between text-[10px] font-black text-slate-400 mb-2">
+                            <span class="uppercase tracking-widest">On-Time Rate</span>
+                            <span id="kpi-prod-pct" class="text-red-500 text-[12px]">0%</span>
+                        </div>
+                        <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+                            <div id="kpi-prod-bar" class="h-full rounded-full transition-all duration-700 ease-out" style="width:0%;background:linear-gradient(90deg,#ef4444,#f87171)"></div>
+                        </div>
+                        <div id="kpi-prod-pic" class="mt-3 space-y-1.5"></div>
+                    </div>
                 </div>
             </div>
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
@@ -736,7 +956,7 @@
             <!-- Pending Laser Cut Styles -->
             <div class="bg-white p-6 rounded-xl border shadow-sm mb-6">
                 <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Pending Laser Cut Styles</h3>
-                <div class="overflow-y-auto max-h-[300px] rounded-lg border">
+                <div class="overflow-y-auto max-h-[520px] rounded-lg border">
                     <table class="w-full text-left text-[11px] table-fixed">
                         <colgroup>
                             <col style="width:12%">
@@ -766,7 +986,7 @@
             <!-- Pending Consumption Styles -->
             <div class="bg-white p-6 rounded-xl border shadow-sm mb-6">
                 <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Pending Consumption Styles</h3>
-                <div class="overflow-y-auto max-h-[300px] rounded-lg border">
+                <div class="overflow-y-auto max-h-[520px] rounded-lg border">
                     <table class="w-full text-left text-[11px] table-fixed">
                         <colgroup>
                             <col style="width:12%">
@@ -2403,8 +2623,7 @@
             const st = document.getElementById('tempSyncStatus');
             if(!isSilent && st) st.classList.add('sync-active');
             try {
-                const _ctrl_t = new AbortController(); const _t_t = setTimeout(() => _ctrl_t.abort(), 25000);
-                const r_t = await fetch(templateFetchURL + "&cb=" + Date.now(), { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}), signal: _ctrl_t.signal }); clearTimeout(_t_t);
+                const r_t = await postPortalJson(templateFetchURL, {}, 40000);
                 if (!r_t.ok) throw new Error(`HTTP ${r_t.status}`);
                 const rows = extractRows(await r_t.json());
                 allTemplates = rows.map(i => {
@@ -2465,7 +2684,20 @@
                 }
                 renderUtilization(); populateTabMonthFilters();
                 if(st) { st.innerText = "LIVE: " + new Date().toLocaleTimeString() + ` (${allTemplates.length} rows)`; st.classList.remove('sync-active'); }
-            } catch (e) { if(st) st.innerText = "Error"; }
+            } catch (e) {
+                if (allTemplates.length) {
+                    if(st) { st.innerText = `PA slow - showing cached ${allTemplates.length} rows`; st.classList.remove('sync-active'); }
+                    console.warn('Template fetch failed; keeping last loaded rows:', e.message);
+                    return;
+                }
+                const hydrated = hydrateDashboardFromSnapshot();
+                if (hydrated && allTemplates.length) {
+                    templateDataLoaded = true;
+                    if(st) { st.innerText = `PA slow - showing cached ${allTemplates.length} rows`; st.classList.remove('sync-active'); }
+                    return;
+                }
+                if(st) { st.innerText = "Error"; st.classList.remove('sync-active'); }
+            }
         }
 
         function updateDashboard() {
@@ -2586,17 +2818,17 @@
                         .map(([name, s]) => {
                             const p    = s.total ? Math.round((s.total-s.late)/s.total*100) : 0;
                             const bc   = p >= 90 ? '#10b981' : p >= 70 ? '#f59e0b' : '#ef4444';
-                            const bgCl = p >= 90 ? '' : p >= 70 ? 'bg-amber-50' : 'bg-red-50';
+                            const bgCl = p >= 90 ? 'bg-emerald-50/70' : p >= 70 ? 'bg-amber-50/80' : 'bg-red-50/80';
                             const lateTag = s.late > 0
-                                ? `<span class="ml-1 px-1.5 py-0.5 rounded text-[8px] font-black bg-red-100 text-red-700 animate-pulse">${s.late} LATE</span>`
-                                : `<span class="ml-1 px-1.5 py-0.5 rounded text-[8px] font-bold bg-emerald-100 text-emerald-700">✓ All on time</span>`;
-                            return `<div class="flex items-center gap-2 text-[10px] rounded-lg px-2 py-1.5 ${bgCl}">
-                                <span class="w-14 font-black text-slate-800 truncate">${name}</span>
-                                <div class="flex-1 bg-slate-100 rounded-full h-2 overflow-hidden">
-                                    <div class="h-2 rounded-full transition-all" style="width:${p}%;background:${bc}"></div>
+                                ? `<span class="ml-1.5 px-2 py-0.5 rounded text-[9px] font-black bg-red-100 text-red-700 whitespace-nowrap">${s.late} LATE</span>`
+                                : `<span class="ml-1.5 px-2 py-0.5 rounded text-[9px] font-black bg-emerald-100 text-emerald-700 whitespace-nowrap">ON TIME</span>`;
+                            return `<div class="flex items-center gap-2 text-[11px] rounded-lg px-2.5 py-1.5 ${bgCl}">
+                                <span class="w-16 font-black text-slate-800 truncate">${name}</span>
+                                <div class="flex-1 bg-slate-100 rounded-full h-1.5 overflow-hidden">
+                                    <div class="h-1.5 rounded-full transition-all" style="width:${p}%;background:${bc}"></div>
                                 </div>
-                                <span class="font-black text-[11px] w-9 text-right" style="color:${bc}">${p}%</span>
-                                <span class="text-slate-400 text-[9px]">${s.total-s.late}/${s.total}</span>
+                                <span class="font-black text-[13px] w-9 text-right" style="color:${bc}">${p}%</span>
+                                <span class="text-slate-400 text-[10px] w-8">${s.total-s.late}/${s.total}</span>
                                 ${lateTag}
                             </div>`;
                         }).join('');
@@ -5013,7 +5245,7 @@
                         <td class="px-3 py-2.5 font-bold border-r bg-slate-50/50 text-slate-800">${escapePatchHtml(name)}
                             <div class="text-[9px] font-semibold text-slate-400 mt-0">${items.length} pending</div>
                         </td>
-                        <td class="px-3 py-2.5 flex flex-wrap gap-1.5">${items.map(item=>`<div class="inline-flex items-center gap-1.5 border border-slate-200 rounded-lg px-2 py-1 shadow-sm bg-white"><span class="w-2 h-2 rounded-full ${item.pendingMaterial ? 'bg-amber-400' : 'bg-slate-300'}"></span><span class="font-black text-blue-700 text-[10px] leading-none">${escapePatchHtml(item.label)}</span>${item.pendingMaterial ? '<span class="text-[9px] font-black text-amber-800 bg-amber-100 border border-amber-300 rounded-md px-1.5 py-0.5 uppercase tracking-wide">Pending Material</span>' : ''}</div>`).join('')}</td>
+                        <td class="px-3 py-2.5 flex flex-wrap gap-2">${items.map(item=>`<div class="patch-pending-chip inline-flex max-w-full items-center gap-1.5 border border-slate-200 rounded-lg px-2.5 py-1.5 shadow-sm bg-white"><span class="w-2 h-2 shrink-0 rounded-full ${item.pendingMaterial ? 'bg-amber-400' : 'bg-slate-300'}"></span><span class="patch-pending-style min-w-0 font-black text-blue-700 text-[12px] leading-tight">${escapePatchHtml(item.label)}</span>${item.pendingMaterial ? '<span class="patch-pending-status shrink-0 text-[8px] font-black text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-1.5 py-0.5 uppercase tracking-wide">Pending Material</span>' : ''}</div>`).join('')}</td>
                     </tr>`).join('')
                 : '<tr><td colspan="2" class="p-6 text-center italic text-slate-400">All patches completed!</td></tr>';
         }
@@ -5543,6 +5775,7 @@
             if (t === 'consumption' && allConsumptionRows.length) renderConsumptionTable();
             // Refresh down filling data when switching to down filling tab
             if (t === 'downfilling') { refreshDownData(true); updateDownPicDisplay(); }
+            updateDailyReportButton();
         }
 
         function canManualSyncQuiltingDetails() {
@@ -5557,6 +5790,1159 @@
                     el.classList.remove('sync-active');
                 }
             });
+        }
+
+        function isDailyReportAllowed() {
+            return currentUser === 'Joe';
+        }
+
+        function updateDailyReportButton() {
+            const btn = document.getElementById('dailyReportPdfBtn');
+            if (!btn) return;
+            const isDashboardVisible = !document.getElementById('content-dashboard')?.classList.contains('hidden');
+            btn.classList.toggle('hidden', !isDailyReportAllowed() || !isDashboardVisible);
+        }
+
+        function setDailyReportProgress(message) {
+            const progress = document.getElementById('dailyReportPdfProgress');
+            if (!progress) return;
+            const text = String(message || '').trim();
+            progress.innerText = text;
+            progress.classList.toggle('hidden', !text);
+        }
+
+        function updateDailyReportPendingWindow(pendingWindow, message, percent = null) {
+            if (!pendingWindow || pendingWindow.closed) return;
+            try {
+                const text = String(message || 'Preparing report').trim() || 'Preparing report';
+                const status = pendingWindow.document.getElementById('daily-report-window-status');
+                const detail = pendingWindow.document.getElementById('daily-report-window-detail');
+                const bar = pendingWindow.document.getElementById('daily-report-window-bar');
+                if (status) status.textContent = text;
+                if (detail) {
+                    detail.textContent = text === 'Opening Outlook web'
+                        ? 'Opening the Outlook draft in this tab.'
+                        : 'Please keep this tab open while the dashboard report is generated.';
+                }
+                if (bar && percent !== null && Number.isFinite(Number(percent))) {
+                    bar.style.width = `${Math.max(6, Math.min(100, Number(percent)))}%`;
+                }
+            } catch (err) {
+                // The tab may already be navigating to Outlook.
+            }
+        }
+
+        function loadScriptOnce(src, readyCheck) {
+            if (readyCheck()) return Promise.resolve();
+            return new Promise((resolve, reject) => {
+                const existing = Array.from(document.scripts).find(s => s.src === src);
+                if (existing) {
+                    existing.addEventListener('load', () => resolve(), { once: true });
+                    existing.addEventListener('error', reject, { once: true });
+                    return;
+                }
+                const script = document.createElement('script');
+                script.src = src;
+                script.async = true;
+                script.onload = () => resolve();
+                script.onerror = () => reject(new Error(`Failed to load ${src}`));
+                document.head.appendChild(script);
+            });
+        }
+
+        async function ensureDashboardPdfLibraries() {
+            await loadScriptOnce(
+                'https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js',
+                () => !!(window.jspdf && window.jspdf.jsPDF)
+            );
+            await loadScriptOnce(
+                'https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js',
+                () => typeof window.html2canvas === 'function'
+            );
+        }
+
+        function reportDateLabel(date = new Date()) {
+            return date.toLocaleDateString('en-GB');
+        }
+
+        function reportEmailDateLabel(date = new Date()) {
+            return `${date.getDate()} ${date.toLocaleString('en-GB', { month: 'long' })} ${date.getFullYear()}`;
+        }
+
+        function buildDailyReportOutlookUrl(details) {
+            const encodeMailParam = value => encodeURIComponent(value || '').replace(/%0A/g, '%0D%0A');
+            const query = [
+                `to=${encodeMailParam(details.to)}`,
+                `cc=${encodeMailParam(details.cc)}`,
+                `ccRecipients=${encodeMailParam(details.cc)}`,
+                `subject=${encodeMailParam(details.subject)}`,
+                `body=${encodeMailParam(details.body)}`
+            ].join('&');
+            return `https://outlook.office.com/mail/deeplink/compose?${query}`;
+        }
+
+        function openDailyReportPendingWindow() {
+            const pendingWindow = window.open('', '_blank');
+            if (!pendingWindow) return null;
+            try {
+                pendingWindow.document.write(`
+                    <!doctype html>
+                    <html>
+                    <head>
+                        <meta charset="utf-8">
+                        <title>Preparing M&A Daily Report Email</title>
+                        <style>
+                            body {
+                                margin: 0;
+                                min-height: 100vh;
+                                display: grid;
+                                place-items: center;
+                                background: #e8ebf3;
+                                color: #20242d;
+                                font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+                            }
+                            .panel {
+                                width: min(560px, calc(100vw - 48px));
+                                padding: 36px;
+                                border: 1px solid #d8deea;
+                                border-radius: 24px;
+                                background: white;
+                                box-shadow: 0 18px 50px rgba(31, 41, 55, 0.15);
+                            }
+                            .eyebrow {
+                                color: #8b97ad;
+                                font-size: 13px;
+                                font-weight: 900;
+                                letter-spacing: 0.18em;
+                                text-transform: uppercase;
+                            }
+                            h1 {
+                                margin: 10px 0 8px;
+                                font-size: 30px;
+                                line-height: 1.1;
+                            }
+                            p {
+                                margin: 0;
+                                color: #7d8799;
+                                font-size: 16px;
+                                font-weight: 700;
+                                line-height: 1.5;
+                            }
+                            .progress {
+                                height: 10px;
+                                margin-top: 22px;
+                                overflow: hidden;
+                                border: 1px solid #d8deea;
+                                border-radius: 999px;
+                                background: #eef2f7;
+                            }
+                            .progress > div {
+                                width: 8%;
+                                height: 100%;
+                                border-radius: inherit;
+                                background: #3f64d8;
+                                transition: width 180ms ease;
+                            }
+                        </style>
+                    </head>
+                    <body>
+                        <div class="panel">
+                            <div class="eyebrow">M&A Daily Report</div>
+                            <h1 id="daily-report-window-status">Starting Export</h1>
+                            <p id="daily-report-window-detail">Please keep this tab open while the dashboard report is generated.</p>
+                            <div class="progress"><div id="daily-report-window-bar"></div></div>
+                        </div>
+                    </body>
+                    </html>
+                `);
+                pendingWindow.document.close();
+            } catch (err) {
+                // If the browser blocks document access, keep the already-opened tab for navigation.
+            }
+            return pendingWindow;
+        }
+
+        function openDailyReportOutlookWeb(details, targetWindow = null) {
+            const url = buildDailyReportOutlookUrl(details);
+            if (targetWindow && !targetWindow.closed) {
+                targetWindow.location.href = url;
+                targetWindow.focus();
+                return;
+            }
+            window.open(url, '_blank');
+        }
+
+        function reportFileDate(date = new Date()) {
+            const y = date.getFullYear();
+            const m = String(date.getMonth() + 1).padStart(2, '0');
+            const d = String(date.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function getDashboardDividerTitle(node) {
+            if (!node || node.nodeType !== Node.ELEMENT_NODE) return '';
+            const text = (node.textContent || '').replace(/\s+/g, ' ').trim();
+            const titles = ['Template', 'Laser Tracking', 'M&A Support', 'Patch Tracking', 'Consumption', 'Down Filling'];
+            return titles.find(title => text === title) || '';
+        }
+
+        function getDashboardReportGroups() {
+            const dashboard = document.getElementById('content-dashboard');
+            if (!dashboard) return [];
+            const groups = [];
+            let current = { title: 'Template', nodes: [] };
+            Array.from(dashboard.children).forEach(node => {
+                if (node.id === 'slaModal') return;
+                if (node.querySelector && (node.querySelector('#monthFilter') || node.querySelector('#dailyReportPdfBtn'))) return;
+                const dividerTitle = getDashboardDividerTitle(node);
+                if (dividerTitle) {
+                    if (current.nodes.length) groups.push(current);
+                    current = { title: dividerTitle, nodes: [] };
+                    return;
+                }
+                current.nodes.push(node);
+            });
+            if (current.nodes.length) groups.push(current);
+            return groups;
+        }
+
+        function getDashboardChartInstance(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas || !window.Chart) return null;
+            try {
+                if (typeof window.Chart.getChart === 'function') {
+                    return window.Chart.getChart(canvas) || window.Chart.getChart(canvasId) || null;
+                }
+            } catch (err) {
+                // Fall back to older Chart.js instance lookup below.
+            }
+            if (canvas.chart) return canvas.chart;
+            const instances = window.Chart.instances;
+            if (instances) {
+                const list = Array.isArray(instances) ? instances : Object.values(instances);
+                for (const instance of list) {
+                    const chart = instance?.chart || instance;
+                    if (chart?.canvas === canvas || chart?.ctx?.canvas === canvas) return chart;
+                }
+            }
+            return null;
+        }
+
+        function refreshDashboardChartCanvas(canvasId) {
+            const chart = getDashboardChartInstance(canvasId);
+            if (!chart) return;
+            try {
+                if (typeof chart.stop === 'function') chart.stop();
+                if (typeof chart.resize === 'function') chart.resize();
+                if (typeof chart.update === 'function') chart.update('none');
+                if (typeof chart.render === 'function') chart.render();
+            } catch (err) {
+                // Keep export moving if one chart cannot be refreshed.
+            }
+        }
+
+        function getDashboardReportChartIds() {
+            const ids = new Set();
+            ['Template', 'Laser Tracking', 'M&A Support', 'Patch Tracking', 'Consumption', 'Down Filling'].forEach(title => {
+                const config = getDashboardReportConfig(title);
+                (config?.charts || []).forEach(chart => {
+                    if (chart?.id) ids.add(chart.id);
+                });
+            });
+            return Array.from(ids);
+        }
+
+        async function settleDashboardReportCharts() {
+            const ids = getDashboardReportChartIds();
+            ids.forEach(refreshDashboardChartCanvas);
+            await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+            await new Promise(resolve => setTimeout(resolve, 160));
+            ids.forEach(refreshDashboardChartCanvas);
+        }
+
+        function getDashboardChartDataUrl(canvasId) {
+            const canvas = document.getElementById(canvasId);
+            if (!canvas || typeof canvas.toDataURL !== 'function') return '';
+            refreshDashboardChartCanvas(canvasId);
+            if (!canvas.width || !canvas.height) return '';
+            try {
+                const chart = getDashboardChartInstance(canvasId);
+                const dataUrl = typeof chart?.toBase64Image === 'function'
+                    ? chart.toBase64Image('image/png', 1)
+                    : canvas.toDataURL('image/png');
+                return dataUrl && dataUrl.length > 200 ? dataUrl : '';
+            } catch (err) {
+                return '';
+            }
+        }
+
+        function replaceClonedCanvasesWithImages(clone) {
+            clone.querySelectorAll('canvas[id]').forEach(clonedCanvas => {
+                const dataUrl = getDashboardChartDataUrl(clonedCanvas.id);
+                if (!dataUrl) return;
+                const img = document.createElement('img');
+                img.src = dataUrl;
+                img.className = 'ma-report-chart';
+                img.alt = clonedCanvas.id;
+                clonedCanvas.replaceWith(img);
+            });
+        }
+
+        function getDashboardText(selector, fallback = '—') {
+            const node = document.querySelector(selector);
+            const text = (node?.textContent || '').replace(/\s+/g, ' ').trim();
+            return text || fallback;
+        }
+
+        function appendReportKpis(body, items) {
+            const grid = document.createElement('div');
+            grid.className = 'ma-report-kpi-grid';
+            items.forEach(item => {
+                const card = document.createElement('div');
+                card.className = 'ma-report-kpi-card';
+                card.innerHTML = `
+                    <div class="ma-report-kpi-label">${escapeHtml(item.label)}</div>
+                    <div class="ma-report-kpi-value" style="color:${item.color || '#1f2937'}">${escapeHtml(item.value)}</div>
+                `;
+                grid.appendChild(card);
+            });
+            body.appendChild(grid);
+        }
+
+        function createReportChartPanel(canvasId, title) {
+            const panel = document.createElement('div');
+            panel.className = 'ma-report-panel';
+            panel.innerHTML = `<div class="ma-report-panel-title">${escapeHtml(title)}</div>`;
+            const dataUrl = getDashboardChartDataUrl(canvasId);
+            if (dataUrl) {
+                const img = document.createElement('img');
+                img.className = 'ma-report-chart';
+                img.alt = title;
+                img.src = dataUrl;
+                panel.appendChild(img);
+                return panel;
+            }
+            const empty = document.createElement('div');
+            empty.className = 'ma-report-muted';
+            empty.textContent = 'Chart not available';
+            panel.appendChild(empty);
+            return panel;
+        }
+
+        function appendTemplatePendingReport(body) {
+            const sourceRows = Array.from(document.querySelectorAll('#pic-workload-table tr'));
+            const panel = document.createElement('div');
+            panel.className = 'ma-report-panel';
+            panel.innerHTML = `<div class="ma-report-panel-title">Pending Template Styles By PIC</div>`;
+            const table = document.createElement('table');
+            table.className = 'ma-report-compact-table';
+            table.innerHTML = '<thead><tr><th style="width:120px">M&A PIC</th><th>Pending Items</th></tr></thead><tbody></tbody>';
+            const tbody = table.querySelector('tbody');
+            sourceRows.slice(0, 9).forEach(row => {
+                const cells = Array.from(row.children);
+                if (!cells.length) return;
+                const picText = (cells[0]?.textContent || '').replace(/\s+/g, ' ').trim();
+                const itemTexts = Array.from(cells[1]?.querySelectorAll('button, span, a') || [])
+                    .map(node => (node.textContent || '').replace(/\s+/g, ' ').trim())
+                    .filter(Boolean)
+                    .slice(0, 14);
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td><strong>${escapeHtml(picText || 'Unassigned')}</strong></td>
+                    <td>${itemTexts.length ? itemTexts.map(text => `<span class="ma-report-pill">${escapeHtml(text)}</span>`).join('') : '<span class="ma-report-muted">No pending items</span>'}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            if (!tbody.children.length) {
+                tbody.innerHTML = '<tr><td colspan="2" class="ma-report-muted">No pending template items.</td></tr>';
+            }
+            panel.appendChild(table);
+            body.appendChild(panel);
+        }
+
+        function buildTemplateReportBody(body) {
+            appendReportKpis(body, [
+                { label: 'New Styles (Month)', value: getDashboardText('#stat-total', '0'), color: '#1f2937' },
+                { label: 'Total Pending', value: getDashboardText('#stat-pending', '0'), color: '#d97706' },
+                { label: 'Total Delayed', value: getDashboardText('#stat-delayed', '0'), color: '#dc2626' },
+                { label: 'Done (Month)', value: getDashboardText('#stat-completed', '0'), color: '#059669' }
+            ]);
+            const chartGrid = document.createElement('div');
+            chartGrid.className = 'ma-report-chart-grid';
+            chartGrid.appendChild(createReportChartPanel('sectionChart', 'Requests By Section'));
+            chartGrid.appendChild(createReportChartPanel('volumeChart', 'Completion Trends (Daily)'));
+            body.appendChild(chartGrid);
+            appendTemplatePendingReport(body);
+            return true;
+        }
+
+        function buildDashboardReportPage(group, pageNumber, reportDate) {
+            const page = document.createElement('section');
+            page.className = 'ma-report-page';
+            page.innerHTML = `
+                <div class="ma-report-page-header">
+                    <div>
+                        <div class="ma-report-page-title">${escapeHtml(group.title)}</div>
+                        <div class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">Generated from M&A Portal dashboard</div>
+                    </div>
+                    <div class="ma-report-page-meta">
+                        ${escapeHtml(reportDate)}<br>
+                        Page ${pageNumber}
+                    </div>
+                </div>
+            `;
+            const body = document.createElement('div');
+            body.className = 'ma-report-page-body';
+            if (group.title === 'Template') {
+                const placeholder = document.createElement('div');
+                placeholder.className = 'ma-report-muted';
+                placeholder.textContent = 'Template report is rendered directly into the PDF.';
+                body.appendChild(placeholder);
+            } else {
+                group.nodes.forEach(node => {
+                    const clone = node.cloneNode(true);
+                    replaceClonedCanvasesWithImages(clone);
+                    body.appendChild(clone);
+                });
+            }
+            page.appendChild(body);
+            return page;
+        }
+
+        function getReportPageTitle(page) {
+            return page?.querySelector('.ma-report-page-title')?.textContent?.split('·').pop()?.trim() || 'Section';
+        }
+
+        function withReportTimeout(promise, ms, label) {
+            let timer = null;
+            const timeout = new Promise((_, reject) => {
+                timer = setTimeout(() => reject(new Error(`${label} took too long. Please refresh the dashboard data and try again.`)), ms);
+            });
+            return Promise.race([promise, timeout]).finally(() => {
+                if (timer) clearTimeout(timer);
+            });
+        }
+
+        function fitReportPageContent(page) {
+            const body = page?.querySelector('.ma-report-page-body');
+            if (!page || !body) return;
+            body.style.transform = '';
+            body.style.width = '100%';
+            const header = page.querySelector('.ma-report-page-header');
+            const pageHeight = 1123;
+            const paddingAllowance = 56;
+            const availableHeight = Math.max(240, pageHeight - (header?.offsetHeight || 0) - paddingAllowance);
+            const contentHeight = Math.max(1, body.scrollHeight);
+            const contentWidth = Math.max(1, body.scrollWidth);
+            const availableWidth = Math.max(1, page.clientWidth - 56);
+            const scale = Math.min(1, availableHeight / contentHeight, availableWidth / contentWidth);
+            if (scale < 1) {
+                body.style.width = `${100 / scale}%`;
+                body.style.transform = `scale(${scale})`;
+                body.dataset.reportScale = scale.toFixed(3);
+            }
+        }
+
+        async function captureReportPage(page, label) {
+            const width = 794;
+            const height = 1123;
+            await new Promise(resolve => requestAnimationFrame(resolve));
+            await new Promise(resolve => setTimeout(resolve, 40));
+            return withReportTimeout(window.html2canvas(page, {
+                backgroundColor: '#ffffff',
+                scale: 1.2,
+                useCORS: true,
+                logging: false,
+                windowWidth: width,
+                windowHeight: height,
+                width,
+                height,
+                scrollX: 0,
+                scrollY: 0,
+                imageTimeout: 1200,
+                removeContainer: true,
+                onclone: clonedDoc => {
+                    const clonedPage = clonedDoc.querySelector('.ma-report-page');
+                    if (!clonedPage) return;
+                    clonedPage.style.width = `${width}px`;
+                    clonedPage.style.height = `${height}px`;
+                    clonedPage.style.minHeight = `${height}px`;
+                    clonedPage.style.maxHeight = `${height}px`;
+                    clonedPage.style.overflow = 'hidden';
+                    clonedPage.querySelectorAll('.overflow-y-auto, .overflow-x-auto').forEach(el => {
+                        el.style.overflow = 'hidden';
+                    });
+                }
+            }), 12000, `Capturing ${label}`);
+        }
+
+        function truncateReportPdfText(value, maxLength = 90) {
+            const text = String(value || '').replace(/\s+/g, ' ').trim();
+            if (text.length <= maxLength) return text;
+            return `${text.slice(0, Math.max(0, maxLength - 1)).trim()}...`;
+        }
+
+        function getTemplatePendingPdfRows() {
+            const sourceRows = Array.from(document.querySelectorAll('#pic-workload-table tr'));
+            return sourceRows.map(row => {
+                const cells = Array.from(row.children);
+                const pic = (cells[0]?.textContent || '').replace(/\s+/g, ' ').trim() || 'Unassigned';
+                const items = Array.from(cells[1]?.querySelectorAll('button, span, a') || [])
+                    .map(node => (node.textContent || '').replace(/\s+/g, ' ').trim())
+                    .filter(Boolean);
+                return {
+                    pic: truncateReportPdfText(pic, 28),
+                    items: truncateReportPdfText(items.slice(0, 12).join(', '), 150) || 'No pending items'
+                };
+            }).filter(row => row.pic || row.items);
+        }
+
+        const DASHBOARD_PDF_THEME = {
+            bg: [235, 239, 246],
+            card: [255, 255, 255],
+            border: [226, 232, 240],
+            tableHead: [248, 250, 252],
+            ink: [31, 41, 55],
+            muted: [100, 116, 139],
+            faint: [148, 163, 184],
+            line: [241, 245, 249],
+            blue: [37, 99, 235],
+            amber: [217, 119, 6],
+            green: [5, 150, 105],
+            red: [220, 38, 38]
+        };
+
+        const DASHBOARD_PDF_LAYOUT = {
+            pageW: 297,
+            pageH: 210,
+            margin: 8,
+            gap: 4,
+            headerY: 6,
+            headerH: 22,
+            kpiY: 32,
+            kpiH: 20,
+            analyticsLabelY: 58,
+            chartY: 62,
+            chartH: 82,
+            detailLabelY: 151,
+            detailY: 156,
+            detailH: 42,
+            noChartDetailLabelY: 58,
+            noChartDetailY: 63,
+            noChartDetailH: 135
+        };
+
+        function setPdfRgb(pdf, method, rgb) {
+            pdf[method](rgb[0], rgb[1], rgb[2]);
+        }
+
+        function addPdfPageBase(pdf) {
+            setPdfRgb(pdf, 'setFillColor', DASHBOARD_PDF_THEME.bg);
+            pdf.rect(0, 0, DASHBOARD_PDF_LAYOUT.pageW, DASHBOARD_PDF_LAYOUT.pageH, 'F');
+            addPdfFooterLogo(pdf);
+        }
+
+        function addPdfFooterLogo(pdf) {
+            const cx = DASHBOARD_PDF_LAYOUT.pageW / 2;
+            const y = DASHBOARD_PDF_LAYOUT.pageH - 6.4;
+            const logo = document.getElementById('headerLogo');
+            try {
+                if (logo && logo.complete && logo.naturalWidth > 0) {
+                    pdf.addImage(logo, 'PNG', cx - 8, y - 2.4, 16, 4.8, undefined, 'FAST');
+                    return;
+                }
+            } catch (err) {
+                console.warn('PDF footer logo image fallback used', err);
+            }
+            setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.faint);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(5);
+            pdf.text('M&A', cx, y, { align: 'center' });
+        }
+
+        function addPdfReportHeader(pdf, title, reportDate, pageNumber) {
+            const margin = DASHBOARD_PDF_LAYOUT.margin;
+            const pageW = DASHBOARD_PDF_LAYOUT.pageW;
+            setPdfRgb(pdf, 'setDrawColor', DASHBOARD_PDF_THEME.border);
+            setPdfRgb(pdf, 'setFillColor', DASHBOARD_PDF_THEME.card);
+            pdf.roundedRect(margin, DASHBOARD_PDF_LAYOUT.headerY, pageW - margin * 2, DASHBOARD_PDF_LAYOUT.headerH, 4, 4, 'FD');
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(5.8);
+            setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.faint);
+            pdf.text('DASHBOARD', margin + 5, DASHBOARD_PDF_LAYOUT.headerY + 7);
+            pdf.setFontSize(15.5);
+            setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.ink);
+            pdf.text(truncateReportPdfText(String(title || 'Dashboard'), 44), margin + 5, DASHBOARD_PDF_LAYOUT.headerY + 17);
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(6);
+            setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.muted);
+            pdf.text(`Daily Report · ${String(reportDate || '')} · Page ${pageNumber}`, pageW - margin - 5, DASHBOARD_PDF_LAYOUT.headerY + 13, { align: 'right' });
+        }
+
+        function addPdfKpiCard(pdf, x, y, w, label, value, color) {
+            setPdfRgb(pdf, 'setDrawColor', DASHBOARD_PDF_THEME.border);
+            setPdfRgb(pdf, 'setFillColor', DASHBOARD_PDF_THEME.card);
+            pdf.roundedRect(x, y, w, DASHBOARD_PDF_LAYOUT.kpiH, 4, 4, 'FD');
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(5.2);
+            setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.faint);
+            pdf.text(truncateReportPdfText(String(label || '').toUpperCase(), 24), x + 4, y + 7);
+            const rgb = color || DASHBOARD_PDF_THEME.ink;
+            pdf.setFontSize(String(value || '0').length > 7 ? 10 : 13.2);
+            setPdfRgb(pdf, 'setTextColor', rgb);
+            pdf.text(truncateReportPdfText(String(value || '0'), 14), x + 4, y + 16.7);
+        }
+
+        function addPdfSectionLabel(pdf, title, x, y, w) {
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(6.2);
+            setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.faint);
+            pdf.text(String(title || '').toUpperCase(), x, y);
+            setPdfRgb(pdf, 'setDrawColor', DASHBOARD_PDF_THEME.border);
+            pdf.line(x + Math.min(50, String(title || '').length * 1.9 + 7), y - 1.5, x + w, y - 1.5);
+        }
+
+        function addPdfChartPanel(pdf, canvasId, title, x, y, w, h) {
+            setPdfRgb(pdf, 'setDrawColor', DASHBOARD_PDF_THEME.border);
+            setPdfRgb(pdf, 'setFillColor', DASHBOARD_PDF_THEME.card);
+            pdf.roundedRect(x, y, w, h, 4, 4, 'FD');
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(7.3);
+            setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.ink);
+            pdf.text(truncateReportPdfText(String(title || ''), 76), x + 4, y + 7.2);
+            const canvas = document.getElementById(canvasId);
+            const img = getDashboardChartDataUrl(canvasId);
+            if (!canvas || !img) {
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(6);
+                setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.faint);
+                pdf.text('Chart not available', x + 4, y + 20);
+                return;
+            }
+            try {
+                const boxX = x + 4;
+                const boxY = y + 10.5;
+                const boxW = w - 8;
+                const boxH = h - 13.5;
+                const ratio = Math.max(0.1, canvas.width / Math.max(1, canvas.height));
+                let imgW = boxW;
+                let imgH = imgW / ratio;
+                if (imgH > boxH) {
+                    imgH = boxH;
+                    imgW = imgH * ratio;
+                }
+                pdf.addImage(img, 'PNG', boxX + (boxW - imgW) / 2, boxY + (boxH - imgH) / 2, imgW, imgH, undefined, 'FAST');
+            } catch (err) {
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(6);
+                setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.faint);
+                pdf.text('Chart not available', x + 4, y + 20);
+            }
+        }
+
+        function getAvailableDashboardCharts(charts) {
+            return (charts || []).filter(chart => {
+                const canvas = document.getElementById(chart.id);
+                return canvas && typeof canvas.toDataURL === 'function' && canvas.width > 0 && canvas.height > 0;
+            });
+        }
+
+        function getDashboardReportConfig(title) {
+            const blue = [37, 99, 235];
+            const amber = [217, 119, 6];
+            const green = [5, 150, 105];
+            const red = [220, 38, 38];
+            const slate = [31, 41, 55];
+            const configs = {
+                'Template': {
+                    kpis: [
+                        { label: 'New Styles (Month)', selector: '#stat-total', color: slate },
+                        { label: 'Total Pending', selector: '#stat-pending', color: amber },
+                        { label: 'Total Delayed', selector: '#stat-delayed', color: red },
+                        { label: 'Done (Month)', selector: '#stat-completed', color: green }
+                    ],
+                    charts: [
+                        { id: 'sectionChart', title: 'Requests By Section' },
+                        { id: 'volumeChart', title: 'Completion Trends (Daily)' }
+                    ],
+                    detailCards: [
+                        { type: 'deliveryKpi', title: 'Sample Development Delivery KPI', prefix: 'kpi-sample' },
+                        { type: 'deliveryKpi', title: 'Production Delivery KPI', prefix: 'kpi-prod' }
+                    ],
+                    tables: [
+                        { title: 'Pending Template Styles By PIC', selector: '#pic-workload-table', maxRows: 8, mode: 'picPending' }
+                    ]
+                },
+                'Laser Tracking': {
+                    kpis: [
+                        { label: 'Laser Jobs (Month)', selector: '#ld-total', color: slate },
+                        { label: 'Pending Laser Cut', selector: '#ld-laser-pending', color: blue },
+                        { label: 'Pending Consumption', selector: '#ld-pending', color: amber },
+                        { label: 'Consumption Done', selector: '#ld-done', color: green }
+                    ],
+                    charts: [
+                        { id: 'laserTrendChart', title: 'Laser Cut Loading (Daily)' },
+                        { id: 'laserSLAChart', title: 'Completion Rate (Within 6hr)' }
+                    ],
+                    tables: [
+                        { title: 'Pending Laser Cut Styles', selector: '#ld-laser-pending-table', maxRows: 8 },
+                        { title: 'Pending Consumption Styles', selector: '#ld-pending-table', maxRows: 20 }
+                    ]
+                },
+                'M&A Support': {
+                    kpis: [
+                        { label: 'Support Jobs (Month)', selector: '#ds-total', color: slate },
+                        { label: 'Pending', selector: '#ds-pending', color: amber },
+                        { label: 'Avg Turnaround (Hrs)', selector: '#ds-avg', color: blue },
+                        { label: 'Repair / Rework', selector: '#ds-repair', color: red }
+                    ],
+                    charts: [
+                        { id: 'supSectionChart', title: 'Support By Section' },
+                        { id: 'supVolumeChart', title: 'Support Loading (Daily)' },
+                        { id: 'supTypeChart', title: 'Avg Elapsed By Support Type' }
+                    ],
+                    tables: [
+                        { title: 'Pending Support By PIC', selector: '#ds-pic-table', maxRows: 8, mode: 'picPending' }
+                    ]
+                },
+                'Patch Tracking': {
+                    kpis: [
+                        { label: 'Patch Jobs (Month)', selector: '#db-patch-total', color: slate },
+                        { label: 'Pending', selector: '#db-patch-pending', color: amber },
+                        { label: 'Completed', selector: '#db-patch-done', color: green }
+                    ],
+                    charts: [
+                        { id: 'patchMonthChart', title: 'Patch Loading (Daily)' },
+                        { id: 'patchSeasonChart', title: 'Patch By Season' }
+                    ],
+                    tables: [
+                        { title: 'Pending Patches By PIC', selector: '#db-patch-pic-table', maxRows: 8, mode: 'picPending' }
+                    ]
+                },
+                'Consumption': {
+                    kpis: [
+                        { label: 'Consumption Jobs (Month)', selector: '#cd-total', color: slate },
+                        { label: 'In Progress', selector: '#cd-pending', color: amber },
+                        { label: 'Completed', selector: '#cd-done', color: green },
+                        { label: 'Avg Turnaround (Hrs)', selector: '#cd-avg', color: blue }
+                    ],
+                    charts: [
+                        { id: 'conVolumeChart', title: 'Volume Trend (Daily)' },
+                        { id: 'conProtoChart', title: 'Requests By Proto Stage' }
+                    ],
+                    tables: [
+                        { title: 'Pending Consumption Styles', selector: '#cd-pending-table', maxRows: 20 }
+                    ]
+                },
+                'Down Filling': {
+                    kpis: [
+                        { label: 'Down Jobs (Month)', selector: '#dd-total', color: slate },
+                        { label: 'Pending', selector: '#dd-pending', color: amber },
+                        { label: 'Completed', selector: '#dd-done', color: green },
+                        { label: 'Styles', selector: '#dd-styles', color: blue }
+                    ],
+                    charts: [
+                        { id: 'downVolumeChart', title: 'Down Loading (Daily)' },
+                        { id: 'downSeasonChart', title: 'Down By Season' }
+                    ],
+                    tables: [
+                        { title: 'Pending Down Filling By PIC', selector: '#dd-pic-table', maxRows: 8, mode: 'picPending' }
+                    ]
+                }
+            };
+            return configs[title] || null;
+        }
+
+        function getDashboardTablePdfRows(selector, maxRows = 8, mode = 'default') {
+            const rows = Array.from(document.querySelectorAll(`${selector} tbody tr, ${selector} tr`));
+            return rows.map(row => {
+                if (row.querySelector('th') && !row.querySelector('td')) return null;
+                const dataCells = Array.from(row.querySelectorAll('td'));
+                const cells = (dataCells.length ? dataCells : Array.from(row.children || []))
+                    .map(cell => (cell.textContent || '').replace(/\s+/g, ' ').trim())
+                    .filter(Boolean);
+                if (!cells.length) return null;
+                if (mode === 'picPending') {
+                    const picText = (dataCells[0]?.textContent || cells[0] || 'Unassigned').replace(/\s+/g, ' ').trim() || 'Unassigned';
+                    const itemCell = dataCells[1];
+                    let pendingItems = [];
+                    if (itemCell) {
+                        pendingItems = Array.from(itemCell.querySelectorAll('.patch-pending-chip')).map(chip => {
+                            const label = (chip.querySelector('.patch-pending-style')?.textContent || '').replace(/\s+/g, ' ').trim();
+                            const status = (chip.querySelector('.patch-pending-status')?.textContent || '').replace(/\s+/g, ' ').trim();
+                            if (!label && !status) return '';
+                            return status ? `${label} - ${status}` : label;
+                        }).filter(Boolean);
+                    }
+                    if (!pendingItems.length) {
+                        const fallback = cells.slice(1).join(' ')
+                            .replace(/Pending Material/g, ' - Pending Material | ')
+                            .replace(/\s+\|\s*$/g, '')
+                            .replace(/\s+/g, ' ')
+                            .trim();
+                        pendingItems = fallback ? [fallback] : ['-'];
+                    }
+                    return [truncateReportPdfText(picText, 28), truncateReportPdfText(pendingItems.join(' | '), 170)];
+                }
+                return cells.slice(0, 5).map((cell, index) => truncateReportPdfText(cell, index === 0 ? 26 : 44));
+            }).filter(Boolean).slice(0, maxRows);
+        }
+
+        function addPdfTableCard(pdf, title, selector, x, y, w, h, options = {}) {
+            const mode = options.mode || 'default';
+            const rows = getDashboardTablePdfRows(selector, options.maxRows || 8, mode);
+            setPdfRgb(pdf, 'setDrawColor', DASHBOARD_PDF_THEME.border);
+            setPdfRgb(pdf, 'setFillColor', DASHBOARD_PDF_THEME.card);
+            pdf.roundedRect(x, y, w, h, 4, 4, 'FD');
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(7.2);
+            setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.ink);
+            pdf.text(truncateReportPdfText(String(title || ''), 58), x + 4, y + 6.8);
+            setPdfRgb(pdf, 'setFillColor', DASHBOARD_PDF_THEME.tableHead);
+            pdf.rect(x, y + 10.4, w, 6.2, 'F');
+            pdf.setFontSize(5);
+            setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.muted);
+            const colCount = mode === 'picPending' ? 2 : 5;
+            const colWidths = mode === 'picPending'
+                ? [32, w - 40]
+                : [w * 0.16, w * 0.18, w * 0.22, w * 0.22, w * 0.18];
+            const headers = mode === 'picPending'
+                ? ['M&A PIC', 'Pending Items']
+                : ['Style', 'Stage', 'Season', 'PIC / Owner', 'Date / Status'];
+            let headerX = x + 4;
+            for (let i = 0; i < colCount; i += 1) {
+                pdf.text(headers[i], headerX, y + 14.7);
+                headerX += colWidths[i] || 24;
+            }
+            let cursorY = y + 21.2;
+            if (!rows.length) {
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(5.8);
+                setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.faint);
+                pdf.text('No rows to report.', x + 4, cursorY);
+                return;
+            }
+            rows.forEach((row, rowIndex) => {
+                if (cursorY > y + h - 6) return;
+                const cells = Array.isArray(row) ? row : [String(row)];
+                let rowHeight = 5.6;
+                const wrappedCells = cells.slice(0, colCount).map((cell, index) => {
+                    const wrapped = pdf.splitTextToSize(String(cell || '-'), Math.max(10, (colWidths[index] || 24) - 3));
+                    rowHeight = Math.max(rowHeight, wrapped.length * 2.55 + 2.1);
+                    return wrapped;
+                });
+                if (cursorY + rowHeight > y + h - 2.5) return;
+                if (rowIndex % 2 === 0) {
+                    setPdfRgb(pdf, 'setFillColor', [252, 253, 255]);
+                    pdf.rect(x + 0.6, cursorY - 4.3, w - 1.2, rowHeight, 'F');
+                }
+                setPdfRgb(pdf, 'setDrawColor', DASHBOARD_PDF_THEME.line);
+                pdf.line(x, cursorY - 4.8, x + w, cursorY - 4.8);
+                let cellX = x + 4;
+                for (let i = 0; i < colCount; i += 1) {
+                    pdf.setFont('helvetica', i === 0 ? 'bold' : 'normal');
+                    pdf.setFontSize(5.1);
+                    setPdfRgb(pdf, 'setTextColor', i === 0 ? DASHBOARD_PDF_THEME.blue : DASHBOARD_PDF_THEME.ink);
+                    pdf.text(wrappedCells[i] || ['-'], cellX, cursorY);
+                    cellX += colWidths[i] || 24;
+                }
+                cursorY += rowHeight;
+            });
+        }
+
+        function addPdfPendingSnapshotCard(pdf, tables, x, y, w, h) {
+            const rows = [];
+            (tables || []).forEach(table => {
+                const mode = table.mode || 'default';
+                const sourceRows = getDashboardTablePdfRows(table.selector, 2, mode);
+                sourceRows.forEach(row => {
+                    if (rows.length >= 4) return;
+                    const cells = Array.isArray(row) ? row : [String(row || '')];
+                    if (mode === 'picPending') {
+                        rows.push([
+                            truncateReportPdfText(table.title || 'Pending', 24),
+                            truncateReportPdfText(cells[0] || 'Unassigned', 24),
+                            truncateReportPdfText(cells[1] || '-', 78),
+                            'Pending'
+                        ]);
+                    } else {
+                        rows.push([
+                            truncateReportPdfText(table.title || 'Pending', 24),
+                            truncateReportPdfText(cells[0] || '-', 24),
+                            truncateReportPdfText(cells.slice(1, 4).filter(Boolean).join(' · ') || '-', 78),
+                            truncateReportPdfText(cells[4] || 'Pending', 26)
+                        ]);
+                    }
+                });
+            });
+
+            setPdfRgb(pdf, 'setDrawColor', DASHBOARD_PDF_THEME.border);
+            setPdfRgb(pdf, 'setFillColor', DASHBOARD_PDF_THEME.card);
+            pdf.roundedRect(x, y, w, h, 4, 4, 'FD');
+
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(7.2);
+            setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.ink);
+            pdf.text('Pending Snapshot', x + 4, y + 6.8);
+
+            setPdfRgb(pdf, 'setFillColor', DASHBOARD_PDF_THEME.tableHead);
+            pdf.rect(x, y + 10.4, w, 6.2, 'F');
+
+            const colWidths = [36, 34, w - 116, 30];
+            const headers = ['Area', 'Style / PIC', 'Detail', 'Status'];
+            let headerX = x + 4;
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(5);
+            setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.muted);
+            headers.forEach((header, index) => {
+                pdf.text(header, headerX, y + 14.7);
+                headerX += colWidths[index];
+            });
+
+            if (!rows.length) {
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(5.8);
+                setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.faint);
+                pdf.text('No pending rows to report.', x + 4, y + 23);
+                return;
+            }
+
+            let cursorY = y + 21.2;
+            rows.forEach((row, rowIndex) => {
+                if (cursorY > y + h - 6) return;
+                if (rowIndex % 2 === 0) {
+                    setPdfRgb(pdf, 'setFillColor', [252, 253, 255]);
+                    pdf.rect(x + 0.6, cursorY - 4.3, w - 1.2, 6.2, 'F');
+                }
+                setPdfRgb(pdf, 'setDrawColor', DASHBOARD_PDF_THEME.line);
+                pdf.line(x, cursorY - 4.8, x + w, cursorY - 4.8);
+
+                let cellX = x + 4;
+                row.forEach((cell, index) => {
+                    const maxWidth = Math.max(12, colWidths[index] - 4);
+                    const text = pdf.splitTextToSize(String(cell || '-'), maxWidth).slice(0, 2);
+                    pdf.setFont('helvetica', index === 1 ? 'bold' : 'normal');
+                    pdf.setFontSize(index === 2 ? 5 : 5.1);
+                    const color = index === 1
+                        ? DASHBOARD_PDF_THEME.blue
+                        : index === 3
+                            ? DASHBOARD_PDF_THEME.amber
+                            : index === 0
+                                ? DASHBOARD_PDF_THEME.muted
+                                : DASHBOARD_PDF_THEME.ink;
+                    setPdfRgb(pdf, 'setTextColor', color);
+                    pdf.text(text, cellX, cursorY);
+                    cellX += colWidths[index];
+                });
+                cursorY += 6.2;
+            });
+        }
+
+        function getDeliveryKpiText(prefix, key, fallback = '0') {
+            return getDashboardText(`#${prefix}-${key}`, fallback);
+        }
+
+        function addPdfDeliveryKpiCard(pdf, title, prefix, x, y, w, h) {
+            setPdfRgb(pdf, 'setDrawColor', DASHBOARD_PDF_THEME.border);
+            setPdfRgb(pdf, 'setFillColor', DASHBOARD_PDF_THEME.card);
+            pdf.roundedRect(x, y, w, h, 4, 4, 'FD');
+
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(7.2);
+            setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.ink);
+            pdf.text(truncateReportPdfText(String(title || ''), 62), x + 4, y + 7);
+
+            const stats = [
+                { label: 'Completed', value: getDeliveryKpiText(prefix, 'total', '0'), color: DASHBOARD_PDF_THEME.ink },
+                { label: 'On Time', value: getDeliveryKpiText(prefix, 'ontime', '0'), color: DASHBOARD_PDF_THEME.green },
+                { label: 'Delayed', value: getDeliveryKpiText(prefix, 'late', '0'), color: DASHBOARD_PDF_THEME.red }
+            ];
+            const statW = (w - 12) / stats.length;
+            stats.forEach((stat, index) => {
+                const sx = x + 4 + statW * index;
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(10);
+                setPdfRgb(pdf, 'setTextColor', stat.color);
+                pdf.text(truncateReportPdfText(String(stat.value), 10), sx, y + 21);
+                pdf.setFontSize(5);
+                setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.muted);
+                pdf.text(truncateReportPdfText(stat.label.toUpperCase(), 16), sx, y + 27);
+            });
+
+            const pctText = getDeliveryKpiText(prefix, 'pct', '0%');
+            const pctValue = parseFloat(String(pctText).replace(/[^\d.]/g, '')) || 0;
+            const barX = x + 4;
+            const barY = y + h - 9;
+            const barW = w - 8;
+            const barH = 4.2;
+            const barColor = pctValue >= 80 ? DASHBOARD_PDF_THEME.green : pctValue >= 60 ? DASHBOARD_PDF_THEME.amber : DASHBOARD_PDF_THEME.red;
+            setPdfRgb(pdf, 'setFillColor', [226, 232, 240]);
+            pdf.roundedRect(barX, barY, barW, barH, 1.8, 1.8, 'F');
+            setPdfRgb(pdf, 'setFillColor', barColor);
+            pdf.roundedRect(barX, barY, Math.max(2, barW * Math.min(100, pctValue) / 100), barH, 1.8, 1.8, 'F');
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(5.4);
+            setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.ink);
+            pdf.text(truncateReportPdfText(String(pctText), 10), barX + barW - 1.8, barY + 2.9, { align: 'right' });
+        }
+
+        function addDashboardSectionPdfPages(pdf, title, reportDate, startPageNumber, isFirstPdfPage) {
+            const config = getDashboardReportConfig(title);
+            const pageW = DASHBOARD_PDF_LAYOUT.pageW;
+            const margin = DASHBOARD_PDF_LAYOUT.margin;
+            const gap = DASHBOARD_PDF_LAYOUT.gap;
+            const pageNumber = startPageNumber;
+
+            if (!isFirstPdfPage) {
+                pdf.addPage('a4', 'l');
+            }
+            addPdfPageBase(pdf);
+            addPdfReportHeader(pdf, title, reportDate, pageNumber);
+
+            if (!config) {
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(8);
+                setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.faint);
+                pdf.text('Dashboard section not available.', margin + 4, 54);
+                return 1;
+            }
+
+            const kpis = config.kpis || [];
+            const cardGap = gap;
+            const cardW = (pageW - margin * 2 - cardGap * Math.max(0, kpis.length - 1)) / Math.max(1, kpis.length);
+            kpis.forEach((item, index) => {
+                addPdfKpiCard(pdf, margin + index * (cardW + cardGap), DASHBOARD_PDF_LAYOUT.kpiY, cardW, item.label, getDashboardText(item.selector, '0'), item.color);
+            });
+
+            const charts = getAvailableDashboardCharts(config.charts || []);
+            const chartCount = Math.min(3, charts.length);
+            if (chartCount > 0) {
+                addPdfSectionLabel(pdf, 'Analytics', margin, DASHBOARD_PDF_LAYOUT.analyticsLabelY, pageW - margin * 2);
+                if (chartCount === 1) {
+                    addPdfChartPanel(pdf, charts[0].id, charts[0].title, margin, DASHBOARD_PDF_LAYOUT.chartY, pageW - margin * 2, DASHBOARD_PDF_LAYOUT.chartH);
+                } else {
+                    const chartW = (pageW - margin * 2 - gap * (chartCount - 1)) / chartCount;
+                    charts.slice(0, chartCount).forEach((chart, index) => {
+                        addPdfChartPanel(pdf, chart.id, chart.title, margin + index * (chartW + gap), DASHBOARD_PDF_LAYOUT.chartY, chartW, DASHBOARD_PDF_LAYOUT.chartH);
+                    });
+                }
+            }
+
+            const bottomY = chartCount > 0 ? DASHBOARD_PDF_LAYOUT.detailY : DASHBOARD_PDF_LAYOUT.noChartDetailY;
+            const bottomH = chartCount > 0 ? DASHBOARD_PDF_LAYOUT.detailH : DASHBOARD_PDF_LAYOUT.noChartDetailH;
+            const detailLabelY = chartCount > 0 ? DASHBOARD_PDF_LAYOUT.detailLabelY : DASHBOARD_PDF_LAYOUT.noChartDetailLabelY;
+            const detailCards = config.detailCards || [];
+            const tables = config.tables || [];
+            const bottomCards = [
+                ...detailCards.slice(0, 2).map(card => ({ ...card, kind: 'delivery' })),
+                ...tables.slice(0, 2).map(table => ({ ...table, kind: 'table' }))
+            ].slice(0, 3);
+            if (bottomCards.length) {
+                addPdfSectionLabel(pdf, chartCount > 0 ? 'Detail Review' : 'Review', margin, detailLabelY, pageW - margin * 2);
+                const bottomW = (pageW - margin * 2 - gap * (bottomCards.length - 1)) / bottomCards.length;
+                bottomCards.forEach((card, index) => {
+                    const x = margin + index * (bottomW + gap);
+                    if (card.kind === 'delivery') {
+                        addPdfDeliveryKpiCard(pdf, card.title, card.prefix, x, bottomY, bottomW, bottomH);
+                    } else {
+                        addPdfTableCard(pdf, card.title, card.selector, x, bottomY, bottomW, bottomH, {
+                            mode: card.mode,
+                            maxRows: chartCount > 0 ? Math.min(card.maxRows || 8, 5) : Math.min(card.maxRows || 12, 12)
+                        });
+                    }
+                });
+            }
+
+            return 1;
+        }
+
+        async function generateDashboardDailyReport() {
+            if (!isDailyReportAllowed()) return;
+            const btn = document.getElementById('dailyReportPdfBtn');
+            const originalText = btn ? btn.innerText : '';
+            const outlookWindow = openDailyReportPendingWindow();
+            const reportProgress = (message, percent = null) => {
+                setDailyReportProgress(message);
+                updateDailyReportPendingWindow(outlookWindow, message, percent);
+            };
+            try {
+                if (btn) {
+                    btn.disabled = true;
+                    btn.innerText = 'Generating';
+                }
+                reportProgress('Preparing dashboard', 8);
+                if (document.getElementById('content-dashboard')?.classList.contains('hidden')) {
+                    switchTab('dashboard');
+                }
+                updateDashboard();
+                if (allLaserRows.length) {
+                    renderLaserDashboard();
+                    renderLaserSLA();
+                }
+                if (allSupportRows.length) renderSupportDashboard();
+                if (allPatchRows.length) renderPatchDashboard();
+                if (allConsumptionRows.length) renderConsumptionDashboard();
+                if (allDownRows.length) renderDownDashboard();
+                await new Promise(resolve => setTimeout(resolve, 400));
+                reportProgress('Preparing chart images', 24);
+                await settleDashboardReportCharts();
+                reportProgress('Loading PDF tools', 32);
+                await ensureDashboardPdfLibraries();
+
+                const groups = getDashboardReportGroups();
+                if (!groups.length) throw new Error('No dashboard sections found.');
+
+                reportProgress(`Preparing ${groups.length} dashboard sections`, 42);
+                const reportDate = reportDateLabel();
+                const { jsPDF } = window.jspdf;
+                const pdf = new jsPDF('l', 'mm', 'a4');
+                let pageNumber = 1;
+                let isFirstPdfPage = true;
+
+                for (let i = 0; i < groups.length; i += 1) {
+                    const pageTitle = groups[i].title;
+                    reportProgress(`Rendering ${i + 1}/${groups.length}: ${pageTitle}`, 45 + Math.round(((i + 1) / groups.length) * 42));
+                    const pagesUsed = addDashboardSectionPdfPages(pdf, pageTitle, reportDate, pageNumber, isFirstPdfPage);
+                    pageNumber += pagesUsed;
+                    isFirstPdfPage = false;
+                    await new Promise(resolve => setTimeout(resolve, 20));
+                }
+
+                reportProgress('Saving PDF', 92);
+                const filename = `MA-Daily-Report-${reportFileDate()}.pdf`;
+                pdf.save(filename);
+
+                reportProgress('Opening Outlook web', 98);
+                const emailDate = reportEmailDateLabel();
+                const subject = `M&A Daily Report – ${emailDate}`;
+                const body = [
+                    'Hi Yvonne,',
+                    '',
+                    `Please find attached the M&A Daily Report dated ${emailDate} for your reference.`,
+                    '',
+                    'You may also refer to the M&A Portal using the link below:',
+                    'https://jwtan888.github.io/M-APortal/index.html',
+                    '',
+                    'Regards,',
+                    'Joe'
+                ].join('\n');
+                const to = 'yvonne@sig.com.my';
+                const cc = 'MA@sig.com.my';
+                updateDailyReportPendingWindow(outlookWindow, 'Opening Outlook web', 100);
+                openDailyReportOutlookWeb({ to, cc, subject, body, filename }, outlookWindow);
+            } catch (err) {
+                if (outlookWindow && !outlookWindow.closed) {
+                    updateDailyReportPendingWindow(outlookWindow, `Export failed: ${err.message}`, 100);
+                }
+                alert(`Daily report export failed: ${err.message}`);
+            } finally {
+                setDailyReportProgress('');
+                if (btn) {
+                    btn.disabled = false;
+                    btn.innerText = originalText || 'Daily Report PDF';
+                }
+                updateDailyReportButton();
+            }
         }
 
         function login() {
@@ -5613,6 +6999,7 @@
                 if (quiltingSyncBtn) quiltingSyncBtn.classList.add('hidden');
                 clearConsumptionSyncMessages();
             }
+            updateDailyReportButton();
         }
 
         function clearAllNA() {
@@ -5636,8 +7023,7 @@
             const st = document.getElementById('supportSyncStatus');
             if (!isSilent && st) { st.innerText = 'Syncing...'; st.classList.add('sync-active'); }
             try {
-                const _ctrl_s = new AbortController(); const _t_s = setTimeout(() => _ctrl_s.abort(), 25000);
-                const r = await fetch(supportFetchURL + "&cb=" + Date.now(), { method: 'POST', body: JSON.stringify({}), signal: _ctrl_s.signal }); clearTimeout(_t_s);
+                const r = await postPortalJson(supportFetchURL, {}, 40000);
                 const rawText = await r.text();
                 if (!r.ok) {
                     throw new Error(`HTTP ${r.status}: ${rawText.substring(0, 200)}`);
@@ -5677,9 +7063,21 @@
                 renderSupportDashboard();
                     if (st) { st.innerText = 'LIVE: ' + new Date().toLocaleTimeString(); st.classList.remove('sync-active'); }
             } catch(e) {
+                if (allSupportRows.length) {
+                    renderSupportTable();
+                    renderSupportDashboard();
+                    if (st) { st.innerText = `PA slow - showing cached ${allSupportRows.length} rows`; st.classList.remove('sync-active'); }
+                    console.warn('Support fetch failed; keeping last loaded rows:', e.message);
+                    return;
+                }
+                const hydrated = hydrateDashboardFromSnapshot();
+                if (hydrated && allSupportRows.length) {
+                    if (st) { st.innerText = `PA slow - showing cached ${allSupportRows.length} rows`; st.classList.remove('sync-active'); }
+                    return;
+                }
                 const tbody = document.getElementById('supportTable');
                 if (tbody) tbody.innerHTML = `<tr><td colspan="17" class="p-6 text-center text-red-400 italic text-xs">Failed to load: ${e.message}<br><br>Check your Power Automate Flow has a Response action returning body/value.</td></tr>`;
-                if (st) st.innerText = 'Error';
+                if (st) { st.innerText = 'Error'; st.classList.remove('sync-active'); }
             }
         }
 
@@ -5898,8 +7296,7 @@
             const st = document.getElementById('patchSyncStatus');
             if (!isSilent && st) { st.innerText = 'Syncing...'; st.classList.add('sync-active'); }
             try {
-                const _ctrl_p = new AbortController(); const _t_p = setTimeout(() => _ctrl_p.abort(), 30000);
-                const r_p = await fetch(patchFetchURL + "&cb=" + Date.now(), { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}), signal: _ctrl_p.signal }); clearTimeout(_t_p);
+                const r_p = await postPortalJson(patchFetchURL, {}, 40000);
                 const rawText_p = await r_p.text();
                 if (!r_p.ok) throw new Error(`HTTP ${r_p.status}: ${rawText_p.substring(0,200)}`);
                 let d_p; try { d_p = JSON.parse(rawText_p); } catch(pe) { throw new Error(`Bad JSON: ${rawText_p.substring(0,150)}`); }
@@ -5916,6 +7313,17 @@
                 if (st) { st.innerText = `LIVE: ${new Date().toLocaleTimeString()} (${rows_p.length} rows)`; st.classList.remove('sync-active'); }
             } catch(e) {
                 console.error('[Patch]', e.message);
+                if (allPatchRows.length) {
+                    renderPatchTable();
+                    renderPatchDashboard();
+                    if (st) { st.innerText = `PA slow - showing cached ${allPatchRows.length} rows`; st.classList.remove('sync-active'); }
+                    return;
+                }
+                const hydrated = hydrateDashboardFromSnapshot();
+                if (hydrated && allPatchRows.length) {
+                    if (st) { st.innerText = `PA slow - showing cached ${allPatchRows.length} rows`; st.classList.remove('sync-active'); }
+                    return;
+                }
                 const tbody = document.getElementById('patchTable');
                 if (tbody) tbody.innerHTML = `<tr><td colspan="23" class="p-6 text-center text-red-400 italic text-xs">ERR: ${e.message}</td></tr>`;
                 if (st) { st.innerText = `ERR: ${e.message.substring(0,60)}`; st.classList.remove('sync-active'); }
@@ -6876,8 +8284,7 @@
             const st = document.getElementById('consumptionSyncStatus');
             if (!isSilent && st) { st.innerText = 'Syncing...'; st.classList.add('sync-active'); }
             try {
-                const _ctrl = new AbortController(); const _t = setTimeout(() => _ctrl.abort(), 25000);
-                const r_c = await fetch(consumptionFetchURL + '&cb=' + Date.now(), { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({}), signal: _ctrl.signal }); clearTimeout(_t);
+                const r_c = await postPortalJson(consumptionFetchURL, {}, 40000);
                 if (!r_c.ok) throw new Error(`HTTP ${r_c.status}`);
                 const rows = extractRows(await r_c.json());
                 rows.sort((a,b) => (parseInt(getVal(b,['Id','ID','id']))||0) - (parseInt(getVal(a,['Id','ID','id']))||0));
@@ -6896,8 +8303,35 @@
                 renderConsumptionDashboard();
                     if (st) { st.innerText = 'LIVE: ' + new Date().toLocaleTimeString(); st.classList.remove('sync-active'); }
             } catch(e) {
+                let restoredFromSnapshot = false;
+                if (!allConsumptionRows.length) {
+                    try {
+                        const snapshot = JSON.parse(localStorage.getItem(DASHBOARD_SNAPSHOT_KEY) || 'null');
+                        if (snapshot && Array.isArray(snapshot.consumption) && snapshot.consumption.length) {
+                            allConsumptionRows = snapshot.consumption;
+                            consumptionDataLoaded = true;
+                            restoredFromSnapshot = true;
+                            renderConsumptionTable();
+                            populateConsumptionMonthFilter();
+                            renderConsumptionDashboard();
+                        }
+                    } catch (snapshotError) {
+                        console.warn('Consumption snapshot fallback skipped:', snapshotError.message);
+                    }
+                }
+
+                if (allConsumptionRows.length) {
+                    if (st) {
+                        st.innerText = restoredFromSnapshot ? 'CACHED: fetch retrying' : 'LIVE RETRYING';
+                        st.classList.remove('sync-active');
+                    }
+                    console.warn('Consumption fetch failed; keeping last loaded rows:', e.message);
+                    return;
+                }
+
                 const tbody = document.getElementById('consumptionTable');
-                if (tbody) tbody.innerHTML = `<tr><td colspan="13" class="p-6 text-center text-red-400 italic text-xs">Failed to load: ${e.message}</td></tr>`;
+                const message = e && e.name === 'AbortError' ? 'Fetch timed out' : e.message;
+                if (tbody) tbody.innerHTML = `<tr><td colspan="13" class="p-6 text-center text-red-400 italic text-xs">Failed to load: ${message}</td></tr>`;
                 if (st) { st.innerText = 'Error'; st.classList.remove('sync-active'); }
             }
         }
