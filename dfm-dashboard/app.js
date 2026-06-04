@@ -19,7 +19,7 @@
   const DATA_RECORD_INITIAL_LIMIT = 240;
   const DATA_RECORD_BATCH_SIZE = 240;
   const SHARED_SESSION_KEY = "ma_admin_session_user";
-  const DFM_LOGIN_USERS = ["Gavin", "Joe"];
+  const DFM_LOGIN_USERS = ["Gavin", "James", "Joe"];
   const LEGACY_STORAGE_PREFIX = "dfm-dashboard-records-";
   const PENDING_SYNC_TTL_MS = 10 * 60 * 1000;
   const FLOW_ENDPOINTS = {
@@ -2385,7 +2385,7 @@
       samImprovement: nextSam,
       improvementType: nextImprovementType,
       investmentDecision: nextDecision,
-      updatedBy: "Gavin",
+      updatedBy: getSharedSessionUser() || "Gavin",
       updatedAt: formatExcelFriendlyTimestamp(updatedAt),
     };
 
@@ -3272,7 +3272,7 @@
           return;
         }
         if (!canEditDfmSummary()) {
-          alert("Only Gavin or Joe can edit the DFM Summary Board.");
+          alert("Only Gavin, James, or Joe can edit the DFM Summary Board.");
           return;
         }
         const code = row.dataset.code || "";

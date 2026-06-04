@@ -156,6 +156,7 @@
               <select id="dfm-user-select" class="dfm-session-select">
                 <option value="">Select PIC...</option>
                 <option>Gavin</option>
+                <option>James</option>
                 <option>Joe</option>
               </select>
               <button id="dfm-login-btn" type="button" class="primary-btn" onclick="openDfmLogin()">Login</button>
@@ -326,8 +327,12 @@
       })();
 
       const DFM_SESSION_KEY = 'ma_admin_session_user';
-      const DFM_PASSWORD = 'Modernization@888';
-      const DFM_LOGIN_USERS = ['Gavin', 'Joe'];
+      const DFM_LOGIN_USERS = ['Gavin', 'James', 'Joe'];
+      const DFM_LOGIN_PASSWORDS = {
+        Gavin: 'Modernization@888',
+        James: 'Modernization@11246',
+        Joe: 'Modernization@888',
+      };
       let dfmPendingUser = '';
 
       function updateDfmSessionUI() {
@@ -364,7 +369,7 @@
       function submitDfmPasswordLogin() {
         const password = document.getElementById('dfmModalPasswordInput').value;
         if (!dfmPendingUser) return;
-        if (password !== DFM_PASSWORD) {
+        if (password !== DFM_LOGIN_PASSWORDS[dfmPendingUser]) {
           alert('Invalid password.');
           return;
         }
@@ -384,7 +389,7 @@
       window.addEventListener('ma-admin-session-changed', updateDfmSessionUI);
       updateDfmSessionUI();
     </script>
-    <script src="./seed-data.js?v=20260604010124"></script>
+    <script src="./seed-data.js?v=20260522080037"></script>
     <script src="./construction-master.js?v=20260522154034"></script>
     <script src="./app.js?v=20260521091800"></script>
   </body>
