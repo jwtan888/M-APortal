@@ -5811,6 +5811,22 @@
             progress.classList.toggle('hidden', !text);
         }
 
+        function setDailyReportProgressLink(message, url) {
+            const progress = document.getElementById('dailyReportPdfProgress');
+            if (!progress) return;
+            progress.innerHTML = '';
+            const text = document.createElement('span');
+            text.textContent = `${message} `;
+            const link = document.createElement('a');
+            link.href = url;
+            link.target = '_blank';
+            link.rel = 'noopener';
+            link.textContent = 'Open Outlook Email';
+            progress.appendChild(text);
+            progress.appendChild(link);
+            progress.classList.remove('hidden');
+        }
+
         function updateDailyReportPendingWindow(pendingWindow, message, percent = null) {
             if (!pendingWindow || pendingWindow.closed) return;
             try {
@@ -5879,6 +5895,14 @@
                 `body=${encodeMailParam(details.body)}`
             ].join('&');
             return `https://outlook.office.com/mail/deeplink/compose?${query}`;
+        }
+
+        function refocusDailyReportPortalTab() {
+            try {
+                window.focus();
+            } catch (err) {
+                // Browser focus policies may ignore this; export continues either way.
+            }
         }
 
         function openDailyReportPendingWindow() {
@@ -5959,6 +5983,7 @@
             } catch (err) {
                 // If the browser blocks document access, keep the already-opened tab for navigation.
             }
+            setTimeout(refocusDailyReportPortalTab, 0);
             return pendingWindow;
         }
 
@@ -5966,10 +5991,21 @@
             const url = buildDailyReportOutlookUrl(details);
             if (targetWindow && !targetWindow.closed) {
                 targetWindow.location.href = url;
-                targetWindow.focus();
-                return;
+                setTimeout(refocusDailyReportPortalTab, 0);
+                return true;
             }
-            window.open(url, '_blank');
+            const openedWindow = window.open(url, '_blank');
+            if (!openedWindow) {
+                setDailyReportProgressLink('Outlook did not open automatically.', url);
+            } else {
+                try {
+                    openedWindow.opener = null;
+                } catch (err) {
+                    // Some browsers prevent changing opener; it does not affect the report export.
+                }
+            }
+            setTimeout(refocusDailyReportPortalTab, 0);
+            return !!openedWindow;
         }
 
         function reportFileDate(date = new Date()) {
@@ -6860,10 +6896,13 @@
             if (!isDailyReportAllowed()) return;
             const btn = document.getElementById('dailyReportPdfBtn');
             const originalText = btn ? btn.innerText : '';
-            const outlookWindow = openDailyReportPendingWindow();
+            let keepProgressVisible = false;
             const reportProgress = (message, percent = null) => {
-                setDailyReportProgress(message);
-                updateDailyReportPendingWindow(outlookWindow, message, percent);
+                const progressPercent = Number(percent);
+                const progressText = percent !== null && Number.isFinite(progressPercent)
+                    ? `${message} (${Math.round(progressPercent)}%)`
+                    : message;
+                setDailyReportProgress(progressText);
             };
             try {
                 if (btn) {
@@ -6921,22 +6960,17 @@
                     `Please find attached the M&A Daily Report dated ${emailDate} for your reference.`,
                     '',
                     'You may also refer to the M&A Portal using the link below:',
-                    'https://jwtan888.github.io/M-APortal/index.html',
-                    '',
-                    'Regards,',
-                    'Joe'
+                    'https://jwtan888.github.io/M-APortal/index.html'
                 ].join('\n');
                 const to = 'yvonne@sig.com.my';
                 const cc = 'MA@sig.com.my';
-                updateDailyReportPendingWindow(outlookWindow, 'Opening Outlook web', 100);
-                openDailyReportOutlookWeb({ to, cc, subject, body, filename }, outlookWindow);
+                keepProgressVisible = !openDailyReportOutlookWeb({ to, cc, subject, body, filename });
             } catch (err) {
-                if (outlookWindow && !outlookWindow.closed) {
-                    updateDailyReportPendingWindow(outlookWindow, `Export failed: ${err.message}`, 100);
-                }
                 alert(`Daily report export failed: ${err.message}`);
             } finally {
-                setDailyReportProgress('');
+                if (!keepProgressVisible) {
+                    setDailyReportProgress('');
+                }
                 if (btn) {
                     btn.disabled = false;
                     btn.innerText = originalText || 'Daily Report PDF';
