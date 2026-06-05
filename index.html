@@ -798,7 +798,7 @@
             <!-- Stat cards: New Styles, Pending, Delayed, Done -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">New Styles (Month)</p>
+                    <p id="stat-total-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">New Styles (Month)</p>
                     <h2 id="stat-total" class="text-3xl font-bold text-slate-800">0</h2>
                 </div>
                 <div onclick="drillDown('PENDING')" class="bg-white p-6 rounded-xl border shadow-sm cursor-pointer hover:border-amber-400 transition-all">
@@ -819,8 +819,8 @@
                 <div id="kpi-sample-card" class="bg-white rounded-xl shadow-sm overflow-hidden border-l-4 border-red-500 transition-all" style="border-left-color:#ef4444;border-top:1px solid #e2e8f0;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0">
                     <div id="kpi-sample-header" class="px-4 py-3 flex items-center justify-between bg-red-50/60 border-b" style="background:linear-gradient(90deg,#fef2f2,#fff)">
                         <div>
-                            <p class="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Sample Development</p>
-                            <h3 class="text-sm font-black text-slate-800 tracking-tight">Delivery KPI</h3>
+                            <p class="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">KPI- On Time Delivery To</p>
+                            <h3 class="text-sm font-black text-slate-800 tracking-tight">Sample Development</h3>
                         </div>
                         <div class="text-right">
                             <div id="kpi-sample-badge" class="text-3xl font-black text-red-500 leading-none">0%</div>
@@ -856,8 +856,8 @@
                 <div id="kpi-prod-card" class="bg-white rounded-xl shadow-sm overflow-hidden border-l-4 border-red-500 transition-all" style="border-left-color:#ef4444;border-top:1px solid #e2e8f0;border-right:1px solid #e2e8f0;border-bottom:1px solid #e2e8f0">
                     <div id="kpi-prod-header" class="px-4 py-3 flex items-center justify-between bg-red-50/60 border-b" style="background:linear-gradient(90deg,#fef2f2,#fff)">
                         <div>
-                            <p class="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">Production</p>
-                            <h3 class="text-sm font-black text-slate-800 tracking-tight">Delivery KPI</h3>
+                            <p class="text-[9px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">KPI- On Time Delivery To</p>
+                            <h3 class="text-sm font-black text-slate-800 tracking-tight">Production</h3>
                         </div>
                         <div class="text-right">
                             <div id="kpi-prod-badge" class="text-3xl font-black text-red-500 leading-none">0%</div>
@@ -1193,13 +1193,18 @@
                                 <th class="p-2">Style</th>
                                 <th class="p-2">Proto Stage</th>
                                 <th class="p-2">Season</th>
-                                <th class="p-2">Request By</th>
+                                <th class="p-2">Requestor</th>
                                 <th class="p-2">M&A PIC</th>
                                 <th class="p-2">Start Date</th>
                                 <th class="p-2">Complete Date</th>
                             </tr>
                         </thead>
                         <tbody id="cd-pending-table"></tbody>
+                    </table>
+                </div>
+                <div class="hidden" aria-hidden="true">
+                    <table>
+                        <tbody id="cd-pending-pic-table"></tbody>
                     </table>
                 </div>
             </div>
@@ -2700,8 +2705,35 @@
             }
         }
 
+        function getDashboardMonthRangeLabel() {
+            const monthSelect = document.getElementById('monthFilter');
+            const values = Array.from(monthSelect?.options || [])
+                .map(option => option.value)
+                .filter(value => value && value !== 'ALL');
+            if (!values.length) return 'New Styles (Accumulate)';
+            const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+            const parsed = values.map(value => {
+                const [month, year] = value.split('-');
+                return { value, date: new Date(Number(year), monthNames.indexOf(month), 1) };
+            }).filter(item => !Number.isNaN(item.date.getTime()));
+            if (!parsed.length) return 'New Styles (Accumulate)';
+            parsed.sort((a, b) => a.date - b.date);
+            return `New Styles (Accumulate from ${parsed[0].value} to ${parsed[parsed.length - 1].value})`;
+        }
+
+        function getNewStylesCardLabel() {
+            const selected = document.getElementById('monthFilter')?.value || 'ALL';
+            return selected === 'ALL' ? getDashboardMonthRangeLabel() : 'New Styles (Month)';
+        }
+
+        function updateNewStylesCardLabel() {
+            const label = document.getElementById('stat-total-label');
+            if (label) label.innerText = getNewStylesCardLabel();
+        }
+
         function updateDashboard() {
             const selectedMonthStr = document.getElementById('monthFilter').value;
+            updateNewStylesCardLabel();
             const months = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
             // Exclude cancelled ("-") rows from dashboard counts only — they still show in the data table
             const activetemplates = allTemplates.filter(t => !t.cancelled);
@@ -4920,12 +4952,39 @@
 
                 let conVolumeChart = null, conProtoChart = null;
 
+        function renderConsumptionPendingPicTable(pendingRows) {
+            const tbody = document.getElementById('cd-pending-pic-table');
+            if (!tbody) return;
+            const escapeFn = typeof escapePatchHtml === 'function'
+                ? escapePatchHtml
+                : (typeof escapeHtml === 'function' ? escapeHtml : (value => String(value || '')));
+            const grouped = {};
+            (pendingRows || []).forEach(row => {
+                const pic = getMAPic(row) || 'Unassigned';
+                const style = getVal(row, ['Style Number', 'StyleNumber', 'Style']) || '-';
+                if (!grouped[pic]) grouped[pic] = [];
+                grouped[pic].push(style);
+            });
+            const entries = Object.entries(grouped).sort((a, b) => b[1].length - a[1].length || a[0].localeCompare(b[0]));
+            tbody.innerHTML = entries.length
+                ? entries.map(([pic, styles]) => `
+                    <tr>
+                        <td>
+                            <span class="font-bold text-blue-700">${escapeFn(pic)}</span>
+                            <span class="block text-[10px] font-bold text-slate-400">${styles.length} pending</span>
+                        </td>
+                        <td>${styles.map(style => `<span class="patch-pending-chip"><span class="patch-pending-style">${escapeFn(style)}</span></span>`).join('')}</td>
+                    </tr>`).join('')
+                : '<tr><td colspan="2">No pending consumption styles.</td></tr>';
+        }
+
         function renderConsumptionDashboard() {
             if (!allConsumptionRows.length) {
                 ['cd-total','cd-pending','cd-done'].forEach(id => setDashboardText(id, '0'));
                 setDashboardText('cd-avg', '—');
                 const pendingTbody = document.getElementById('cd-pending-table');
                 if (pendingTbody) pendingTbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center italic text-slate-400">No pending consumption styles.</td></tr>';
+                renderConsumptionPendingPicTable([]);
                 if (conVolumeChart) { conVolumeChart.destroy(); conVolumeChart = null; }
                 if (conProtoChart) { conProtoChart.destroy(); conProtoChart = null; }
                 return;
@@ -4954,6 +5013,7 @@
             const done    = filtered.filter(isConsumptionDone).length;
             const pendingRows = filtered.filter(isConsumptionPending);
             const pending = pendingRows.length;
+            renderConsumptionPendingPicTable(pendingRows);
             const turnarounds = filtered.map(r => {
                 const s = rawToLocalDate(getVal(r,['Start Date m/d/yyyy','Start Date','StartDate']));
                 const e = rawToLocalDate(getVal(r,['Complete Date m/d/yyyy','Complete Date','CompleteDate']));
@@ -5005,7 +5065,7 @@
                         const style = getVal(r,['Style Number','StyleNumber']);
                         const proto = getVal(r,['Proto Stage','ProtoStage']);
                         const season = getVal(r,['Season']);
-                        const reqBy = getVal(r,['Request By','RequestBy','Requestor']);
+                        const reqBy = getVal(r,['Requestor','Request By','RequestBy']);
                         const pic = getMAPic(r);
                         const start = convertExcelDate(getVal(r,['Start Date m/d/yyyy','Start Date','StartDate']));
                         const complete = convertExcelDate(getVal(r,['Complete Date m/d/yyyy','Complete Date','CompleteDate']));
@@ -5234,8 +5294,14 @@
                 const cleanTmpl = tmpl && tmpl !== '---' ? String(tmpl).trim() : '';
                 if (!picPend[picDisplay]) picPend[picDisplay] = [];
                 picPend[picDisplay].push({
-                    label: pendingMaterial ? (cleanStyle || '---') : `${cleanStyle || '---'}${cleanTmpl ? ' (' + cleanTmpl + ')' : ''}`,
+                    label: cleanStyle || '---',
                     pendingMaterial
+                });
+            });
+            Object.values(picPend).forEach(items => {
+                items.sort((a, b) => {
+                    if (a.pendingMaterial !== b.pendingMaterial) return a.pendingMaterial ? 1 : -1;
+                    return String(a.label || '').localeCompare(String(b.label || ''));
                 });
             });
             const picTbl = el('db-patch-pic-table');
@@ -5245,7 +5311,7 @@
                         <td class="px-3 py-2.5 font-bold border-r bg-slate-50/50 text-slate-800">${escapePatchHtml(name)}
                             <div class="text-[9px] font-semibold text-slate-400 mt-0">${items.length} pending</div>
                         </td>
-                        <td class="px-3 py-2.5 flex flex-wrap gap-2">${items.map(item=>`<div class="patch-pending-chip inline-flex max-w-full items-center gap-1.5 border border-slate-200 rounded-lg px-2.5 py-1.5 shadow-sm bg-white"><span class="w-2 h-2 shrink-0 rounded-full ${item.pendingMaterial ? 'bg-amber-400' : 'bg-slate-300'}"></span><span class="patch-pending-style min-w-0 font-black text-blue-700 text-[12px] leading-tight">${escapePatchHtml(item.label)}</span>${item.pendingMaterial ? '<span class="patch-pending-status shrink-0 text-[8px] font-black text-amber-700 bg-amber-50 border border-amber-200 rounded-md px-1.5 py-0.5 uppercase tracking-wide">Pending Material</span>' : ''}</div>`).join('')}</td>
+                        <td class="px-3 py-2.5 flex flex-wrap gap-2">${items.map(item=>`<div class="patch-pending-chip inline-flex max-w-full items-center gap-1.5 border border-slate-200 rounded-lg px-2.5 py-1.5 shadow-sm bg-white" title="${item.pendingMaterial ? 'Pending material' : 'Material received, pending completion'}" data-pending-material="${item.pendingMaterial ? 'true' : 'false'}"><span class="w-2 h-2 shrink-0 rounded-full bg-amber-400"></span><span class="patch-pending-style min-w-0 font-black text-blue-700 text-[12px] leading-tight">${escapePatchHtml(item.label)}</span>${item.pendingMaterial ? '<span class="patch-pending-status shrink-0 text-[8px] font-bold uppercase tracking-wide text-amber-500/70">Pending Material</span>' : ''}</div>`).join('')}</td>
                     </tr>`).join('')
                 : '<tr><td colspan="2" class="p-6 text-center italic text-slate-400">All patches completed!</td></tr>';
         }
@@ -5732,14 +5798,14 @@
                 picTbody.innerHTML = Object.keys(picPending).length
                     ? Object.entries(picPending).map(([name, jobs]) => `
                         <tr class="border-b hover:bg-slate-50 cursor-pointer transition-colors" onclick="switchTab('support')">
-                            <td class="px-3 py-2.5 font-bold border-r bg-slate-50/50 text-slate-800">${escapeHtml(name)}
-                                <div class="text-[9px] font-semibold text-slate-400 mt-0">${jobs.length} pending</div>
+                            <td class="px-3 py-4 font-bold border-r bg-slate-50/50 text-slate-800 align-top">${escapeHtml(name)}
+                                <div class="text-[10px] font-semibold text-slate-400 mt-1">${jobs.length} pending</div>
                             </td>
-                            <td class="px-3 py-2.5 flex flex-wrap gap-1.5">
-                                ${jobs.map(j => `<div class="inline-flex items-center gap-1.5 border border-slate-200 rounded-lg px-2 py-1 bg-white shadow-sm">
+                            <td class="px-3 py-4 flex flex-wrap gap-2">
+                                ${jobs.map(j => `<div class="inline-flex items-center gap-1.5 border border-slate-200 rounded-lg px-2.5 py-1.5 bg-white shadow-sm">
                                     <span class="w-2 h-2 rounded-full bg-amber-400"></span>
-                                    <span class="font-black text-blue-700 text-[10px] leading-none">${escapeHtml(j.machineNo || j.rid || '---')}</span>
-                                    <span class="font-black text-blue-700 text-[10px] leading-none">${escapeHtml(j.type || '')}</span>
+                                    <span class="font-black text-blue-700 text-[12px] leading-tight">${escapeHtml(j.machineNo || j.rid || '---')}</span>
+                                    <span class="font-black text-blue-700 text-[11px] leading-tight">${escapeHtml(j.type || '')}</span>
                                 </div>`).join('')}
                             </td>
                         </tr>`).join('')
@@ -5886,11 +5952,10 @@
         }
 
         function buildDailyReportOutlookUrl(details) {
-            const encodeMailParam = value => encodeURIComponent(value || '').replace(/%0A/g, '%0D%0A');
+            const encodeMailParam = value => encodeURIComponent(String(value || '').replace(/\r?\n/g, '\r\n'));
             const query = [
                 `to=${encodeMailParam(details.to)}`,
                 `cc=${encodeMailParam(details.cc)}`,
-                `ccRecipients=${encodeMailParam(details.cc)}`,
                 `subject=${encodeMailParam(details.subject)}`,
                 `body=${encodeMailParam(details.body)}`
             ].join('&');
@@ -6089,6 +6154,7 @@
         }
 
         async function settleDashboardReportCharts() {
+            refreshDashboardReportChartLabels();
             const ids = getDashboardReportChartIds();
             ids.forEach(refreshDashboardChartCanvas);
             await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
@@ -6198,7 +6264,7 @@
 
         function buildTemplateReportBody(body) {
             appendReportKpis(body, [
-                { label: 'New Styles (Month)', value: getDashboardText('#stat-total', '0'), color: '#1f2937' },
+                { label: getNewStylesCardLabel(), value: getDashboardText('#stat-total', '0'), color: '#1f2937' },
                 { label: 'Total Pending', value: getDashboardText('#stat-pending', '0'), color: '#d97706' },
                 { label: 'Total Delayed', value: getDashboardText('#stat-delayed', '0'), color: '#dc2626' },
                 { label: 'Done (Month)', value: getDashboardText('#stat-completed', '0'), color: '#059669' }
@@ -6483,6 +6549,52 @@
             });
         }
 
+        function formatDashboardPdfChartValue(value) {
+            const n = Number(value);
+            if (!Number.isFinite(n)) return String(value || '');
+            return n % 1 === 0 ? n.toLocaleString() : n.toFixed(1).replace(/\.0$/, '');
+        }
+
+        function registerDashboardPdfBarValuePlugin() {
+            if (!window.Chart || window.__dashboardPdfBarValuePluginRegistered) return;
+            window.__dashboardPdfBarValuePluginRegistered = true;
+            Chart.register({
+                id: 'dashboardPdfBarValueLabels',
+                afterDatasetsDraw(chart) {
+                    if (!window.__dailyReportPdfExporting || chart.config?.type !== 'bar') return;
+                    const ctx = chart.ctx;
+                    const horizontal = chart.options?.indexAxis === 'y';
+                    ctx.save();
+                    ctx.font = '700 10px Inter, Arial, sans-serif';
+                    ctx.fillStyle = '#1f2937';
+                    ctx.textBaseline = 'middle';
+                    (chart.data.datasets || []).forEach((dataset, datasetIndex) => {
+                        const meta = chart.getDatasetMeta(datasetIndex);
+                        if (meta.hidden) return;
+                        (meta.data || []).forEach((bar, index) => {
+                            const value = Array.isArray(dataset.data) ? dataset.data[index] : null;
+                            const label = formatDashboardPdfChartValue(value);
+                            if (!label || label === '0') return;
+                            const props = bar.getProps(['x', 'y'], true);
+                            if (horizontal) {
+                                ctx.textAlign = 'left';
+                                ctx.fillText(label, Math.min(props.x + 5, chart.chartArea.right - 28), props.y);
+                            } else {
+                                ctx.textAlign = 'center';
+                                ctx.fillText(label, props.x, Math.max(chart.chartArea.top + 8, props.y - 8));
+                            }
+                        });
+                    });
+                    ctx.restore();
+                }
+            });
+        }
+
+        function refreshDashboardReportChartLabels() {
+            registerDashboardPdfBarValuePlugin();
+            getDashboardReportChartIds().forEach(refreshDashboardChartCanvas);
+        }
+
         function getDashboardReportConfig(title) {
             const blue = [37, 99, 235];
             const amber = [217, 119, 6];
@@ -6492,7 +6604,7 @@
             const configs = {
                 'Template': {
                     kpis: [
-                        { label: 'New Styles (Month)', selector: '#stat-total', color: slate },
+                        { label: () => getNewStylesCardLabel(), selector: '#stat-total', color: slate },
                         { label: 'Total Pending', selector: '#stat-pending', color: amber },
                         { label: 'Total Delayed', selector: '#stat-delayed', color: red },
                         { label: 'Done (Month)', selector: '#stat-completed', color: green }
@@ -6502,8 +6614,8 @@
                         { id: 'volumeChart', title: 'Completion Trends (Daily)' }
                     ],
                     detailCards: [
-                        { type: 'deliveryKpi', title: 'Sample Development Delivery KPI', prefix: 'kpi-sample' },
-                        { type: 'deliveryKpi', title: 'Production Delivery KPI', prefix: 'kpi-prod' }
+                        { type: 'deliveryKpi', title: 'KPI- On Time Delivery To Sample Development', prefix: 'kpi-sample' },
+                        { type: 'deliveryKpi', title: 'KPI- On Time Delivery To Production', prefix: 'kpi-prod' }
                     ],
                     tables: [
                         { title: 'Pending Template Styles By PIC', selector: '#pic-workload-table', maxRows: 8, mode: 'picPending' }
@@ -6530,7 +6642,7 @@
                         { label: 'Support Jobs (Month)', selector: '#ds-total', color: slate },
                         { label: 'Pending', selector: '#ds-pending', color: amber },
                         { label: 'Avg Turnaround (Hrs)', selector: '#ds-avg', color: blue },
-                        { label: 'Repair / Rework', selector: '#ds-repair', color: red }
+                        { label: 'Repair & Support', selector: '#ds-repair', color: red }
                     ],
                     charts: [
                         { id: 'supSectionChart', title: 'Support By Section' },
@@ -6567,7 +6679,8 @@
                         { id: 'conProtoChart', title: 'Requests By Proto Stage' }
                     ],
                     tables: [
-                        { title: 'Pending Consumption Styles', selector: '#cd-pending-table', maxRows: 20 }
+                        { title: 'Pending Consumption By M&A PIC', selector: '#cd-pending-pic-table', maxRows: 8, mode: 'picPending', countOnly: true },
+                        { title: 'Pending Consumption Styles', selector: '#cd-pending-table', maxRows: 24, headers: ['Style', 'Stage', 'Season', 'Requestor', 'Date / Status'] }
                     ]
                 },
                 'Down Filling': {
@@ -6589,7 +6702,7 @@
             return configs[title] || null;
         }
 
-        function getDashboardTablePdfRows(selector, maxRows = 8, mode = 'default') {
+        function getDashboardTablePdfRows(selector, maxRows = 8, mode = 'default', options = {}) {
             const rows = Array.from(document.querySelectorAll(`${selector} tbody tr, ${selector} tr`));
             return rows.map(row => {
                 if (row.querySelector('th') && !row.querySelector('td')) return null;
@@ -6600,23 +6713,38 @@
                 if (!cells.length) return null;
                 if (mode === 'picPending') {
                     const picText = (dataCells[0]?.textContent || cells[0] || 'Unassigned').replace(/\s+/g, ' ').trim() || 'Unassigned';
+                    if (options.countOnly) {
+                        const countMatch = picText.match(/(\d+)\s+pending/i);
+                        const picName = picText.replace(/\s+\d+\s+pending\b/i, '').trim() || picText;
+                        return [
+                            truncateReportPdfText(picName, 28),
+                            countMatch ? `${countMatch[1]} pending` : '-'
+                        ];
+                    }
                     const itemCell = dataCells[1];
                     let pendingItems = [];
                     if (itemCell) {
                         pendingItems = Array.from(itemCell.querySelectorAll('.patch-pending-chip')).map(chip => {
                             const label = (chip.querySelector('.patch-pending-style')?.textContent || '').replace(/\s+/g, ' ').trim();
-                            const status = (chip.querySelector('.patch-pending-status')?.textContent || '').replace(/\s+/g, ' ').trim();
+                            const rawStatus = (chip.querySelector('.patch-pending-status')?.textContent || '').replace(/\s+/g, ' ').trim();
+                            const status = chip.dataset.pendingMaterial === 'true' ? 'Pending Material' : rawStatus;
                             if (!label && !status) return '';
                             return status ? `${label} - ${status}` : label;
                         }).filter(Boolean);
                     }
                     if (!pendingItems.length) {
-                        const fallback = cells.slice(1).join(' ')
-                            .replace(/Pending Material/g, ' - Pending Material | ')
-                            .replace(/\s+\|\s*$/g, '')
+                        const fallbackText = cells.slice(1).join(' ')
                             .replace(/\s+/g, ' ')
                             .trim();
-                        pendingItems = fallback ? [fallback] : ['-'];
+                        if (fallbackText.includes('Pending Material')) {
+                            pendingItems = fallbackText.split('Pending Material')
+                                .map(part => part.trim())
+                                .filter(Boolean)
+                                .map(part => `${part} - Pending Material`);
+                        } else {
+                            pendingItems = fallbackText ? [fallbackText] : ['-'];
+                        }
+                        if (!pendingItems.length) pendingItems = ['Pending Material'];
                     }
                     return [truncateReportPdfText(picText, 28), truncateReportPdfText(pendingItems.join(' | '), 170)];
                 }
@@ -6626,7 +6754,7 @@
 
         function addPdfTableCard(pdf, title, selector, x, y, w, h, options = {}) {
             const mode = options.mode || 'default';
-            const rows = getDashboardTablePdfRows(selector, options.maxRows || 8, mode);
+            const rows = getDashboardTablePdfRows(selector, options.maxRows || 8, mode, options);
             setPdfRgb(pdf, 'setDrawColor', DASHBOARD_PDF_THEME.border);
             setPdfRgb(pdf, 'setFillColor', DASHBOARD_PDF_THEME.card);
             pdf.roundedRect(x, y, w, h, 4, 4, 'FD');
@@ -6638,13 +6766,14 @@
             pdf.rect(x, y + 10.4, w, 6.2, 'F');
             pdf.setFontSize(5);
             setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.muted);
-            const colCount = mode === 'picPending' ? 2 : 5;
+            const customHeaders = Array.isArray(options.headers) ? options.headers : null;
+            const colCount = mode === 'picPending' ? 2 : (customHeaders ? customHeaders.length : 5);
             const colWidths = mode === 'picPending'
                 ? [32, w - 40]
-                : [w * 0.16, w * 0.18, w * 0.22, w * 0.22, w * 0.18];
-            const headers = mode === 'picPending'
-                ? ['M&A PIC', 'Pending Items']
-                : ['Style', 'Stage', 'Season', 'PIC / Owner', 'Date / Status'];
+                : (customHeaders ? Array(colCount).fill((w - 8) / colCount) : [w * 0.16, w * 0.18, w * 0.22, w * 0.22, w * 0.18]);
+            const headers = customHeaders || (mode === 'picPending'
+                ? ['M&A PIC', options.countOnly ? 'Pending Count' : 'Pending Items']
+                : ['Style', 'Stage', 'Season', 'Requestor', 'Date / Status']);
             let headerX = x + 4;
             for (let i = 0; i < colCount; i += 1) {
                 pdf.text(headers[i], headerX, y + 14.7);
@@ -6847,7 +6976,8 @@
             const cardGap = gap;
             const cardW = (pageW - margin * 2 - cardGap * Math.max(0, kpis.length - 1)) / Math.max(1, kpis.length);
             kpis.forEach((item, index) => {
-                addPdfKpiCard(pdf, margin + index * (cardW + cardGap), DASHBOARD_PDF_LAYOUT.kpiY, cardW, item.label, getDashboardText(item.selector, '0'), item.color);
+                const label = typeof item.label === 'function' ? item.label() : item.label;
+                addPdfKpiCard(pdf, margin + index * (cardW + cardGap), DASHBOARD_PDF_LAYOUT.kpiY, cardW, label, getDashboardText(item.selector, '0'), item.color);
             });
 
             const charts = getAvailableDashboardCharts(config.charts || []);
@@ -6881,9 +7011,11 @@
                     if (card.kind === 'delivery') {
                         addPdfDeliveryKpiCard(pdf, card.title, card.prefix, x, bottomY, bottomW, bottomH);
                     } else {
-                        addPdfTableCard(pdf, card.title, card.selector, x, bottomY, bottomW, bottomH, {
+                addPdfTableCard(pdf, card.title, card.selector, x, bottomY, bottomW, bottomH, {
                             mode: card.mode,
-                            maxRows: chartCount > 0 ? Math.min(card.maxRows || 8, 5) : Math.min(card.maxRows || 12, 12)
+                            maxRows: chartCount > 0 ? Math.min(card.maxRows || 8, card.mode === 'picPending' ? 6 : 8) : Math.min(card.maxRows || 12, 12),
+                            headers: card.headers,
+                            countOnly: card.countOnly
                         });
                     }
                 });
@@ -6924,6 +7056,8 @@
                 if (allDownRows.length) renderDownDashboard();
                 await new Promise(resolve => setTimeout(resolve, 400));
                 reportProgress('Preparing chart images', 24);
+                window.__dailyReportPdfExporting = true;
+                refreshDashboardReportChartLabels();
                 await settleDashboardReportCharts();
                 reportProgress('Loading PDF tools', 32);
                 await ensureDashboardPdfLibraries();
@@ -6968,6 +7102,8 @@
             } catch (err) {
                 alert(`Daily report export failed: ${err.message}`);
             } finally {
+                window.__dailyReportPdfExporting = false;
+                refreshDashboardReportChartLabels();
                 if (!keepProgressVisible) {
                     setDailyReportProgress('');
                 }
@@ -7521,7 +7657,7 @@
                 const patchAiButton = !isDone ? `<a href="${escapePatchAttr(getPatchAiUrl(tmplNo))}" target="_self" class="inline-flex items-center justify-center bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-blue-700">PATCH</a>` : '';
                 const patchActionCell = savePatchButton || patchAiButton ? `<div class="flex flex-wrap items-center gap-1.5">${savePatchButton}${patchAiButton}</div>` : '';
                 const pendingMaterial = !received || received === '---' || received === '-';
-                const pendingMaterialBadge = pendingMaterial ? '<span class="inline-flex items-center rounded-md border border-amber-300 bg-amber-100 px-1.5 py-0.5 text-[9px] font-black uppercase tracking-wide text-amber-800">Pending Material</span>' : '';
+                const pendingMaterialBadge = pendingMaterial ? '<span class="inline-flex items-center rounded-md px-1 text-[9px] font-bold uppercase tracking-wide text-amber-500/70" title="Pending material">Pending Material</span>' : '';
                 const receivedCell = canEdit
                     ? `<div class="flex flex-col gap-1.5"><input id="patch-received-${sid}" class="manual-input admin-input" value="${received==='---'?'':received}" placeholder="m/d/yyyy hh:mm">${pendingMaterialBadge}</div>`
                     : (pendingMaterial ? pendingMaterialBadge : received);
