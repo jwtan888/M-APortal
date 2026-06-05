@@ -3499,7 +3499,7 @@
                         <td class="p-3 font-mono text-slate-400">${id}</td>
                         <td class="p-3 text-slate-500 date-cell">${received}</td>
                         <td class="p-3 font-bold">${season}</td>
-                        <td class="p-3 text-blue-700 font-bold">${style}</td>
+                        <td class="p-3 text-blue-700 font-bold">${portalSearchLink(style, 'drillDownLaserSearch')}</td>
                         <td class="p-3">${section}</td>
                         <td class="p-3">${category}</td>
                         <td class="p-3 font-semibold text-purple-700">${proto}</td>
@@ -4216,6 +4216,56 @@
             }, 250);
         }
 
+        function portalSearchClickValue(value) {
+            return String(value ?? '')
+                .trim()
+                .replace(/\r?\n/g, ' ')
+                .replace(/\\/g, '\\\\')
+                .replace(/'/g, "\\'");
+        }
+
+        function portalSearchLink(value, handlerName, extraClass = '') {
+            const raw = String(value ?? '').trim();
+            const label = raw || '---';
+            if (!raw || raw === '-' || raw === '---') {
+                return `<span>${escapePatchHtml(label)}</span>`;
+            }
+            return `<button type="button" class="bg-transparent border-0 p-0 text-left font-bold text-blue-700 cursor-pointer hover:underline ${extraClass}" onclick="${handlerName}('${portalSearchClickValue(raw)}', event)" title="Click to filter this item">${escapePatchHtml(label)}</button>`;
+        }
+
+        function drillDownToPortalSearch(tabName, inputId, query, renderFn, tableSelector, event) {
+            if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+            const cleanQuery = String(query || '').trim();
+            if (!cleanQuery || cleanQuery === '-' || cleanQuery === '---') return;
+            switchTab(tabName);
+            setTimeout(() => {
+                const input = document.getElementById(inputId);
+                if (input) {
+                    input.value = cleanQuery;
+                    input.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                if (typeof renderFn === 'function') renderFn();
+                scrollToMatchedRow(tableSelector, cleanQuery);
+            }, 120);
+        }
+
+        function drillDownTemplateSearch(query, event) {
+            drillDownToPortalSearch('template', 'tempSearch', query, () => applyTempFilters(false), '#tempTable', event);
+        }
+
+        function drillDownPatchSearch(query, event) {
+            patchUnassignedOnly = false;
+            drillDownToPortalSearch('patch', 'patchSearch', query, applyPatchFilter, '#patchTable', event);
+        }
+
+        function drillDownLaserSearch(query, event) {
+            drillDownToPortalSearch('laser', 'laserSearch', query, applyLaserFilter, '#laserTable', event);
+        }
+
+        function drillDownDownSearch(query, event) {
+            drillDownToPortalSearch('downfilling', 'downSearch', query, applyDownFilter, '#downTable', event);
+        }
+
         function sanitizeTemplateValue(value) {
             const text = String(value ?? '').trim();
             if (!text || text === '---' || text.toLowerCase() === 'null' || text.toLowerCase() === 'undefined') {
@@ -4369,10 +4419,10 @@
                         : `<span class="text-[11px]">${t.section}</span>`}</td>
                     <td class="p-3">${isAdmin
                         ? `<input id="style-${t.id}" class="manual-input admin-input" style="width:90px" value="${t.style!=='---'?t.style:''}">`
-                        : `<span class="font-bold">${t.style}</span>`}</td>
+                        : portalSearchLink(t.style, 'drillDownTemplateSearch')}</td>
                     <td class="p-3">${isAdmin
                         ? `<input id="jobno-${t.id}" class="manual-input" style="width:100px" value="${t.jobNo!=='---'?t.jobNo:''}">`
-                        : `<span class="text-[11px]">${t.jobNo}</span>`}</td>
+                        : portalSearchLink(t.jobNo, 'drillDownTemplateSearch', 'text-[11px]')}</td>
                     <td class="p-3">${isAdmin
                         ? `<input id="proto-${t.id}" class="manual-input admin-input" style="width:90px" value="${t.protoStage!=='---'?t.protoStage:''}">`
                         : `<span class="font-semibold text-purple-700">${t.protoStage}</span>`}</td>
@@ -7671,9 +7721,9 @@
                     <td class="p-3 font-mono text-slate-500 text-[10px]">${noVal}</td>
                     <td class="p-3 text-sky-700 text-[10px] date-cell font-semibold">${requestReceived}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-season-${sid}" class="manual-input" style="width:70px" value="${season!=='---'?season:''}" placeholder="Season">` : `<span class="text-[10px]">${season}</span>`}</td>
-                    <td class="p-3 font-bold text-blue-700">${isGavinP ? `<input id="patch-style-${sid}" class="manual-input admin-input" style="width:90px;color:#1d4ed8;font-weight:bold" value="${style!=='---'?style:''}" placeholder="Style No.">` : `<span>${style}</span>`}</td>
+                    <td class="p-3 font-bold text-blue-700">${isGavinP ? `<input id="patch-style-${sid}" class="manual-input admin-input" style="width:90px;color:#1d4ed8;font-weight:bold" value="${style!=='---'?style:''}" placeholder="Style No.">` : portalSearchLink(style, 'drillDownPatchSearch')}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-category-${sid}" class="manual-input" style="width:80px" value="${category!=='---'?category:''}" placeholder="Category">` : `<span class="text-[10px]">${category}</span>`}</td>
-                    <td class="p-3">${isGavinP ? `<input id="patch-jobno-${sid}" class="manual-input" style="width:80px" value="${jobNo!=='---'?jobNo:''}" placeholder="Job No.">` : `<span class="text-[10px]">${jobNo}</span>`}</td>
+                    <td class="p-3">${isGavinP ? `<input id="patch-jobno-${sid}" class="manual-input" style="width:80px" value="${jobNo!=='---'?jobNo:''}" placeholder="Job No.">` : portalSearchLink(jobNo, 'drillDownPatchSearch', 'text-[10px]')}</td>
                     <td class="p-3 font-bold text-orange-700">${isGavinP ? `<input id="patch-bddpic-${sid}" class="manual-input admin-input" style="width:70px;color:#c2410c;font-weight:bold" value="${bddPic!=='---'?bddPic:''}" placeholder="BDD PIC">` : `<span>${bddPic}</span>`}</td>
                     <td class="p-3">${isGavinP ? `<input id="patch-patchitem-${sid}" class="manual-input" style="width:100px" value="${patchItem!=='---'?patchItem:''}" placeholder="Patch Item">` : `<span class="text-[10px]">${patchItem}</span>`}</td>
                     <td class="p-3" style="min-width:220px;max-width:320px">${isGavinP ? `<input id="patch-patchdesc-${sid}" class="manual-input" style="width:240px" value="${patchDescValue}" placeholder="Patch Description">` : renderPatchLongText(patchDesc, 'Patch Description')}</td>
@@ -7936,8 +7986,8 @@
                     <td class="p-3">${isEditingDown ? `<input id="dw-season-${rid}" class="manual-input admin-input" value="${season==='---'?'':season}">` : season}</td>
                     <td class="p-3">${isEditingDown ? `<input id="dw-bddPic-${rid}" class="manual-input admin-input" value="${bddPic==='---'?'':bddPic}">` : bddPic}</td>
                     <td class="p-3">${isEditingDown ? `<input id="dw-category-${rid}" class="manual-input admin-input" value="${category==='---'?'':category}">` : category}</td>
-                    <td class="p-3">${isEditingDown ? `<input id="dw-style-${rid}" class="manual-input admin-input" value="${style==='---'?'':style}">` : style}</td>
-                    <td class="p-3">${isEditingDown ? `<input id="dw-job-${rid}" class="manual-input admin-input" value="${job==='---'?'':job}">` : job}</td>
+                    <td class="p-3">${isEditingDown ? `<input id="dw-style-${rid}" class="manual-input admin-input" value="${style==='---'?'':style}">` : portalSearchLink(style, 'drillDownDownSearch')}</td>
+                    <td class="p-3">${isEditingDown ? `<input id="dw-job-${rid}" class="manual-input admin-input" value="${job==='---'?'':job}">` : portalSearchLink(job, 'drillDownDownSearch')}</td>
                     <td class="p-3 down-layer-cell">${isEditingDown ? `<input id="dw-layer-${rid}" class="manual-input admin-input" style="width:260px" value="${layer==='---'?'':layer}">` : layer}</td>
                     <td class="p-3 font-bold text-emerald-600">${isEditingDown ? `<input id="dw-fabricItem-${rid}" class="manual-input admin-input" style="color:#059669;font-weight:bold" value="${fabricItem==='---'?'':fabricItem}">` : fabricItem}</td>
                     <td class="p-3 font-bold text-purple-600">${isEditingDown ? `<input id="dw-downBagItem-${rid}" class="manual-input admin-input" style="color:#7c3aed;font-weight:bold" value="${downBagItem==='---'?'':downBagItem}">` : downBagItem}</td>
@@ -8458,7 +8508,6 @@
                 if (!r_c.ok) throw new Error(`HTTP ${r_c.status}`);
                 const rows = extractRows(await r_c.json());
                 rows.sort((a,b) => (parseInt(getVal(b,['Id','ID','id']))||0) - (parseInt(getVal(a,['Id','ID','id']))||0));
-                const _dbg = `allConsumptionRows.length = ${rows.length} | Open browser console (F12) for [CON] debug log`;
                 allConsumptionRows = rows;
                 consumptionDataLoaded = true;
                 writeDashboardSnapshot();
@@ -8555,10 +8604,8 @@
             });
 
             if (!rows.length) {
-                const _dbg = `allConsumptionRows.length = ${allConsumptionRows.length} | Open browser console (F12) for [CON] debug log`;
                 tbody.innerHTML = `<tr><td colspan="13" class="p-4 text-center">
                     <p class="text-slate-400 italic text-xs mb-1">${consumptionSearchQuery||consumptionMonthQuery ? 'No results for current filter.' : 'No consumption records found.'}</p>
-                    <p class="text-[10px] font-mono text-slate-300">${_dbg}</p>
                 </td></tr>`;
                 return;
             }
