@@ -8310,6 +8310,20 @@
             ].join('|');
         }
 
+        function getQuiltingTemplateStyleStageKey(row) {
+            return [
+                normalizeConsumptionMatchValue(row?.style),
+                normalizeConsumptionMatchValue(row?.protoStage)
+            ].join('|');
+        }
+
+        function getConsumptionStyleStageKey(row) {
+            return [
+                normalizeConsumptionMatchValue(getVal(row, ['Style Number','StyleNumber','Style'])),
+                normalizeConsumptionMatchValue(getVal(row, ['Proto Stage','ProtoStage','Stage']))
+            ].join('|');
+        }
+
         const QUILTING_CONSUMPTION_SYNC_CUTOFF = new Date(2026, 4, 8);
         const QUILTING_CONSUMPTION_SYNC_MIN_TEMPLATE_ID = 200;
 
@@ -8354,6 +8368,7 @@
 
         function hasMatchingQuiltingConsumptionRow(templateRow) {
             const templateKey = getQuiltingConsumptionKey(templateRow);
+            const templateStyleStageKey = getQuiltingTemplateStyleStageKey(templateRow);
             const templateId = String(templateRow?.id || '').trim();
             return allConsumptionRows.some(r => {
                 const requestType = String(getVal(r, ['Request Type','RequestType','Type']) || '').toLowerCase();
@@ -8364,6 +8379,7 @@
                     normalizeConsumptionMatchValue(getVal(r, ['Proto Stage','ProtoStage','Stage']))
                 ].join('|');
                 if (templateId && remark.includes(`Template ID ${templateId}`)) return true;
+                if (templateStyleStageKey !== '|' && getConsumptionStyleStageKey(r) === templateStyleStageKey) return true;
                 return templateKey !== '||' && rowKey === templateKey && requestType.includes('quilting');
             });
         }
