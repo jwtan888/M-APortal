@@ -2,6 +2,10 @@ const state = {
   fileName: "",
   sourceType: "dxf",
   simpleShape: null,
+  imageTrace: null,
+  imagePreviewOpacity: 0.35,
+  importStatus: "",
+  importError: "",
   rawEntityTypes: {},
   entities: [],
   generated: [],
@@ -40,6 +44,7 @@ DEFAULT_FORMULA.templateNumber = INITIAL_TEMPLATE_NUMBER;
 
 const els = {
   dxfInput: document.querySelector("#dxfInput"),
+  imageInput: document.querySelector("#imageInput"),
   predictButton: document.querySelector("#predictButton"),
   clearButton: document.querySelector("#clearButton"),
   exportButton: document.querySelector("#exportButton"),
@@ -73,6 +78,11 @@ const els = {
   slotHeight: document.querySelector("#slotHeight"),
   slotRightEdge: document.querySelector("#slotRightEdge"),
   offset: document.querySelector("#offset"),
+  scanTraceWidth: document.querySelector("#scanTraceWidth"),
+  scanTraceMode: document.querySelector("#scanTraceMode"),
+  scanThresholdAdjust: document.querySelector("#scanThresholdAdjust"),
+  scanTraceDetail: document.querySelector("#scanTraceDetail"),
+  scanImageOpacity: document.querySelector("#scanImageOpacity"),
   templateNumber: document.querySelector("#templateNumber"),
   patchRelX: document.querySelector("#patchRelX"),
   patchRelY: document.querySelector("#patchRelY"),
@@ -83,6 +93,7 @@ const els = {
   simpleShapeWidthLabel: document.querySelector("#simpleShapeWidthLabel"),
   simpleShapeHeightWrap: document.querySelector("#simpleShapeHeightWrap"),
   createSimpleShapeButton: document.querySelector("#createSimpleShapeButton"),
+  scanAdjustPanel: document.querySelector(".scan-adjust-panel"),
   zoomInButton: document.querySelector("#zoomInButton"),
   zoomOutButton: document.querySelector("#zoomOutButton"),
   zoomResetButton: document.querySelector("#zoomResetButton"),
@@ -110,6 +121,12 @@ els.dxfInput.addEventListener("change", async (event) => {
   await handleDxfFile(file);
 });
 
+els.imageInput.addEventListener("change", async (event) => {
+  const file = event.target.files[0];
+  if (!file) return;
+  await handleImageFile(file);
+});
+
 ["dragenter", "dragover"].forEach((eventName) => {
   els.previewPanel.addEventListener(eventName, (event) => {
     event.preventDefault();
@@ -126,9 +143,10 @@ els.dxfInput.addEventListener("change", async (event) => {
 
 els.previewPanel.addEventListener("drop", async (event) => {
   event.preventDefault();
-  const file = [...event.dataTransfer.files].find((item) => /\.dxf$/i.test(item.name));
+  const file = [...event.dataTransfer.files].find((item) => isSupportedImportFile(item));
   if (!file) return;
-  await handleDxfFile(file);
+  if (/\.dxf$/i.test(file.name)) await handleDxfFile(file);
+  else await handleImageFile(file);
 });
 
 els.clearButton.addEventListener("click", clearArtboard);
@@ -178,12 +196,15 @@ function clearArtboard() {
   state.fileName = "";
   state.sourceType = "dxf";
   state.simpleShape = null;
+  state.imageTrace = null;
+  state.imagePreviewOpacity = 0.35;
   state.rawEntityTypes = {};
   state.entities = [];
   state.generated = [];
   state.baseViewBox = null;
   state.viewBox = null;
   els.dxfInput.value = "";
+  els.imageInput.value = "";
   resetParameters();
   els.applyButton.disabled = true;
   els.clearButton.disabled = true;
@@ -196,6 +217,30 @@ function clearArtboard() {
 async function handleDxfFile(file) {
   loadDxf(await file.text(), file.name);
   if (els.dxfInput) els.dxfInput.value = "";
+}
+
+async function handleImageFile(file) {
+  state.fileName = file.name;
+  state.sourceType = "image-trace";
+  state.importStatus = `Importing ${file.name}...`;
+  state.importError = "";
+  state.simpleShape = null;
+  state.imageTrace = null;
+  state.entities = [];
+  state.generated = [];
+  els.applyButton.disabled = true;
+  els.clearButton.disabled = false;
+  els.exportButton.disabled = true;
+  resetView();
+  render();
+  try {
+    const trace = await traceScanFile(file);
+    loadImageTrace(trace, file.name);
+  } catch (error) {
+    loadImageImportError(file.name, error);
+  } finally {
+    if (els.imageInput) els.imageInput.value = "";
+  }
 }
 
 async function loadPatchModel() {
@@ -284,6 +329,8 @@ function patchFeatureSource(outline) {
     heightMm: height,
     areaMm2: area,
     simpleShapeType: state.simpleShape?.type || "",
+    sourceType: state.sourceType || "dxf",
+    scanTrace: scanTraceFeatureInput(),
   };
 }
 
@@ -303,6 +350,9 @@ function runPatchModelPrediction(model, patch) {
 
 function patchFeatureVector(patch, keys) {
   const entityTypes = patch.entityTypes || {};
+  const sourceType = patch.sourceType || "dxf";
+  const scanTrace = patch.scanTrace || {};
+  const traceMode = scanTrace.traceMode || "";
   const width = Number(patch.widthMm) || 0;
   const height = Number(patch.heightMm) || 0;
   const area = Number(patch.areaMm2) || 0;
@@ -324,6 +374,19 @@ function patchFeatureVector(patch, keys) {
     patch_fill_ratio: width > 0 && height > 0 ? area / (width * height) : 0,
     simple_rectangle: patch.simpleShapeType === "rectangle" ? 1 : 0,
     simple_circle_or_oval: patch.simpleShapeType === "circle" ? 1 : 0,
+    source_dxf: sourceType === "dxf" ? 1 : 0,
+    source_image_trace: sourceType === "image-trace" ? 1 : 0,
+    source_pdf_trace: scanTrace.sourceType === "pdf" ? 1 : 0,
+    source_bmp_trace: scanTrace.sourceType === "bmp" ? 1 : 0,
+    trace_mode_auto: traceMode === "auto" ? 1 : 0,
+    trace_mode_silhouette: traceMode === "silhouette" ? 1 : 0,
+    trace_mode_dark: traceMode === "dark" ? 1 : 0,
+    trace_sensitivity: Number(scanTrace.sensitivity) || 0,
+    trace_detail: Number(scanTrace.detail) || 0,
+    trace_threshold: Number(scanTrace.threshold) || 0,
+    trace_actual_width_mm: Number(scanTrace.actualWidthMm) || 0,
+    trace_raster_width_px: Number(scanTrace.rasterWidthPx) || 0,
+    trace_raster_height_px: Number(scanTrace.rasterHeightPx) || 0,
   };
   return keys.map((key) => Number(values[key]) || 0);
 }
@@ -436,6 +499,11 @@ function resetParameters() {
   els.slotRightEdge.value = DEFAULT_FORMULA.slotRightEdge;
   els.offset.value = DEFAULT_FORMULA.offset;
   els.templateNumber.value = DEFAULT_FORMULA.templateNumber;
+  els.scanTraceWidth.value = 50;
+  els.scanTraceMode.value = "auto";
+  els.scanThresholdAdjust.value = 0;
+  els.scanTraceDetail.value = 6;
+  els.scanImageOpacity.value = 35;
   els.patchRelX.value = DEFAULT_FORMULA.patchRelX;
   els.patchRelY.value = DEFAULT_FORMULA.patchRelY;
   els.patchRotation.value = DEFAULT_FORMULA.patchRotation;
@@ -535,10 +603,31 @@ els.preview.addEventListener("keydown", handlePreviewKeyPan);
   });
 });
 
+els.scanTraceWidth.addEventListener("input", () => {
+  if (!state.imageTrace) return;
+  refreshImageTracePreview({ keepView: true });
+});
+
+els.scanTraceMode.addEventListener("change", () => refreshImageTracePreview());
+els.scanThresholdAdjust.addEventListener("input", () => refreshImageTracePreview());
+els.scanTraceDetail.addEventListener("input", () => refreshImageTracePreview());
+els.scanImageOpacity.addEventListener("input", () => {
+  state.imagePreviewOpacity = getScanImageOpacity();
+  render();
+});
+
+function isSupportedImportFile(file) {
+  return /\.dxf$/i.test(file.name) || /\.pdf$/i.test(file.name) || /^image\//i.test(file.type) || /\.bmp$/i.test(file.name);
+}
+
 function loadDxf(text, fileName) {
   state.fileName = fileName;
   state.sourceType = "dxf";
   state.simpleShape = null;
+  state.imageTrace = null;
+  state.importStatus = "";
+  state.importError = "";
+  state.imagePreviewOpacity = 0.35;
   state.rawEntityTypes = countDxfEntityTypes(text);
   state.entities = parseDxf(text);
   const learned = inferReferenceProfile(state.entities, getFormula());
@@ -554,6 +643,740 @@ function loadDxf(text, fileName) {
   els.exportButton.disabled = true;
   updatePredictButton();
   render();
+}
+
+function loadImageTrace(trace, fileName) {
+  state.fileName = fileName;
+  state.sourceType = "image-trace";
+  state.simpleShape = null;
+  state.imageTrace = trace;
+  state.importStatus = "";
+  state.importError = "";
+  state.imagePreviewOpacity = getScanImageOpacity();
+  state.rawEntityTypes = { IMAGE_TRACE: 1 };
+  applyDetectedTraceWidth(trace);
+  applyRasterFallbackWidth(trace);
+  state.entities = trace.points.length ? [imageTraceEntity(trace, getScanTraceWidth())] : [];
+  state.generated = [];
+  resetView();
+  els.applyButton.disabled = state.entities.length === 0;
+  els.clearButton.disabled = false;
+  els.exportButton.disabled = true;
+  updatePredictButton();
+  render();
+}
+
+function loadImageImportError(fileName, error) {
+  state.fileName = fileName;
+  state.sourceType = "image-trace";
+  state.simpleShape = null;
+  state.imageTrace = null;
+  state.importStatus = "";
+  state.importError = readableImportError(error);
+  state.rawEntityTypes = { IMPORT_ERROR: 1 };
+  state.entities = [];
+  state.generated = [];
+  resetView();
+  els.applyButton.disabled = true;
+  els.clearButton.disabled = false;
+  els.exportButton.disabled = true;
+  updatePredictButton();
+  render();
+}
+
+function readableImportError(error) {
+  const message = error?.message || String(error || "Unknown import error");
+  return message.replace(/^Error:\s*/i, "");
+}
+
+function getScanTraceWidth() {
+  return Math.max(1, Number(els.scanTraceWidth.value) || 50);
+}
+
+function applyDetectedTraceWidth(trace) {
+  if (!Number.isFinite(trace?.actualTraceWidthMm) || trace.actualTraceWidthMm <= 0) return;
+  els.scanTraceWidth.value = round1(trace.actualTraceWidthMm);
+}
+
+function applyRasterFallbackWidth(trace) {
+  if (Number.isFinite(trace?.actualTraceWidthMm) && trace.actualTraceWidthMm > 0) return;
+  if (!trace?.raster?.width) return;
+  els.scanTraceWidth.value = round1((trace.raster.width * 25.4) / 96);
+}
+
+function getTraceThresholdAdjust() {
+  return Number(els.scanThresholdAdjust.value) || 0;
+}
+
+function getTraceMode() {
+  return els.scanTraceMode?.value || "auto";
+}
+
+function getTraceSimplifyTolerance() {
+  const detail = Math.max(1, Math.min(10, Number(els.scanTraceDetail.value) || 6));
+  return 0.8 + (10 - detail) * 0.45;
+}
+
+function getScanImageOpacity() {
+  return Math.max(0, Math.min(1, (Number(els.scanImageOpacity.value) || 0) / 100));
+}
+
+function scanTraceFeatureInput() {
+  if (state.sourceType !== "image-trace" || !state.imageTrace) return null;
+  const trace = state.imageTrace;
+  return {
+    sourceType: trace.sourceType || "image",
+    traceMode: getTraceMode(),
+    threshold: round(Number(trace.threshold) || 0),
+    sensitivity: round(Number(getTraceThresholdAdjust()) || 0),
+    detail: Math.max(1, Math.min(10, Number(els.scanTraceDetail.value) || 6)),
+    actualWidthMm: round(getScanTraceWidth()),
+    physicalSource: trace.physicalSource || "",
+    imageWidthPx: Number(trace.imageWidthPx) || Number(trace.raster?.width) || 0,
+    imageHeightPx: Number(trace.imageHeightPx) || Number(trace.raster?.height) || 0,
+    rasterWidthPx: Number(trace.raster?.width) || 0,
+    rasterHeightPx: Number(trace.raster?.height) || 0,
+    foreground: trace.foreground || "",
+  };
+}
+
+function refreshImageTracePreview(options = {}) {
+  if (!state.imageTrace?.raster) return;
+  const traced = traceRaster(state.imageTrace.raster);
+  state.imageTrace = { ...state.imageTrace, ...traced };
+  state.rawEntityTypes = { IMAGE_TRACE: 1 };
+  state.entities = state.imageTrace.points.length ? [imageTraceEntity(state.imageTrace, getScanTraceWidth())] : [];
+  state.generated = [];
+  els.applyButton.disabled = state.entities.length === 0;
+  els.exportButton.disabled = true;
+  if (!options.keepView) resetView();
+  updatePredictButton();
+  render();
+}
+
+async function traceScanFile(file) {
+  if (/\.pdf$/i.test(file.name) || file.type === "application/pdf") return tracePdfFile(file);
+  if (/\.bmp$/i.test(file.name) || file.type === "image/bmp") return traceBmpFile(file);
+  return traceImageFile(file);
+}
+
+async function traceImageFile(file) {
+  const image = await loadRasterImage(file);
+  const raster = rasterizeImage(image);
+  const physical = await imagePhysicalScale(file, raster);
+  const traced = traceRaster(raster);
+  return {
+    ...withActualTraceWidth(traced, physical?.mmPerRasterPixel),
+    raster,
+    sourceType: "image",
+    physicalSource: physical?.source || "",
+  };
+}
+
+function rasterizeImage(image) {
+  const maxSide = 900;
+  const scale = Math.min(1, maxSide / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height));
+  const width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
+  const height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  ctx.drawImage(image, 0, 0, width, height);
+  const raster = rasterFromCanvas(canvas);
+  raster.scale = scale;
+  raster.originalWidth = image.naturalWidth || image.width;
+  raster.originalHeight = image.naturalHeight || image.height;
+  return raster;
+}
+
+function rasterFromCanvas(canvas) {
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+  return {
+    width: canvas.width,
+    height: canvas.height,
+    gray: grayscalePixels(imageData.data),
+    rgba: new Uint8ClampedArray(imageData.data),
+    dataUrl: canvas.toDataURL("image/png"),
+  };
+}
+
+function traceRaster(raster) {
+  const width = raster.width;
+  const height = raster.height;
+  const gray = raster.gray;
+  const threshold = otsuThreshold(gray);
+  const adjustedThreshold = Math.max(0, Math.min(255, threshold + getTraceThresholdAdjust()));
+  const foregroundIsDark = borderAverage(gray, width, height) > threshold;
+  const mode = getTraceMode();
+  const darkMask = () => largestForegroundComponent(gray, width, height, adjustedThreshold, foregroundIsDark);
+  let mask = mode === "dark" ? darkMask() : silhouetteMask(raster, width, height);
+  let pixelLoop = simplifyPoints(boundaryLoop(mask, width, height), getTraceSimplifyTolerance());
+  if (mode === "auto" && pixelLoop.length < 3) {
+    mask = darkMask();
+    pixelLoop = simplifyPoints(boundaryLoop(mask, width, height), getTraceSimplifyTolerance());
+  }
+  return {
+    points: pixelLoop,
+    imageWidthPx: width,
+    imageHeightPx: height,
+    threshold: adjustedThreshold,
+    foreground: foregroundIsDark ? "dark" : "light",
+  };
+}
+
+function silhouetteMask(raster, width, height) {
+  if (!raster.rgba?.length) return largestForegroundComponent(raster.gray, width, height, otsuThreshold(raster.gray), true);
+  const bg = borderColorAverage(raster.rgba, width, height);
+  const adjust = getTraceThresholdAdjust();
+  const threshold = Math.max(5, Math.min(52, 18 - adjust * 0.16));
+  const raw = new Uint8Array(width * height);
+  for (let index = 0; index < raw.length; index += 1) {
+    const i = index * 4;
+    const r = raster.rgba[i];
+    const g = raster.rgba[i + 1];
+    const b = raster.rgba[i + 2];
+    const diff = Math.hypot(r - bg.r, g - bg.g, b - bg.b);
+    const chroma = Math.max(r, g, b) - Math.min(r, g, b);
+    const gray = raster.gray[index];
+    raw[index] = diff > threshold || (chroma > threshold * 0.9 && diff > threshold * 0.55) || gray < bg.gray - threshold * 1.2 ? 1 : 0;
+  }
+  const closed = closeMask(raw, width, height, 2);
+  return largestBinaryComponent(closed, width, height);
+}
+
+function largestBinaryComponent(mask, width, height) {
+  const visited = new Uint8Array(mask.length);
+  let best = [];
+  const queue = [];
+  for (let start = 0; start < mask.length; start += 1) {
+    if (!mask[start] || visited[start]) continue;
+    const component = [];
+    queue.length = 0;
+    queue.push(start);
+    visited[start] = 1;
+    for (let q = 0; q < queue.length; q += 1) {
+      const index = queue[q];
+      component.push(index);
+      const x = index % width;
+      const y = Math.floor(index / width);
+      for (let dy = -1; dy <= 1; dy += 1) {
+        for (let dx = -1; dx <= 1; dx += 1) {
+          if (!dx && !dy) continue;
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || nx >= width || ny < 0 || ny >= height) continue;
+          const next = ny * width + nx;
+          if (mask[next] && !visited[next]) {
+            visited[next] = 1;
+            queue.push(next);
+          }
+        }
+      }
+    }
+    if (component.length > best.length) best = component;
+  }
+  const result = new Uint8Array(mask.length);
+  best.forEach((index) => {
+    result[index] = 1;
+  });
+  return result;
+}
+
+function borderColorAverage(rgba, width, height) {
+  let r = 0;
+  let g = 0;
+  let b = 0;
+  let count = 0;
+  const add = (x, y) => {
+    const i = (y * width + x) * 4;
+    r += rgba[i];
+    g += rgba[i + 1];
+    b += rgba[i + 2];
+    count += 1;
+  };
+  for (let x = 0; x < width; x += 1) {
+    add(x, 0);
+    add(x, height - 1);
+  }
+  for (let y = 1; y < height - 1; y += 1) {
+    add(0, y);
+    add(width - 1, y);
+  }
+  r /= count || 1;
+  g /= count || 1;
+  b /= count || 1;
+  return { r, g, b, gray: r * 0.299 + g * 0.587 + b * 0.114 };
+}
+
+function closeMask(mask, width, height, iterations) {
+  let next = mask;
+  for (let i = 0; i < iterations; i += 1) next = dilateMask(next, width, height);
+  for (let i = 0; i < iterations; i += 1) next = erodeMask(next, width, height);
+  return next;
+}
+
+function dilateMask(mask, width, height) {
+  const result = new Uint8Array(mask.length);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      let on = false;
+      for (let dy = -1; dy <= 1 && !on; dy += 1) {
+        for (let dx = -1; dx <= 1; dx += 1) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx >= 0 && nx < width && ny >= 0 && ny < height && mask[ny * width + nx]) {
+            on = true;
+            break;
+          }
+        }
+      }
+      result[y * width + x] = on ? 1 : 0;
+    }
+  }
+  return result;
+}
+
+function erodeMask(mask, width, height) {
+  const result = new Uint8Array(mask.length);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      let on = true;
+      for (let dy = -1; dy <= 1 && on; dy += 1) {
+        for (let dx = -1; dx <= 1; dx += 1) {
+          const nx = x + dx;
+          const ny = y + dy;
+          if (nx < 0 || nx >= width || ny < 0 || ny >= height || !mask[ny * width + nx]) {
+            on = false;
+            break;
+          }
+        }
+      }
+      result[y * width + x] = on ? 1 : 0;
+    }
+  }
+  return result;
+}
+
+function withActualTraceWidth(trace, mmPerRasterPixel) {
+  if (!Number.isFinite(mmPerRasterPixel) || mmPerRasterPixel <= 0 || !trace.points?.length) return trace;
+  const box = bounds([{ points: trace.points }]);
+  return {
+    ...trace,
+    actualTraceWidthMm: (box.maxX - box.minX) * mmPerRasterPixel,
+  };
+}
+
+async function tracePdfFile(file) {
+  const pdfjs = await loadPdfJs();
+  const data = new Uint8Array(await file.arrayBuffer());
+  const doc = await pdfjs.getDocument({ data }).promise;
+  const page = await doc.getPage(1);
+  const baseViewport = page.getViewport({ scale: 1 });
+  const scale = Math.max(0.5, Math.min(2.5, 900 / Math.max(baseViewport.width, baseViewport.height)));
+  const viewport = page.getViewport({ scale });
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.ceil(viewport.width);
+  canvas.height = Math.ceil(viewport.height);
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  ctx.fillStyle = "#fff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  await page.render({ canvasContext: ctx, viewport }).promise;
+  const raster = rasterFromCanvas(canvas);
+  const traced = traceRaster(raster);
+  const mmPerRasterPixel = 25.4 / 72 / scale;
+  return {
+    ...withActualTraceWidth(traced, mmPerRasterPixel),
+    raster,
+    sourceType: "pdf",
+    pageNumber: 1,
+    physicalSource: "pdf-page-units",
+  };
+}
+
+async function imagePhysicalScale(file, raster) {
+  const name = file.name || "";
+  let physical = null;
+  try {
+    if (/\.png$/i.test(name) || file.type === "image/png") physical = pngPhysicalScale(await file.arrayBuffer(), raster);
+    else if (/\.jpe?g$/i.test(name) || file.type === "image/jpeg") physical = jpegPhysicalScale(await file.arrayBuffer(), raster);
+    else if (/\.svg$/i.test(name) || file.type === "image/svg+xml") physical = svgPhysicalScale(await file.text(), raster);
+  } catch {
+    // Fall back below to the browser/CSS image convention.
+  }
+  return physical || scaleFromOriginalPixel(25.4 / 96, raster, "96dpi-estimate");
+}
+
+function pngPhysicalScale(buffer, raster) {
+  const view = new DataView(buffer);
+  let offset = 8;
+  while (offset + 12 <= view.byteLength) {
+    const length = view.getUint32(offset, false);
+    const type = asciiFromBuffer(buffer, offset + 4, 4);
+    if (type === "pHYs" && offset + 21 <= view.byteLength) {
+      const xPpm = view.getUint32(offset + 8, false);
+      const unit = view.getUint8(offset + 16);
+      if (unit === 1 && xPpm > 0) return scaleFromOriginalPixel(1000 / xPpm, raster, "png-physical-pixels");
+    }
+    offset += 12 + length;
+  }
+  return null;
+}
+
+function jpegPhysicalScale(buffer, raster) {
+  const view = new DataView(buffer);
+  let offset = 2;
+  while (offset + 4 < view.byteLength) {
+    if (view.getUint8(offset) !== 0xff) break;
+    const marker = view.getUint8(offset + 1);
+    const length = view.getUint16(offset + 2, false);
+    if (marker === 0xe0 && asciiFromBuffer(buffer, offset + 4, 5) === "JFIF\0") {
+      const unit = view.getUint8(offset + 11);
+      const xDensity = view.getUint16(offset + 12, false);
+      if (unit === 1 && xDensity > 0) return scaleFromOriginalPixel(25.4 / xDensity, raster, "jpeg-jfif-dpi");
+      if (unit === 2 && xDensity > 0) return scaleFromOriginalPixel(10 / xDensity, raster, "jpeg-jfif-dpcm");
+    }
+    offset += 2 + length;
+  }
+  return null;
+}
+
+function svgPhysicalScale(text, raster) {
+  const svg = new DOMParser().parseFromString(text, "image/svg+xml").documentElement;
+  if (!svg || svg.nodeName.toLowerCase() !== "svg") return null;
+  const widthMm = lengthToMm(svg.getAttribute("width"));
+  if (!Number.isFinite(widthMm) || widthMm <= 0 || !raster.originalWidth) return null;
+  return scaleFromOriginalPixel(widthMm / raster.originalWidth, raster, "svg-width");
+}
+
+function scaleFromOriginalPixel(mmPerOriginalPixel, raster, source) {
+  if (!Number.isFinite(mmPerOriginalPixel) || mmPerOriginalPixel <= 0) return null;
+  return {
+    mmPerRasterPixel: mmPerOriginalPixel / (raster.scale || 1),
+    source,
+  };
+}
+
+function lengthToMm(value) {
+  const match = String(value || "").trim().match(/^([+-]?\d*\.?\d+)\s*(mm|cm|in|pt|px)?$/i);
+  if (!match) return null;
+  const amount = Number(match[1]);
+  const unit = (match[2] || "px").toLowerCase();
+  if (!Number.isFinite(amount)) return null;
+  if (unit === "mm") return amount;
+  if (unit === "cm") return amount * 10;
+  if (unit === "in") return amount * 25.4;
+  if (unit === "pt") return (amount * 25.4) / 72;
+  if (unit === "px") return (amount * 25.4) / 96;
+  return null;
+}
+
+function asciiFromBuffer(buffer, offset, length) {
+  return String.fromCharCode(...new Uint8Array(buffer, offset, length));
+}
+
+async function traceBmpFile(file) {
+  const buffer = await file.arrayBuffer();
+  const canvas = bmpToCanvas(buffer);
+  const raster = rasterFromCanvas(canvas);
+  const view = new DataView(buffer);
+  const xPpm = view.getInt32(38, true);
+  const traced = traceRaster(raster);
+  const physical = xPpm > 0 ? { mmPerRasterPixel: 1000 / xPpm, source: "bmp-pixels-per-meter" } : scaleFromOriginalPixel(25.4 / 96, raster, "96dpi-estimate");
+  return {
+    ...withActualTraceWidth(traced, physical?.mmPerRasterPixel),
+    raster,
+    sourceType: "bmp",
+    physicalSource: physical?.source || "",
+  };
+}
+
+function bmpToCanvas(buffer) {
+  const view = new DataView(buffer);
+  if (view.getUint16(0, true) !== 0x4d42) throw new Error("Invalid BMP file");
+  const pixelOffset = view.getUint32(10, true);
+  const dibSize = view.getUint32(14, true);
+  if (dibSize < 40) throw new Error("Unsupported BMP header");
+  const width = view.getInt32(18, true);
+  const rawHeight = view.getInt32(22, true);
+  const height = Math.abs(rawHeight);
+  const planes = view.getUint16(26, true);
+  const bitDepth = view.getUint16(28, true);
+  const compression = view.getUint32(30, true);
+  if (planes !== 1 || compression !== 0 || ![24, 32].includes(bitDepth) || width <= 0 || height <= 0) {
+    throw new Error("Only uncompressed 24-bit and 32-bit BMP files are supported");
+  }
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  const imageData = ctx.createImageData(width, height);
+  const bytesPerPixel = bitDepth / 8;
+  const rowSize = Math.floor((bitDepth * width + 31) / 32) * 4;
+  const bottomUp = rawHeight > 0;
+  for (let y = 0; y < height; y += 1) {
+    const sourceY = bottomUp ? height - 1 - y : y;
+    const row = pixelOffset + sourceY * rowSize;
+    for (let x = 0; x < width; x += 1) {
+      const source = row + x * bytesPerPixel;
+      const target = (y * width + x) * 4;
+      imageData.data[target] = view.getUint8(source + 2);
+      imageData.data[target + 1] = view.getUint8(source + 1);
+      imageData.data[target + 2] = view.getUint8(source);
+      imageData.data[target + 3] = bitDepth === 32 ? view.getUint8(source + 3) : 255;
+    }
+  }
+  ctx.putImageData(imageData, 0, 0);
+  return canvas;
+}
+
+async function loadPdfJs() {
+  if (window.pdfjsLib) return window.pdfjsLib;
+  if (window.location.protocol === "file:") {
+    throw new Error("PDF import requires the local server. Open http://127.0.0.1:8792/index.html instead of the HTML file directly.");
+  }
+  const pdfjsUrl = new URL("assets/pdf.min.mjs", window.location.href).href;
+  const pdfjs = await import(pdfjsUrl);
+  pdfjs.GlobalWorkerOptions.workerSrc = new URL("./assets/pdf.worker.min.mjs", window.location.href).href;
+  window.pdfjsLib = pdfjs;
+  return pdfjs;
+}
+
+function loadRasterImage(file) {
+  return new Promise((resolve, reject) => {
+    const image = new Image();
+    const url = URL.createObjectURL(file);
+    image.onload = () => {
+      URL.revokeObjectURL(url);
+      resolve(image);
+    };
+    image.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error("Image could not be loaded"));
+    };
+    image.src = url;
+  });
+}
+
+function grayscalePixels(data) {
+  const gray = new Uint8Array(data.length / 4);
+  for (let i = 0, p = 0; i < data.length; i += 4, p += 1) {
+    const alpha = data[i + 3] / 255;
+    const r = data[i] * alpha + 255 * (1 - alpha);
+    const g = data[i + 1] * alpha + 255 * (1 - alpha);
+    const b = data[i + 2] * alpha + 255 * (1 - alpha);
+    gray[p] = Math.round(r * 0.299 + g * 0.587 + b * 0.114);
+  }
+  return gray;
+}
+
+function otsuThreshold(gray) {
+  const hist = new Array(256).fill(0);
+  gray.forEach((value) => {
+    hist[value] += 1;
+  });
+  const total = gray.length;
+  let sum = 0;
+  hist.forEach((count, value) => {
+    sum += value * count;
+  });
+  let sumB = 0;
+  let weightB = 0;
+  let best = 127;
+  let bestVariance = -1;
+  for (let value = 0; value < 256; value += 1) {
+    weightB += hist[value];
+    if (!weightB) continue;
+    const weightF = total - weightB;
+    if (!weightF) break;
+    sumB += value * hist[value];
+    const meanB = sumB / weightB;
+    const meanF = (sum - sumB) / weightF;
+    const variance = weightB * weightF * (meanB - meanF) ** 2;
+    if (variance > bestVariance) {
+      bestVariance = variance;
+      best = value;
+    }
+  }
+  return best;
+}
+
+function borderAverage(gray, width, height) {
+  let total = 0;
+  let count = 0;
+  for (let x = 0; x < width; x += 1) {
+    total += gray[x] + gray[(height - 1) * width + x];
+    count += 2;
+  }
+  for (let y = 1; y < height - 1; y += 1) {
+    total += gray[y * width] + gray[y * width + width - 1];
+    count += 2;
+  }
+  return count ? total / count : 255;
+}
+
+function largestForegroundComponent(gray, width, height, threshold, foregroundIsDark) {
+  const mask = new Uint8Array(width * height);
+  for (let i = 0; i < gray.length; i += 1) {
+    const isForeground = foregroundIsDark ? gray[i] <= threshold : gray[i] > threshold;
+    mask[i] = isForeground ? 1 : 0;
+  }
+  const visited = new Uint8Array(mask.length);
+  let best = [];
+  const queue = [];
+  for (let start = 0; start < mask.length; start += 1) {
+    if (!mask[start] || visited[start]) continue;
+    const component = [];
+    queue.length = 0;
+    queue.push(start);
+    visited[start] = 1;
+    for (let q = 0; q < queue.length; q += 1) {
+      const index = queue[q];
+      component.push(index);
+      const x = index % width;
+      const y = Math.floor(index / width);
+      const neighbors = [
+        x > 0 ? index - 1 : -1,
+        x < width - 1 ? index + 1 : -1,
+        y > 0 ? index - width : -1,
+        y < height - 1 ? index + width : -1,
+      ];
+      neighbors.forEach((next) => {
+        if (next >= 0 && mask[next] && !visited[next]) {
+          visited[next] = 1;
+          queue.push(next);
+        }
+      });
+    }
+    if (component.length > best.length) best = component;
+  }
+  const result = new Uint8Array(mask.length);
+  best.forEach((index) => {
+    result[index] = 1;
+  });
+  return result;
+}
+
+function boundaryLoop(mask, width, height) {
+  const edges = [];
+  const isSet = (x, y) => x >= 0 && x < width && y >= 0 && y < height && mask[y * width + x];
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      if (!isSet(x, y)) continue;
+      if (!isSet(x, y - 1)) edges.push(edgePoint(x, y, x + 1, y));
+      if (!isSet(x + 1, y)) edges.push(edgePoint(x + 1, y, x + 1, y + 1));
+      if (!isSet(x, y + 1)) edges.push(edgePoint(x + 1, y + 1, x, y + 1));
+      if (!isSet(x - 1, y)) edges.push(edgePoint(x, y + 1, x, y));
+    }
+  }
+  const loops = linkBoundaryEdges(edges);
+  return loops.sort((a, b) => Math.abs(signedArea(b)) - Math.abs(signedArea(a)))[0] || [];
+}
+
+function edgePoint(x1, y1, x2, y2) {
+  return { start: `${x1},${y1}`, end: `${x2},${y2}`, p1: { x: x1, y: y1 }, p2: { x: x2, y: y2 } };
+}
+
+function linkBoundaryEdges(edges) {
+  const byStart = new Map();
+  edges.forEach((edge) => {
+    if (!byStart.has(edge.start)) byStart.set(edge.start, []);
+    byStart.get(edge.start).push(edge);
+  });
+  const loops = [];
+  while (edges.length) {
+    const edge = edges.pop();
+    removeStartEdge(byStart, edge);
+    const loop = [edge.p1, edge.p2];
+    let current = edge;
+    while (current.end !== edge.start) {
+      const next = byStart.get(current.end)?.pop();
+      if (!next) break;
+      const index = edges.indexOf(next);
+      if (index !== -1) edges.splice(index, 1);
+      loop.push(next.p2);
+      current = next;
+    }
+    const cleaned = cleanClosingPoint(loop);
+    if (cleaned.length >= 3) loops.push(cleaned);
+  }
+  return loops;
+}
+
+function removeStartEdge(map, edge) {
+  const list = map.get(edge.start);
+  if (!list) return;
+  const index = list.indexOf(edge);
+  if (index !== -1) list.splice(index, 1);
+}
+
+function imageTraceEntity(trace, widthMm) {
+  const points = trace.points || [];
+  if (points.length < 3) return { type: "LWPOLYLINE", layer: "AI_IMAGE_TRACE_SOURCE", points: [], closed: true };
+  const box = bounds([{ points }]);
+  const pixelWidth = Math.max(1, box.maxX - box.minX);
+  const mmPerPixel = widthMm / pixelWidth;
+  const mmPoints = points.map((point) => ({
+    x: (point.x - (box.minX + box.maxX) / 2) * mmPerPixel,
+    y: ((box.minY + box.maxY) / 2 - point.y) * mmPerPixel,
+  }));
+  return { type: "LWPOLYLINE", layer: "AI_IMAGE_TRACE_SOURCE", points: cleanCurvePoints(mmPoints), closed: true };
+}
+
+function imagePreviewEntity(trace, widthMm) {
+  const raster = trace?.raster;
+  if (!raster?.dataUrl) return null;
+  const hasTrace = trace?.points?.length >= 3;
+  const box = hasTrace
+    ? bounds([{ points: trace.points }])
+    : { minX: 0, minY: 0, maxX: raster.width, maxY: raster.height };
+  const pixelWidth = Math.max(1, hasTrace ? box.maxX - box.minX : raster.width);
+  const mmPerPixel = widthMm / pixelWidth;
+  const centerX = (box.minX + box.maxX) / 2;
+  const centerY = (box.minY + box.maxY) / 2;
+  return {
+    type: "IMAGE",
+    layer: "AI_SCAN_PREVIEW",
+    href: raster.dataUrl,
+    x: -centerX * mmPerPixel,
+    y: -centerY * mmPerPixel,
+    width: raster.width * mmPerPixel,
+    height: raster.height * mmPerPixel,
+    opacity: state.imagePreviewOpacity,
+  };
+}
+
+function simplifyPoints(points, tolerance) {
+  const cleaned = cleanClosingPoint(cleanCurvePoints(points));
+  if (cleaned.length <= 3) return cleaned;
+  const simplified = douglasPeucker(cleaned.concat(cleaned[0]), tolerance);
+  return cleanClosingPoint(simplified);
+}
+
+function douglasPeucker(points, tolerance) {
+  if (points.length <= 2) return points;
+  let maxDistance = 0;
+  let index = 0;
+  const first = points[0];
+  const last = points[points.length - 1];
+  for (let i = 1; i < points.length - 1; i += 1) {
+    const distance = pointLineDistance(points[i], first, last);
+    if (distance > maxDistance) {
+      maxDistance = distance;
+      index = i;
+    }
+  }
+  if (maxDistance <= tolerance) return [first, last];
+  return douglasPeucker(points.slice(0, index + 1), tolerance).slice(0, -1).concat(douglasPeucker(points.slice(index), tolerance));
+}
+
+function pointLineDistance(point, a, b) {
+  const dx = b.x - a.x;
+  const dy = b.y - a.y;
+  if (!dx && !dy) return Math.hypot(point.x - a.x, point.y - a.y);
+  const t = Math.max(0, Math.min(1, ((point.x - a.x) * dx + (point.y - a.y) * dy) / (dx * dx + dy * dy)));
+  return Math.hypot(point.x - (a.x + t * dx), point.y - (a.y + t * dy));
 }
 
 function countDxfEntityTypes(text) {
@@ -961,7 +1784,7 @@ function generatePatchTemplate(entities, formula) {
   generated.push({
     type: "TEXT",
     layer: "AI_LABEL",
-    text: "Patch DXF",
+    text: state.sourceType === "image-trace" ? "Scan trace" : "Patch DXF",
     point: { x: startX - formula.boardWidth / 2, y: sourcePreviewY + 18 },
     previewOnly: true,
   });
@@ -1463,6 +2286,7 @@ function buildTrainingExample() {
       entityCount: state.entities.length,
       entityTypes: types,
       simpleShape: state.simpleShape,
+      scanTrace: scanTraceFeatureInput(),
     },
     selectedPatch: {
       layer: outline.layer,
@@ -2054,8 +2878,21 @@ function render() {
   }
   if (els.saveTrainingButton) els.saveTrainingButton.disabled = !state.entities.length;
   if (els.exportTrainingButton) els.exportTrainingButton.disabled = state.trainingExamples.length === 0;
-  if (state.entities.length && state.sourceType === "simple-shape") {
+  if (els.scanAdjustPanel) els.scanAdjustPanel.classList.toggle("hidden", state.sourceType !== "image-trace");
+  if (state.importStatus) {
+    els.fileSummary.textContent = state.importStatus;
+  } else if (state.importError) {
+    els.fileSummary.textContent = `${state.fileName}: import failed - ${state.importError}`;
+  } else if (state.entities.length && state.sourceType === "simple-shape") {
     els.fileSummary.textContent = `${simpleShapeLabel(state.simpleShape)}: simple shape generated`;
+  } else if (state.sourceType === "image-trace" && state.entities.length) {
+    const pointCount = state.entities[0]?.points?.length || 0;
+    const sizeNote = traceSizeStatus(state.imageTrace);
+    els.fileSummary.textContent = state.generated.length
+      ? `${state.fileName}: template generated from ${pointCount} trace points`
+      : `${state.fileName}: compare original with ${pointCount} trace points, ${sizeNote}, then apply`;
+  } else if (state.sourceType === "image-trace" && state.fileName) {
+    els.fileSummary.textContent = `${state.fileName}: original imported, no closed trace found; adjust sensitivity/detail`;
   } else if (state.fileName && !state.entities.length) {
     const unsupported = Object.entries(state.rawEntityTypes || {})
       .map(([type, count]) => `${type} ${count}`)
@@ -2064,10 +2901,18 @@ function render() {
       ? `${state.fileName}: no patch vector found (${unsupported})`
       : `${state.fileName}: no supported patch vector found`;
   } else {
-    els.fileSummary.textContent = state.entities.length ? `${state.fileName}: ${state.entities.length} entities parsed` : "Import patch DXF to auto generate template";
+    els.fileSummary.textContent = state.entities.length
+      ? `${state.fileName}: ${state.entities.length} entities parsed`
+      : "Import patch DXF or scan image to auto generate template";
   }
   if (els.issueList) renderIssues();
   renderPreview();
+}
+
+function traceSizeStatus(trace) {
+  if (!trace?.actualTraceWidthMm) return "manual width ready";
+  if (trace.physicalSource === "96dpi-estimate") return "size estimated from image pixels";
+  return "actual size detected";
 }
 
 function simpleShapeLabel(shape) {
@@ -2082,7 +2927,12 @@ function simpleShapeLabel(shape) {
 function renderDxfSize() {
   const outline = state.entities.length ? selectPatchOutline(state.entities, getFormula()) : null;
   if (!outline) {
-    els.dxfSize.textContent = "0 x 0 mm";
+    if (state.sourceType === "image-trace" && state.imageTrace?.raster) {
+      const image = imagePreviewEntity(state.imageTrace, getScanTraceWidth());
+      els.dxfSize.textContent = image ? `${round(image.width)} x ${round(image.height)} mm` : "0 x 0 mm";
+    } else {
+      els.dxfSize.textContent = "0 x 0 mm";
+    }
     els.dxfSizeSummary.textContent = "";
     return;
   }
@@ -2128,8 +2978,16 @@ function renderPreview() {
   setZoomButtons(Boolean(visible.length));
   els.preview.innerHTML = "";
   const rendered = new Set();
+  if (state.importStatus) {
+    drawPreviewMessage(state.importStatus);
+    return;
+  }
+  if (state.importError) {
+    drawPreviewMessage(`Import failed: ${state.importError}`);
+    return;
+  }
   if (!visible.length && state.fileName) {
-    drawPreviewMessage(`${state.fileName}: no drawable DXF vectors found`);
+    drawPreviewMessage(`${state.fileName}: no drawable vector found`);
     return;
   }
   if (!state.generated.length) previewSource.forEach((entity) => drawEntity(entity, "source-line", rendered));
@@ -2137,10 +2995,15 @@ function renderPreview() {
 }
 
 function drawableEntities(entities) {
-  return entities.filter((entity) => isShapeEntity(entity) || entity.type === "LINE" || entity.type === "TEXT");
+  return entities.filter((entity) => isShapeEntity(entity) || entity.type === "LINE" || entity.type === "TEXT" || entity.type === "IMAGE");
 }
 
 function selectedSourcePreviewEntities() {
+  if (state.sourceType === "image-trace" && state.imageTrace) {
+    const image = imagePreviewEntity(state.imageTrace, getScanTraceWidth());
+    const outline = state.entities.length ? selectPatchOutline(state.entities, getFormula()) : null;
+    return [image, outline && { ...outline, layer: "AI_SELECTED_SOURCE_PREVIEW" }].filter(Boolean);
+  }
   if (!state.entities.length) return [];
   const outline = selectPatchOutline(state.entities, getFormula());
   if (!outline) return state.entities;
@@ -2186,6 +3049,19 @@ function drawEntity(entity, className, rendered = null) {
     const text = svgEl("text", { x: entity.point.x, y: -entity.point.y, class: "label-text", "text-anchor": entity.anchor || "start" });
     text.textContent = entity.text;
     els.preview.appendChild(text);
+  }
+  if (entity.type === "IMAGE") {
+    const image = svgEl("image", {
+      href: entity.href,
+      x: entity.x,
+      y: entity.y,
+      width: entity.width,
+      height: entity.height,
+      opacity: entity.opacity,
+      class: "scan-preview-image",
+      preserveAspectRatio: "none",
+    });
+    els.preview.prepend(image);
   }
 }
 

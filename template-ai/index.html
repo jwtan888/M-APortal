@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>AI Generative Patch Template</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 68 48'%3E%3Cg fill='%230514ff'%3E%3Cpath d='M9 4h7L7 44H0z'/%3E%3Cpath d='M21 4h12L24 44H12z'/%3E%3Cpath d='M44 4h21c2 0 3 2 3 4l-7 28c-1 5-5 8-10 8H34c-4 0-7-3-6-7l7-26c1-4 5-7 9-7z'/%3E%3C/g%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css?v=20260609-predict-tooltip-v1">
+    <link rel="stylesheet" href="styles.css?v=20260610-trace-mode-v1">
   </head>
   <body>
     <main class="app-shell">
@@ -21,6 +21,8 @@
           </div>
           <button id="predictButton" class="secondary-button has-tooltip" type="button" disabled data-tooltip="Use the MLP neural network model to predict template size, patch position, rotation, needle slot, and offset from the imported DXF.">Predict</button>
           <button id="clearButton" class="secondary-button" type="button" disabled>Clear</button>
+          <label class="primary-button" for="imageInput">Import Scan</label>
+          <input id="imageInput" type="file" accept="image/*,.bmp,.pdf,application/pdf">
           <label class="primary-button" for="dxfInput">Import DXF</label>
           <input id="dxfInput" type="file" accept=".dxf,text/plain">
           <button id="exportButton" type="button" disabled>Export DXF</button>
@@ -86,7 +88,7 @@
           <div class="preview-header">
             <div>
               <h2>Artboard</h2>
-              <p id="fileSummary">Import patch DXF to auto generate template</p>
+              <p id="fileSummary">Import patch DXF or scan image to auto generate template</p>
             </div>
             <div class="simple-shape-panel artboard-simple-shape">
               <select id="simpleShapeType" aria-label="Simple patch shape">
@@ -110,11 +112,37 @@
                 <button id="zoomInButton" type="button" disabled>+</button>
               </div>
               <div class="artboard-measurement">
-                <span>DXF size</span>
+                <span>Patch size</span>
                 <strong id="dxfSize">0 x 0 mm</strong>
                 <p id="dxfSizeSummary"></p>
               </div>
             </div>
+          </div>
+          <div class="scan-adjust-panel hidden">
+            <label>
+              Actual width, mm
+              <input id="scanTraceWidth" type="number" min="1" max="1000" step="0.5" value="50">
+            </label>
+            <label>
+              Trace mode
+              <select id="scanTraceMode">
+                <option value="auto">Auto</option>
+                <option value="silhouette">Outer silhouette</option>
+                <option value="dark">Dark lines</option>
+              </select>
+            </label>
+            <label>
+              Sensitivity
+              <input id="scanThresholdAdjust" type="range" min="-80" max="80" step="1" value="0">
+            </label>
+            <label>
+              Detail
+              <input id="scanTraceDetail" type="range" min="1" max="10" step="1" value="6">
+            </label>
+            <label>
+              Opacity
+              <input id="scanImageOpacity" type="range" min="0" max="100" step="5" value="35">
+            </label>
           </div>
           <svg id="preview" viewBox="0 0 100 60" role="img" aria-label="Patch template preview" tabindex="0"></svg>
         </section>
@@ -137,6 +165,6 @@
       </div>
     </div>
     <script src="config.js"></script>
-  <script src="app.js?v=20260609-patch-onedrive-combined-model-v1"></script>
+  <script src="app.js?v=20260610-trace-mode-v1"></script>
   </body>
 </html>
