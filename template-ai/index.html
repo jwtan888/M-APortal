@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>AI Generative Patch Template</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 68 48'%3E%3Cg fill='%230514ff'%3E%3Cpath d='M9 4h7L7 44H0z'/%3E%3Cpath d='M21 4h12L24 44H12z'/%3E%3Cpath d='M44 4h21c2 0 3 2 3 4l-7 28c-1 5-5 8-10 8H34c-4 0-7-3-6-7l7-26c1-4 5-7 9-7z'/%3E%3C/g%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css">
+    <link rel="stylesheet" href="styles.css?v=20260609-predict-tooltip-v1">
   </head>
   <body>
     <main class="app-shell">
@@ -19,6 +19,7 @@
             <span>Training data</span>
             <strong id="trainingCount">0</strong>
           </div>
+          <button id="predictButton" class="secondary-button has-tooltip" type="button" disabled data-tooltip="Use the MLP neural network model to predict template size, patch position, rotation, needle slot, and offset from the imported DXF.">Predict</button>
           <button id="clearButton" class="secondary-button" type="button" disabled>Clear</button>
           <label class="primary-button" for="dxfInput">Import DXF</label>
           <input id="dxfInput" type="file" accept=".dxf,text/plain">
@@ -136,6 +137,6 @@
       </div>
     </div>
     <script src="config.js"></script>
-    <script src="app.js?v=20260529-weird-shape-offset-2"></script>
+  <script src="app.js?v=20260609-patch-onedrive-combined-model-v1"></script>
   </body>
 </html>

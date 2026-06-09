@@ -10,6 +10,8 @@ const state = {
   trainingMeta: loadTrainingMeta(),
   trainingStatus: "Loading training data...",
   trainingSyncing: false,
+  patchModel: null,
+  patchModelStatus: "Loading patch model...",
   baseViewBox: null,
   viewBox: null,
   pan: null,
@@ -18,6 +20,7 @@ const state = {
 const APP_CONFIG = window.PATCH_TEMPLATE_CONFIG || {};
 const POWER_AUTOMATE_TRAINING_URL = APP_CONFIG.powerAutomateTrainingUrl || "";
 const POWER_AUTOMATE_READ_URL = APP_CONFIG.powerAutomateReadUrl || "";
+const PATCH_MODEL_URL = APP_CONFIG.patchModelUrl || "pytorch/data/patch-template-training-data.json";
 const DEFAULT_FORMULA = {
   boardWidth: 150,
   boardHeight: 180,
@@ -37,6 +40,7 @@ DEFAULT_FORMULA.templateNumber = INITIAL_TEMPLATE_NUMBER;
 
 const els = {
   dxfInput: document.querySelector("#dxfInput"),
+  predictButton: document.querySelector("#predictButton"),
   clearButton: document.querySelector("#clearButton"),
   exportButton: document.querySelector("#exportButton"),
   applyButton: document.querySelector("#applyButton"),
@@ -96,16 +100,39 @@ if (els.templateNumber) {
 
 if (state.learnedProfile) applyLearnedProfileToControls(state.learnedProfile);
 render();
+loadPatchModel();
 loadTrainingMasterJsonFromPowerAutomate();
 syncArtboardHeightToParameter();
 
 els.dxfInput.addEventListener("change", async (event) => {
   const file = event.target.files[0];
   if (!file) return;
-  loadDxf(await file.text(), file.name);
+  await handleDxfFile(file);
+});
+
+["dragenter", "dragover"].forEach((eventName) => {
+  els.previewPanel.addEventListener(eventName, (event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = "copy";
+    els.previewPanel.classList.add("drop-active");
+  });
+});
+
+["dragleave", "drop"].forEach((eventName) => {
+  els.previewPanel.addEventListener(eventName, () => {
+    els.previewPanel.classList.remove("drop-active");
+  });
+});
+
+els.previewPanel.addEventListener("drop", async (event) => {
+  event.preventDefault();
+  const file = [...event.dataTransfer.files].find((item) => /\.dxf$/i.test(item.name));
+  if (!file) return;
+  await handleDxfFile(file);
 });
 
 els.clearButton.addEventListener("click", clearArtboard);
+els.predictButton.addEventListener("click", predictPatchTemplate);
 els.createSimpleShapeButton.addEventListener("click", createSimplePatchTemplate);
 els.simpleShapeType.addEventListener("change", updateSimpleShapeControls);
 updateSimpleShapeControls();
@@ -161,15 +188,179 @@ function clearArtboard() {
   els.applyButton.disabled = true;
   els.clearButton.disabled = true;
   els.exportButton.disabled = true;
+  updatePredictButton();
   closeExportModal();
   render();
+}
+
+async function handleDxfFile(file) {
+  loadDxf(await file.text(), file.name);
+  if (els.dxfInput) els.dxfInput.value = "";
+}
+
+async function loadPatchModel() {
+  try {
+    const response = await fetch(PATCH_MODEL_URL, { cache: "no-store" });
+    if (!response.ok) throw new Error(`HTTP ${response.status}`);
+    const payload = await response.json();
+    const model = normalizePatchModelPayload(payload);
+    validatePatchModel(model);
+    state.patchModel = model;
+    state.patchModelStatus = `Loaded ${model.exampleCount || 0} patch training example(s).`;
+    loadEmbeddedTrainingData(payload);
+  } catch (error) {
+    state.patchModel = null;
+    state.patchModelStatus = "Patch model JSON not loaded. Use a local server or upload the model JSON.";
+  }
+  updatePredictButton();
+}
+
+function normalizePatchModelPayload(payload) {
+  return payload?.model && Array.isArray(payload.model.layers) ? payload.model : payload;
+}
+
+function loadEmbeddedTrainingData(payload) {
+  const trainingPayload = payload?.trainingData || payload?.model?.trainingData || (Array.isArray(payload?.examples) ? payload : null);
+  if (!trainingPayload || !Array.isArray(trainingPayload.examples)) return;
+  state.trainingExamples = trainingPayload.examples.map(normalizeTrainingExample);
+  state.trainingMeta = {
+    revision: Number(trainingPayload.revision) || state.trainingMeta.revision || 0,
+    updatedAt: trainingPayload.updatedAt || trainingPayload.exportedAt || state.trainingMeta.updatedAt || "",
+  };
+  state.learnedProfile = trainingPayload.learnedProfile || state.learnedProfile;
+  saveTrainingExamples(state.trainingExamples);
+  saveTrainingMeta(state.trainingMeta);
+  saveLearnedProfile(state.learnedProfile);
+  const updated = state.trainingMeta.updatedAt ? ` · ${formatTrainingDate(state.trainingMeta.updatedAt)}` : "";
+  state.trainingStatus = `Loaded from training/model JSON${updated}.`;
+}
+
+function validatePatchModel(model) {
+  if (!model || !Array.isArray(model.featureKeys) || !Array.isArray(model.targetKeys) || !Array.isArray(model.layers)) {
+    throw new Error("Invalid patch model JSON");
+  }
+}
+
+function updatePredictButton() {
+  if (!els.predictButton) return;
+  const enabled = Boolean(state.patchModel && state.entities.length);
+  els.predictButton.disabled = !enabled;
+  const status = state.patchModelStatus ? `\nStatus: ${state.patchModelStatus}` : "";
+  els.predictButton.removeAttribute("title");
+  els.predictButton.dataset.tooltip = `Use the MLP neural network model to predict template size, patch position, rotation, needle slot, and offset from the imported DXF.${status}`;
+}
+
+function predictPatchTemplate() {
+  if (!state.patchModel || !state.entities.length) return;
+  const currentFormula = getFormula();
+  const outline = selectPatchOutline(state.entities, currentFormula);
+  if (!outline) return;
+  const patch = patchFeatureSource(outline);
+  const prediction = runPatchModelPrediction(state.patchModel, patch);
+  applyPredictionToControls(prediction);
+  state.generated = generatePatchTemplate(state.entities, getFormula());
+  els.applyButton.disabled = state.entities.length === 0;
+  els.clearButton.disabled = false;
+  els.exportButton.disabled = state.generated.length === 0;
+  resetView();
+  render();
+}
+
+function patchFeatureSource(outline) {
+  const parts = outline.parts?.length ? outline.parts : [outline];
+  const outlineBox = bounds(parts);
+  const width = outlineBox.maxX - outlineBox.minX;
+  const height = outlineBox.maxY - outlineBox.minY;
+  const area = parts.reduce((sum, part) => sum + Math.abs(polygonArea(part.points)), 0);
+  const pointCount = parts.reduce((sum, part) => sum + part.points.length, 0);
+  const entityTypes = state.rawEntityTypes || {};
+  return {
+    entityCount: state.entities.length || 1,
+    entityTypes,
+    type: outline.type || "LWPOLYLINE",
+    partCount: parts.length,
+    pointCount,
+    widthMm: width,
+    heightMm: height,
+    areaMm2: area,
+    simpleShapeType: state.simpleShape?.type || "",
+  };
+}
+
+function runPatchModelPrediction(model, patch) {
+  let values = patchFeatureVector(patch, model.featureKeys);
+  values = normalizeVector(values, model.xMean, model.xStd);
+  model.layers.forEach((layer) => {
+    if (layer.type === "linear") values = linearLayer(values, layer);
+    if (layer.type === "relu") values = values.map((value) => Math.max(0, value));
+  });
+  values = denormalizeVector(values, model.yMean, model.yStd);
+  return model.targetKeys.reduce((acc, key, index) => {
+    acc[key] = values[index];
+    return acc;
+  }, {});
+}
+
+function patchFeatureVector(patch, keys) {
+  const entityTypes = patch.entityTypes || {};
+  const width = Number(patch.widthMm) || 0;
+  const height = Number(patch.heightMm) || 0;
+  const area = Number(patch.areaMm2) || 0;
+  const values = {
+    entity_count: Number(patch.entityCount) || 1,
+    lwpolyline_count: Number(entityTypes.LWPOLYLINE) || (patch.type === "LWPOLYLINE" ? 1 : 0),
+    spline_count: Number(entityTypes.SPLINE) || (patch.type === "SPLINE" ? 1 : 0),
+    line_count: Number(entityTypes.LINE) || (patch.type === "LINE" ? 1 : 0),
+    arc_count: Number(entityTypes.ARC) || (patch.type === "ARC" ? 1 : 0),
+    circle_count: Number(entityTypes.CIRCLE) || (patch.type === "CIRCLE" ? 1 : 0),
+    hatch_count: Number(entityTypes.HATCH) || (patch.type === "HATCH" ? 1 : 0),
+    multipatch_count: patch.type === "MULTIPATCH" ? 1 : 0,
+    part_count: Number(patch.partCount) || 1,
+    point_count: Number(patch.pointCount) || 0,
+    patch_width_mm: width,
+    patch_height_mm: height,
+    patch_area_mm2: area,
+    patch_aspect_ratio: height > 0 ? width / height : 0,
+    patch_fill_ratio: width > 0 && height > 0 ? area / (width * height) : 0,
+    simple_rectangle: patch.simpleShapeType === "rectangle" ? 1 : 0,
+    simple_circle_or_oval: patch.simpleShapeType === "circle" ? 1 : 0,
+  };
+  return keys.map((key) => Number(values[key]) || 0);
+}
+
+function normalizeVector(values, means, stds) {
+  return values.map((value, index) => (value - Number(means[index] || 0)) / (Number(stds[index]) || 1));
+}
+
+function denormalizeVector(values, means, stds) {
+  return values.map((value, index) => value * (Number(stds[index]) || 1) + Number(means[index] || 0));
+}
+
+function linearLayer(values, layer) {
+  return layer.bias.map((bias, rowIndex) => {
+    const weights = layer.weight[rowIndex] || [];
+    return weights.reduce((sum, weight, index) => sum + Number(weight) * values[index], Number(bias) || 0);
+  });
+}
+
+function applyPredictionToControls(prediction) {
+  if (Number.isFinite(prediction.boardWidthMm)) els.boardWidth.value = Math.max(80, round1(prediction.boardWidthMm));
+  if (Number.isFinite(prediction.boardHeightMm)) els.boardHeight.value = Math.max(100, round1(prediction.boardHeightMm));
+  if (Number.isFinite(prediction.cornerRadiusMm)) els.cornerRadius.value = Math.max(0, round1(prediction.cornerRadiusMm));
+  if (Number.isFinite(prediction.needleSlotWidthMm)) els.slotWidth.value = Math.max(1, round1(prediction.needleSlotWidthMm));
+  if (Number.isFinite(prediction.needleSlotHeightMm)) els.slotHeight.value = Math.max(1, round1(prediction.needleSlotHeightMm));
+  if (Number.isFinite(prediction.needleSlotRightEdgeMm)) els.slotRightEdge.value = Math.max(0, round1(prediction.needleSlotRightEdgeMm));
+  if (Number.isFinite(prediction.outwardOffsetMm)) els.offset.value = Math.max(0, round1(prediction.outwardOffsetMm));
+  if (Number.isFinite(prediction.patchRelX)) els.patchRelX.value = round1(prediction.patchRelX);
+  if (Number.isFinite(prediction.patchRelY)) els.patchRelY.value = round1(prediction.patchRelY);
+  if (Number.isFinite(prediction.patchRotationDeg)) els.patchRotation.value = round1(prediction.patchRotationDeg);
 }
 
 function updateSimpleShapeControls() {
   const shape = getSimpleShapeType();
   if (shape === "circle") {
-    els.simpleShapeWidthLabel.textContent = "Diameter, mm";
-    els.simpleShapeHeightWrap.classList.add("hidden");
+    els.simpleShapeWidthLabel.textContent = "Width, mm";
+    els.simpleShapeHeightWrap.classList.remove("hidden");
     return;
   }
   els.simpleShapeWidthLabel.textContent = "Width, mm";
@@ -183,14 +374,14 @@ function getSimpleShapeType() {
 function createSimplePatchTemplate() {
   const shapeType = getSimpleShapeType();
   const width = Math.max(1, Number(els.simpleShapeWidth.value) || 1);
-  const height = shapeType === "circle" ? width : Math.max(1, Number(els.simpleShapeHeight.value) || 1);
+  const height = Math.max(1, Number(els.simpleShapeHeight.value) || 1);
   const entity = simpleShapeEntity(shapeType, width, height);
   state.sourceType = "simple-shape";
   state.simpleShape = {
     type: shapeType,
     widthMm: round(width),
     heightMm: round(height),
-    diameterMm: shapeType === "circle" ? round(width) : null,
+    diameterMm: shapeType === "circle" && Math.abs(width - height) < 0.001 ? round(width) : null,
   };
   state.fileName = simpleShapeFileName(state.simpleShape);
   state.entities = [entity];
@@ -199,12 +390,13 @@ function createSimplePatchTemplate() {
   els.applyButton.disabled = false;
   els.clearButton.disabled = false;
   els.exportButton.disabled = state.generated.length === 0;
+  updatePredictButton();
   render();
 }
 
 function simpleShapeEntity(shapeType, width, height) {
   if (shapeType === "circle") {
-    return { type: "CIRCLE", layer: "AI_SIMPLE_PATCH_SOURCE", points: circlePoints(0, 0, width / 2), closed: true };
+    return { type: "LWPOLYLINE", layer: "AI_SIMPLE_PATCH_SOURCE", points: ovalPoints(0, 0, width, height), closed: true };
   }
   return {
     type: "LWPOLYLINE",
@@ -228,7 +420,10 @@ function rectanglePoints(width, height) {
 }
 
 function simpleShapeFileName(shape) {
-  if (shape.type === "circle") return `simple-circle-${shape.diameterMm}mm.dxf`;
+  if (shape.type === "circle") {
+    const prefix = shape.diameterMm ? "circle" : "oval";
+    return `simple-${prefix}-${shape.widthMm}x${shape.heightMm}mm.dxf`;
+  }
   return `simple-rectangle-${shape.widthMm}x${shape.heightMm}mm.dxf`;
 }
 
@@ -309,6 +504,7 @@ if (els.importTrainingButton && els.trainingInput) {
     const examples = Array.isArray(imported) ? imported : imported.examples;
     if (!Array.isArray(examples)) return;
     state.trainingExamples = examples.map(normalizeTrainingExample);
+    applyModelFromTrainingPayload(imported);
     saveTrainingExamples(state.trainingExamples);
     updateTrainingMasterJson();
     await syncTrainingMasterJson();
@@ -356,6 +552,7 @@ function loadDxf(text, fileName) {
   els.applyButton.disabled = state.entities.length === 0;
   els.clearButton.disabled = false;
   els.exportButton.disabled = true;
+  updatePredictButton();
   render();
 }
 
@@ -598,6 +795,16 @@ function circlePoints(cx, cy, radius, segments = 96) {
   return Array.from({ length: segments }, (_, index) => {
     const angle = (Math.PI * 2 * index) / segments;
     return { x: cx + Math.cos(angle) * radius, y: cy + Math.sin(angle) * radius };
+  });
+}
+
+function ovalPoints(cx, cy, width, height, segments = 96) {
+  const rx = width / 2;
+  const ry = height / 2;
+  if (!rx || !ry) return [];
+  return Array.from({ length: segments }, (_, index) => {
+    const angle = (Math.PI * 2 * index) / segments;
+    return { x: cx + Math.cos(angle) * rx, y: cy + Math.sin(angle) * ry };
   });
 }
 
@@ -1139,6 +1346,10 @@ function round(value) {
   return Math.round(value * 1000) / 1000;
 }
 
+function round1(value) {
+  return Math.round(value * 10) / 10;
+}
+
 function loadLearnedProfile() {
   try {
     return JSON.parse(localStorage.getItem("patchTemplateLearnedProfile") || "null");
@@ -1331,7 +1542,7 @@ function describeOffsetGeneration(outline, formula) {
 
 function trainingPayload() {
   const updatedAt = state.trainingMeta.updatedAt || new Date().toISOString();
-  return {
+  const payload = {
     schema: "patch-template-ai-training-v1",
     revision: state.trainingMeta.revision || 0,
     updatedAt,
@@ -1341,6 +1552,19 @@ function trainingPayload() {
     examples: state.trainingExamples,
     learnedProfile: state.learnedProfile,
   };
+  if (state.patchModel) {
+    payload.model = {
+      ...serializablePatchModel(state.patchModel),
+      trainingDataFileName: "patch-template-training-data.json",
+      exampleCount: state.patchModel.exampleCount || state.trainingExamples.length,
+    };
+  }
+  return payload;
+}
+
+function serializablePatchModel(model) {
+  const { trainingData, ...modelOnly } = model;
+  return modelOnly;
 }
 
 function updateTrainingMasterJson() {
@@ -1417,6 +1641,7 @@ async function loadTrainingMasterJsonFromPowerAutomate(options = {}) {
       updatedAt: payload.updatedAt || payload.exportedAt || state.trainingMeta.updatedAt || "",
     };
     state.learnedProfile = payload.learnedProfile || state.learnedProfile;
+    applyModelFromTrainingPayload(payload);
     saveTrainingExamples(state.trainingExamples);
     saveTrainingMeta(state.trainingMeta);
     saveLearnedProfile(state.learnedProfile);
@@ -1454,7 +1679,19 @@ function normalizeTrainingPayload(responseBody) {
     }
   }
   if (possibleContent && Array.isArray(possibleContent.examples)) return possibleContent;
+  if (responseBody.trainingData && Array.isArray(responseBody.trainingData.examples)) return responseBody.trainingData;
   return null;
+}
+
+function applyModelFromTrainingPayload(payload) {
+  const model = normalizePatchModelPayload(payload);
+  try {
+    validatePatchModel(model);
+    state.patchModel = model;
+    state.patchModelStatus = `Loaded ${model.exampleCount || payload.examples?.length || 0} patch training example(s).`;
+  } catch {
+    // The OneDrive JSON may be training-only before the first PyTorch export.
+  }
 }
 
 function formatTrainingDate(value) {
@@ -1835,7 +2072,10 @@ function render() {
 
 function simpleShapeLabel(shape) {
   if (!shape) return "Simple patch";
-  if (shape.type === "circle") return `Circle ${shape.diameterMm}mm`;
+  if (shape.type === "circle") {
+    const label = shape.diameterMm ? "Circle" : "Oval";
+    return `${label} ${shape.widthMm} x ${shape.heightMm}mm`;
+  }
   return `Rectangle ${shape.widthMm} x ${shape.heightMm}mm`;
 }
 
@@ -1876,7 +2116,9 @@ function renderIssues() {
 
 function renderPreview() {
   const sourcePreview = selectedSourcePreviewEntities();
-  const visible = state.generated.length ? state.generated : sourcePreview;
+  const fallbackPreview = drawableEntities(state.entities);
+  const previewSource = sourcePreview.length ? sourcePreview : fallbackPreview;
+  const visible = state.generated.length ? state.generated : previewSource;
   const box = expandBox(bounds(visible), 30);
   const width = Math.max(1, box.maxX - box.minX);
   const height = Math.max(1, box.maxY - box.minY);
@@ -1885,8 +2127,17 @@ function renderPreview() {
   els.preview.setAttribute("viewBox", `${state.viewBox.x} ${state.viewBox.y} ${state.viewBox.width} ${state.viewBox.height}`);
   setZoomButtons(Boolean(visible.length));
   els.preview.innerHTML = "";
-  if (!state.generated.length) sourcePreview.forEach((entity) => drawEntity(entity, "source-line"));
-  state.generated.forEach((entity) => drawEntity(entity, generatedClass(entity.layer)));
+  const rendered = new Set();
+  if (!visible.length && state.fileName) {
+    drawPreviewMessage(`${state.fileName}: no drawable DXF vectors found`);
+    return;
+  }
+  if (!state.generated.length) previewSource.forEach((entity) => drawEntity(entity, "source-line", rendered));
+  state.generated.forEach((entity) => drawEntity(entity, generatedClass(entity.layer), rendered));
+}
+
+function drawableEntities(entities) {
+  return entities.filter((entity) => isShapeEntity(entity) || entity.type === "LINE" || entity.type === "TEXT");
 }
 
 function selectedSourcePreviewEntities() {
@@ -1911,7 +2162,11 @@ function generatedClass(layer) {
   return "label-text";
 }
 
-function drawEntity(entity, className) {
+function drawEntity(entity, className, rendered = null) {
+  const key = rendered ? previewEntityKey(entity, className) : "";
+  if (key && rendered.has(key)) return;
+  if (key) rendered.add(key);
+
   if (isShapeEntity(entity)) {
     const d = entity.points.map((point, index) => `${index === 0 ? "M" : "L"} ${point.x} ${-point.y}`).join(" ");
     const path = svgEl("path", { d: d + (entity.closed ? " Z" : ""), class: className });
@@ -1932,6 +2187,32 @@ function drawEntity(entity, className) {
     text.textContent = entity.text;
     els.preview.appendChild(text);
   }
+}
+
+function drawPreviewMessage(message) {
+  const box = state.viewBox || { x: 0, y: 0, width: 100, height: 60 };
+  const text = svgEl("text", {
+    x: box.x + box.width / 2,
+    y: box.y + box.height / 2,
+    class: "preview-message",
+    "text-anchor": "middle",
+  });
+  text.textContent = message;
+  els.preview.appendChild(text);
+}
+
+function previewEntityKey(entity, className) {
+  if (entity.points?.length) {
+    return `${className}:${entity.closed ? 1 : 0}:${entity.points.map(previewPointKey).join("|")}`;
+  }
+  if (entity.type === "LINE" && entity.points?.length === 2) {
+    return `${className}:line:${entity.points.map(previewPointKey).join("|")}`;
+  }
+  return "";
+}
+
+function previewPointKey(point) {
+  return `${round(point.x)}:${round(point.y)}`;
 }
 
 function svgEl(tag, attrs) {
