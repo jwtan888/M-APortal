@@ -818,15 +818,17 @@ function traceRaster(raster) {
   const adjustedThreshold = Math.max(0, Math.min(255, threshold + getTraceThresholdAdjust()));
   const foregroundIsDark = borderAverage(gray, width, height) > threshold;
   const mode = getTraceMode();
-  const darkMask = () => largestForegroundComponent(gray, width, height, adjustedThreshold, foregroundIsDark);
+  const darkMask = () => foregroundMask(gray, width, height, adjustedThreshold, foregroundIsDark);
   let mask = mode === "dark" ? darkMask() : silhouetteMask(raster, width, height);
-  let pixelLoop = simplifyPoints(boundaryLoop(mask, width, height), getTraceSimplifyTolerance());
-  if (mode === "auto" && pixelLoop.length < 3) {
+  let pixelParts = traceMaskParts(mask, width, height);
+  if (mode === "auto" && !pixelParts.length) {
     mask = darkMask();
-    pixelLoop = simplifyPoints(boundaryLoop(mask, width, height), getTraceSimplifyTolerance());
+    pixelParts = traceMaskParts(mask, width, height);
   }
+  const pixelLoop = pixelParts[0] || [];
   return {
     points: pixelLoop,
+    parts: pixelParts,
     imageWidthPx: width,
     imageHeightPx: height,
     threshold: adjustedThreshold,
@@ -850,8 +852,7 @@ function silhouetteMask(raster, width, height) {
     const gray = raster.gray[index];
     raw[index] = diff > threshold || (chroma > threshold * 0.9 && diff > threshold * 0.55) || gray < bg.gray - threshold * 1.2 ? 1 : 0;
   }
-  const closed = closeMask(raw, width, height, 2);
-  return largestBinaryComponent(closed, width, height);
+  return closeMask(raw, width, height, 2);
 }
 
 function largestBinaryComponent(mask, width, height) {
@@ -968,8 +969,9 @@ function erodeMask(mask, width, height) {
 }
 
 function withActualTraceWidth(trace, mmPerRasterPixel) {
-  if (!Number.isFinite(mmPerRasterPixel) || mmPerRasterPixel <= 0 || !trace.points?.length) return trace;
-  const box = bounds([{ points: trace.points }]);
+  const pixelParts = trace.parts?.length ? trace.parts.filter((points) => points.length >= 3) : (trace.points?.length >= 3 ? [trace.points] : []);
+  if (!Number.isFinite(mmPerRasterPixel) || mmPerRasterPixel <= 0 || !pixelParts.length) return trace;
+  const box = bounds(pixelParts.map((points) => ({ points })));
   return {
     ...trace,
     actualTraceWidthMm: (box.maxX - box.minX) * mmPerRasterPixel,
@@ -1235,13 +1237,43 @@ function borderAverage(gray, width, height) {
 }
 
 function largestForegroundComponent(gray, width, height, threshold, foregroundIsDark) {
+  return largestBinaryComponent(foregroundMask(gray, width, height, threshold, foregroundIsDark), width, height);
+}
+
+function foregroundMask(gray, width, height, threshold, foregroundIsDark) {
   const mask = new Uint8Array(width * height);
   for (let i = 0; i < gray.length; i += 1) {
     const isForeground = foregroundIsDark ? gray[i] <= threshold : gray[i] > threshold;
     mask[i] = isForeground ? 1 : 0;
   }
+  return mask;
+}
+
+function traceMaskParts(mask, width, height) {
+  const components = connectedBinaryComponents(mask, width, height);
+  if (!components.length) return [];
+  const largest = components[0].length;
+  const minArea = Math.max(40, Math.round(mask.length * 0.00005), Math.round(largest * 0.015));
+  const tolerance = getTraceSimplifyTolerance();
+  return components
+    .filter((component) => component.length >= minArea)
+    .slice(0, 40)
+    .map((component) => simplifyPoints(boundaryLoop(maskFromComponent(component, mask.length), width, height), tolerance))
+    .filter((points) => points.length >= 3)
+    .sort((a, b) => Math.abs(signedArea(b)) - Math.abs(signedArea(a)));
+}
+
+function maskFromComponent(component, size) {
+  const result = new Uint8Array(size);
+  component.forEach((index) => {
+    result[index] = 1;
+  });
+  return result;
+}
+
+function connectedBinaryComponents(mask, width, height) {
   const visited = new Uint8Array(mask.length);
-  let best = [];
+  const components = [];
   const queue = [];
   for (let start = 0; start < mask.length; start += 1) {
     if (!mask[start] || visited[start]) continue;
@@ -1267,13 +1299,9 @@ function largestForegroundComponent(gray, width, height, threshold, foregroundIs
         }
       });
     }
-    if (component.length > best.length) best = component;
+    components.push(component);
   }
-  const result = new Uint8Array(mask.length);
-  best.forEach((index) => {
-    result[index] = 1;
-  });
-  return result;
+  return components.sort((a, b) => b.length - a.length);
 }
 
 function boundaryLoop(mask, width, height) {
@@ -1330,24 +1358,41 @@ function removeStartEdge(map, edge) {
 }
 
 function imageTraceEntity(trace, widthMm) {
-  const points = trace.points || [];
-  if (points.length < 3) return { type: "LWPOLYLINE", layer: "AI_IMAGE_TRACE_SOURCE", points: [], closed: true };
-  const box = bounds([{ points }]);
+  const pixelParts = trace.parts?.length ? trace.parts.filter((points) => points.length >= 3) : (trace.points?.length >= 3 ? [trace.points] : []);
+  if (!pixelParts.length) return { type: "LWPOLYLINE", layer: "AI_IMAGE_TRACE_SOURCE", points: [], closed: true };
+  const box = bounds(pixelParts.map((points) => ({ points })));
   const pixelWidth = Math.max(1, box.maxX - box.minX);
   const mmPerPixel = widthMm / pixelWidth;
-  const mmPoints = points.map((point) => ({
-    x: (point.x - (box.minX + box.maxX) / 2) * mmPerPixel,
-    y: ((box.minY + box.maxY) / 2 - point.y) * mmPerPixel,
-  }));
-  return { type: "LWPOLYLINE", layer: "AI_IMAGE_TRACE_SOURCE", points: cleanCurvePoints(mmPoints), closed: true };
+  const centerX = (box.minX + box.maxX) / 2;
+  const centerY = (box.minY + box.maxY) / 2;
+  const parts = pixelParts
+    .map((points, index) => ({
+      type: "LWPOLYLINE",
+      layer: `AI_IMAGE_TRACE_SOURCE_${index + 1}`,
+      points: cleanCurvePoints(points.map((point) => ({
+        x: (point.x - centerX) * mmPerPixel,
+        y: (centerY - point.y) * mmPerPixel,
+      }))),
+      closed: true,
+    }))
+    .filter((part) => part.points.length >= 3);
+  if (parts.length === 1) return { ...parts[0], layer: "AI_IMAGE_TRACE_SOURCE" };
+  return {
+    type: "MULTIPATCH",
+    layer: "AI_IMAGE_TRACE_SOURCE",
+    parts,
+    points: parts.flatMap((part) => part.points),
+    closed: true,
+  };
 }
 
 function imagePreviewEntity(trace, widthMm) {
   const raster = trace?.raster;
   if (!raster?.dataUrl) return null;
-  const hasTrace = trace?.points?.length >= 3;
+  const pixelParts = trace.parts?.length ? trace.parts.filter((points) => points.length >= 3) : (trace.points?.length >= 3 ? [trace.points] : []);
+  const hasTrace = pixelParts.length > 0;
   const box = hasTrace
-    ? bounds([{ points: trace.points }])
+    ? bounds(pixelParts.map((points) => ({ points })))
     : { minX: 0, minY: 0, maxX: raster.width, maxY: raster.height };
   const pixelWidth = Math.max(1, hasTrace ? box.maxX - box.minX : raster.width);
   const mmPerPixel = widthMm / pixelWidth;
@@ -1786,7 +1831,7 @@ function validPoints(points) {
 }
 
 function isShapeEntity(entity) {
-  return ["LWPOLYLINE", "SPLINE", "CIRCLE", "ARC", "ELLIPSE", "HATCH"].includes(entity.type);
+  return ["LWPOLYLINE", "SPLINE", "CIRCLE", "ARC", "ELLIPSE", "HATCH", "MULTIPATCH"].includes(entity.type);
 }
 
 function generatePatchTemplate(entities, formula) {
@@ -1876,6 +1921,8 @@ function centeredPatchParts(outline, rotationDeg) {
 function selectPatchOutline(entities, formula) {
   const simpleShape = entities.find((entity) => entity.layer === "AI_SIMPLE_PATCH_SOURCE" && isShapeEntity(entity) && entity.points.length >= 3);
   if (simpleShape) return simpleShape;
+  const tracedMultiPatch = entities.find((entity) => entity.type === "MULTIPATCH" && entity.parts?.length);
+  if (tracedMultiPatch) return tracedMultiPatch;
   const candidates = entities
     .filter((entity) => isShapeEntity(entity) && entity.points.length >= 3)
     .map((entity) => ({ entity, box: bounds([entity]), area: polygonArea(entity.points) }))
@@ -3044,6 +3091,10 @@ function generatedClass(layer) {
 }
 
 function drawEntity(entity, className, rendered = null) {
+  if (entity.type === "MULTIPATCH" && entity.parts?.length) {
+    entity.parts.forEach((part) => drawEntity(part, className, rendered));
+    return;
+  }
   const key = rendered ? previewEntityKey(entity, className) : "";
   if (key && rendered.has(key)) return;
   if (key) rendered.add(key);
