@@ -615,7 +615,7 @@ els.preview.addEventListener("keydown", handlePreviewKeyPan);
 
 els.scanTraceWidth.addEventListener("input", () => {
   if (!state.imageTrace) return;
-  refreshImageTracePreview({ keepView: true });
+  applyScanTraceWidthChange();
 });
 
 els.scanTraceMode.addEventListener("change", () => refreshImageTracePreview({ keepView: true }));
@@ -828,6 +828,18 @@ function resetScanCrop() {
   els.applyButton.disabled = state.entities.length === 0;
   els.exportButton.disabled = true;
   resetView();
+  updatePredictButton();
+  render();
+}
+
+function applyScanTraceWidthChange() {
+  if (!state.imageTrace) return;
+  state.entities = traceHasParts(state.imageTrace) ? [imageTraceEntity(state.imageTrace, getScanTraceWidth())] : [];
+  if (state.generated.length) {
+    state.generated = generatePatchTemplate(state.entities, getFormula());
+  }
+  els.applyButton.disabled = state.entities.length === 0;
+  els.exportButton.disabled = state.generated.length === 0;
   updatePredictButton();
   render();
 }
