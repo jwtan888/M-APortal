@@ -524,15 +524,23 @@ function closeExportModal() {
 
 function syncArtboardHeightToParameter() {
   if (!els.controls || !els.previewPanel || !window.ResizeObserver) return;
+  const layout = document.querySelector(".layout");
   const resize = () => {
     if (window.matchMedia("(max-width: 1180px)").matches) {
       els.previewPanel.style.removeProperty("--parameter-card-height");
+      layout?.style.removeProperty("--desktop-panel-height");
       return;
     }
-    els.previewPanel.style.setProperty("--parameter-card-height", `${els.controls.offsetHeight}px`);
+    const layoutTop = layout?.getBoundingClientRect().top || 0;
+    const viewportHeight = window.visualViewport?.height || window.innerHeight;
+    const availableHeight = Math.max(420, viewportHeight - layoutTop - 16);
+    const panelHeight = Math.min(els.controls.scrollHeight, availableHeight);
+    els.previewPanel.style.setProperty("--parameter-card-height", `${panelHeight}px`);
+    layout?.style.setProperty("--desktop-panel-height", `${availableHeight}px`);
   };
   new ResizeObserver(resize).observe(els.controls);
   window.addEventListener("resize", resize);
+  window.visualViewport?.addEventListener("resize", resize);
   resize();
 }
 
