@@ -608,9 +608,9 @@ els.scanTraceWidth.addEventListener("input", () => {
   refreshImageTracePreview({ keepView: true });
 });
 
-els.scanTraceMode.addEventListener("change", () => refreshImageTracePreview());
-els.scanThresholdAdjust.addEventListener("input", () => refreshImageTracePreview());
-els.scanTraceDetail.addEventListener("input", () => refreshImageTracePreview());
+els.scanTraceMode.addEventListener("change", () => refreshImageTracePreview({ keepView: true }));
+els.scanThresholdAdjust.addEventListener("input", () => refreshImageTracePreview({ keepView: true }));
+els.scanTraceDetail.addEventListener("input", () => refreshImageTracePreview({ keepView: true }));
 els.scanImageOpacity.addEventListener("input", () => {
   state.imagePreviewOpacity = getScanImageOpacity();
   render();
