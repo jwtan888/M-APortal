@@ -398,7 +398,7 @@ input[type="range"] {
 
 .scan-adjust-panel {
   display: grid;
-  grid-template-columns: minmax(12rem, 16rem) minmax(9rem, 12rem) repeat(3, minmax(7rem, 1fr));
+  grid-template-columns: minmax(11rem, 15rem) minmax(8.5rem, 11rem) repeat(3, minmax(6.5rem, 1fr)) auto;
   align-items: end;
   gap: 0.7rem;
   margin: -0.25rem 0 0.85rem;
@@ -418,6 +418,18 @@ input[type="range"] {
 .scan-adjust-panel input[type="range"] {
   min-height: 2.35rem;
   padding: 0;
+}
+
+.scan-crop-actions {
+  display: flex;
+  align-items: end;
+  gap: 0.45rem;
+}
+
+.scan-crop-actions button {
+  min-height: 2.35rem;
+  padding: 0.48rem 0.75rem;
+  font-size: 0.78rem;
 }
 
 .artboard-simple-shape select {

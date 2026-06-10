@@ -83,6 +83,8 @@ const els = {
   scanThresholdAdjust: document.querySelector("#scanThresholdAdjust"),
   scanTraceDetail: document.querySelector("#scanTraceDetail"),
   scanImageOpacity: document.querySelector("#scanImageOpacity"),
+  scanCropButton: document.querySelector("#scanCropButton"),
+  scanResetCropButton: document.querySelector("#scanResetCropButton"),
   templateNumber: document.querySelector("#templateNumber"),
   patchRelX: document.querySelector("#patchRelX"),
   patchRelY: document.querySelector("#patchRelY"),
@@ -623,6 +625,8 @@ els.scanImageOpacity.addEventListener("input", () => {
   state.imagePreviewOpacity = getScanImageOpacity();
   render();
 });
+els.scanCropButton?.addEventListener("click", cropScanToCurrentView);
+els.scanResetCropButton?.addEventListener("click", resetScanCrop);
 
 function isSupportedImportFile(file) {
   return /\.dxf$/i.test(file.name) || /\.pdf$/i.test(file.name) || /^image\//i.test(file.type) || /\.bmp$/i.test(file.name);
@@ -662,9 +666,10 @@ function loadImageTrace(trace, fileName) {
   state.importError = "";
   state.imagePreviewOpacity = getScanImageOpacity();
   state.rawEntityTypes = { IMAGE_TRACE: 1 };
+  if (!state.imageTrace.originalRaster) state.imageTrace.originalRaster = state.imageTrace.raster;
   applyDetectedTraceWidth(trace);
   applyRasterFallbackWidth(trace);
-  state.entities = trace.points.length ? [imageTraceEntity(trace, getScanTraceWidth())] : [];
+  state.entities = traceHasParts(trace) ? [imageTraceEntity(trace, getScanTraceWidth())] : [];
   state.generated = [];
   resetView();
   els.applyButton.disabled = state.entities.length === 0;
@@ -729,6 +734,10 @@ function getScanImageOpacity() {
   return Math.max(0, Math.min(1, (Number(els.scanImageOpacity.value) || 0) / 100));
 }
 
+function traceHasParts(trace) {
+  return Boolean(trace?.parts?.some((points) => points.length >= 3) || trace?.points?.length >= 3);
+}
+
 function scanTraceFeatureInput() {
   if (state.sourceType !== "image-trace" || !state.imageTrace) return null;
   const trace = state.imageTrace;
@@ -748,12 +757,119 @@ function scanTraceFeatureInput() {
   };
 }
 
+function cropScanToCurrentView() {
+  const trace = state.imageTrace;
+  if (!trace?.raster || !state.viewBox) return;
+  const image = imagePreviewEntity(trace, getScanTraceWidth());
+  if (!image?.width || !image?.height) return;
+  const raster = trace.raster;
+  const mmPerPixelX = image.width / raster.width;
+  const mmPerPixelY = image.height / raster.height;
+  const viewRight = state.viewBox.x + state.viewBox.width;
+  const viewBottom = state.viewBox.y + state.viewBox.height;
+  const imageRight = image.x + image.width;
+  const imageBottom = image.y + image.height;
+  const left = Math.max(state.viewBox.x, image.x);
+  const top = Math.max(state.viewBox.y, image.y);
+  const right = Math.min(viewRight, imageRight);
+  const bottom = Math.min(viewBottom, imageBottom);
+  if (right <= left || bottom <= top) return;
+  const rawCrop = {
+    x: Math.floor((left - image.x) / mmPerPixelX),
+    y: Math.floor((top - image.y) / mmPerPixelY),
+    width: Math.ceil((right - left) / mmPerPixelX),
+    height: Math.ceil((bottom - top) / mmPerPixelY),
+  };
+  const pad = Math.max(18, Math.round(Math.max(rawCrop.width, rawCrop.height) * 0.08));
+  const crop = clampRasterCrop({
+    x: rawCrop.x - pad,
+    y: rawCrop.y - pad,
+    width: rawCrop.width + pad * 2,
+    height: rawCrop.height + pad * 2,
+  }, raster);
+  if (crop.width < 8 || crop.height < 8) return;
+  const croppedRaster = cropRaster(raster, crop);
+  const traced = traceRaster(croppedRaster);
+  state.imageTrace = {
+    ...trace,
+    ...withActualTraceWidth(traced, trace.mmPerRasterPixel),
+    raster: croppedRaster,
+    crop: {
+      x: (trace.crop?.x || 0) + crop.x,
+      y: (trace.crop?.y || 0) + crop.y,
+      width: crop.width,
+      height: crop.height,
+    },
+  };
+  applyDetectedTraceWidth(state.imageTrace);
+  state.entities = traceHasParts(state.imageTrace) ? [imageTraceEntity(state.imageTrace, getScanTraceWidth())] : [];
+  state.generated = [];
+  els.applyButton.disabled = state.entities.length === 0;
+  els.exportButton.disabled = true;
+  resetView();
+  updatePredictButton();
+  render();
+  zoomPreview(0.82);
+}
+
+function resetScanCrop() {
+  const trace = state.imageTrace;
+  if (!trace?.originalRaster || trace.raster === trace.originalRaster) return;
+  const traced = traceRaster(trace.originalRaster);
+  state.imageTrace = {
+    ...trace,
+    ...withActualTraceWidth(traced, trace.mmPerRasterPixel),
+    raster: trace.originalRaster,
+    crop: null,
+  };
+  applyDetectedTraceWidth(state.imageTrace);
+  state.entities = traceHasParts(state.imageTrace) ? [imageTraceEntity(state.imageTrace, getScanTraceWidth())] : [];
+  state.generated = [];
+  els.applyButton.disabled = state.entities.length === 0;
+  els.exportButton.disabled = true;
+  resetView();
+  updatePredictButton();
+  render();
+}
+
+function clampRasterCrop(crop, raster) {
+  const x = Math.max(0, Math.min(raster.width - 1, crop.x));
+  const y = Math.max(0, Math.min(raster.height - 1, crop.y));
+  const maxWidth = raster.width - x;
+  const maxHeight = raster.height - y;
+  return {
+    x,
+    y,
+    width: Math.max(1, Math.min(maxWidth, crop.width)),
+    height: Math.max(1, Math.min(maxHeight, crop.height)),
+  };
+}
+
+function cropRaster(raster, crop) {
+  const canvas = document.createElement("canvas");
+  canvas.width = crop.width;
+  canvas.height = crop.height;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  const imageData = ctx.createImageData(crop.width, crop.height);
+  for (let y = 0; y < crop.height; y += 1) {
+    const sourceStart = ((crop.y + y) * raster.width + crop.x) * 4;
+    const sourceEnd = sourceStart + crop.width * 4;
+    imageData.data.set(raster.rgba.slice(sourceStart, sourceEnd), y * crop.width * 4);
+  }
+  ctx.putImageData(imageData, 0, 0);
+  const cropped = rasterFromCanvas(canvas);
+  cropped.scale = raster.scale || 1;
+  cropped.originalWidth = raster.originalWidth || raster.width;
+  cropped.originalHeight = raster.originalHeight || raster.height;
+  return cropped;
+}
+
 function refreshImageTracePreview(options = {}) {
   if (!state.imageTrace?.raster) return;
   const traced = traceRaster(state.imageTrace.raster);
   state.imageTrace = { ...state.imageTrace, ...traced };
   state.rawEntityTypes = { IMAGE_TRACE: 1 };
-  state.entities = state.imageTrace.points.length ? [imageTraceEntity(state.imageTrace, getScanTraceWidth())] : [];
+  state.entities = traceHasParts(state.imageTrace) ? [imageTraceEntity(state.imageTrace, getScanTraceWidth())] : [];
   state.generated = [];
   els.applyButton.disabled = state.entities.length === 0;
   els.exportButton.disabled = true;
@@ -776,6 +892,8 @@ async function traceImageFile(file) {
   return {
     ...withActualTraceWidth(traced, physical?.mmPerRasterPixel),
     raster,
+    originalRaster: raster,
+    mmPerRasterPixel: physical?.mmPerRasterPixel || 0,
     sourceType: "image",
     physicalSource: physical?.source || "",
   };
@@ -999,6 +1117,8 @@ async function tracePdfFile(file) {
   return {
     ...withActualTraceWidth(traced, mmPerRasterPixel),
     raster,
+    originalRaster: raster,
+    mmPerRasterPixel,
     sourceType: "pdf",
     pageNumber: 1,
     physicalSource: "pdf-page-units",
@@ -1097,6 +1217,8 @@ async function traceBmpFile(file) {
   return {
     ...withActualTraceWidth(traced, physical?.mmPerRasterPixel),
     raster,
+    originalRaster: raster,
+    mmPerRasterPixel: physical?.mmPerRasterPixel || 0,
     sourceType: "bmp",
     physicalSource: physical?.source || "",
   };
@@ -2944,6 +3066,8 @@ function render() {
   if (els.saveTrainingButton) els.saveTrainingButton.disabled = !state.entities.length;
   if (els.exportTrainingButton) els.exportTrainingButton.disabled = state.trainingExamples.length === 0;
   if (els.scanAdjustPanel) els.scanAdjustPanel.classList.toggle("hidden", state.sourceType !== "image-trace");
+  if (els.scanCropButton) els.scanCropButton.disabled = state.sourceType !== "image-trace" || !state.imageTrace?.raster;
+  if (els.scanResetCropButton) els.scanResetCropButton.disabled = !state.imageTrace?.crop;
   if (state.importStatus) {
     els.fileSummary.textContent = state.importStatus;
   } else if (state.importError) {
