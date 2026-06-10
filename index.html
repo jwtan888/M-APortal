@@ -705,11 +705,11 @@
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Cons. Start Date</label>
-                        <input type="text" id="l_consStart" placeholder="m/d/yyyy hh:mm" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="text" id="l_consStart" placeholder="m/d/yyyy hh:mm or -" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Cons. End Date</label>
-                        <input type="text" id="l_consEnd" placeholder="m/d/yyyy hh:mm" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="text" id="l_consEnd" placeholder="m/d/yyyy hh:mm or -" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Remark</label>
@@ -1330,8 +1330,8 @@
                     <p id="machineModelLabel" class="text-[11px] text-slate-500 font-mono mt-1 mb-1 col-span-full"></p>
                     <input type="text" id="fName" placeholder="File Name / Style" class="p-2 border rounded text-sm">
                     <input type="text" id="fSize" placeholder="Size (e.g. XL, 10)" class="p-2 border rounded text-sm">
-                    <input type="text" id="sTime" placeholder="Start Date m/d/yyyy hh:mm" class="p-2 border rounded text-sm">
-                    <input type="text" id="eTime" placeholder="Complete Date m/d/yyyy hh:mm" class="p-2 border rounded text-sm">
+                    <input type="text" id="sTime" placeholder="Start Date m/d/yyyy hh:mm or -" class="p-2 border rounded text-sm">
+                    <input type="text" id="eTime" placeholder="Complete Date m/d/yyyy hh:mm or -" class="p-2 border rounded text-sm">
                     <button onclick="addEntry()" id="submitBtn" class="bg-blue-600 text-white font-bold py-2 rounded hover:bg-blue-700 shadow-md active:scale-95 transition-all col-span-full md:col-span-1">+ ADD ROW</button>
                 </div>
                 <!-- FIX 3: Removed opacity:0 from CSS. Image is visible by default. onerror/onload handlers updated to be safe. -->
@@ -1634,11 +1634,11 @@
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Start Time</label>
-                        <input type="text" id="d_startTime" placeholder="m/d/yyyy" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="text" id="d_startTime" placeholder="m/d/yyyy or -" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Complete Time</label>
-                        <input type="text" id="d_completeTime" placeholder="m/d/yyyy" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="text" id="d_completeTime" placeholder="m/d/yyyy or -" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Remark</label>
@@ -2431,6 +2431,7 @@
             const existing = String(existingValue ?? '').trim();
             if (typed === '-' && options.allowNoAction) return '-';
             if (!typed) {
+                if (existing === '-' && options.allowNoAction) return '-';
                 if (!existing || existing === '---') return '';
                 const preserved = toExcelDateFormat(existing);
                 return isNormalizedPortalDate(preserved) ? (options.dateOnly ? preserved.split(' ')[0] : preserved) : '';
@@ -2464,6 +2465,8 @@
 
         function preparePortalDateFieldPayload(inputValue, rawExistingValue = '', options = {}) {
             const typed = String(inputValue ?? '').trim();
+            if (typed === '-' && options.allowNoAction) return '-';
+            if (!typed && String(rawExistingValue ?? '').trim() === '-' && options.allowNoAction) return '-';
             const existingPayload = formatPortalDatePayloadFromRaw(rawExistingValue, options);
             if (!typed) return existingPayload;
             const existingDisplay = convertExcelDate(rawExistingValue, !options.dateOnly);
@@ -3793,19 +3796,19 @@
                         <td class="p-2"><input id="le-laserParts-${rid}" class="manual-input qty-input" value="${laserParts==='---'?'':laserParts}" type="number"></td>
                         <td class="p-2"><input id="le-ironParts-${rid}" class="manual-input qty-input" value="${ironParts==='---'?'':ironParts}" type="number"></td>
                         <td class="p-2"><input id="le-trimParts-${rid}" class="manual-input qty-input" value="${trimParts==='---'?'':trimParts}" type="number"></td>
-                        <td class="p-2 date-cell"><input id="le-startDate-${rid}" class="manual-input admin-input" value="${startDate==='---'?'':startDate}" placeholder="m/d/yyyy hh:mm"></td>
+                        <td class="p-2 date-cell"><input id="le-startDate-${rid}" class="manual-input admin-input" value="${startDate==='---'?'':startDate}" placeholder="m/d/yyyy hh:mm or -"></td>
                         <td class="p-2 date-cell">
                             <div class="flex flex-col gap-1">
-                                <input id="le-completeDate-${rid}" class="manual-input admin-input" value="${completeDate==='---'?'':completeDate}" placeholder="m/d/yyyy hh:mm">
+                                <input id="le-completeDate-${rid}" class="manual-input admin-input" value="${completeDate==='---'?'':completeDate}" placeholder="m/d/yyyy hh:mm or -">
                                 ${laserPendingStatus}
                             </div>
                         </td>
                         <td class="p-2">${maPicDropdown}</td>
-                        <td class="p-2 date-cell"><input id="le-consStart-${rid}" class="${consClass}" value="${consStart==='---'?'':consStart}" placeholder="m/d/yyyy hh:mm"${consDisabled}></td>
-                        <td class="p-2 date-cell"><input id="le-consEnd-${rid}" class="${consClass}" value="${consEnd==='---'?'':consEnd}" placeholder="m/d/yyyy hh:mm"${consDisabled}></td>
+                        <td class="p-2 date-cell"><input id="le-consStart-${rid}" class="${consClass}" value="${consStart==='---'?'':consStart}" placeholder="m/d/yyyy hh:mm or -"${consDisabled}></td>
+                        <td class="p-2 date-cell"><input id="le-consEnd-${rid}" class="${consClass}" value="${consEnd==='---'?'':consEnd}" placeholder="m/d/yyyy hh:mm or -"${consDisabled}></td>
                         <td class="p-2"><input id="le-consPic-${rid}" class="${consClass}" value="${consPic==='---'?'':consPic}" placeholder="PIC"${consDisabled}></td>
                         <td class="p-2"><input id="le-remark-${rid}" class="manual-input" value="${remark==='---'?'':remark}" placeholder="Remark"></td>
-                        <td class="p-2 date-cell"><input id="le-requiredDate-${rid}" class="manual-input admin-input" value="${requiredDate==='---'?'':requiredDate}" placeholder="m/d/yyyy"></td>
+                        <td class="p-2 date-cell"><input id="le-requiredDate-${rid}" class="manual-input admin-input" value="${requiredDate==='---'?'':requiredDate}" placeholder="m/d/yyyy or -"></td>
                         <td class="p-2">
                             <div class="flex flex-col gap-1">
                                 <select id="le-consStatus-${rid}" class="manual-input admin-input" style="width:80px">
@@ -3833,17 +3836,17 @@
                         <td class="p-3">${canEditLaserCompletion ? `<input id="le-ironParts-${rid}" class="manual-input qty-input admin-input" value="${ironParts==='---'?'':ironParts}" type="number">` : ironParts}</td>
                         <td class="p-3">${canEditLaserCompletion ? `<input id="le-trimParts-${rid}" class="manual-input qty-input admin-input" value="${trimParts==='---'?'':trimParts}" type="number">` : trimParts}</td>
                         <td class="p-3 date-cell ${startDate !== '---' ? 'text-blue-600 font-bold' : 'text-slate-400'}">${canEditLaserCompletion
-                            ? `<input id="le-startDate-${rid}" class="manual-input admin-input" value="${startDate==='---'?'':startDate}" placeholder="m/d/yyyy hh:mm">`
+                            ? `<input id="le-startDate-${rid}" class="manual-input admin-input" value="${startDate==='---'?'':startDate}" placeholder="m/d/yyyy hh:mm or -">`
                             : startDate}</td>
                         <td class="p-3 date-cell ${isComplete?'text-emerald-600 font-bold':'text-slate-400'}">${canEditLaserCompletion
-                            ? `<div class="flex flex-col gap-1"><input id="le-completeDate-${rid}" class="manual-input admin-input" value="${completeDate==='---'?'':completeDate}" placeholder="m/d/yyyy hh:mm">${laserPendingStatus}</div>`
+                            ? `<div class="flex flex-col gap-1"><input id="le-completeDate-${rid}" class="manual-input admin-input" value="${completeDate==='---'?'':completeDate}" placeholder="m/d/yyyy hh:mm or -">${laserPendingStatus}</div>`
                             : (laserPendingStatus || completeDate)}</td>
                         <td class="p-3 font-medium">${maPic}</td>
                         <td class="p-3">${canEditCons
-                            ? `<input id="le-consStart-${rid}" class="manual-input admin-input" value="${consStart==='---'?'':consStart}" placeholder="m/d/yyyy hh:mm">`
+                            ? `<input id="le-consStart-${rid}" class="manual-input admin-input" value="${consStart==='---'?'':consStart}" placeholder="m/d/yyyy hh:mm or -">`
                             : `<span>${consStart}</span>`}</td>
                         <td class="p-3">${canEditCons
-                            ? `<input id="le-consEnd-${rid}" class="manual-input admin-input" value="${consEnd==='---'?'':consEnd}" placeholder="m/d/yyyy hh:mm">`
+                            ? `<input id="le-consEnd-${rid}" class="manual-input admin-input" value="${consEnd==='---'?'':consEnd}" placeholder="m/d/yyyy hh:mm or -">`
                             : `<span>${consEnd}</span>`}</td>
                         <td class="p-3">
                             ${canEditCons
@@ -4259,10 +4262,11 @@
             const sizeVal    = document.getElementById('fSize').value.trim();
             const startVal   = document.getElementById('sTime').value.trim();
             const endVal     = document.getElementById('eTime').value.trim();
-            const startNorm  = toExcelDateFormat(startVal);
-            const endNorm    = toExcelDateFormat(endVal);
+            const startNorm  = preparePortalDatePayload(startVal, '', { allowNoAction: true });
+            const endNorm    = preparePortalDatePayload(endVal, '', { allowNoAction: true });
             const isNewReq   = document.getElementById('requestToggle').checked;
             if(!fileVal) return alert("Missing Info: Please enter a File Name.");
+            if ([startNorm, endNorm].some(v => v === null)) return alert('Invalid date format. Use m/d/yyyy, m/d/yyyy hh:mm, or - for no action.');
             const b = document.getElementById('submitBtn'); b.innerText = "Saving..."; b.disabled = true;
             try {
                 const res = await fetch(postURL, {
@@ -5651,7 +5655,8 @@
             ]);
             const isPatchPendingMaterial = r => {
                 const received = String(getPatchMaterialReceived(r) || '').trim();
-                return !received || received === '---' || received === '-' || /pending/i.test(received);
+                if (isPortalNoActionValue(received)) return false;
+                return !received || received === '---' || /pending/i.test(received);
             };
             const picPend = {};
             activePatch.forEach(r => {
@@ -6074,7 +6079,8 @@
             const total   = filtered.length;
             const pending = filtered.filter(r => {
                 const ct = getVal(r, ['Complete Time','CompleteTime']);
-                return !ct || ct === '---' || String(ct).trim() === '';
+                const clean = String(ct || '').trim();
+                return !clean || clean === '---';
             }).length;
             const repair  = filtered.filter(r =>
                 String(getVal(r, ['Support Type','SupportType','Type'])).toLowerCase().includes('repair')
@@ -6157,7 +6163,8 @@
             const picPending = {};
             filtered.forEach(r => {
                 const ct = getVal(r, ['Complete Time','CompleteTime']);
-                if (ct && ct !== '---' && String(ct).trim() !== '') return;
+                const cleanComplete = String(ct || '').trim();
+                if (cleanComplete && cleanComplete !== '---') return;
                 const pic = getMAPic(r) || '---';
                 if (!picPending[pic]) picPending[pic] = [];
                 const machineNo = getVal(r, ['Machine No','MachineNo','Machine']);
@@ -7698,9 +7705,11 @@
                 const month       = getVal(i, ['Month']);
                 const startTime   = convertExcelDate(getVal(i, ['Start Time','StartTime']));
                 const completeTime= convertExcelDate(getVal(i, ['Complete Time','CompleteTime']));
+                const isStartNoAction = isPortalNoActionValue(startTime);
+                const isCompleteNoAction = isPortalNoActionValue(completeTime);
                 // Compute elapsed live from start/complete times; fall back to Excel stored value
-                const startDateObj    = startTime && startTime !== '---' ? rawToLocalDate(getVal(i, ['Start Time','StartTime'])) : null;
-                const endDateObj      = completeTime && completeTime !== '---' ? rawToLocalDate(getVal(i, ['Complete Time','CompleteTime'])) : null;
+                const startDateObj    = startTime && startTime !== '---' && !isStartNoAction ? rawToLocalDate(getVal(i, ['Start Time','StartTime'])) : null;
+                const endDateObj      = completeTime && completeTime !== '---' && !isCompleteNoAction ? rawToLocalDate(getVal(i, ['Complete Time','CompleteTime'])) : null;
                 const elapsedRaw      = getVal(i, ['Job Elapsed Calendar Hrs','ElapsedHrs','Elapsed','Job Elapsed']);
                 const elapsed         = (startDateObj && endDateObj && endDateObj > startDateObj)
                                         ? ((endDateObj - startDateObj) / 3600000).toFixed(2)
@@ -7708,7 +7717,7 @@
                 const pic         = getMAPic(i);
                 const remark      = getVal(i, ['Remark','Remarks']);
 
-                const isDone      = completeTime && completeTime !== '---';
+                const isDone      = completeTime && completeTime !== '---' && !isCompleteNoAction;
                 const isGavin     = isPortalAdmin();
                 // PIC-restricted: Gavin edits all; others only edit rows where PIC matches them or PIC is blank
                 const rowPic      = pic && pic !== '---' ? pic : null;
@@ -7729,10 +7738,10 @@
                     <td class="p-3 text-slate-500 italic text-[10px] max-w-[200px]">${desc}</td>
                     <td class="p-3 text-[10px]">${month}</td>
                     <td class="p-3 text-[10px]">${canEdit
-                        ? `<input id="sup-start-${sid}" class="manual-input admin-input" value="${startTime==='---'?'':startTime}" placeholder="m/d/yyyy hh:mm" oninput="updateElapsedDisplay('${sid}')">`
+                        ? `<input id="sup-start-${sid}" class="manual-input admin-input" value="${startTime==='---'?'':startTime}" placeholder="m/d/yyyy hh:mm or -" oninput="updateElapsedDisplay('${sid}')">`
                         : startTime}</td>
                     <td class="p-3 text-[10px]">${canEdit
-                        ? `<input id="sup-end-${sid}" class="manual-input admin-input" value="${completeTime==='---'?'':completeTime}" placeholder="m/d/yyyy hh:mm" oninput="updateElapsedDisplay('${sid}')">`
+                        ? `<input id="sup-end-${sid}" class="manual-input admin-input" value="${completeTime==='---'?'':completeTime}" placeholder="m/d/yyyy hh:mm or -" oninput="updateElapsedDisplay('${sid}')">`
                         : `<span class="${isDone?'text-emerald-600 font-bold':'text-slate-400'}">${completeTime}</span>`}</td>
                     <td class="p-3 font-bold" id="sup-elapsed-display-${sid}" style="color:${parseFloat(elapsed)>8?'#ef4444':'#334155'}">${elapsed !== '---' ? elapsed + ' hrs' : '---'}</td>
                     <td class="p-3 font-bold ${(!pic || pic === '---') ? 'text-blue-600' : ''}">${(!pic || pic === '---') && canEdit && currentUser ? `<span class="text-blue-600">${currentUser} <span class="text-[9px] text-slate-400">(will be saved)</span></span>` : ((!pic || pic === '---') ? '---' : pic)}</td>
@@ -7755,6 +7764,11 @@
             const eVal = document.getElementById(`sup-end-${sid}`)?.value.trim();
             const el   = document.getElementById(`sup-elapsed-display-${sid}`);
             if (!el) return;
+            if (isPortalNoActionValue(sVal) || isPortalNoActionValue(eVal)) {
+                el.innerText = '---';
+                el.style.color = '#334155';
+                return;
+            }
             const s = rawToLocalDate(sVal); const e = rawToLocalDate(eVal);
             if (s && e && e > s) {
                 const hrs = ((e - s) / 3600000).toFixed(2);
@@ -7782,10 +7796,10 @@
             });
             const existingPic = existingRow ? getMAPic(existingRow) : '---';
             const picToSave   = (!existingPic || existingPic === '---') ? currentUser : existingPic;
-            const startNorm = preparePortalDatePayload(startVal, convertExcelDate(getVal(existingRow, ['Start Time','StartTime'])));
-            const endNorm = preparePortalDatePayload(endVal, convertExcelDate(getVal(existingRow, ['Complete Time','CompleteTime'])));
+            const startNorm = preparePortalDatePayload(startVal, convertExcelDate(getVal(existingRow, ['Start Time','StartTime'])), { allowNoAction: true });
+            const endNorm = preparePortalDatePayload(endVal, convertExcelDate(getVal(existingRow, ['Complete Time','CompleteTime'])), { allowNoAction: true });
             if ([startNorm, endNorm].some(v => v === null)) {
-                alert('Invalid date format. Use m/d/yyyy or m/d/yyyy hh:mm.');
+                alert('Invalid date format. Use m/d/yyyy, m/d/yyyy hh:mm, or - for no action.');
                 btn.innerText = 'SAVE'; btn.disabled = false; return;
             }
             const complexityVal = document.getElementById(`sup-complexity-${sid}`)?.value || '';
@@ -7970,8 +7984,16 @@
 
             // Stats
             const total   = rows.length;
-            const pending = rows.filter(r => { const cd = getVal(r,['Complete Date','CompleteDate']); return !cd || cd==='---' || String(cd).trim()===''; }).length;
-            const done    = total - pending;
+            const pending = rows.filter(r => {
+                const cd = getVal(r,['Complete Date m/d/yyyy','Complete Date','CompleteDate']);
+                const clean = String(cd || '').trim();
+                return !clean || clean === '---';
+            }).length;
+            const done = rows.filter(r => {
+                const cd = getVal(r,['Complete Date m/d/yyyy','Complete Date','CompleteDate']);
+                const clean = String(cd || '').trim();
+                return !!clean && clean !== '---' && !isPortalNoActionValue(clean);
+            }).length;
             const el = id => document.getElementById(id);
             if (el('patch-total'))   el('patch-total').innerText   = total;
             if (el('patch-pending')) el('patch-pending').innerText = pending;
@@ -8010,7 +8032,7 @@
                 const complete  = convertExcelDate(getVal(i,['Complete Date m/d/yyyy','Complete Date','CompleteDate']));
                 const pic       = getMAPic(i);
                 const remark    = getVal(i,['Remark','Remarks']);
-                const isDone    = complete && complete !== '---';
+                const isDone    = complete && complete !== '---' && !isPortalNoActionValue(complete);
                 const isGavinP  = isPortalAdmin();
                 const canAssignPatchPic = isPortalAdmin() || currentUser === 'Viki';
                 const rowPic    = pic && pic !== '---' ? pic : null;
@@ -8020,13 +8042,18 @@
                 const patchDescValue = patchDesc !== '---' ? escapePatchAttr(patchDesc) : '';
                 const fabDescValue = fabDesc !== '---' ? escapePatchAttr(fabDesc) : '';
                 const savePatchButton = canSavePatchRow ? `<button onclick="savePatchRow('${sid}',event)" class="bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-blue-700">SAVE</button>` : '';
-                const patchAiButton = !isDone ? `<a href="${escapePatchAttr(getPatchAiUrl(tmplNo))}" target="_self" class="inline-flex items-center justify-center bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-blue-700">PATCH</a>` : '';
+                const isPatchNoAction = isPortalNoActionValue(startDate) || isPortalNoActionValue(complete);
+                const patchAiButton = !isDone && !isPatchNoAction ? `<a href="${escapePatchAttr(getPatchAiUrl(tmplNo))}" target="_self" class="inline-flex items-center justify-center bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-blue-700">PATCH</a>` : '';
                 const patchActionCell = savePatchButton || patchAiButton ? `<div class="flex flex-wrap items-center gap-1.5">${savePatchButton}${patchAiButton}</div>` : '';
-                const pendingMaterial = !received || received === '---' || received === '-';
+                const receivedNoAction = isPortalNoActionValue(received);
+                const pendingMaterial = !receivedNoAction && (!received || received === '---') && !isDone && !isPatchNoAction;
                 const pendingMaterialBadge = pendingMaterial ? '<span class="inline-flex items-center rounded-md px-1 text-[9px] font-bold uppercase tracking-wide text-amber-500/70" title="Pending material">Pending Material</span>' : '';
                 const receivedCell = canEdit
-                    ? `<div class="flex flex-col gap-1.5"><input id="patch-received-${sid}" class="manual-input admin-input" value="${received==='---'?'':received}" placeholder="m/d/yyyy hh:mm">${pendingMaterialBadge}</div>`
-                    : (pendingMaterial ? pendingMaterialBadge : received);
+                    ? `<input id="patch-received-${sid}" class="manual-input admin-input" value="${received==='---'?'':received}" placeholder="m/d/yyyy hh:mm or -">`
+                    : received;
+                const completeCell = canEdit
+                    ? `<div class="flex flex-col gap-1.5"><input id="patch-complete-${sid}" class="manual-input admin-input" value="${complete!=='---'?complete:''}" placeholder="m/d/yyyy hh:mm or -">${pendingMaterialBadge}</div>`
+                    : (pendingMaterial ? pendingMaterialBadge : (complete!=='---'?complete:'---'));
                 const patchPicSelect = `<select id="patch-mapic-${sid}" class="manual-input admin-input" style="width:90px">
                     <option value="">Assign PIC</option>
                     ${picList.map(p => `<option value="${p}" ${p === pic ? 'selected' : ''}>${p}</option>`).join('')}
@@ -8053,8 +8080,8 @@
                     <td class="p-3 font-bold text-blue-700">${canEdit ? `<input id="patch-tmplno-${sid}" class="manual-input admin-input" value="${tmplNo==='---'?'':tmplNo}" placeholder="e.g. S0019C">` : tmplNo}</td>
                     <td class="p-3">${canEdit ? `<input id="patch-machine-${sid}" class="manual-input admin-input" value="${machine==='---'?'':machine}" placeholder="e.g. AQM0001">` : machine}</td>
                     <td class="p-3 text-[10px]">${month}</td>
-                    <td class="p-3 date-cell">${canEdit ? `<input id="patch-startdate-${sid}" class="manual-input admin-input" value="${startDate!=='---'?startDate:''}" placeholder="m/d/yyyy hh:mm">` : (startDate!=='---'?startDate:'---')}</td>
-                    <td class="p-3 date-cell ${isDone?'text-emerald-600 font-bold':'text-slate-400'}">${canEdit ? `<input id="patch-complete-${sid}" class="manual-input admin-input" value="${isDone?complete:''}" placeholder="m/d/yyyy hh:mm">` : (isDone?complete:'---')}</td>
+                    <td class="p-3 date-cell">${canEdit ? `<input id="patch-startdate-${sid}" class="manual-input admin-input" value="${startDate!=='---'?startDate:''}" placeholder="m/d/yyyy hh:mm or -">` : (startDate!=='---'?startDate:'---')}</td>
+                    <td class="p-3 date-cell ${isDone?'text-emerald-600 font-bold':'text-slate-400'}">${completeCell}</td>
                     <td class="p-3 font-bold ${(!pic||pic==='---')?'text-blue-600':''}">${canAssignPatchPic ? patchPicSelect : picDisplay}</td>
                     <td class="p-3">${canEdit ? `<input id="patch-remark-${sid}" class="manual-input" value="${remark==='---'?'':remark}" placeholder="Remark">` : `<span class="italic text-slate-400 text-[10px]">${remark}</span>`}</td>
                     <td class="p-3">${patchActionCell}</td>
@@ -8082,12 +8109,12 @@
             // Helper: read input by id, null if not in DOM
             const g = id => { const el = document.getElementById(`${id}-${sid}`); return el ? el.value.trim() : null; };
 
-            const patchReceived = preparePortalDatePayload(g('patch-received'), convertExcelDate(getVal(existingRow,['Patch & Fabric Receive Date & Time m/d/yyyy','Patch & Fabric Receive Date'])));
-            const patchStart = preparePortalDatePayload(g('patch-startdate'), convertExcelDate(getVal(existingRow,['Start Date m/d/yyyy','Start Date','StartDate'])));
-            const patchComplete = preparePortalDatePayload(g('patch-complete'), convertExcelDate(getVal(existingRow,['Complete Date m/d/yyyy','Complete Date','CompleteDate'])));
+            const patchReceived = preparePortalDatePayload(g('patch-received'), convertExcelDate(getVal(existingRow,['Patch & Fabric Receive Date & Time m/d/yyyy','Patch & Fabric Receive Date'])), { allowNoAction: true });
+            const patchStart = preparePortalDatePayload(g('patch-startdate'), convertExcelDate(getVal(existingRow,['Start Date m/d/yyyy','Start Date','StartDate'])), { allowNoAction: true });
+            const patchComplete = preparePortalDatePayload(g('patch-complete'), convertExcelDate(getVal(existingRow,['Complete Date m/d/yyyy','Complete Date','CompleteDate'])), { allowNoAction: true });
             if ([patchReceived, patchStart, patchComplete].some(v => v === null)) {
                 btn.innerText = 'ERROR'; btn.disabled = false;
-                alert('Invalid date format. Use m/d/yyyy or m/d/yyyy hh:mm.');
+                alert('Invalid date format. Use m/d/yyyy, m/d/yyyy hh:mm, or - for no action.');
                 return;
             }
             // Build payload with exact keys matching PA trigger body (triggerBody()?['key'])
@@ -8287,7 +8314,7 @@
                         : remark;
                 return `<tr class="border-b hover:bg-slate-50 ${canEditDown ? 'down-editable-row' : ''} ${isEditingDown ? 'down-row-editing' : ''}">
                     <td class="p-3 font-mono text-[10px]">${id}</td>
-                    <td class="p-3 date-cell">${isEditingDown ? `<input id="dw-dateUpdate-${rid}" class="manual-input admin-input" value="${dateUpdate==='---'?'':dateUpdate}" placeholder="m/d/yyyy hh:mm">` : dateUpdate}</td>
+                    <td class="p-3 date-cell">${isEditingDown ? `<input id="dw-dateUpdate-${rid}" class="manual-input admin-input" value="${dateUpdate==='---'?'':dateUpdate}" placeholder="m/d/yyyy hh:mm or -">` : dateUpdate}</td>
                     <td class="p-3">${isEditingDown ? `<input id="dw-season-${rid}" class="manual-input admin-input" value="${season==='---'?'':season}">` : season}</td>
                     <td class="p-3">${isEditingDown ? `<input id="dw-bddPic-${rid}" class="manual-input admin-input" value="${bddPic==='---'?'':bddPic}">` : bddPic}</td>
                     <td class="p-3">${isEditingDown ? `<input id="dw-category-${rid}" class="manual-input admin-input" value="${category==='---'?'':category}">` : category}</td>
@@ -8308,8 +8335,8 @@
                     <td class="p-3">${isEditingDown ? `<input id="dw-humidity-${rid}" class="manual-input admin-input" value="${humidity==='---'?'':humidity}">` : humidity}</td>
                     <td class="p-3">${isEditingDown ? `<input id="dw-relaxedTime-${rid}" class="manual-input admin-input" value="${relaxedTime==='---'?'':relaxedTime}">` : relaxedTime}</td>
                     <td class="p-3">${isEditingDown && isAdminDown ? `<select id="dw-maPic-${rid}" class="manual-input admin-input">${ATT_MEMBERS.map(name => `<option value="${name}" ${(maPic === name || (!maPic || maPic === '---') && currentUser === name) ? 'selected' : ''}>${name}</option>`).join('')}</select>` : maPic}</td>
-                    <td class="p-3 date-cell">${isEditingDown ? `<input id="dw-startTime-${rid}" class="manual-input admin-input" value="${startTime==='---'?'':startTime}" placeholder="m/d/yyyy hh:mm">` : startTime}</td>
-                    <td class="p-3 date-cell">${isEditingDown ? `<input id="dw-completeTime-${rid}" class="manual-input admin-input" value="${completeTime==='---'?'':completeTime}" placeholder="m/d/yyyy hh:mm">` : completeTime}</td>
+                    <td class="p-3 date-cell">${isEditingDown ? `<input id="dw-startTime-${rid}" class="manual-input admin-input" value="${startTime==='---'?'':startTime}" placeholder="m/d/yyyy hh:mm or -">` : startTime}</td>
+                    <td class="p-3 date-cell">${isEditingDown ? `<input id="dw-completeTime-${rid}" class="manual-input admin-input" value="${completeTime==='---'?'':completeTime}" placeholder="m/d/yyyy hh:mm or -">` : completeTime}</td>
                     <td class="p-3">${downActionCell}</td>
                 </tr>`;
             }).join('');
@@ -8436,12 +8463,12 @@
             if (!canEditDown) return alert(`Only ${rowPic || 'the assigned PIC'}, Gavin or Joe can edit this down filling row.`);
             const btn = event.target; btn.innerText = 'SAVING...'; btn.disabled = true;
             const g = (field) => document.getElementById(`dw-${field}-${rid}`)?.value.trim() || '';
-            const dateUpdateNorm = preparePortalDatePayload(g('dateUpdate'), convertExcelDate(getVal(existingRow, ['Date Update','DateUpdate'])));
-            const startNorm = preparePortalDatePayload(g('startTime'), convertExcelDate(getVal(existingRow, ['Start Time','StartTime'])));
-            const completeNorm = preparePortalDatePayload(g('completeTime'), convertExcelDate(getVal(existingRow, ['Complete Time','CompleteTime'])));
+            const dateUpdateNorm = preparePortalDatePayload(g('dateUpdate'), convertExcelDate(getVal(existingRow, ['Date Update','DateUpdate'])), { allowNoAction: true });
+            const startNorm = preparePortalDatePayload(g('startTime'), convertExcelDate(getVal(existingRow, ['Start Time','StartTime'])), { allowNoAction: true });
+            const completeNorm = preparePortalDatePayload(g('completeTime'), convertExcelDate(getVal(existingRow, ['Complete Time','CompleteTime'])), { allowNoAction: true });
             if ([dateUpdateNorm, startNorm, completeNorm].some(v => v === null)) {
                 btn.innerText = 'ERROR'; btn.disabled = false;
-                alert('Invalid date format. Use m/d/yyyy or m/d/yyyy hh:mm.');
+                alert('Invalid date format. Use m/d/yyyy, m/d/yyyy hh:mm, or - for no action.');
                 return;
             }
             const downDescValue = g('downDesc');
