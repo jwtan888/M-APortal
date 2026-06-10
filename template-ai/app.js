@@ -1136,9 +1136,19 @@ async function loadPdfJs() {
   if (window.location.protocol === "file:") {
     throw new Error("PDF import requires the local server. Open http://127.0.0.1:8792/index.html instead of the HTML file directly.");
   }
-  const pdfjsUrl = new URL("assets/pdf.min.mjs", window.location.href).href;
-  const pdfjs = await import(pdfjsUrl);
-  pdfjs.GlobalWorkerOptions.workerSrc = new URL("./assets/pdf.worker.min.mjs", window.location.href).href;
+  const localPdfjsUrl = new URL("assets/pdf.min.mjs", window.location.href).href;
+  const localWorkerUrl = new URL("assets/pdf.worker.min.mjs", window.location.href).href;
+  const cdnPdfjsUrl = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.min.mjs";
+  const cdnWorkerUrl = "https://cdn.jsdelivr.net/npm/pdfjs-dist@4.10.38/build/pdf.worker.min.mjs";
+  let pdfjs;
+  try {
+    pdfjs = await import(localPdfjsUrl);
+    pdfjs.GlobalWorkerOptions.workerSrc = localWorkerUrl;
+  } catch (error) {
+    console.warn("Local PDF.js assets unavailable; loading PDF.js from CDN.", error);
+    pdfjs = await import(cdnPdfjsUrl);
+    pdfjs.GlobalWorkerOptions.workerSrc = cdnWorkerUrl;
+  }
   window.pdfjsLib = pdfjs;
   return pdfjs;
 }
