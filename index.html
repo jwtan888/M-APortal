@@ -744,11 +744,12 @@
 
             <!-- Laser Search Bar -->
             <div class="bg-white p-4 rounded-xl border shadow-sm mb-4 flex flex-wrap gap-2 items-center">
-                <input type="text" id="laserSearch" oninput="applyLaserFilter()" placeholder="Search Style, Season, Section, PIC, Category..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none min-w-[200px]">
+                <input type="text" id="laserSearch" oninput="applyLaserFilter()" placeholder="Search Style, PIC, Status, Season, Category..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none min-w-[200px]">
                 <select id="laserMonthFilter" onchange="applyLaserFilter()" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500">
                     <option value="">All Months</option>
                 </select>
                 <button onclick="clearLaserSearch()" class="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-300">CLEAR</button>
+                <div id="laserFilterStatus" class="basis-full text-[11px] font-semibold text-slate-500"></div>
             </div>
 
             <!-- Laser Table -->
@@ -798,6 +799,7 @@
                     <select id="monthFilter" onchange="updateDashboard()" class="text-xs font-bold outline-none cursor-pointer" style="border:none;background:transparent;color:var(--accent)">
                         <option value="ALL">All Months</option>
                     </select>
+                    <button type="button" onclick="clearDashboardMonthFilter()" class="bg-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-[10px] font-bold hover:bg-slate-300">CLEAR</button>
                 </div>
             </div>
 
@@ -1064,7 +1066,7 @@
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Support Requests (Month)</p>
                     <h2 id="ds-total" class="text-3xl font-bold text-slate-800">0</h2>
                 </div>
-                <div class="bg-white p-6 rounded-xl border shadow-sm">
+                <div class="bg-white p-6 rounded-xl border shadow-sm cursor-pointer hover:border-amber-400 transition-all" onclick="drillDownSupportPending()">
                     <p class="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1">Pending (No Complete Time)</p>
                     <h2 id="ds-pending" class="text-3xl font-bold text-amber-600">0</h2>
                 </div>
@@ -1123,7 +1125,7 @@
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Patches</p>
                     <h2 id="db-patch-total" class="text-3xl font-bold text-slate-800">0</h2>
                 </div>
-                <div class="bg-white p-5 rounded-xl border shadow-sm">
+                <div class="bg-white p-5 rounded-xl border shadow-sm cursor-pointer hover:border-amber-400 transition-all" onclick="drillDownPatchPending()">
                     <p class="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1">Pending</p>
                     <h2 id="db-patch-pending" class="text-3xl font-bold text-amber-600">0</h2>
                 </div>
@@ -1169,7 +1171,7 @@
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total (Month)</p>
                     <h2 id="cd-total" class="text-3xl font-bold text-slate-800">0</h2>
                 </div>
-                <div class="bg-white p-5 rounded-xl border shadow-sm">
+                <div class="bg-white p-5 rounded-xl border shadow-sm cursor-pointer hover:border-amber-400 transition-all" onclick="drillDownConsumptionPending()">
                     <p class="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1">In Progress</p>
                     <h2 id="cd-pending" class="text-3xl font-bold text-amber-600">0</h2>
                 </div>
@@ -1234,7 +1236,7 @@
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Records</p>
                     <h2 id="dd-total" class="text-3xl font-bold text-slate-800">0</h2>
                 </div>
-                <div class="bg-white p-5 rounded-xl border shadow-sm">
+                <div class="bg-white p-5 rounded-xl border shadow-sm cursor-pointer hover:border-amber-400 transition-all" onclick="drillDownDownPending()">
                     <p class="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1">In Progress</p>
                     <h2 id="dd-pending" class="text-3xl font-bold text-amber-600">0</h2>
                 </div>
@@ -1278,12 +1280,13 @@
             <div class="portal-filter-shell bg-white p-6 rounded-xl border shadow-sm mb-4">
                 <div class="portal-filter-row">
                     <div class="portal-filter-controls">
-                        <input type="text" id="tempSearch" oninput="applyTempFilters(false)" placeholder="Search Style, PIC, Section, Month..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="text" id="tempSearch" oninput="applyTempFilters(false)" placeholder="Search Style, PIC, Status, Section..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                         <select id="tempMonthFilter" onchange="applyTempFilters(false)" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 shrink-0"><option value="">All Months</option></select>
                         <button onclick="clearTempSearch()" class="bg-slate-200 text-slate-600 px-4 rounded-lg text-xs font-bold hover:bg-slate-300 shrink-0">CLEAR</button>
                     </div>
                     <div id="tempSyncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Syncing...</div>
                 </div>
+                <div id="tempFilterStatus" class="mt-3 text-[11px] font-semibold text-slate-500"></div>
             </div>
             <div class="portal-table-shell bg-white rounded-xl shadow-sm border">
                 <table class="portal-wide-table portal-data-table text-left">
@@ -1473,13 +1476,14 @@
             <div class="portal-filter-shell bg-white p-6 rounded-xl border shadow-sm mb-4">
                 <div class="portal-filter-row">
                     <div class="portal-filter-controls">
-                        <input type="text" id="consumptionSearch" oninput="applyConsumptionFilter()" placeholder="Search Style, Season, PIC, Request Type..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="text" id="consumptionSearch" oninput="applyConsumptionFilter()" placeholder="Search Style, PIC, Status, Request Type..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                         <select id="consumptionMonthFilter" onchange="applyConsumptionFilter()" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 shrink-0"><option value="">All Months</option></select>
                         <button onclick="clearConsumptionSearch()" class="bg-slate-200 text-slate-600 px-4 rounded-lg text-xs font-bold hover:bg-slate-300 shrink-0">CLEAR</button>
                         <button id="manualQuiltingSyncBtn" onclick="manualSyncQuiltingConsumption(event)" class="hidden bg-orange-500 text-white px-4 py-2.5 rounded-lg text-xs font-bold hover:bg-orange-600 shrink-0">SYNC QUILTING</button>
                     </div>
                     <div id="consumptionSyncStatus2" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"></div>
                 </div>
+                <div id="consumptionFilterStatus" class="mt-3 text-[11px] font-semibold text-slate-500"></div>
             </div>
 
             <!-- Table -->
@@ -1515,12 +1519,13 @@
             <div class="portal-filter-shell bg-white p-6 rounded-xl border shadow-sm mb-4">
                 <div class="portal-filter-row">
                     <div class="portal-filter-controls">
-                        <input type="text" id="supportSearch" oninput="applySupport()" placeholder="Search Name, Machine, Type, PIC, Month..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="text" id="supportSearch" oninput="applySupport()" placeholder="Search Name, PIC, Status, Machine, Type..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                         <select id="supportMonthFilter" onchange="applySupport()" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 shrink-0"><option value="">All Months</option></select>
                         <button onclick="clearSupportSearch()" class="bg-slate-200 text-slate-600 px-4 rounded-lg text-xs font-bold hover:bg-slate-300 shrink-0">CLEAR</button>
                     </div>
                     <span id="supportSyncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest shrink-0">Syncing...</span>
                 </div>
+                <div id="supportFilterStatus" class="mt-3 text-[11px] font-semibold text-slate-500"></div>
             </div>
             <!-- Table -->
             <div class="portal-table-shell bg-white rounded-xl shadow-sm border">
@@ -1666,11 +1671,12 @@
             <div class="portal-filter-shell bg-white p-6 rounded-xl border shadow-sm mb-4">
                 <div class="portal-filter-row">
                     <div class="portal-filter-controls">
-                        <input type="text" id="downSearch" oninput="applyDownFilter()" placeholder="Search Style, Season, Job, PIC, Category..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="text" id="downSearch" oninput="applyDownFilter()" placeholder="Search Style, PIC, Status, Job, Category..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                         <select id="downMonthFilter" onchange="applyDownFilter()" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 shrink-0"><option value="">All Months</option></select>
                         <button onclick="clearDownSearch()" class="bg-slate-200 text-slate-600 px-4 rounded-lg text-xs font-bold hover:bg-slate-300 shrink-0">CLEAR</button>
                     </div>
                 </div>
+                <div id="downFilterStatus" class="mt-3 text-[11px] font-semibold text-slate-500"></div>
             </div>
 
             <!-- Table -->
@@ -1718,12 +1724,13 @@
             <div class="portal-filter-shell bg-white p-6 rounded-xl border shadow-sm mb-4">
                 <div class="portal-filter-row">
                     <div class="portal-filter-controls">
-                        <input type="text" id="patchSearch" oninput="applyPatchFilter()" placeholder="Search Style, Season, Template No, Machine, PIC, Month..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
+                        <input type="text" id="patchSearch" oninput="applyPatchFilter()" placeholder="Search Style, PIC, Status, Template No, Machine..." class="flex-1 p-2.5 border rounded-lg bg-slate-50 text-sm focus:ring-2 focus:ring-blue-500 outline-none">
                         <select id="patchMonthFilter" onchange="applyPatchFilter()" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 shrink-0"><option value="">All Months</option></select>
                         <button onclick="clearPatchSearch()" class="bg-slate-200 text-slate-600 px-4 rounded-lg text-xs font-bold hover:bg-slate-300 shrink-0">CLEAR</button>
                     </div>
                     <span id="patchSyncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest shrink-0">Syncing...</span>
                 </div>
+                <div id="patchFilterStatus" class="mt-3 text-[11px] font-semibold text-slate-500"></div>
             </div>
 
             <!-- Table -->
@@ -3067,6 +3074,12 @@
             if (label) label.innerText = getNewStylesCardLabel();
         }
 
+        function clearDashboardMonthFilter() {
+            const mf = document.getElementById('monthFilter');
+            if (mf) mf.value = 'ALL';
+            updateDashboard();
+        }
+
         function updateDashboard() {
             const selectedMonthStr = document.getElementById('monthFilter').value;
             updateNewStylesCardLabel();
@@ -3310,6 +3323,7 @@
         const LASER_CACHE_MAX_AGE_MS = 24 * 60 * 60 * 1000;
         let allSupportRows = [];
         let supportSearchQuery = '';
+        let supportPendingOnly = false;
 
         function applyLaserFilter() {
             laserSearchQuery = document.getElementById('laserSearch')?.value.toLowerCase() || '';
@@ -3320,6 +3334,8 @@
         function clearLaserSearch() {
             const el = document.getElementById('laserSearch');
             if (el) el.value = '';
+            const mf = document.getElementById('laserMonthFilter');
+            if (mf) mf.value = '';
             laserSearchQuery = '';
             renderLaserTable();
         }
@@ -3690,6 +3706,7 @@
             const laserSearchEl = document.getElementById('laserSearch');
             if (laserSearchEl) laserSearchQuery = laserSearchEl.value.toLowerCase();
             if (!allLaserRows.length) {
+                setPortalFilterStatus('laserFilterStatus', { search: laserSearchQuery, month: getLaserMonthFilter(), shown: 0, total: 0 });
                 if (laserDataLoading) {
                     tbody.innerHTML = '<tr><td colspan="20" class="p-6 text-center text-slate-400 italic text-xs">Loading laser data...</td></tr>';
                     return;
@@ -3710,13 +3727,21 @@
                     if (dateLabel !== laserMF) return false;
                 }
                 if (!laserSearchQuery) return true;
+                const pendingStatus = getLaserPendingStatus(i);
+                const completeRaw = getLaserCompleteDateRaw(i);
+                const laserStatus = isPortalNoActionValue(completeRaw)
+                    ? 'No Action'
+                    : pendingStatus
+                        ? pendingStatus.label
+                        : hasLaserCompleteDate(i) ? 'Completed' : 'Pending';
                 const vals = [
                     getVal(i, ['Style Number','StyleNumber','Style']),
                     getVal(i, ['Season']), getVal(i, ['Section']),
                     getVal(i, ['Category']), getMAPic(i),
                     getVal(i, ['Consumption PIC','ConsumptionPIC','Cons PIC']),
                     getVal(i, ['Proto Stage','ProtoStage','Stage']),
-                    getVal(i, ['Remark','Remarks'])
+                    getVal(i, ['Remark','Remarks']),
+                    laserStatus
                 ];
                 return vals.some(v => String(v).toLowerCase().includes(laserSearchQuery));
             }).map((row, index) => ({ row, index })).sort((a, b) => {
@@ -3737,6 +3762,7 @@
                 }
                 return a.index - b.index;
             }).map(item => item.row);
+            setPortalFilterStatus('laserFilterStatus', { search: laserSearchQuery, month: laserMF, shown: laserRowsToShow.length, total: allLaserRows.length });
             if (!laserRowsToShow.length) {
                 tbody.innerHTML = `<tr><td colspan="20" class="p-6 text-center text-slate-400 italic text-xs">No results for "${laserSearchQuery}".</td></tr>`;
                 return;
@@ -4541,6 +4567,14 @@
             applyTempFilters(true);
             scrollToMatchedRow('#tempTable', query);
         }
+        function scrollToDashboardDetail(selector) {
+            const target = document.querySelector(selector);
+            if (!target) return;
+            const panel = target.closest('.bg-white') || target;
+            panel.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            panel.classList.add('ring-2', 'ring-amber-300', 'ring-offset-2');
+            setTimeout(() => panel.classList.remove('ring-2', 'ring-amber-300', 'ring-offset-2'), 1800);
+        }
         function drillDownPatch(picName) {
             switchTab('patch');
             const cleanPic = String(picName || '').trim();
@@ -4569,6 +4603,91 @@
                     }
                 }
             }, 250);
+        }
+
+        function resetPortalFilterInput(id) {
+            const input = document.getElementById(id);
+            if (input) input.value = '';
+        }
+
+        function setPortalFilterStatus(id, { search = '', month = '', mode = '', shown = 0, total = 0 } = {}) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const parts = [];
+            const cleanSearch = String(search || '').trim();
+            const cleanMonth = String(month || '').trim();
+            const cleanMode = String(mode || '').trim();
+            if (cleanSearch) parts.push(`Search: "${cleanSearch}"`);
+            if (cleanMonth) parts.push(`Month: ${cleanMonth}`);
+            if (cleanMode) parts.push(`Status: ${cleanMode}`);
+            const filterText = parts.length ? parts.join(' | ') : 'All records';
+            el.textContent = `Filter: ${filterText} | Showing ${shown} of ${total}`;
+        }
+
+        function getCompleteStatusLabel(value) {
+            const clean = String(value || '').trim();
+            if (isPortalNoActionValue(clean)) return 'No Action';
+            if (!clean || clean === '---') return 'Pending';
+            return 'Completed';
+        }
+
+        function getConsumptionStatusLabel(row) {
+            const start = convertExcelDate(getVal(row, ['Start Date m/d/yyyy','Start Date','StartDate']));
+            const complete = convertExcelDate(getVal(row, ['Complete Date m/d/yyyy','Complete Date','CompleteDate']));
+            if (isPortalNoActionValue(start) || isPortalNoActionValue(complete)) return 'No Action';
+            if (complete && complete !== '---') return 'Completed';
+            return 'In Progress';
+        }
+
+        function getDownStatusLabel(row) {
+            const start = convertExcelDate(getVal(row, ['Start Time','StartTime','Start Time m/d/yyyy']));
+            const complete = convertExcelDate(getVal(row, ['Complete Time','CompleteTime','Complete Time m/d/yyyy']));
+            if (isPortalNoActionValue(start) || isPortalNoActionValue(complete)) return 'No Action';
+            if (complete && complete !== '---') return 'Completed';
+            return 'In Progress';
+        }
+
+        function drillDownSupportPending() {
+            switchTab('support');
+            supportPendingOnly = true;
+            supportSearchQuery = '';
+            resetPortalFilterInput('supportSearch');
+            resetPortalFilterInput('supportMonthFilter');
+            renderSupportTable();
+            scrollToMatchedRow('#supportTable', '');
+        }
+
+        function drillDownPatchPending() {
+            switchTab('patch');
+            patchPendingOnly = true;
+            patchUnassignedOnly = false;
+            patchSearchQuery = '';
+            resetPortalFilterInput('patchSearch');
+            resetPortalFilterInput('patchMonthFilter');
+            renderPatchTable();
+            scrollToMatchedRow('#patchTable', '');
+        }
+
+        function drillDownConsumptionPending() {
+            switchTab('consumption');
+            consumptionPendingOnly = true;
+            consumptionSearchQuery = '';
+            consumptionMonthQuery = '';
+            resetPortalFilterInput('consumptionSearch');
+            resetPortalFilterInput('consumptionMonthFilter');
+            renderConsumptionTable();
+            scrollToMatchedRow('#consumptionTable', '');
+        }
+
+        function drillDownDownPending() {
+            switchTab('downfilling');
+            downPendingOnly = true;
+            downSearchQuery = '';
+            downMonthQuery = '';
+            resetPortalFilterInput('downSearch');
+            resetPortalFilterInput('downMonthFilter');
+            renderDownTable();
+            scrollToMatchedRow('#downTable', '');
         }
 
         function portalSearchClickValue(value) {
@@ -4750,6 +4869,7 @@
             );
             const isPicFilter = !!sv && filtered.length > 0 && filtered.every(t => String(t.pic || '').toLowerCase().includes(sv));
             sortTemplateRows(filtered, prioritySort, isPicFilter);
+            setPortalFilterStatus('tempFilterStatus', { search: sv, month: selMonth, shown: filtered.length, total: allTemplates.length });
             document.getElementById('tempTable').innerHTML = filtered.map(t => {
                 const done = t.status === 'COMPLETED', isMine = (currentUser === t.pic);
                 const noAction = !!t.cancelled || String(t.status || '').toUpperCase() === 'NO ACTION';
@@ -4995,6 +5115,15 @@
                 alert(e.message || 'Template update failed. Data was not updated.');
                 setTimeout(() => { btn.innerText = "SAVE"; btn.disabled = false; }, 2000);
             }
+        }
+        function drillDownSupport(query) {
+            switchTab('support');
+            const search = document.getElementById('supportSearch');
+            if (search) {
+                search.value = query;
+                applySupport();
+            }
+            scrollToMatchedRow('#supportTable', query);
         }
 
         function generateMonthOptions() {
@@ -5385,21 +5514,28 @@
                 if (!d) return false;
                 return `${months[d.getMonth()]}-${d.getFullYear()}` === sharedMonth;
             });
-            const total   = filtered.length;
+            const activeConsumptionRows = filtered.filter(r => {
+                const sd = getVal(r,['Start Date m/d/yyyy','Start Date','StartDate']);
+                const cd = getVal(r,['Complete Date m/d/yyyy','Complete Date','CompleteDate']);
+                return !isPortalNoActionValue(sd) && !isPortalNoActionValue(cd);
+            });
+            const total   = activeConsumptionRows.length;
             const isConsumptionDone = (r) => {
                 const cd = getVal(r,['Complete Date m/d/yyyy','Complete Date','CompleteDate']);
-                return cd && cd !== '---' && String(cd).trim() !== '';
+                return cd && cd !== '---' && String(cd).trim() !== '' && !isPortalNoActionValue(cd);
             };
             const isConsumptionPending = (r) => {
-                if (isConsumptionDone(r)) return false;
                 const sd = getVal(r,['Start Date m/d/yyyy','Start Date','StartDate']);
+                if (isConsumptionDone(r)) return false;
+                if (isPortalNoActionValue(sd)) return false;
                 const hasStart = sd && sd !== '---' && String(sd).trim() !== '';
                 const cd = getVal(r,['Complete Date m/d/yyyy','Complete Date','CompleteDate']);
+                if (isPortalNoActionValue(cd)) return false;
                 const hasEnd = cd && cd !== '---' && String(cd).trim() !== '';
                 return !hasEnd || (!hasStart && !hasEnd);
             };
-            const done    = filtered.filter(isConsumptionDone).length;
-            const pendingRows = filtered.filter(isConsumptionPending);
+            const done    = activeConsumptionRows.filter(isConsumptionDone).length;
+            const pendingRows = activeConsumptionRows.filter(isConsumptionPending);
             const pending = pendingRows.length;
             renderConsumptionPendingPicTable(pendingRows);
             const turnarounds = filtered.map(r => {
@@ -5492,10 +5628,15 @@
                 if (!d) return false;
                 return `${months[d.getMonth()]}-${d.getFullYear()}` === selectedMonth;
             });
-            const total   = filtered.length;
-            const done    = filtered.filter(r => { const ct = getVal(r,['Complete Time','CompleteTime','Complete Time m/d/yyyy']); return ct&&ct!=='---'&&String(ct).trim()!==''; }).length;
-            const pending = total - done;
-            const styles  = new Set(filtered.map(r => getVal(r,['Style','Style Number','StyleNumber'])).filter(s=>s&&s!=='---'));
+            const activeDownRows = filtered.filter(r => {
+                const st = getVal(r,['Start Time','StartTime','Start Time m/d/yyyy']);
+                const ct = getVal(r,['Complete Time','CompleteTime','Complete Time m/d/yyyy']);
+                return !isPortalNoActionValue(st) && !isPortalNoActionValue(ct);
+            });
+            const total   = activeDownRows.length;
+            const done    = activeDownRows.filter(r => { const ct = getVal(r,['Complete Time','CompleteTime','Complete Time m/d/yyyy']); return ct&&ct!=='---'&&String(ct).trim()!==''&&!isPortalNoActionValue(ct); }).length;
+            const pending = activeDownRows.filter(r => { const ct = getVal(r,['Complete Time','CompleteTime','Complete Time m/d/yyyy']); const clean = String(ct || '').trim(); return !clean || clean === '---'; }).length;
+            const styles  = new Set(activeDownRows.map(r => getVal(r,['Style','Style Number','StyleNumber'])).filter(s=>s&&s!=='---'));
             const el = id => document.getElementById(id);
             if (el('dd-total'))   el('dd-total').innerText   = total;
             if (el('dd-pending')) el('dd-pending').innerText = pending;
@@ -5503,7 +5644,7 @@
             if (el('dd-styles'))  el('dd-styles').innerText  = styles.size;
             // Volume trend
             const dayMap = {};
-            filtered.forEach(r => {
+            activeDownRows.forEach(r => {
                 const d = rawToLocalDate(getVal(r, ['Date Update','DateUpdate','Date']));
                 if (!d) return;
                 const k = `${d.getMonth()+1}/${d.getDate()}/${d.getFullYear()}`;
@@ -5526,7 +5667,7 @@
             });
             // Season breakdown
             const seasonMap = {};
-            filtered.forEach(r => { const s=getVal(r,['Season'])||'—'; seasonMap[s]=(seasonMap[s]||0)+1; });
+            activeDownRows.forEach(r => { const s=getVal(r,['Season'])||'—'; seasonMap[s]=(seasonMap[s]||0)+1; });
             const sortedSeasons = Object.entries(seasonMap).sort((a,b)=>b[1]-a[1]);
             if (downSeasonChart) downSeasonChart.destroy();
             const dsc = document.getElementById('downSeasonChart');
@@ -5536,9 +5677,9 @@
             });
             // PIC pending table
             const picPending = {};
-            filtered.forEach(r => {
+            activeDownRows.forEach(r => {
                 const ct = getVal(r,['Complete Time','CompleteTime','Complete Time m/d/yyyy']);
-                if (ct && ct!=='---' && String(ct).trim()!=='') return;
+                if (ct && ct!=='---' && String(ct).trim()!=='' || isPortalNoActionValue(ct)) return;
                 const pic = getMAPic(r) || '---';
                 if (!picPending[pic]) picPending[pic] = [];
                 picPending[pic].push(getVal(r,['Style','Style Number','StyleNumber']));
@@ -5547,7 +5688,7 @@
             if (picTbody) {
                 picTbody.innerHTML = Object.keys(picPending).length
                     ? Object.entries(picPending).map(([name, items]) => `
-                        <tr class="border-b hover:bg-slate-50 cursor-pointer transition-colors" onclick="switchTab('downfilling')">
+                        <tr class="border-b hover:bg-slate-50 cursor-pointer transition-colors" onclick="drillDownDownSearch('${String(name).replace(/'/g,"\\'")}')">
                             <td class="px-3 py-2.5 font-bold border-r bg-slate-50/50 text-slate-800">${escapeHtml(name)}<div class="text-[9px] font-semibold text-slate-400 mt-0">${items.length} pending</div></td>
                             <td class="px-3 py-2.5 flex flex-wrap gap-1.5">${items.map(s=>`<div class="inline-flex items-center gap-1.5 border border-slate-200 rounded-lg px-2 py-1 bg-white shadow-sm"><span class="w-2 h-2 rounded-full bg-sky-400"></span><span class="font-black text-blue-700 text-[10px] leading-none">${escapeHtml(s)}</span></div>`).join('')}</td>
                         </tr>`).join('')
@@ -5580,7 +5721,7 @@
                 return String(cd).trim() !== '-';
             });
             const total   = activePatch.length;
-            const pending = activePatch.filter(r => { const cd = getVal(r,['Complete Date m/d/yyyy','Complete Date','CompleteDate']); return !cd||cd==='---'||String(cd).trim()===''||String(cd).trim()==='-'; }).length;
+            const pending = activePatch.filter(r => { const cd = getVal(r,['Complete Date m/d/yyyy','Complete Date','CompleteDate']); return !cd||cd==='---'||String(cd).trim()===''; }).length;
             const done    = activePatch.filter(r => { const cd = getVal(r,['Complete Date m/d/yyyy','Complete Date','CompleteDate']); return cd && cd !== '---' && String(cd).trim() !== '' && String(cd).trim() !== '-'; }).length;
             const rate    = (done + pending) ? Math.round(done/(done + pending)*100)+'%' : '—';
             const el = id => document.getElementById(id);
@@ -6188,7 +6329,7 @@
             if (picTbody) {
                 picTbody.innerHTML = Object.keys(picPending).length
                     ? Object.entries(picPending).map(([name, jobs]) => `
-                        <tr class="border-b hover:bg-slate-50 cursor-pointer transition-colors" onclick="switchTab('support')">
+                        <tr class="border-b hover:bg-slate-50 cursor-pointer transition-colors" onclick="drillDownSupport('${String(name).replace(/'/g,"\\'")}')">
                             <td class="px-3 py-4 font-bold border-r bg-slate-50/50 text-slate-800 align-top">${escapeHtml(name)}
                                 <div class="text-[10px] font-semibold text-slate-400 mt-1">${jobs.length} pending</div>
                             </td>
@@ -7643,6 +7784,7 @@
         }
 
         function applySupport() {
+            supportPendingOnly = false;
             supportSearchQuery = document.getElementById('supportSearch')?.value.toLowerCase() || '';
             renderSupportTable();
         }
@@ -7651,7 +7793,10 @@
         function clearSupportSearch() {
             const el = document.getElementById('supportSearch');
             if (el) el.value = '';
+            const mf = document.getElementById('supportMonthFilter');
+            if (mf) mf.value = '';
             supportSearchQuery = '';
+            supportPendingOnly = false;
             renderSupportTable();
         }
 
@@ -7672,6 +7817,11 @@
                     const ctLabel = `${months[d.getMonth()]}-${d.getFullYear()}`;
                     if (ctLabel !== supMF) return false;
                 }
+                if (supportPendingOnly) {
+                    const ct = getVal(r, ['Complete Time','CompleteTime']);
+                    const clean = String(ct || '').trim();
+                    if (clean && clean !== '---') return false;
+                }
                 if (!supportSearchQuery) return true;
                 const vals = [
                     getVal(r, ['Style Number','StyleNumber','Style','Name']),
@@ -7682,9 +7832,17 @@
                     getVal(r, ['Section']),
                     getVal(r, ['M&A PIC','PIC']),
                     getVal(r, ['Description','Desc']),
-                    getVal(r, ['Request ID','RequestID'])
+                    getVal(r, ['Request ID','RequestID']),
+                    getCompleteStatusLabel(getVal(r, ['Complete Time','CompleteTime']))
                 ];
                 return vals.some(v => String(v).toLowerCase().includes(supportSearchQuery));
+            });
+            setPortalFilterStatus('supportFilterStatus', {
+                search: supportSearchQuery,
+                month: supMF,
+                mode: supportPendingOnly ? 'Pending' : '',
+                shown: rows.length,
+                total: allSupportRows.length
             });
 
             // Update stats
@@ -7852,7 +8010,7 @@
 
         // ── PATCH PAGE ──────────────────────────────────────────────────────────
         const patchFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/578c605e308e41e0a92bff040fbee0fd/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=3ACOFx4gywYqLicKRU56fVHlclF4aE1HNrdO21CgriQ";
-        let allPatchRows = [], patchSearchQuery = '', patchUnassignedOnly = false;
+        let allPatchRows = [], patchSearchQuery = '', patchUnassignedOnly = false, patchPendingOnly = false;
 
         async function refreshPatchData(isSilent = false) {
             const st = document.getElementById('patchSyncStatus');
@@ -7893,6 +8051,7 @@
         }
 
         function applyPatchFilter() {
+            patchPendingOnly = false;
             patchSearchQuery = document.getElementById('patchSearch')?.value.toLowerCase() || '';
             if (patchSearchQuery) patchUnassignedOnly = false;
             renderPatchTable();
@@ -7900,8 +8059,10 @@
         function getPatchMonthFilter() { return document.getElementById('patchMonthFilter')?.value || ''; }
         function clearPatchSearch() {
             const el = document.getElementById('patchSearch'); if (el) el.value = '';
+            const mf = document.getElementById('patchMonthFilter'); if (mf) mf.value = '';
             patchSearchQuery = '';
             patchUnassignedOnly = false;
+            patchPendingOnly = false;
             renderPatchTable();
         }
 
@@ -7975,6 +8136,11 @@
                     const cleanPic = String(pic || '').trim();
                     if (cleanPic && cleanPic !== '---') return false;
                 }
+                if (patchPendingOnly) {
+                    const cd = getVal(r,['Complete Date m/d/yyyy','Complete Date','CompleteDate']);
+                    const clean = String(cd || '').trim();
+                    if (clean && clean !== '---') return false;
+                }
                 if (!patchSearchQuery) return true;;
                 const vals = [
                     getVal(r,['No_x002e_','No.','No']), getVal(r,['Season']),
@@ -7984,7 +8150,8 @@
                     getVal(r,['Request Receive Time (Auto Do Not Edit)','Request Receive Time m/d/yyyy','Request Receive Time','RequestReceiveTime','Request Date','RequestDate']),
                     getVal(r,['Template No.','TemplateNo','Template No']),
                     getVal(r,['Machine No.','Machine No','MachineNo','Machine']),
-                    getMAPic(r), getVal(r,['Month']), getVal(r,['Remark','Remarks'])
+                    getMAPic(r), getVal(r,['Month']), getVal(r,['Remark','Remarks']),
+                    getCompleteStatusLabel(getVal(r,['Complete Date m/d/yyyy','Complete Date','CompleteDate']))
                 ];
                 return vals.some(v => String(v).toLowerCase().includes(patchSearchQuery));
             }).sort((a, b) => {
@@ -8010,6 +8177,13 @@
             if (el('patch-total'))   el('patch-total').innerText   = total;
             if (el('patch-pending')) el('patch-pending').innerText = pending;
             if (el('patch-done'))    el('patch-done').innerText    = done;
+            setPortalFilterStatus('patchFilterStatus', {
+                search: patchSearchQuery,
+                month: patchMF,
+                mode: patchPendingOnly ? 'Pending' : patchUnassignedOnly ? 'Unassigned PIC' : '',
+                shown: rows.length,
+                total: allPatchRows.length
+            });
 
             if (!rows.length) {
                 tbody.innerHTML = `<tr><td colspan="23" class="p-6 text-center text-slate-400 italic text-xs">${patchSearchQuery?'No results.':'No patch records found.'}</td></tr>`;
@@ -8201,6 +8375,7 @@
         // DOWN FILLING PAGE
         // ══════════════════════════════════════════════════════════════
         let allDownRows = [], downSearchQuery = '', downMonthQuery = '';
+        let downPendingOnly = false;
         let editingDownRowId = null;
         let downDataLoading = false;
 
@@ -8273,6 +8448,7 @@
             const downMonthEl = document.getElementById('downMonthFilter');
             if (downMonthEl) downMonthQuery = downMonthEl.value || '';
             if (!allDownRows.length) {
+                setPortalFilterStatus('downFilterStatus', { search: downSearchQuery, month: downMonthQuery, mode: downPendingOnly ? 'In Progress' : '', shown: 0, total: 0 });
                 if (downDataLoading) {
                     tbody.innerHTML = '<tr><td colspan="25" class="p-6 text-center text-slate-400 italic text-xs">Loading down filling data...</td></tr>';
                     return;
@@ -8289,10 +8465,24 @@
                     if (cdL !== downMonthQuery) return false;
                 }
                 if (downSearchQuery) {
-                    const txt = Object.values(row).join(' ').toLowerCase();
+                    const txt = `${Object.values(row).join(' ')} ${getDownStatusLabel(row)}`.toLowerCase();
                     if (!txt.includes(downSearchQuery)) return false;
                 }
+                if (downPendingOnly) {
+                    const st = getVal(row, ['Start Time','StartTime','Start Time m/d/yyyy']);
+                    const ct = getVal(row, ['Complete Time','CompleteTime','Complete Time m/d/yyyy']);
+                    const cleanComplete = String(ct || '').trim();
+                    if (isPortalNoActionValue(st) || isPortalNoActionValue(ct)) return false;
+                    if (cleanComplete && cleanComplete !== '---') return false;
+                }
                 return true;
+            });
+            setPortalFilterStatus('downFilterStatus', {
+                search: downSearchQuery,
+                month: downMonthQuery,
+                mode: downPendingOnly ? 'In Progress' : '',
+                shown: rowsToShow.length,
+                total: allDownRows.length
             });
             tbody.innerHTML = rowsToShow.map(row => {
                 const id = getVal(row, ['Id','ID','id']);
@@ -8394,6 +8584,7 @@
         }
 
         function applyDownFilter() {
+            downPendingOnly = false;
             downSearchQuery = document.getElementById('downSearch')?.value.toLowerCase() || '';
             downMonthQuery = document.getElementById('downMonthFilter')?.value || '';
             renderDownTable();
@@ -8405,6 +8596,7 @@
             if (el) el.value = '';
             downSearchQuery = '';
             downMonthQuery = '';
+            downPendingOnly = false;
             const mf = document.getElementById('downMonthFilter');
             if (mf) mf.value = '';
             renderDownTable();
@@ -8596,6 +8788,7 @@
         // CONSUMPTION PAGE
         // ══════════════════════════════════════════════════════════════
         let allConsumptionRows = [], consumptionSearchQuery = '', consumptionMonthQuery = '';
+        let consumptionPendingOnly = false;
 
         function updateConsumptionPicDisplay() {
             const el = document.getElementById('c_picDisplay');
@@ -8832,6 +9025,7 @@
         }
 
         function applyConsumptionFilter() {
+            consumptionPendingOnly = false;
             consumptionSearchQuery = document.getElementById('consumptionSearch')?.value.toLowerCase() || '';
             consumptionMonthQuery  = document.getElementById('consumptionMonthFilter')?.value || '';
             renderConsumptionTable();
@@ -8842,6 +9036,7 @@
             if (el) el.value = '';
             consumptionSearchQuery = '';
             consumptionMonthQuery  = '';
+            consumptionPendingOnly = false;
             const mf = document.getElementById('consumptionMonthFilter');
             if (mf) mf.value = '';
             renderConsumptionTable();
@@ -8936,6 +9131,13 @@
                     if (!d) return false;
                     if (`${months[d.getMonth()]}-${d.getFullYear()}` !== consumptionMonthQuery) return false;
                 }
+                if (consumptionPendingOnly) {
+                    const startDt = convertExcelDate(getVal(r, ['Start Date m/d/yyyy','Start Date','StartDate']));
+                    const completeDt = convertExcelDate(getVal(r, ['Complete Date m/d/yyyy','Complete Date','CompleteDate']));
+                    const isNoAction = isPortalNoActionValue(startDt) || isPortalNoActionValue(completeDt);
+                    const isDone = completeDt && completeDt !== '---' && !isNoAction;
+                    if (isDone || isNoAction) return false;
+                }
                 if (!consumptionSearchQuery) return true;
                 const vals = [
                     getVal(r, ['Style Number','StyleNumber']),
@@ -8945,9 +9147,17 @@
                     getVal(r, ['Proto Stage','ProtoStage']),
                     getVal(r, ['Request Type','RequestType']),
                     getMAPic(r),
-                    getVal(r, ['Remark','Remarks'])
+                    getVal(r, ['Remark','Remarks']),
+                    getConsumptionStatusLabel(r)
                 ];
                 return vals.some(v => String(v).toLowerCase().includes(consumptionSearchQuery));
+            });
+            setPortalFilterStatus('consumptionFilterStatus', {
+                search: consumptionSearchQuery,
+                month: consumptionMonthQuery,
+                mode: consumptionPendingOnly ? 'In Progress' : '',
+                shown: rows.length,
+                total: allConsumptionRows.length
             });
 
             if (!rows.length) {
