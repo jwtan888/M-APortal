@@ -406,20 +406,27 @@
             overflow-x: auto;
         }
         .portal-scroll-controls {
-            display: flex;
+            position: sticky;
+            top: 72px;
+            z-index: 30;
+            display: inline-flex;
             justify-content: flex-end;
+            float: right;
             gap: 0.5rem;
             margin-bottom: 0.5rem;
+            padding: 0;
+            background: transparent;
         }
         .portal-scroll-btn {
             border: 1px solid var(--border2);
-            background: rgba(255,255,255,0.92);
+            background: rgba(255,255,255,0.96);
             color: var(--text-2);
             border-radius: 999px;
             padding: 0.35rem 0.7rem;
             font-size: 11px;
             font-weight: 700;
             line-height: 1;
+            box-shadow: var(--shadow-sm);
             transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
         }
         .portal-scroll-btn:hover {
@@ -8048,13 +8055,17 @@
                 const receivedNoAction = isPortalNoActionValue(received);
                 const completeNoAction = isPortalNoActionValue(complete);
                 const pendingMaterial = !receivedNoAction && (!received || received === '---' || /pending/i.test(received)) && !isDone && !completeNoAction;
+                const materialReceived = !receivedNoAction && received && received !== '---' && !/pending/i.test(received);
+                const patchInProgress = materialReceived && !isDone && !completeNoAction;
                 const pendingMaterialBadge = pendingMaterial ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700" title="Pending material">Pending Material</span>' : '';
+                const inProgressBadge = patchInProgress ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-100 text-blue-700" title="Material received, patch in progress">In Progress</span>' : '';
+                const patchStatusBadge = pendingMaterialBadge || inProgressBadge;
                 const receivedCell = canEdit
                     ? `<input id="patch-received-${sid}" class="manual-input admin-input" value="${received==='---'?'':received}" placeholder="m/d/yyyy hh:mm or -">`
                     : received;
                 const completeCell = canEdit
-                    ? `<div class="flex flex-col gap-1.5"><input id="patch-complete-${sid}" class="manual-input admin-input" value="${complete!=='---'?complete:''}" placeholder="m/d/yyyy hh:mm or -">${pendingMaterialBadge}</div>`
-                    : (pendingMaterial ? pendingMaterialBadge : (complete!=='---'?complete:'---'));
+                    ? `<div class="flex flex-col gap-1.5"><input id="patch-complete-${sid}" class="manual-input admin-input" value="${complete!=='---'?complete:''}" placeholder="m/d/yyyy hh:mm or -">${patchStatusBadge}</div>`
+                    : (patchStatusBadge || (complete!=='---'?complete:'---'));
                 const patchPicSelect = `<select id="patch-mapic-${sid}" class="manual-input admin-input" style="width:90px">
                     <option value="">Assign PIC</option>
                     ${picList.map(p => `<option value="${p}" ${p === pic ? 'selected' : ''}>${p}</option>`).join('')}
@@ -8958,6 +8969,8 @@
                 const isNoAction = completeDt === '-' || startDt === '-';
                 const isDone   = completeDt && completeDt !== '---' && !isNoAction;
                 const completeDisplayValue = completeDt !== '---' ? completeDt : '';
+                const isPending = !isDone && !isNoAction;
+                const pendingBadge = isPending ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700" title="Consumption incomplete">Pending</span>' : '';
                 const isQuiltingDetails = String(reqType || '').toLowerCase().includes('quilting');
                 const picOptions = `<select id="con-pic-${sid}" class="manual-input admin-input" style="width:90px">
                     <option value="">Assign PIC</option>
@@ -8980,8 +8993,8 @@
                         ? `<input id="con-start-${sid}" class="manual-input admin-input" value="${startDt !== '---' ? startDt : ''}" placeholder="m/d/yyyy hh:mm or -">`
                         : startDt}</td>
                     <td class="p-3 ${isDone ? 'text-emerald-600 font-bold' : isNoAction ? 'text-slate-500 font-bold' : 'text-slate-400'}">${canEdit
-                        ? `<input id="con-complete-${sid}" class="manual-input admin-input" value="${completeDisplayValue}" placeholder="m/d/yyyy hh:mm or -">`
-                        : (completeDisplayValue || '---')}</td>
+                        ? `<div class="flex flex-col gap-1.5"><input id="con-complete-${sid}" class="manual-input admin-input" value="${completeDisplayValue}" placeholder="m/d/yyyy hh:mm or -">${pendingBadge}</div>`
+                        : (pendingBadge || completeDisplayValue || '---')}</td>
                     <td class="p-3 font-bold ${(!pic||pic==='---') ? 'text-blue-600' : ''}">${
                         isAdmin
                         ? picOptions
