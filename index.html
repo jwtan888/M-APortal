@@ -904,7 +904,7 @@
                     </div>
                 </div>
             </div>
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
                     <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Requests by Section</h3>
                     <div class="h-[300px]"><canvas id="sectionChart"></canvas></div>
@@ -912,6 +912,11 @@
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
                     <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-4">Completion Trends (Daily)</h3>
                     <div class="h-[300px]"><canvas id="volumeChart"></canvas></div>
+                </div>
+                <div class="bg-white p-6 rounded-xl border shadow-sm">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Developed Template Value</h3>
+                    <p id="templateValueMeta" class="text-[10px] font-semibold text-slate-400 mb-3">Unique styles and base job numbers</p>
+                    <div class="h-[300px]"><canvas id="templateValueChart"></canvas></div>
                 </div>
             </div>
             <div class="bg-white p-6 rounded-xl border shadow-sm">
@@ -1943,8 +1948,56 @@
             return new Promise(resolve => setTimeout(resolve, ms));
         }
 
+        const portalDirtyTabs = new Set();
+
+        function getPortalTabFromElement(el) {
+            const tab = el?.closest?.('.tab-content');
+            return tab?.id ? tab.id.replace(/^content-/, '') : '';
+        }
+
+        function isPortalDataEntryElement(el) {
+            if (!el || !['INPUT', 'SELECT', 'TEXTAREA'].includes(el.tagName)) return false;
+            if (el.closest('#datePickerPopover') || el.closest('.portal-filter-shell')) return false;
+            const id = el.id || '';
+            if (
+                id === 'userSelect' ||
+                id === 'monthFilter' ||
+                id === 'fileSearch' ||
+                id.endsWith('Search') ||
+                id.endsWith('MonthFilter') ||
+                id.endsWith('SyncBtn')
+            ) return false;
+            if (el.classList.contains('manual-input') || el.classList.contains('admin-input') || el.classList.contains('qty-input')) return true;
+            return /^(l_|c_|d_|mID$|fName$|fSize$|sTime$|eTime$|requestToggle$)/.test(id);
+        }
+
+        function markPortalTabDirtyFromElement(el) {
+            if (!isPortalDataEntryElement(el)) return;
+            const tab = getPortalTabFromElement(el);
+            if (tab) portalDirtyTabs.add(tab);
+        }
+
+        function clearPortalTabDirty(tabOrElement) {
+            const tab = typeof tabOrElement === 'string' ? tabOrElement : getPortalTabFromElement(tabOrElement);
+            if (tab) portalDirtyTabs.delete(tab);
+        }
+
+        function isPortalTabDirty(tab) {
+            return portalDirtyTabs.has(tab);
+        }
+
+        function canPortalAutoRender(tab, activeEl = document.activeElement) {
+            if (isPortalTabDirty(tab)) return false;
+            const content = document.getElementById(`content-${tab}`);
+            return !(content && activeEl && content.contains(activeEl) && ['INPUT', 'SELECT', 'TEXTAREA'].includes(activeEl.tagName));
+        }
+
+        document.addEventListener('input', event => markPortalTabDirtyFromElement(event.target));
+        document.addEventListener('change', event => markPortalTabDirtyFromElement(event.target));
+
         function showPortalSaveSuccess(button, options = {}) {
             if (!button) return;
+            const dirtyTab = getPortalTabFromElement(button);
             const resetText = options.resetText || 'SAVE';
             const holdMs = Number(options.holdMs || 2000);
             button.innerText = 'SAVED ✓';
@@ -1952,6 +2005,7 @@
             setTimeout(() => {
                 button.innerText = resetText;
                 button.disabled = false;
+                clearPortalTabDirty(dirtyTab);
                 if (typeof options.after === 'function') options.after();
             }, holdMs);
         }
@@ -2031,9 +2085,39 @@
         let allRecords = [], allTemplates = [], currentUser = sessionStorage.getItem('ma_session_user') || null;
         let editingSettingRowId = null;
         let templateDataLoaded = false, consumptionDataLoaded = false, quiltingConsumptionSyncing = false;
-        let sectionChart = null, volumeChart = null;
+        let sectionChart = null, volumeChart = null, templateValueChart = null;
         function isPortalAdmin(user = currentUser) {
             return user === 'Gavin' || user === 'Joe';
+        }
+
+        function getTemplateBaseJobNumber(jobNo) {
+            const clean = String(jobNo || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+            if (!clean || clean === '---' || clean === 'N/A' || clean === '-') return '';
+            const match = clean.match(/[A-Z]{2}\d{3}/);
+            return match ? match[0] : '';
+        }
+
+        function isTemplateJobNumberLike(value) {
+            const clean = String(value || '').trim().toUpperCase().replace(/[^A-Z0-9]/g, '');
+            return /^[A-Z]{2}\d{3}(?:\d{3})?[A-Z]*$/.test(clean);
+        }
+
+        function getTemplateStyleKey(styleNo) {
+            const clean = String(styleNo || '').trim().toUpperCase().replace(/\s+/g, '');
+            if (!clean || clean === '---' || clean === 'N/A' || clean === '-' || isTemplateJobNumberLike(clean)) return '';
+            return clean;
+        }
+
+        function renderTemplateValueList(id, values) {
+            const el = document.getElementById(id);
+            if (!el) return;
+            const sorted = Array.from(values || []).sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+            if (!sorted.length) {
+                el.innerHTML = '<span class="text-slate-400 italic">No data</span>';
+                return;
+            }
+            el.title = sorted.join(', ');
+            el.innerHTML = sorted.map(value => `<span class="inline-flex items-center rounded-md border border-slate-200 bg-slate-50 px-2 py-1 font-black text-slate-700">${escapeHtml(value)}</span>`).join('');
         }
 
         function loadTemplatePendingUpdates() {
@@ -2902,11 +2986,11 @@
                 generateMonthOptions();
                 populateTabMonthFilters();
                 updateDashboard();
-                renderLaserTable();
-                renderSupportTable();
-                renderPatchTable();
-                renderConsumptionTable();
-                renderDownTable();
+                if (canPortalAutoRender('laser')) renderLaserTable();
+                if (canPortalAutoRender('support')) renderSupportTable();
+                if (canPortalAutoRender('patch')) renderPatchTable();
+                if (canPortalAutoRender('consumption')) renderConsumptionTable();
+                if (canPortalAutoRender('downfilling')) renderDownTable();
 
                 const ageMin = Math.max(1, Math.round((Date.now() - snapshot.updatedAt) / 60000));
                 [
@@ -3024,10 +3108,8 @@
                 writeDashboardSnapshot();
                 syncQuiltingTemplatesToConsumption(true);
                 generateMonthOptions(); updateDashboard(); 
-                // Don't re-render template table if user is actively typing in it
-                const _tActiveEl = document.activeElement;
-                const _tTable = document.getElementById('tempTable');
-                if (!(_tTable && _tActiveEl && _tTable.contains(_tActiveEl) && (_tActiveEl.tagName === 'INPUT' || _tActiveEl.tagName === 'SELECT' || _tActiveEl.tagName === 'TEXTAREA'))) {
+                // Do not replace unsaved PIC edits during background refresh.
+                if (canPortalAutoRender('template')) {
                     applyTempFilters(false);
                 }
                 renderUtilization(); populateTabMonthFilters();
@@ -3302,6 +3384,51 @@
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { usePointStyle: true } } } }
             });
+
+            const uniqueStyles = new Set();
+            const uniqueJobs = new Set();
+            filteredByMonth.forEach(t => {
+                const styleKey = getTemplateStyleKey(t.style);
+                const jobKey = getTemplateBaseJobNumber(t.jobNo);
+                if (styleKey) uniqueStyles.add(styleKey);
+                if (jobKey) uniqueJobs.add(jobKey);
+            });
+            const valueMeta = document.getElementById('templateValueMeta');
+            if (valueMeta) {
+                valueMeta.innerText = `${uniqueStyles.size} unique styles · ${uniqueJobs.size} unique base jobs`;
+            }
+            if (templateValueChart) templateValueChart.destroy();
+            const valueCtx = document.getElementById('templateValueChart');
+            if (valueCtx) {
+                templateValueChart = new Chart(valueCtx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Style Number', 'Base Job Number'],
+                        datasets: [{
+                            label: 'Developed Template Coverage',
+                            data: [uniqueStyles.size, uniqueJobs.size],
+                            backgroundColor: ['#2563eb', '#0f766e'],
+                            borderRadius: 6,
+                            maxBarThickness: 72
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            legend: { display: false },
+                            tooltip: {
+                                callbacks: {
+                                    label: ctx => `${ctx.raw || 0} unique ${ctx.dataIndex === 0 ? 'styles' : 'base jobs'}`
+                                }
+                            }
+                        },
+                        scales: {
+                            y: { beginAtZero: true, ticks: { precision: 0 } }
+                        }
+                    }
+                });
+            }
             // Render laser section whenever dashboard tab is opened/refreshed
             renderLaserDashboard();
             requestAnimationFrame(() => renderLaserSLA());
@@ -3676,10 +3803,8 @@
                 allLaserRows = mergePortalPendingUpdates('laser', rows);
                 saveLaserRowsCache(allLaserRows);
                 writeDashboardSnapshot();
-                // Don't re-render laser table if user is actively typing in it
-                const _lActiveEl = document.activeElement;
-                const _lTable = document.getElementById('laserTable');
-                if (!(_lTable && _lActiveEl && _lTable.contains(_lActiveEl) && (_lActiveEl.tagName === 'INPUT' || _lActiveEl.tagName === 'SELECT'))) {
+                // Do not replace unsaved PIC edits during background refresh.
+                if (canPortalAutoRender('laser')) {
                     renderLaserTable();
                 }
                 generateMonthOptions();
@@ -3693,7 +3818,7 @@
                 laserDataLoading = false;
                 console.warn('Laser data refresh failed:', e);
                 if (allLaserRows.length) {
-                    renderLaserTable();
+                    if (canPortalAutoRender('laser')) renderLaserTable();
                     renderLaserDashboard();
                     const message = `PA slow - showing cached ${allLaserRows.length} rows`;
                     if (st) { st.innerText = message; st.classList.remove('sync-active'); }
@@ -3973,6 +4098,7 @@
                 const res = await postPortalJson(laserAddURL, payload);
                 await readPortalWriteResult(res, 'Laser add');
                 btn.innerText = 'ADDED!';
+                clearPortalTabDirty('laser');
                 ['l_receivedTime','l_season','l_styleNumber','l_category','l_protoStage',
                  'l_garmentQty','l_laserParts','l_ironParts','l_trimParts',
                  'l_completeDate','l_consStart','l_consEnd','l_remark'].forEach(id => {
@@ -4214,6 +4340,7 @@
                     btn.disabled = false;
                     btn.classList.remove('bg-emerald-600');
                     btn.classList.add('bg-blue-600', 'hover:bg-blue-700');
+                    clearPortalTabDirty('laser');
                     refreshLaserData(true);
                 }, 2000);
             } catch(e) {
@@ -4274,6 +4401,7 @@
                     btn.disabled = false;
                     btn.classList.remove('bg-green-700');
                     btn.classList.add('bg-emerald-600', 'hover:bg-emerald-700');
+                    clearPortalTabDirty('laser');
                     refreshLaserData(true);
                 }, 2000);
             } catch(e) {
@@ -6387,8 +6515,8 @@
             // Refresh support data when switching to support tab
             if (t === 'support') refreshSupportData(true);
             // Re-render patch/consumption with correct canEdit state each time tab is opened
-            if (t === 'patch' && allPatchRows.length) renderPatchTable();
-            if (t === 'consumption' && allConsumptionRows.length) renderConsumptionTable();
+            if (t === 'patch' && allPatchRows.length && canPortalAutoRender('patch')) renderPatchTable();
+            if (t === 'consumption' && allConsumptionRows.length && canPortalAutoRender('consumption')) renderConsumptionTable();
             // Refresh down filling data when switching to down filling tab
             if (t === 'downfilling') { refreshDownData(true); updateDownPicDisplay(); }
             updateDailyReportButton();
@@ -6823,6 +6951,7 @@
             chartGrid.className = 'ma-report-chart-grid';
             chartGrid.appendChild(createReportChartPanel('sectionChart', 'Requests By Section'));
             chartGrid.appendChild(createReportChartPanel('volumeChart', 'Completion Trends (Daily)'));
+            chartGrid.appendChild(createReportChartPanel('templateValueChart', 'Developed Template Value'));
             body.appendChild(chartGrid);
             appendTemplatePendingReport(body);
             return true;
@@ -7161,7 +7290,8 @@
                     ],
                     charts: [
                         { id: 'sectionChart', title: 'Requests By Section' },
-                        { id: 'volumeChart', title: 'Completion Trends (Daily)' }
+                        { id: 'volumeChart', title: 'Completion Trends (Daily)' },
+                        { id: 'templateValueChart', title: 'Developed Template Value' }
                     ],
                     detailCards: [
                         { type: 'deliveryKpi', title: 'KPI- On Time Delivery To Sample Development', prefix: 'kpi-sample' },
@@ -7775,16 +7905,14 @@
                 });
                 allSupportRows = rows;
                 writeDashboardSnapshot();
-                const _sActiveEl = document.activeElement;
-                const _sContent = document.getElementById('content-support');
-                if (!(_sContent && _sActiveEl && _sContent.contains(_sActiveEl) && (_sActiveEl.tagName === 'INPUT' || _sActiveEl.tagName === 'SELECT' || _sActiveEl.tagName === 'TEXTAREA'))) {
+                if (canPortalAutoRender('support')) {
                     renderSupportTable();
                 }
                 renderSupportDashboard();
                     if (st) { st.innerText = 'LIVE: ' + new Date().toLocaleTimeString(); st.classList.remove('sync-active'); }
             } catch(e) {
                 if (allSupportRows.length) {
-                    renderSupportTable();
+                    if (canPortalAutoRender('support')) renderSupportTable();
                     renderSupportDashboard();
                     if (st) { st.innerText = `PA slow - showing cached ${allSupportRows.length} rows`; st.classList.remove('sync-active'); }
                     console.warn('Support fetch failed; keeping last loaded rows:', e.message);
@@ -8041,9 +8169,7 @@
                 let rows_p=[]; if(Array.isArray(d_p)) rows_p=d_p; else if(d_p?.value&&Array.isArray(d_p.value)) rows_p=d_p.value; else if(d_p?.body?.value&&Array.isArray(d_p.body.value)) rows_p=d_p.body.value; else if(d_p?.body&&Array.isArray(d_p.body)) rows_p=d_p.body; else{for(const k of Object.keys(d_p||{})){if(Array.isArray(d_p[k])&&d_p[k].length){rows_p=d_p[k];break;}}}
                 allPatchRows = rows_p;
                 writeDashboardSnapshot();
-                const _pActiveEl = document.activeElement;
-                const _pContent = document.getElementById('content-patch');
-                if (!(_pContent && _pActiveEl && _pContent.contains(_pActiveEl) && (_pActiveEl.tagName === 'INPUT' || _pActiveEl.tagName === 'SELECT' || _pActiveEl.tagName === 'TEXTAREA'))) {
+                if (canPortalAutoRender('patch')) {
                     renderPatchTable();
                 }
                 renderPatchDashboard();
@@ -8052,7 +8178,7 @@
             } catch(e) {
                 console.error('[Patch]', e.message);
                 if (allPatchRows.length) {
-                    renderPatchTable();
+                    if (canPortalAutoRender('patch')) renderPatchTable();
                     renderPatchDashboard();
                     if (st) { st.innerText = `PA slow - showing cached ${allPatchRows.length} rows`; st.classList.remove('sync-active'); }
                     return;
@@ -8429,9 +8555,7 @@
                 rows.sort((a,b) => (parseInt(getVal(b,['Id','ID','id']))||0) - (parseInt(getVal(a,['Id','ID','id']))||0));
                 allDownRows = rows;
                 writeDashboardSnapshot();
-                const _dwActiveEl = document.activeElement;
-                const _dwContent = document.getElementById('content-downfilling');
-                if (!(_dwContent && _dwActiveEl && _dwContent.contains(_dwActiveEl) && (_dwActiveEl.tagName === 'INPUT' || _dwActiveEl.tagName === 'SELECT' || _dwActiveEl.tagName === 'TEXTAREA'))) {
+                if (canPortalAutoRender('downfilling')) {
                     renderDownTable();
                 }
                 populateDownMonthFilter();
@@ -8441,7 +8565,7 @@
                 downDataLoading = false;
                 console.warn('Down filling data refresh failed:', e);
                 if (allDownRows.length) {
-                    renderDownTable();
+                    if (canPortalAutoRender('downfilling')) renderDownTable();
                     renderDownDashboard();
                     if (st) { st.innerText = `PA slow - showing cached ${allDownRows.length} rows`; st.classList.remove('sync-active'); }
                     return;
@@ -8577,6 +8701,7 @@
         function cancelDownEdit(event) {
             if (event) event.stopPropagation();
             editingDownRowId = null;
+            clearPortalTabDirty('downfilling');
             renderDownTable();
         }
 
@@ -8669,6 +8794,7 @@
                 const res = await fetch(downAddURL, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload) });
                 await readPortalWriteResult(res, 'Down filling add');
                 btn.innerText = 'ADDED!';
+                clearPortalTabDirty('downfilling');
                 ['d_dateUpdate','d_season','d_bddPic','d_category','d_style','d_job','d_layer',
                  'd_fabricItem','d_downBagItem','d_downItem','d_downDesc','d_liningItem',
                  'd_needle','d_thread','d_upperRpm','d_lowerRpm','d_inletPressure','d_outletPressure',
@@ -9072,10 +9198,8 @@
                 consumptionDataLoaded = true;
                 writeDashboardSnapshot();
                 syncQuiltingTemplatesToConsumption(true);
-                // Skip re-render if user is actively editing anywhere in the consumption tab (table OR add form)
-                const _cActiveEl = document.activeElement;
-                const _cContent = document.getElementById('content-consumption');
-                if (!(_cContent && _cActiveEl && _cContent.contains(_cActiveEl) && (_cActiveEl.tagName === 'INPUT' || _cActiveEl.tagName === 'SELECT' || _cActiveEl.tagName === 'TEXTAREA'))) {
+                // Do not replace unsaved PIC edits during background refresh.
+                if (canPortalAutoRender('consumption')) {
                     renderConsumptionTable();
                 }
                 populateConsumptionMonthFilter();
@@ -9090,7 +9214,7 @@
                             allConsumptionRows = snapshot.consumption;
                             consumptionDataLoaded = true;
                             restoredFromSnapshot = true;
-                            renderConsumptionTable();
+                            if (canPortalAutoRender('consumption')) renderConsumptionTable();
                             populateConsumptionMonthFilter();
                             renderConsumptionDashboard();
                         }
@@ -9279,6 +9403,7 @@
                 await readPortalWriteResult(res, 'Consumption add');
                 {
                     btn.innerText = 'ADDED ✓';
+                    clearPortalTabDirty('consumption');
                     ['c_receivedTime','c_season','c_style','c_jobNo','c_protoStage',
                      'c_requestType','c_startDate','c_completeDate','c_remark'].forEach(id => {
                         const el = document.getElementById(id); if (el) el.value = '';
