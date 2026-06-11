@@ -8046,8 +8046,9 @@
                 const patchAiButton = !isDone && !isPatchNoAction ? `<a href="${escapePatchAttr(getPatchAiUrl(tmplNo))}" target="_self" class="inline-flex items-center justify-center bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-blue-700">PATCH</a>` : '';
                 const patchActionCell = savePatchButton || patchAiButton ? `<div class="flex flex-wrap items-center gap-1.5">${savePatchButton}${patchAiButton}</div>` : '';
                 const receivedNoAction = isPortalNoActionValue(received);
-                const pendingMaterial = !receivedNoAction && (!received || received === '---') && !isDone && !isPatchNoAction;
-                const pendingMaterialBadge = pendingMaterial ? '<span class="inline-flex items-center rounded-md px-1 text-[9px] font-bold uppercase tracking-wide text-amber-500/70" title="Pending material">Pending Material</span>' : '';
+                const completeNoAction = isPortalNoActionValue(complete);
+                const pendingMaterial = !receivedNoAction && (!received || received === '---' || /pending/i.test(received)) && !isDone && !completeNoAction;
+                const pendingMaterialBadge = pendingMaterial ? '<span class="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 text-amber-700" title="Pending material">Pending Material</span>' : '';
                 const receivedCell = canEdit
                     ? `<input id="patch-received-${sid}" class="manual-input admin-input" value="${received==='---'?'':received}" placeholder="m/d/yyyy hh:mm or -">`
                     : received;
