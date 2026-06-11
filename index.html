@@ -747,8 +747,8 @@
             </div>
 
             <!-- Laser Table -->
-            <div id="laserTableWrapper" class="bg-white rounded-xl shadow-sm border overflow-x-auto">
-                <table class="w-full portal-data-table text-left min-w-[1400px]">
+            <div id="laserTableWrapper" class="portal-table-shell bg-white rounded-xl shadow-sm border">
+                <table class="portal-wide-table portal-data-table text-left">
                     <thead class="bg-slate-100 border-b text-[11px] uppercase tracking-wider text-slate-500 font-bold">
                         <tr>
                             <th class="p-3">ID</th>
@@ -9116,9 +9116,12 @@
         }
 
         function enableTableScrollControls() {
-            const wrappers = Array.from(document.querySelectorAll('div.overflow-x-auto, .portal-table-shell'))
+            const wrappers = Array.from(document.querySelectorAll('#laserTableWrapper, .portal-table-shell'))
                 .filter((el, index, arr) => arr.indexOf(el) === index)
                 .filter(el => el.querySelector('table'));
+            document.querySelectorAll('.portal-scroll-controls').forEach(controls => {
+                if (!wrappers.includes(controls.nextElementSibling)) controls.remove();
+            });
 
             wrappers.forEach(el => {
                 if (el.dataset.scrollControlsBound === '1') return;
