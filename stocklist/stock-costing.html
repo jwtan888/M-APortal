@@ -121,6 +121,36 @@
     .panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem; flex-wrap: wrap; }
     .tab-panel-head { display: flex; align-items: center; justify-content: space-between; gap: 1rem; flex-wrap: wrap; }
     .pdf-title { display: none; }
+    @media (max-width: 760px) {
+      body { background: linear-gradient(180deg, #eef1f7 0%, #dfe3ec 100%); }
+      .app-shell { width: 100%; padding: .55rem; gap: .8rem; }
+      .topbar-title { font-size: 1.45rem; line-height: 1.05; }
+      .login-shell, .hero, .panel, .kpi-card { border-radius: 1rem; }
+      .hero { grid-template-columns: 1fr; padding: 1rem; }
+      .hero-title { font-size: 2rem; line-height: 1; }
+      .hero-copy { font-size: .9rem; }
+      .nav-tabs, .page-tabs { width: 100%; overflow-x: auto; flex-wrap: nowrap; justify-content: flex-start; border-radius: 1rem; -webkit-overflow-scrolling: touch; }
+      .nav-tab, .page-tab { flex: 0 0 auto; min-height: 2.65rem; display: inline-flex; align-items: center; justify-content: center; }
+      .tab-panel-head, .panel-head { align-items: stretch; }
+      .login-grid .field, .dashboard-tools .field { min-width: 0; width: 100%; }
+      .login-grid input, .login-grid select, .field input, .field select { min-height: 2.9rem; font-size: 16px; }
+      .password-dialog { width: min(22rem, calc(100vw - 1.5rem)); border-radius: 1rem; }
+      .metric-value { font-size: 2rem; }
+      .grid-5 .metric-value { font-size: 1.7rem; white-space: normal; }
+      .table-wrap { border: 0; background: transparent; overflow: visible; }
+      .table-wrap table.mobile-card-table { display: block; min-width: 0; width: 100%; border-collapse: separate; }
+      .table-wrap table.mobile-card-table thead { display: none; }
+      .table-wrap table.mobile-card-table tbody { display: grid; gap: .75rem; }
+      .table-wrap table.mobile-card-table tr { display: block; overflow: hidden; border: 1px solid var(--line); border-radius: 1rem; background: rgba(255,255,255,.88); box-shadow: 0 10px 28px rgba(48,59,86,.06); }
+      .table-wrap table.mobile-card-table td { display: grid; grid-template-columns: minmax(6.8rem, 42%) minmax(0, 1fr); gap: .75rem; align-items: start; padding: .7rem .85rem; border-bottom: 1px solid var(--line); font-size: .88rem; }
+      .table-wrap table.mobile-card-table td:last-child { border-bottom: 0; }
+      .table-wrap table.mobile-card-table td::before { content: attr(data-label); color: var(--muted); font-size: .68rem; font-weight: 900; letter-spacing: .11em; line-height: 1.25; text-transform: uppercase; }
+      .table-wrap table.mobile-card-table td[colspan] { display: block; }
+      .table-wrap table.mobile-card-table td[colspan]::before { display: none; }
+      .table-wrap table.mobile-card-table input, .table-wrap table.mobile-card-table select, .table-wrap table.mobile-card-table button { max-width: 100%; }
+      .price-input, .balance-input { width: 100%; min-width: 0; }
+      .product-table, table { min-width: 0; }
+    }
     @page { size: A4 portrait; margin: 8mm; }
     @media print {
       html, body { width: 210mm; min-height: 297mm; background: #fff; }
@@ -1230,6 +1260,28 @@
       });
     }
 
+    function syncMobileTableLabels() {
+      document.querySelectorAll('.table-wrap table').forEach((table) => {
+        table.classList.add('mobile-card-table');
+        const headers = Array.from(table.querySelectorAll('thead tr:last-child th'))
+          .map((th) => th.textContent.trim().replace(/\s+/g, ' '));
+        table.querySelectorAll('tbody tr').forEach((row) => {
+          Array.from(row.children).forEach((cell, index) => {
+            if (cell.tagName !== 'TD') return;
+            cell.dataset.label = headers[index] || '';
+          });
+        });
+      });
+    }
+
+    function installMobileTableLabels() {
+      syncMobileTableLabels();
+      const target = document.querySelector('main');
+      if (!target) return;
+      const observer = new MutationObserver(syncMobileTableLabels);
+      observer.observe(target, { childList: true, subtree: true });
+    }
+
     (function rewriteGithubPagesLinks() {
       const isPages = location.hostname.endsWith('github.io');
       const repoPrefix = isPages && location.pathname.split('/').filter(Boolean)[0] ? `/${location.pathname.split('/').filter(Boolean)[0]}` : '';
@@ -1242,6 +1294,7 @@
       appStarted = true;
       initDatePicker();
       bind();
+      installMobileTableLabels();
       const cachedPayload = loadCachedRemoteStockPayload();
       if (cachedPayload) applyRemoteStockPayload(cachedPayload);
       movements = mergeMovementRows(seedMovementRows(), movements);

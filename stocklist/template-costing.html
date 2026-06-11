@@ -150,6 +150,43 @@
     .date-picker-actions .primary-btn { border-radius: 999px; }
     .row-form { border: 1px solid var(--line); border-radius: 1rem; background: rgba(255,255,255,.58); padding: 1rem; margin-top: 1rem; }
     .status-line { color: var(--muted); font-weight: 750; }
+    @media (max-width: 760px) {
+      body { background: linear-gradient(180deg, #eef1f7 0%, #dfe3ec 100%); }
+      .app-shell { width: 100%; padding: .55rem; gap: .8rem; }
+      .topbar-title { font-size: 1.45rem; line-height: 1.05; }
+      .login-shell, .hero, .panel, .kpi-card { border-radius: 1rem; }
+      .hero { grid-template-columns: 1fr; padding: 1rem; }
+      .hero-title { font-size: 2rem; line-height: 1; }
+      .hero-copy { font-size: .9rem; }
+      .nav-tabs, .page-tabs { width: 100%; overflow-x: auto; flex-wrap: nowrap; justify-content: flex-start; border-radius: 1rem; -webkit-overflow-scrolling: touch; }
+      .nav-tab, .page-tab { flex: 0 0 auto; min-height: 2.65rem; display: inline-flex; align-items: center; justify-content: center; }
+      .section-title, .tab-panel-head { align-items: stretch; }
+      .section-title { flex-direction: column; }
+      .dashboard-tools, .dashboard-tools .field { width: 100%; min-width: 0; }
+      .login-grid .field { min-width: 0; width: 100%; }
+      .login-grid input, .login-grid select, .field input, .field select, .entry-input, .entry-select { min-height: 2.9rem; font-size: 16px; }
+      .password-dialog { width: min(22rem, calc(100vw - 1.5rem)); border-radius: 1rem; }
+      .metric-value { font-size: 2rem; }
+      .monthly-bars { padding: .75rem; }
+      .month-bar { grid-template-columns: 3.4rem minmax(0, 1fr); gap: .55rem; }
+      .month-bar .bar-value { grid-column: 1 / -1; text-align: left; }
+      .analysis-grid { grid-template-columns: 1fr; }
+      .row-form { padding: .85rem; border-radius: 1rem; }
+      .table-wrap { border: 0; background: transparent; overflow: visible; }
+      .table-wrap.mobile-scroll-wrap { overflow-x: auto; border: 1px solid var(--line); background: rgba(255,255,255,.7); -webkit-overflow-scrolling: touch; }
+      .comparison-table { min-width: 760px; }
+      .table-wrap table.mobile-card-table { display: block; min-width: 0; width: 100%; border-collapse: separate; }
+      .table-wrap table.mobile-card-table thead { display: none; }
+      .table-wrap table.mobile-card-table tbody { display: grid; gap: .75rem; }
+      .table-wrap table.mobile-card-table tr { display: block; overflow: hidden; border: 1px solid var(--line); border-radius: 1rem; background: rgba(255,255,255,.88); box-shadow: 0 10px 28px rgba(48,59,86,.06); }
+      .table-wrap table.mobile-card-table td { display: grid; grid-template-columns: minmax(6.8rem, 42%) minmax(0, 1fr); gap: .75rem; align-items: start; padding: .7rem .85rem; border-bottom: 1px solid var(--line); font-size: .88rem; }
+      .table-wrap table.mobile-card-table td:last-child { border-bottom: 0; }
+      .table-wrap table.mobile-card-table td::before { content: attr(data-label); color: var(--muted); font-size: .68rem; font-weight: 900; letter-spacing: .11em; line-height: 1.25; text-transform: uppercase; }
+      .table-wrap table.mobile-card-table td[colspan] { display: block; }
+      .table-wrap table.mobile-card-table td[colspan]::before { display: none; }
+      .table-wrap table.mobile-card-table input, .table-wrap table.mobile-card-table select, .table-wrap table.mobile-card-table button { max-width: 100%; }
+      .costing-table, table:not(.comparison-table) { min-width: 0; }
+    }
     @media (min-width: 900px) { .login-layout { display: grid; grid-template-columns: minmax(220px, .85fr) auto minmax(300px, 1fr); align-items: center; } .login-grid { justify-content: center; flex-wrap: nowrap; } .login-status { justify-content: flex-end; } }
     @media (max-width: 1200px) { .entry-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); } .dashboard-grid { grid-template-columns: 1fr; } }
     @media (max-width: 900px) { .app-shell { width: min(1500px, calc(100vw - 1rem)); padding: .75rem 0; } .login-shell, .panel, .kpi-card { padding: 1rem; } .login-layout { display: flex; flex-direction: column; align-items: stretch; } .login-grid, .login-status { justify-content: flex-start; } .hero, .entry-grid, .grid-2, .grid-3, .analysis-grid { grid-template-columns: 1fr; } .topbar { flex-direction: column; align-items: stretch; gap: .85rem; } .nav-tabs, .page-tabs { display: flex; width: 100%; flex-wrap: wrap; } .nav-tab, .page-tab { flex: 1 1 calc(33.333% - .45rem); text-align: center; font-size: .82rem; } .hero-actions, .primary-btn, .ghost-btn { width: 100%; } }
@@ -1072,6 +1109,31 @@
       });
     }
 
+    function syncMobileTableLabels() {
+      document.querySelectorAll('.table-wrap table').forEach((table) => {
+        const isMatrix = table.classList.contains('comparison-table');
+        table.classList.toggle('mobile-card-table', !isMatrix);
+        table.closest('.table-wrap')?.classList.toggle('mobile-scroll-wrap', isMatrix);
+        if (isMatrix) return;
+        const headers = Array.from(table.querySelectorAll('thead tr:last-child th'))
+          .map((th) => th.textContent.trim().replace(/\s+/g, ' '));
+        table.querySelectorAll('tbody tr').forEach((row) => {
+          Array.from(row.children).forEach((cell, index) => {
+            if (cell.tagName !== 'TD') return;
+            cell.dataset.label = headers[index] || '';
+          });
+        });
+      });
+    }
+
+    function installMobileTableLabels() {
+      syncMobileTableLabels();
+      const target = document.querySelector('main');
+      if (!target) return;
+      const observer = new MutationObserver(syncMobileTableLabels);
+      observer.observe(target, { childList: true, subtree: true });
+    }
+
     (function rewriteGithubPagesLinks() {
       const isPages = location.hostname.endsWith('github.io');
       const repoPrefix = isPages && location.pathname.split('/').filter(Boolean)[0] ? `/${location.pathname.split('/').filter(Boolean)[0]}` : '';
@@ -1084,6 +1146,7 @@
       appStarted = true;
       initDatePicker();
       bind();
+      installMobileTableLabels();
       rebuildProductIndex();
       const cachedPayload = loadCachedRemoteStockPayload();
       if (cachedPayload) applyRemoteStockPayload(cachedPayload);
