@@ -939,12 +939,12 @@
                     <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Laser Jobs (Month)</p>
                     <h2 id="ld-total" class="text-3xl font-bold text-slate-800">0</h2>
                 </div>
-                <div onclick="switchTab('laser')" class="bg-white p-6 rounded-xl border shadow-sm cursor-pointer hover:border-blue-400 transition-all">
+                <div onclick="drillDownLaserDashboard()" class="bg-white p-6 rounded-xl border shadow-sm cursor-pointer hover:border-blue-400 transition-all">
                     <p class="text-[10px] font-bold text-blue-500 uppercase tracking-widest mb-1">Pending Laser Cut</p>
                     <h2 id="ld-laser-pending" class="text-3xl font-bold text-blue-600">0</h2>
                     <p class="text-[9px] text-slate-400 mt-1">Required Date filled · No Complete Date</p>
                 </div>
-                <div onclick="switchTab('laser')" class="bg-white p-6 rounded-xl border shadow-sm cursor-pointer hover:border-amber-400 transition-all">
+                <div onclick="drillDownLaserDashboard()" class="bg-white p-6 rounded-xl border shadow-sm cursor-pointer hover:border-amber-400 transition-all">
                     <p class="text-[10px] font-bold text-amber-500 uppercase tracking-widest mb-1">Pending Consumption</p>
                     <h2 id="ld-pending" class="text-3xl font-bold text-amber-600">0</h2>
                     <p class="text-[9px] text-slate-400 mt-1">Complete Date filled · No Consumption Start · P1–P6 / Concept / GGP etc.</p>
@@ -3338,6 +3338,24 @@
             if (mf) mf.value = '';
             laserSearchQuery = '';
             renderLaserTable();
+        }
+
+        function drillDownLaserDashboard() {
+            switchTab('laser');
+            const search = document.getElementById('laserSearch');
+            const month = document.getElementById('laserMonthFilter');
+            const hadFilter = !!String(search?.value || laserSearchQuery || '').trim() || !!String(month?.value || '').trim();
+            if (search) search.value = '';
+            if (month) month.value = '';
+            if (hadFilter) {
+                laserSearchQuery = '';
+                renderLaserTable();
+            }
+            requestAnimationFrame(() => {
+                const target = document.getElementById('laserSearch') || document.getElementById('laserTableWrapper');
+                if (!target) return;
+                target.scrollIntoView({ behavior: 'auto', block: 'start' });
+            });
         }
 
         function drillDownLaser(style, id = '') {
