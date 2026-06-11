@@ -809,10 +809,10 @@
                 <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">Template</span>
                 <div class="flex-1 border-t border-slate-200"></div>
             </div>
-            <!-- Stat cards: New Styles, Pending, Delayed, Done -->
+            <!-- Stat cards: New Requests, Pending, Delayed, Done -->
             <div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <p id="stat-total-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">New Styles (Month)</p>
+                    <p id="stat-total-label" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">New Requests (Month)</p>
                     <h2 id="stat-total" class="text-3xl font-bold text-slate-800">0</h2>
                 </div>
                 <div onclick="drillDown('PENDING')" class="bg-white p-6 rounded-xl border shadow-sm cursor-pointer hover:border-amber-400 transition-all">
@@ -3053,20 +3053,20 @@
             const values = Array.from(monthSelect?.options || [])
                 .map(option => option.value)
                 .filter(value => value && value !== 'ALL');
-            if (!values.length) return 'New Styles (Accumulate)';
+            if (!values.length) return 'New Requests (Accumulate)';
             const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
             const parsed = values.map(value => {
                 const [month, year] = value.split('-');
                 return { value, date: new Date(Number(year), monthNames.indexOf(month), 1) };
             }).filter(item => !Number.isNaN(item.date.getTime()));
-            if (!parsed.length) return 'New Styles (Accumulate)';
+            if (!parsed.length) return 'New Requests (Accumulate)';
             parsed.sort((a, b) => a.date - b.date);
-            return `New Styles (Accumulate from ${parsed[0].value} to ${parsed[parsed.length - 1].value})`;
+            return `New Requests (Accumulate from ${parsed[0].value} to ${parsed[parsed.length - 1].value})`;
         }
 
         function getNewStylesCardLabel() {
             const selected = document.getElementById('monthFilter')?.value || 'ALL';
-            return selected === 'ALL' ? getDashboardMonthRangeLabel() : 'New Styles (Month)';
+            return selected === 'ALL' ? getDashboardMonthRangeLabel() : 'New Requests (Month)';
         }
 
         function updateNewStylesCardLabel() {
