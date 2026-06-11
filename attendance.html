@@ -247,7 +247,7 @@
                 <div>
                     <p class="text-[11px] font-bold uppercase tracking-[0.16em] text-slate-400">Utilization</p>
                     <h2 class="text-2xl font-bold tracking-tight">PIC Capacity vs Workload</h2>
-                    <p class="mt-1 text-sm text-slate-500">Attendance hours are used as monthly PIC capacity. Workload is pulled from Laser, Support, Consumption, and Manual.</p>
+                    <p class="mt-1 text-sm text-slate-500">Attendance hours are used as monthly PIC capacity. Workload is pulled from Laser, Support, Consumption, and Paper Record.</p>
                 </div>
                 <div class="text-right">
                     <div id="util-capacity" class="text-sm font-bold text-slate-800">-</div>
@@ -271,7 +271,7 @@
                                 <th class="p-3">Support</th>
                                 <th class="p-3">Down Filling</th>
                                 <th class="w-20 p-3">Consumption</th>
-                                <th class="p-3">Manual</th>
+                                <th class="p-3">Paper Record</th>
                                 <th class="p-3">Total</th>
                                 <th class="p-3">Utilization</th>
                             </tr>
@@ -586,7 +586,7 @@
 
         async function saveManualUtilHours(pic, rawValue) {
             if (!ATT_EDITORS.includes(currentUser)) {
-                alert('Only Gavin or Joe can edit manual workload.');
+                alert('Only Gavin or Joe can edit Paper Record workload.');
                 return;
             }
             const monthKey = attKey();
@@ -621,7 +621,7 @@
                 await fetchManualUtilFromCloud();
                 renderUtilization();
             } catch (e) {
-                alert('Manual utilization save failed.');
+                alert('Paper Record utilization save failed.');
             }
         }
 
@@ -1262,7 +1262,7 @@
                         { label: 'Support', data: picList.map(pic => parseFloat((supportHrs[pic] || 0).toFixed(1))), backgroundColor: '#3b82f6' },
                         { label: 'Down Filling', data: picList.map(pic => parseFloat((downHrs[pic] || 0).toFixed(1))), backgroundColor: '#0ea5a4' },
                         { label: 'Consumption', data: picList.map(pic => parseFloat((consumptionHrs[pic] || 0).toFixed(1))), backgroundColor: '#8b5cf6' },
-                        { label: 'Manual', data: picList.map(pic => parseFloat((manualHrs[pic] || 0).toFixed(1))), backgroundColor: '#f59e0b' }
+                        { label: 'Paper Record', data: picList.map(pic => parseFloat((manualHrs[pic] || 0).toFixed(1))), backgroundColor: '#f59e0b' }
                     ]
                 },
                 options: {
@@ -1314,7 +1314,7 @@
                     Support: parseFloat(support.toFixed(1)),
                     'Down Filling': parseFloat(down.toFixed(1)),
                     Consumption: parseFloat(consumption.toFixed(1)),
-                    Manual: parseFloat(manual.toFixed(1)),
+                    'Paper Record': parseFloat(manual.toFixed(1)),
                     Total: parseFloat(total.toFixed(1)),
                     Capacity: cap,
                     'Utilization %': pct
@@ -1328,7 +1328,7 @@
                 const support = row.Support;
                 const down = row['Down Filling'];
                 const consumption = row.Consumption;
-                const manual = row.Manual;
+                const manual = row['Paper Record'];
                 const total = row.Total;
                 const cap = row.Capacity;
                 const pct = row['Utilization %'];
