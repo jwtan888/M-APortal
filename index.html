@@ -434,6 +434,11 @@
             color: var(--accent);
             border-color: rgba(0,113,227,0.2);
         }
+        @media (max-width: 767px), (pointer: coarse) {
+            .portal-scroll-controls {
+                display: none !important;
+            }
+        }
         .portal-wide-table {
             width: 100%;
             min-width: 1400px;
@@ -9116,6 +9121,14 @@
         }
 
         function enableTableScrollControls() {
+            const shouldHideControls = window.matchMedia('(max-width: 767px), (pointer: coarse)').matches;
+            if (shouldHideControls) {
+                document.querySelectorAll('.portal-scroll-controls').forEach(controls => controls.remove());
+                document.querySelectorAll('#laserTableWrapper, .portal-table-shell').forEach(el => {
+                    delete el.dataset.scrollControlsBound;
+                });
+                return;
+            }
             const wrappers = Array.from(document.querySelectorAll('#laserTableWrapper, .portal-table-shell'))
                 .filter((el, index, arr) => arr.indexOf(el) === index)
                 .filter(el => el.querySelector('table'));
