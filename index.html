@@ -914,8 +914,7 @@
                     <div class="h-[300px]"><canvas id="volumeChart"></canvas></div>
                 </div>
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
-                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Developed Template Value</h3>
-                    <p id="templateValueMeta" class="text-[10px] font-semibold text-slate-400 mb-3">Unique styles and base job numbers</p>
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Developed Style/Job</h3>
                     <div class="h-[300px]"><canvas id="templateValueChart"></canvas></div>
                 </div>
             </div>
@@ -2120,6 +2119,41 @@
             return { ...PORTAL_BAR_STYLE, ...config };
         }
 
+        function getAttendanceMonthKeyFromDashboardFilter(selectedMonthStr, months) {
+            if (!selectedMonthStr || selectedMonthStr === 'ALL') return null;
+            const [mStr, yStr] = String(selectedMonthStr).split('-');
+            const mIdx = months.indexOf(mStr);
+            const parsedYear = parseInt(yStr, 10);
+            if (mIdx < 0 || isNaN(parsedYear)) return null;
+            const fullYear = String(yStr).length === 2 ? parsedYear + 2000 : parsedYear;
+            return `${fullYear}-${String(mIdx + 1).padStart(2, '0')}`;
+        }
+
+        function countAttendanceWorkingDays(selectedMonthStr, months) {
+            const keys = selectedMonthStr === 'ALL'
+                ? Object.keys(attData || {})
+                : [getAttendanceMonthKeyFromDashboardFilter(selectedMonthStr, months)].filter(Boolean);
+            let workingDays = 0;
+            keys.forEach(key => {
+                const monthData = attData?.[key] || {};
+                const days = new Set();
+                Object.values(monthData).forEach(memberData => {
+                    if (!memberData || typeof memberData !== 'object') return;
+                    Object.entries(memberData).forEach(([day, hours]) => {
+                        if (day === '__total__') return;
+                        const dayNum = parseInt(day, 10);
+                        if (dayNum > 0 && (parseFloat(hours) || 0) > 0) days.add(dayNum);
+                    });
+                });
+                workingDays += days.size;
+            });
+            return workingDays;
+        }
+
+        function workingDayAverageLabel(avg, workingDays) {
+            return `Working-day avg ${avg.toFixed(1)}${workingDays ? ` (${workingDays} days)` : ' (no attendance)'}`;
+        }
+
         function renderTemplateValueList(id, values) {
             const el = document.getElementById(id);
             if (!el) return;
@@ -2417,7 +2451,9 @@
             schedulePortalWriteRefresh(refreshConsumptionData);
         }
 
+        let templateAutoComplexitySyncing = false;
         async function syncTemplateAutoComplexity() {
+            if (templateAutoComplexitySyncing) return;
             if (!Array.isArray(allTemplates) || !allTemplates.length) return;
             const candidates = allTemplates.filter(row => {
                 const existing = sanitizeTemplateValue(row.complexity);
@@ -2426,24 +2462,29 @@
             });
             if (!candidates.length) return;
 
-            await Promise.allSettled(candidates.slice(0, 10).map(async row => {
-                const mapped = getTemplateComplexityForType(row.templateType);
-                const recordIdValue = String(row.id);
-                const payload = {
-                    recordID: recordIdValue,
-                    recordId: recordIdValue,
-                    id: recordIdValue,
-                    Id: recordIdValue,
-                    ID: recordIdValue,
-                    complexity: mapped,
-                    'Complexity Level': mapped,
-                    Complexity: mapped
-                };
-                const res = await postPortalJson(updateURL, payload);
-                await readPortalWriteResult(res, 'Template complexity update');
-                row.complexity = mapped;
-                stageTemplatePendingUpdate(row.id, { complexity: mapped });
-            }));
+            templateAutoComplexitySyncing = true;
+            try {
+                await Promise.allSettled(candidates.slice(0, 10).map(async row => {
+                    const mapped = getTemplateComplexityForType(row.templateType);
+                    const recordIdValue = String(row.id);
+                    const payload = {
+                        recordID: recordIdValue,
+                        recordId: recordIdValue,
+                        id: recordIdValue,
+                        Id: recordIdValue,
+                        ID: recordIdValue,
+                        complexity: mapped,
+                        'Complexity Level': mapped,
+                        Complexity: mapped
+                    };
+                    const res = await postPortalJson(updateURL, payload);
+                    await readPortalWriteResult(res, 'Template complexity update');
+                    row.complexity = mapped;
+                    stageTemplatePendingUpdate(row.id, { complexity: mapped });
+                }));
+            } finally {
+                templateAutoComplexitySyncing = false;
+            }
         }
 
         // FIX 3: Removed prefetchMachineImages entirely — it caused the img onload to fire on the
@@ -2998,6 +3039,7 @@
                 generateMonthOptions();
                 populateTabMonthFilters();
                 updateDashboard();
+                if (canPortalAutoRender('template')) applyTempFilters(false);
                 if (canPortalAutoRender('laser')) renderLaserTable();
                 if (canPortalAutoRender('support')) renderSupportTable();
                 if (canPortalAutoRender('patch')) renderPatchTable();
@@ -3116,7 +3158,6 @@
                 })
                 .sort((a, b) => (parseInt(b.id, 10) || 0) - (parseInt(a.id, 10) || 0));
                 allTemplates = mergeTemplatePendingUpdates(allTemplates);
-                await syncTemplateAutoComplexity();
                 templateDataLoaded = true;
                 writeDashboardSnapshot();
                 syncQuiltingTemplatesToConsumption(true);
@@ -3127,6 +3168,7 @@
                 }
                 renderUtilization(); populateTabMonthFilters();
                 if(st) { st.innerText = "LIVE: " + new Date().toLocaleTimeString() + ` (${allTemplates.length} rows)`; st.classList.remove('sync-active'); }
+                setTimeout(() => safeRun(() => syncTemplateAutoComplexity()), 500);
             } catch (e) {
                 if (allTemplates.length) {
                     if(st) { st.innerText = `PA slow - showing cached ${allTemplates.length} rows`; st.classList.remove('sync-active'); }
@@ -3382,9 +3424,9 @@
                 return new Date(parseInt(ya),parseInt(ma)-1,parseInt(da)) - new Date(parseInt(yb),parseInt(mb)-1,parseInt(db));
             });
             const completionValues = sortedDates.map(d => volStats[d]);
-            const completionAvg = completionValues.length
-                ? completionValues.reduce((sum, count) => sum + count, 0) / completionValues.length
-                : 0;
+            const completedTotal = completionValues.reduce((sum, count) => sum + count, 0);
+            const attendanceWorkingDays = countAttendanceWorkingDays(selectedMonthStr, months);
+            const completionAvg = attendanceWorkingDays ? completedTotal / attendanceWorkingDays : 0;
             if(volumeChart) volumeChart.destroy();
             volumeChart = new Chart(document.getElementById('volumeChart'), {
                 type: 'line',
@@ -3392,7 +3434,7 @@
                     labels: sortedDates,
                     datasets: [
                         { label: 'Completed', data: completionValues, borderColor: '#10b981', tension: 0.3, fill: true, backgroundColor: 'rgba(16,185,129,0.07)', pointRadius: 4 },
-                        { label: `Average ${completionAvg.toFixed(1)}`, data: sortedDates.map(() => completionAvg), borderColor: '#94a3b8', tension: 0, fill: false, pointRadius: 0, borderWidth: 1, pointStyle: 'line' }
+                        { label: workingDayAverageLabel(completionAvg, attendanceWorkingDays), data: sortedDates.map(() => completionAvg), borderColor: '#94a3b8', tension: 0, fill: false, pointRadius: 0, borderWidth: 1, pointStyle: 'line' }
                     ]
                 },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { usePointStyle: true } } } }
@@ -3406,22 +3448,18 @@
                 if (styleKey) uniqueStyles.add(styleKey);
                 if (jobKey) uniqueJobs.add(jobKey);
             });
-            const valueMeta = document.getElementById('templateValueMeta');
-            if (valueMeta) {
-                valueMeta.innerText = `${uniqueStyles.size} unique styles · ${uniqueJobs.size} unique base jobs`;
-            }
             if (templateValueChart) templateValueChart.destroy();
             const valueCtx = document.getElementById('templateValueChart');
             if (valueCtx) {
                 templateValueChart = new Chart(valueCtx, {
                     type: 'bar',
                     data: {
-                        labels: ['Style Number', 'Base Job Number'],
+                        labels: ['Style No.', 'Job No.'],
                         datasets: [{
                             ...PORTAL_BAR_STYLE,
-                            label: 'Developed Template Coverage',
+                            label: 'Developed Style/Job',
                             data: [uniqueStyles.size, uniqueJobs.size],
-                            backgroundColor: ['#2563eb', '#0f766e'],
+                            backgroundColor: ['#3b82f6', '#3b82f6'],
                         }]
                     },
                     options: {
@@ -3714,9 +3752,9 @@
                 return new Date(parseInt(ya),parseInt(ma)-1,parseInt(da)) - new Date(parseInt(yb),parseInt(mb)-1,parseInt(db));
             });
             const laserTrendValues = sortedDays.map(d => dayCounts[d]);
-            const laserTrendAvg = laserTrendValues.length
-                ? laserTrendValues.reduce((sum, count) => sum + count, 0) / laserTrendValues.length
-                : 0;
+            const laserWorkingDays = countAttendanceWorkingDays(sharedMonthVal, months);
+            const laserTrendTotal = laserTrendValues.reduce((sum, count) => sum + count, 0);
+            const laserTrendAvg = laserWorkingDays ? laserTrendTotal / laserWorkingDays : 0;
             if (laserTrendChart) laserTrendChart.destroy();
             const ctx = document.getElementById('laserTrendChart');
             if (ctx) {
@@ -3735,7 +3773,7 @@
                                 pointRadius: 4
                             },
                             {
-                                label: `Average ${laserTrendAvg.toFixed(1)}`,
+                                label: workingDayAverageLabel(laserTrendAvg, laserWorkingDays),
                                 data: sortedDays.map(() => laserTrendAvg),
                                 borderColor: '#94a3b8',
                                 borderWidth: 1,
@@ -5730,11 +5768,13 @@
             if (conVolumeChart) conVolumeChart.destroy();
             const cvc = document.getElementById('conVolumeChart');
             const conVolumeValues = sortedDays.map(d => dayMap[d]);
-            const conVolumeAvg = conVolumeValues.length ? conVolumeValues.reduce((sum, count) => sum + count, 0) / conVolumeValues.length : 0;
+            const conWorkingDays = countAttendanceWorkingDays(sharedMonth, months);
+            const conVolumeTotal = conVolumeValues.reduce((sum, count) => sum + count, 0);
+            const conVolumeAvg = conWorkingDays ? conVolumeTotal / conWorkingDays : 0;
             if (cvc) conVolumeChart = new Chart(cvc, {
                 type:'line', data:{labels:sortedDays, datasets:[
                     {label:'Requests', data:conVolumeValues, borderColor:'#6366f1', backgroundColor:'rgba(99,102,241,0.07)', tension:0.3, fill:true},
-                    {label:`Average ${conVolumeAvg.toFixed(1)}`, data:sortedDays.map(()=>conVolumeAvg), borderColor:'#94a3b8', borderWidth:1, tension:0, fill:false, pointRadius:0, pointStyle:'line'}
+                    {label:workingDayAverageLabel(conVolumeAvg, conWorkingDays), data:sortedDays.map(()=>conVolumeAvg), borderColor:'#94a3b8', borderWidth:1, tension:0, fill:false, pointRadius:0, pointStyle:'line'}
                 ]},
                 options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{usePointStyle:true}}}}
             });
@@ -5823,11 +5863,13 @@
             if (downVolumeChart) downVolumeChart.destroy();
             const dvc = document.getElementById('downVolumeChart');
             const downVolumeValues = sortedDays.map(d => dayMap[d]);
-            const downVolumeAvg = downVolumeValues.length ? downVolumeValues.reduce((sum, count) => sum + count, 0) / downVolumeValues.length : 0;
+            const downWorkingDays = countAttendanceWorkingDays(selectedMonth || 'ALL', months);
+            const downVolumeTotal = downVolumeValues.reduce((sum, count) => sum + count, 0);
+            const downVolumeAvg = downWorkingDays ? downVolumeTotal / downWorkingDays : 0;
             if (dvc) downVolumeChart = new Chart(dvc, {
                 type:'line', data:{labels:sortedDays, datasets:[
                     {label:'Records', data:downVolumeValues, borderColor:'#0ea5e9', backgroundColor:'rgba(14,165,233,0.07)', tension:0.3, fill:true},
-                    {label:`Average ${downVolumeAvg.toFixed(1)}`, data:sortedDays.map(()=>downVolumeAvg), borderColor:'#94a3b8', borderWidth:1, tension:0, fill:false, pointRadius:0, pointStyle:'line'}
+                    {label:workingDayAverageLabel(downVolumeAvg, downWorkingDays), data:sortedDays.map(()=>downVolumeAvg), borderColor:'#94a3b8', borderWidth:1, tension:0, fill:false, pointRadius:0, pointStyle:'line'}
                 ]},
                 options:{responsive:true, maintainAspectRatio:false, plugins:{legend:{labels:{usePointStyle:true}}}}
             });
@@ -5913,7 +5955,9 @@
             if (patchMonthChart) patchMonthChart.destroy();
             const pmCtx = el('patchMonthChart');
             const patchCompletionValues = sortedDays.map(d => dayCompletions[d]);
-            const patchCompletionAvg = patchCompletionValues.length ? patchCompletionValues.reduce((sum, count) => sum + count, 0) / patchCompletionValues.length : 0;
+            const patchWorkingDays = countAttendanceWorkingDays(sharedMonth, months_pd);
+            const patchCompletionTotal = patchCompletionValues.reduce((sum, count) => sum + count, 0);
+            const patchCompletionAvg = patchWorkingDays ? patchCompletionTotal / patchWorkingDays : 0;
             if (pmCtx) patchMonthChart = new Chart(pmCtx, {
                 type: 'line',
                 data: {
@@ -5930,7 +5974,7 @@
                             pointHoverRadius: 5
                         },
                         {
-                            label: `Average ${patchCompletionAvg.toFixed(1)}`,
+                            label: workingDayAverageLabel(patchCompletionAvg, patchWorkingDays),
                             data: sortedDays.map(() => patchCompletionAvg),
                             borderColor: '#94a3b8',
                             borderWidth: 1,
@@ -6445,12 +6489,14 @@
             if (supVolumeChart) supVolumeChart.destroy();
             const svc = document.getElementById('supVolumeChart');
             const supportVolumeValues = sortedDays.map(d => dayStats[d]);
-            const supportVolumeAvg = supportVolumeValues.length ? supportVolumeValues.reduce((sum, count) => sum + count, 0) / supportVolumeValues.length : 0;
+            const supportWorkingDays = countAttendanceWorkingDays(sharedMonth, months);
+            const supportVolumeTotal = supportVolumeValues.reduce((sum, count) => sum + count, 0);
+            const supportVolumeAvg = supportWorkingDays ? supportVolumeTotal / supportWorkingDays : 0;
             if (svc) supVolumeChart = new Chart(svc, {
                 type: 'line',
                 data: { labels: sortedDays, datasets: [
                     { label: 'Requests', data: supportVolumeValues, borderColor: '#8b5cf6', backgroundColor: 'rgba(139,92,246,0.07)', tension: 0.3, fill: true },
-                    { label: `Average ${supportVolumeAvg.toFixed(1)}`, data: sortedDays.map(() => supportVolumeAvg), borderColor: '#94a3b8', borderWidth: 1, tension: 0, fill: false, pointRadius: 0, pointStyle: 'line' }
+                    { label: workingDayAverageLabel(supportVolumeAvg, supportWorkingDays), data: sortedDays.map(() => supportVolumeAvg), borderColor: '#94a3b8', borderWidth: 1, tension: 0, fill: false, pointRadius: 0, pointStyle: 'line' }
                 ] },
                 options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { usePointStyle: true } } } }
             });
@@ -6535,6 +6581,7 @@
             // Refresh support data when switching to support tab
             if (t === 'support') refreshSupportData(true);
             // Re-render patch/consumption with correct canEdit state each time tab is opened
+            if (t === 'template' && allTemplates.length && canPortalAutoRender('template')) applyTempFilters(false);
             if (t === 'patch' && allPatchRows.length && canPortalAutoRender('patch')) renderPatchTable();
             if (t === 'consumption' && allConsumptionRows.length && canPortalAutoRender('consumption')) renderConsumptionTable();
             // Refresh down filling data when switching to down filling tab
@@ -6971,7 +7018,7 @@
             chartGrid.className = 'ma-report-chart-grid';
             chartGrid.appendChild(createReportChartPanel('sectionChart', 'Requests By Section'));
             chartGrid.appendChild(createReportChartPanel('volumeChart', 'Completion Trends (Daily)'));
-            chartGrid.appendChild(createReportChartPanel('templateValueChart', 'Developed Template Value'));
+            chartGrid.appendChild(createReportChartPanel('templateValueChart', 'Developed Style/Job'));
             body.appendChild(chartGrid);
             appendTemplatePendingReport(body);
             return true;
@@ -7311,7 +7358,7 @@
                     charts: [
                         { id: 'sectionChart', title: 'Requests By Section' },
                         { id: 'volumeChart', title: 'Completion Trends (Daily)' },
-                        { id: 'templateValueChart', title: 'Developed Template Value' }
+                        { id: 'templateValueChart', title: 'Developed Style/Job' }
                     ],
                     detailCards: [
                         { type: 'deliveryKpi', title: 'KPI- On Time Delivery To Sample Development', prefix: 'kpi-sample' },
