@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>AI Generative Patch Template</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 68 48'%3E%3Cg fill='%230514ff'%3E%3Cpath d='M9 4h7L7 44H0z'/%3E%3Cpath d='M21 4h12L24 44H12z'/%3E%3Cpath d='M44 4h21c2 0 3 2 3 4l-7 28c-1 5-5 8-10 8H34c-4 0-7-3-6-7l7-26c1-4 5-7 9-7z'/%3E%3C/g%3E%3C/svg%3E">
-    <link rel="stylesheet" href="styles.css?v=20260610-width-rescale-v1">
+    <link rel="stylesheet" href="styles.css?v=20260616-offset-envelope-v1">
   </head>
   <body>
     <main class="app-shell">
@@ -137,7 +137,11 @@
             </label>
             <label>
               Detail
-              <input id="scanTraceDetail" type="range" min="1" max="10" step="1" value="6">
+              <input id="scanTraceDetail" type="range" min="1" max="20" step="1" value="10">
+            </label>
+            <label>
+              Smooth
+              <input id="scanTraceSmooth" type="range" min="0" max="12" step="1" value="0">
             </label>
             <label>
               Opacity
@@ -171,6 +175,6 @@
       </div>
     </div>
     <script src="config.js"></script>
-  <script src="app.js?v=20260610-width-rescale-v1"></script>
-</body>
+    <script src="app.js?v=20260616-offset-envelope-v1"></script>
+  </body>
 </html>

@@ -17,6 +17,8 @@ const state = {
   trainingSyncing: false,
   patchModel: null,
   patchModelStatus: "Loading patch model...",
+  traceRefreshSeq: 0,
+  traceRefreshTimer: null,
   baseViewBox: null,
   viewBox: null,
   pan: null,
@@ -83,6 +85,7 @@ const els = {
   scanTraceMode: document.querySelector("#scanTraceMode"),
   scanThresholdAdjust: document.querySelector("#scanThresholdAdjust"),
   scanTraceDetail: document.querySelector("#scanTraceDetail"),
+  scanTraceSmooth: document.querySelector("#scanTraceSmooth"),
   scanImageOpacity: document.querySelector("#scanImageOpacity"),
   scanCropButton: document.querySelector("#scanCropButton"),
   scanConfirmCropButton: document.querySelector("#scanConfirmCropButton"),
@@ -198,6 +201,9 @@ function exportCurrentDxf() {
 }
 
 function clearArtboard() {
+  window.clearTimeout(state.traceRefreshTimer);
+  state.traceRefreshTimer = null;
+  state.traceRefreshSeq += 1;
   state.fileName = "";
   state.sourceType = "dxf";
   state.simpleShape = null;
@@ -226,6 +232,9 @@ async function handleDxfFile(file) {
 }
 
 async function handleImageFile(file) {
+  window.clearTimeout(state.traceRefreshTimer);
+  state.traceRefreshTimer = null;
+  state.traceRefreshSeq += 1;
   state.fileName = file.name;
   state.sourceType = "image-trace";
   state.importStatus = `Importing ${file.name}...`;
@@ -509,7 +518,8 @@ function resetParameters() {
   els.scanTraceWidth.value = 50;
   els.scanTraceMode.value = "auto";
   els.scanThresholdAdjust.value = 0;
-  els.scanTraceDetail.value = 6;
+  els.scanTraceDetail.value = 10;
+  els.scanTraceSmooth.value = 0;
   els.scanImageOpacity.value = 35;
   els.patchRelX.value = DEFAULT_FORMULA.patchRelX;
   els.patchRelY.value = DEFAULT_FORMULA.patchRelY;
@@ -623,9 +633,10 @@ els.scanTraceWidth.addEventListener("input", () => {
   applyScanTraceWidthChange();
 });
 
-els.scanTraceMode.addEventListener("change", () => refreshImageTracePreview({ keepView: true }));
-els.scanThresholdAdjust.addEventListener("input", () => refreshImageTracePreview({ keepView: true }));
-els.scanTraceDetail.addEventListener("input", () => refreshImageTracePreview({ keepView: true }));
+els.scanTraceMode.addEventListener("change", () => scheduleImageTracePreviewRefresh({ keepView: true, delay: 0 }));
+els.scanThresholdAdjust.addEventListener("input", () => scheduleImageTracePreviewRefresh({ keepView: true }));
+els.scanTraceDetail.addEventListener("input", () => scheduleImageTracePreviewRefresh({ keepView: true }));
+els.scanTraceSmooth.addEventListener("input", () => scheduleImageTracePreviewRefresh({ keepView: true }));
 els.scanImageOpacity.addEventListener("input", () => {
   state.imagePreviewOpacity = getScanImageOpacity();
   render();
@@ -736,8 +747,12 @@ function getTraceMode() {
 }
 
 function getTraceSimplifyTolerance() {
-  const detail = Math.max(1, Math.min(10, Number(els.scanTraceDetail.value) || 6));
-  return 0.8 + (10 - detail) * 0.45;
+  const detail = Math.max(1, Math.min(20, Number(els.scanTraceDetail.value) || 10));
+  return 0.2 + (20 - detail) * 0.22;
+}
+
+function getTraceSmoothValue() {
+  return Math.max(0, Math.min(12, Number(els.scanTraceSmooth?.value) || 0));
 }
 
 function getScanImageOpacity() {
@@ -753,10 +768,12 @@ function scanTraceFeatureInput() {
   const trace = state.imageTrace;
   return {
     sourceType: trace.sourceType || "image",
+    traceEngine: trace.engine || "potrace-browser",
     traceMode: getTraceMode(),
     threshold: round(Number(trace.threshold) || 0),
     sensitivity: round(Number(getTraceThresholdAdjust()) || 0),
-    detail: Math.max(1, Math.min(10, Number(els.scanTraceDetail.value) || 6)),
+    detail: Math.max(1, Math.min(20, Number(els.scanTraceDetail.value) || 10)),
+    smooth: getTraceSmoothValue(),
     actualWidthMm: round(getScanTraceWidth()),
     physicalSource: trace.physicalSource || "",
     imageWidthPx: Number(trace.imageWidthPx) || Number(trace.raster?.width) || 0,
@@ -774,10 +791,10 @@ function previewScanCrop() {
   render();
 }
 
-function applyPreviewedScanCrop() {
+async function applyPreviewedScanCrop() {
   const pending = state.pendingScanCrop || currentViewRasterCrop();
   if (!pending) return;
-  cropScanToRasterCrop(pending.crop);
+  await cropScanToRasterCrop(pending.crop);
 }
 
 function cancelScanCropPreview() {
@@ -819,13 +836,15 @@ function currentViewRasterCrop() {
   return { crop };
 }
 
-function cropScanToRasterCrop(crop) {
+async function cropScanToRasterCrop(crop) {
   const trace = state.imageTrace;
   if (!trace?.raster || !crop) return;
+  window.clearTimeout(state.traceRefreshTimer);
+  state.traceRefreshTimer = null;
   const raster = trace.raster;
   const croppedRaster = cropRaster(raster, crop);
-  const traced = traceRaster(croppedRaster);
-  state.imageTrace = {
+  const traced = await traceRasterWithSelectedEngine(croppedRaster);
+  const nextTrace = {
     ...trace,
     ...withActualTraceWidth(traced, trace.mmPerRasterPixel),
     raster: croppedRaster,
@@ -836,6 +855,7 @@ function cropScanToRasterCrop(crop) {
       height: crop.height,
     },
   };
+  state.imageTrace = nextTrace;
   state.pendingScanCrop = null;
   applyDetectedTraceWidth(state.imageTrace);
   state.entities = traceHasParts(state.imageTrace) ? [imageTraceEntity(state.imageTrace, getScanTraceWidth())] : [];
@@ -848,10 +868,10 @@ function cropScanToRasterCrop(crop) {
   zoomPreview(0.82);
 }
 
-function resetScanCrop() {
+async function resetScanCrop() {
   const trace = state.imageTrace;
   if (!trace?.originalRaster || trace.raster === trace.originalRaster) return;
-  const traced = traceRaster(trace.originalRaster);
+  const traced = await traceRasterWithSelectedEngine(trace.originalRaster);
   state.imageTrace = {
     ...trace,
     ...withActualTraceWidth(traced, trace.mmPerRasterPixel),
@@ -913,9 +933,20 @@ function cropRaster(raster, crop) {
   return cropped;
 }
 
-function refreshImageTracePreview(options = {}) {
+function scheduleImageTracePreviewRefresh(options = {}) {
+  window.clearTimeout(state.traceRefreshTimer);
+  state.traceRefreshTimer = window.setTimeout(() => {
+    state.traceRefreshTimer = null;
+    refreshImageTracePreview(options);
+  }, options.delay ?? 260);
+}
+
+async function refreshImageTracePreview(options = {}) {
   if (!state.imageTrace?.raster) return;
-  const traced = traceRaster(state.imageTrace.raster);
+  const seq = state.traceRefreshSeq + 1;
+  state.traceRefreshSeq = seq;
+  const traced = await traceRasterWithSelectedEngine(state.imageTrace.raster);
+  if (seq !== state.traceRefreshSeq) return;
   state.imageTrace = { ...state.imageTrace, ...traced };
   state.pendingScanCrop = null;
   state.rawEntityTypes = { IMAGE_TRACE: 1 };
@@ -938,7 +969,7 @@ async function traceImageFile(file) {
   const image = await loadRasterImage(file);
   const raster = rasterizeImage(image);
   const physical = await imagePhysicalScale(file, raster);
-  const traced = traceRaster(raster);
+  const traced = await traceRasterWithSelectedEngine(raster);
   return {
     ...withActualTraceWidth(traced, physical?.mmPerRasterPixel),
     raster,
@@ -950,7 +981,7 @@ async function traceImageFile(file) {
 }
 
 function rasterizeImage(image) {
-  const maxSide = 900;
+  const maxSide = 1800;
   const scale = Math.min(1, maxSide / Math.max(image.naturalWidth || image.width, image.naturalHeight || image.height));
   const width = Math.max(1, Math.round((image.naturalWidth || image.width) * scale));
   const height = Math.max(1, Math.round((image.naturalHeight || image.height) * scale));
@@ -1002,6 +1033,373 @@ function traceRaster(raster) {
     threshold: adjustedThreshold,
     foreground: foregroundIsDark ? "dark" : "light",
   };
+}
+
+async function traceRasterWithSelectedEngine(raster) {
+  return traceRasterWithBrowserPotrace(raster);
+}
+
+async function traceRasterWithBrowserPotrace(raster) {
+  await loadBrowserPotrace();
+  const workRaster = downscaleRasterForPotrace(raster);
+  const scaleBack = raster.width / workRaster.width;
+  const mask = potracePreprocessMask(workRaster);
+  const canvas = maskToCanvas(mask, workRaster.width, workRaster.height);
+  const url = canvas.toDataURL("image/png");
+  window.Potrace.setParameter({
+    turnpolicy: "minority",
+    turdsize: Math.max(2, Math.round(mask.length * 0.00003)),
+    alphamax: 0.65 + Math.max(1, Math.min(20, Number(els.scanTraceDetail.value) || 10)) * 0.045,
+    optcurve: true,
+    opttolerance: 0.18,
+  });
+  window.Potrace.loadImageFromUrl(url);
+  await new Promise((resolve) => window.Potrace.process(resolve));
+  const parts = svgToTraceParts(window.Potrace.getSVG(1), getTraceSimplifyTolerance())
+    .map((points) => scaleTracePoints(points, scaleBack))
+    .filter((points) => points.length >= 3)
+    .sort((a, b) => Math.abs(signedArea(b)) - Math.abs(signedArea(a)));
+  if (!parts.length) return { ...traceRaster(raster), engine: "potrace-browser-empty" };
+  return {
+    imageWidthPx: raster.width,
+    imageHeightPx: raster.height,
+    threshold: 0,
+    foreground: "potrace-browser",
+    points: parts[0],
+    parts,
+    engine: "potrace-browser",
+  };
+}
+
+function loadBrowserPotrace() {
+  if (window.Potrace) return Promise.resolve(window.Potrace);
+  return new Promise((resolve, reject) => {
+    const script = document.createElement("script");
+    script.src = "assets/potrace.js?v=20260616";
+    script.onload = () => window.Potrace ? resolve(window.Potrace) : reject(new Error("Potrace browser script not loaded"));
+    script.onerror = () => reject(new Error("Potrace browser script missing"));
+    document.head.appendChild(script);
+  });
+}
+
+function downscaleRasterForPotrace(raster) {
+  const maxSide = 1000;
+  const scale = Math.min(1, maxSide / Math.max(raster.width, raster.height));
+  if (scale >= 1) return raster;
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.max(1, Math.round(raster.width * scale));
+  canvas.height = Math.max(1, Math.round(raster.height * scale));
+  const source = document.createElement("canvas");
+  source.width = raster.width;
+  source.height = raster.height;
+  const sourceCtx = source.getContext("2d", { willReadFrequently: true });
+  const imageData = sourceCtx.createImageData(raster.width, raster.height);
+  imageData.data.set(raster.rgba);
+  sourceCtx.putImageData(imageData, 0, 0);
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  ctx.imageSmoothingEnabled = true;
+  ctx.imageSmoothingQuality = "high";
+  ctx.drawImage(source, 0, 0, canvas.width, canvas.height);
+  const scaled = rasterFromCanvas(canvas);
+  scaled.scale = (raster.scale || 1) * scale;
+  scaled.originalWidth = raster.originalWidth || raster.width;
+  scaled.originalHeight = raster.originalHeight || raster.height;
+  return scaled;
+}
+
+function scaleTracePoints(points, scale) {
+  if (Math.abs(scale - 1) < 0.0001) return points;
+  return points.map((point) => ({ x: point.x * scale, y: point.y * scale }));
+}
+
+function maskToCanvas(mask, width, height) {
+  const canvas = document.createElement("canvas");
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext("2d", { willReadFrequently: true });
+  const imageData = ctx.createImageData(width, height);
+  for (let index = 0; index < mask.length; index += 1) {
+    const value = mask[index] ? 0 : 255;
+    const i = index * 4;
+    imageData.data[i] = value;
+    imageData.data[i + 1] = value;
+    imageData.data[i + 2] = value;
+    imageData.data[i + 3] = 255;
+  }
+  ctx.putImageData(imageData, 0, 0);
+  return canvas;
+}
+
+function svgToTraceParts(svg, tolerance) {
+  const parts = [];
+  const matches = String(svg || "").matchAll(/<path[^>]*\sd="([^"]+)"/g);
+  for (const match of matches) {
+    parts.push(...svgPathToParts(match[1], tolerance));
+  }
+  return parts;
+}
+
+function svgPathToParts(pathData, tolerance) {
+  const tokens = String(pathData || "").match(/[MmLlHhVvCcQqZz]|[-+]?(?:\d*\.\d+|\d+)(?:[eE][-+]?\d+)?/g) || [];
+  const parts = [];
+  let part = [];
+  let x = 0;
+  let y = 0;
+  let startX = 0;
+  let startY = 0;
+  let command = "";
+  let index = 0;
+  const steps = Math.max(6, Math.min(24, Math.round(24 - tolerance * 2)));
+  const isCommand = (token) => /^[A-Za-z]$/.test(token);
+  const hasNumber = () => index < tokens.length && !isCommand(tokens[index]);
+  const number = () => Number(tokens[index++]);
+  const closePart = () => {
+    const cleaned = cleanClosingPoint(cleanCurvePoints(part));
+    if (cleaned.length >= 3) parts.push(cleaned);
+    part = [];
+  };
+  while (index < tokens.length) {
+    if (isCommand(tokens[index])) command = tokens[index++];
+    if (command === "M" || command === "m") {
+      let first = true;
+      while (hasNumber()) {
+        let nx = number();
+        let ny = number();
+        if (command === "m") {
+          nx += x;
+          ny += y;
+        }
+        x = nx;
+        y = ny;
+        if (first) {
+          if (part.length >= 3) closePart();
+          part = [{ x, y }];
+          startX = x;
+          startY = y;
+          first = false;
+        } else {
+          part.push({ x, y });
+        }
+      }
+      command = command === "M" ? "L" : "l";
+    } else if (command === "L" || command === "l") {
+      while (hasNumber()) {
+        let nx = number();
+        let ny = number();
+        if (command === "l") {
+          nx += x;
+          ny += y;
+        }
+        x = nx;
+        y = ny;
+        part.push({ x, y });
+      }
+    } else if (command === "H" || command === "h") {
+      while (hasNumber()) {
+        let nx = number();
+        if (command === "h") nx += x;
+        x = nx;
+        part.push({ x, y });
+      }
+    } else if (command === "V" || command === "v") {
+      while (hasNumber()) {
+        let ny = number();
+        if (command === "v") ny += y;
+        y = ny;
+        part.push({ x, y });
+      }
+    } else if (command === "C" || command === "c") {
+      while (hasNumber()) {
+        let x1 = number();
+        let y1 = number();
+        let x2 = number();
+        let y2 = number();
+        let x3 = number();
+        let y3 = number();
+        if (command === "c") {
+          x1 += x;
+          y1 += y;
+          x2 += x;
+          y2 += y;
+          x3 += x;
+          y3 += y;
+        }
+        part.push(...sampleCubic(x, y, x1, y1, x2, y2, x3, y3, steps));
+        x = x3;
+        y = y3;
+      }
+    } else if (command === "Q" || command === "q") {
+      while (hasNumber()) {
+        let x1 = number();
+        let y1 = number();
+        let x2 = number();
+        let y2 = number();
+        if (command === "q") {
+          x1 += x;
+          y1 += y;
+          x2 += x;
+          y2 += y;
+        }
+        part.push(...sampleQuadratic(x, y, x1, y1, x2, y2, steps));
+        x = x2;
+        y = y2;
+      }
+    } else if (command === "Z" || command === "z") {
+      x = startX;
+      y = startY;
+      closePart();
+      command = "";
+    } else {
+      break;
+    }
+  }
+  if (part.length >= 3) closePart();
+  return parts;
+}
+
+function sampleCubic(x0, y0, x1, y1, x2, y2, x3, y3, steps) {
+  const points = [];
+  for (let step = 1; step <= steps; step += 1) {
+    const t = step / steps;
+    const mt = 1 - t;
+    points.push({
+      x: mt ** 3 * x0 + 3 * mt ** 2 * t * x1 + 3 * mt * t ** 2 * x2 + t ** 3 * x3,
+      y: mt ** 3 * y0 + 3 * mt ** 2 * t * y1 + 3 * mt * t ** 2 * y2 + t ** 3 * y3,
+    });
+  }
+  return points;
+}
+
+function sampleQuadratic(x0, y0, x1, y1, x2, y2, steps) {
+  const points = [];
+  for (let step = 1; step <= steps; step += 1) {
+    const t = step / steps;
+    const mt = 1 - t;
+    points.push({
+      x: mt ** 2 * x0 + 2 * mt * t * x1 + t ** 2 * x2,
+      y: mt ** 2 * y0 + 2 * mt * t * y1 + t ** 2 * y2,
+    });
+  }
+  return points;
+}
+
+function traceMaskForCurrentSettings(raster) {
+  const width = raster.width;
+  const height = raster.height;
+  const gray = raster.gray;
+  const threshold = Math.max(0, Math.min(255, otsuThreshold(gray) + getTraceThresholdAdjust()));
+  const foregroundIsDark = borderAverage(gray, width, height) > threshold;
+  const mode = getTraceMode();
+  if (mode === "dark") return foregroundMask(gray, width, height, threshold, foregroundIsDark);
+  return silhouetteMask(raster, width, height);
+}
+
+function potracePreprocessMask(raster) {
+  const width = raster.width;
+  const height = raster.height;
+  const smooth = getTraceSmoothValue();
+  const mode = getTraceMode();
+  let score = mode === "dark"
+    ? darkForegroundScore(raster)
+    : silhouetteScore(raster);
+  score = boxBlurGray(score, width, height, Math.max(1, Math.round(1 + smooth * 0.18)));
+  const threshold = scoreThreshold(score, mode === "dark" ? 128 : Math.max(10, 20 - getTraceThresholdAdjust() * 0.12));
+  let mask = thresholdScoreMask(score, threshold);
+  const closeIterations = Math.max(1, Math.round(1 + smooth * 0.22));
+  mask = closeMask(mask, width, height, closeIterations);
+  if (smooth >= 5) mask = openMask(mask, width, height, Math.max(1, Math.round(smooth / 6)));
+  return significantComponentMask(mask, width, height);
+}
+
+function significantComponentMask(mask, width, height) {
+  const components = connectedBinaryComponents(mask, width, height);
+  if (!components.length) return mask;
+  const largest = components[0].length;
+  const minArea = Math.max(30, Math.round(mask.length * 0.000025), Math.round(largest * 0.006));
+  const result = new Uint8Array(mask.length);
+  components
+    .filter((component) => component.length >= minArea)
+    .slice(0, 80)
+    .forEach((component) => {
+      component.forEach((index) => {
+        result[index] = 1;
+      });
+    });
+  return result;
+}
+
+function silhouetteScore(raster) {
+  const width = raster.width;
+  const height = raster.height;
+  const bg = borderColorAverage(raster.rgba, width, height);
+  const score = new Uint8Array(width * height);
+  for (let index = 0; index < score.length; index += 1) {
+    const i = index * 4;
+    const r = raster.rgba[i];
+    const g = raster.rgba[i + 1];
+    const b = raster.rgba[i + 2];
+    const diff = Math.hypot(r - bg.r, g - bg.g, b - bg.b);
+    const dark = Math.max(0, bg.gray - raster.gray[index]);
+    score[index] = Math.max(0, Math.min(255, Math.round(Math.max(diff, dark * 1.15))));
+  }
+  return score;
+}
+
+function darkForegroundScore(raster) {
+  const score = new Uint8Array(raster.gray.length);
+  const threshold = Math.max(0, Math.min(255, otsuThreshold(raster.gray) + getTraceThresholdAdjust()));
+  const foregroundIsDark = borderAverage(raster.gray, raster.width, raster.height) > threshold;
+  for (let index = 0; index < score.length; index += 1) {
+    const value = foregroundIsDark ? threshold - raster.gray[index] : raster.gray[index] - threshold;
+    score[index] = Math.max(0, Math.min(255, Math.round(128 + value)));
+  }
+  return score;
+}
+
+function boxBlurGray(values, width, height, radius) {
+  if (radius <= 0) return values;
+  const temp = new Uint8Array(values.length);
+  const result = new Uint8Array(values.length);
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      let total = 0;
+      let count = 0;
+      for (let dx = -radius; dx <= radius; dx += 1) {
+        const nx = x + dx;
+        if (nx < 0 || nx >= width) continue;
+        total += values[y * width + nx];
+        count += 1;
+      }
+      temp[y * width + x] = Math.round(total / count);
+    }
+  }
+  for (let y = 0; y < height; y += 1) {
+    for (let x = 0; x < width; x += 1) {
+      let total = 0;
+      let count = 0;
+      for (let dy = -radius; dy <= radius; dy += 1) {
+        const ny = y + dy;
+        if (ny < 0 || ny >= height) continue;
+        total += temp[ny * width + x];
+        count += 1;
+      }
+      result[y * width + x] = Math.round(total / count);
+    }
+  }
+  return result;
+}
+
+function scoreThreshold(score, fallback) {
+  const auto = otsuThreshold(score);
+  return Math.max(1, Math.min(254, Math.round((auto + fallback) / 2 + getTraceThresholdAdjust() * 0.08)));
+}
+
+function thresholdScoreMask(score, threshold) {
+  const mask = new Uint8Array(score.length);
+  for (let index = 0; index < score.length; index += 1) {
+    mask[index] = score[index] >= threshold ? 1 : 0;
+  }
+  return mask;
 }
 
 function silhouetteMask(raster, width, height) {
@@ -1094,6 +1492,13 @@ function closeMask(mask, width, height, iterations) {
   return next;
 }
 
+function openMask(mask, width, height, iterations) {
+  let next = mask;
+  for (let i = 0; i < iterations; i += 1) next = erodeMask(next, width, height);
+  for (let i = 0; i < iterations; i += 1) next = dilateMask(next, width, height);
+  return next;
+}
+
 function dilateMask(mask, width, height) {
   const result = new Uint8Array(mask.length);
   for (let y = 0; y < height; y += 1) {
@@ -1162,7 +1567,7 @@ async function tracePdfFile(file) {
   ctx.fillRect(0, 0, canvas.width, canvas.height);
   await page.render({ canvasContext: ctx, viewport }).promise;
   const raster = rasterFromCanvas(canvas);
-  const traced = traceRaster(raster);
+  const traced = await traceRasterWithSelectedEngine(raster);
   const mmPerRasterPixel = 25.4 / 72 / scale;
   return {
     ...withActualTraceWidth(traced, mmPerRasterPixel),
@@ -1262,7 +1667,7 @@ async function traceBmpFile(file) {
   const raster = rasterFromCanvas(canvas);
   const view = new DataView(buffer);
   const xPpm = view.getInt32(38, true);
-  const traced = traceRaster(raster);
+  const traced = await traceRasterWithSelectedEngine(raster);
   const physical = xPpm > 0 ? { mmPerRasterPixel: 1000 / xPpm, source: "bmp-pixels-per-meter" } : scaleFromOriginalPixel(25.4 / 96, raster, "96dpi-estimate");
   return {
     ...withActualTraceWidth(traced, physical?.mmPerRasterPixel),
@@ -1544,15 +1949,18 @@ function imageTraceEntity(trace, widthMm) {
   const centerX = (box.minX + box.maxX) / 2;
   const centerY = (box.minY + box.maxY) / 2;
   const parts = pixelParts
-    .map((points, index) => ({
-      type: "LWPOLYLINE",
-      layer: `AI_IMAGE_TRACE_SOURCE_${index + 1}`,
-      points: cleanCurvePoints(points.map((point) => ({
-        x: (point.x - centerX) * mmPerPixel,
-        y: (centerY - point.y) * mmPerPixel,
-      }))),
-      closed: true,
-    }))
+    .map((points, index) => {
+      const smoothed = smoothTracePart(points, getTraceSmoothWindow());
+      return {
+        type: "LWPOLYLINE",
+        layer: `AI_IMAGE_TRACE_SOURCE_${index + 1}`,
+        points: cleanCurvePoints(smoothed.map((point) => ({
+          x: (point.x - centerX) * mmPerPixel,
+          y: (centerY - point.y) * mmPerPixel,
+        }))),
+        closed: true,
+      };
+    })
     .filter((part) => part.points.length >= 3);
   if (parts.length === 1) return { ...parts[0], layer: "AI_IMAGE_TRACE_SOURCE" };
   return {
@@ -1609,6 +2017,60 @@ function simplifyPoints(points, tolerance) {
   if (cleaned.length <= 3) return cleaned;
   const simplified = douglasPeucker(cleaned.concat(cleaned[0]), tolerance);
   return cleanClosingPoint(simplified);
+}
+
+function getTraceSmoothWindow() {
+  const smooth = getTraceSmoothValue();
+  if (!smooth) return 0;
+  return Math.max(1, Math.round(1 + smooth * 0.35));
+}
+
+function smoothTracePart(points, windowSize) {
+  const cleaned = cleanClosingPoint(cleanCurvePoints(points));
+  if (cleaned.length < 8 || windowSize <= 0) return cleaned;
+  const passes = Math.max(1, Math.round(getTraceSmoothValue() / 3));
+  let current = cleaned;
+  for (let pass = 0; pass < passes; pass += 1) {
+    current = smoothTracePass(current, windowSize);
+  }
+  return cleanCurvePoints(current);
+}
+
+function smoothTracePass(points, windowSize) {
+  const result = [];
+  for (let i = 0; i < points.length; i += 1) {
+    const prev = points[(i - 1 + points.length) % points.length];
+    const point = points[i];
+    const next = points[(i + 1) % points.length];
+    const angle = turnAngle(prev, point, next);
+    if (angle < 128) {
+      result.push(point);
+      continue;
+    }
+    let x = 0;
+    let y = 0;
+    let weightTotal = 0;
+    for (let offset = -windowSize; offset <= windowSize; offset += 1) {
+      const neighbor = points[(i + offset + points.length) % points.length];
+      const weight = windowSize + 1 - Math.abs(offset);
+      x += neighbor.x * weight;
+      y += neighbor.y * weight;
+      weightTotal += weight;
+    }
+    result.push({ x: x / weightTotal, y: y / weightTotal });
+  }
+  return result;
+}
+
+function turnAngle(prev, point, next) {
+  const ax = prev.x - point.x;
+  const ay = prev.y - point.y;
+  const bx = next.x - point.x;
+  const by = next.y - point.y;
+  const la = Math.hypot(ax, ay) || 1;
+  const lb = Math.hypot(bx, by) || 1;
+  const dot = Math.max(-1, Math.min(1, (ax * bx + ay * by) / (la * lb)));
+  return (Math.acos(dot) * 180) / Math.PI;
 }
 
 function douglasPeucker(points, tolerance) {
@@ -2032,6 +2494,7 @@ function generatePatchTemplate(entities, formula) {
   const outline = selectPatchOutline(entities, formula);
   if (!outline) return [];
   const basePatchParts = centeredPatchParts(outline, formula.patchRotation);
+  const baseOffsetParts = centeredOffsetParts(outline, formula.patchRotation);
   const startX = 70;
   const gap = formula.boardWidth + 16;
   const startY = 0;
@@ -2066,8 +2529,9 @@ function generatePatchTemplate(entities, formula) {
     const origin = { x: startX + (layer - 1) * gap, y: startY };
     const board = templateBoard(origin, formula);
     const patchParts = basePatchParts.map((part) => movePoints(part, origin.x + formula.patchRelX, origin.y + formula.patchRelY));
+    const offsetSourceParts = baseOffsetParts.map((part) => movePoints(part, origin.x + formula.patchRelX, origin.y + formula.patchRelY));
     const offsetParts = unionOffsetParts(
-      patchParts
+      offsetSourceParts
         .map((part) => offsetOrthogonalPolygon(part, formula.offset, "outward"))
         .filter((part) => part.length >= 3),
     );
@@ -2110,6 +2574,67 @@ function centeredPatchParts(outline, rotationDeg) {
   const box = bounds(parts.map((points) => ({ points })));
   const center = { x: (box.minX + box.maxX) / 2, y: (box.minY + box.maxY) / 2 };
   return parts.map((points) => rotatePoints(movePoints(points, -center.x, -center.y), rotationDeg));
+}
+
+function centeredOffsetParts(outline, rotationDeg) {
+  const parts = centeredPatchParts(outline, rotationDeg).filter((points) => points.length >= 3);
+  if (parts.length <= 1) return parts;
+  const envelope = offsetEnvelopePart(parts);
+  if (envelope.length >= 3) return [envelope];
+  const ranked = parts
+    .map((points) => ({ points, area: polygonArea(points), box: bounds([{ points }]) }))
+    .sort((a, b) => b.area - a.area);
+  const largestArea = ranked[0]?.area || 0;
+  const totalArea = ranked.reduce((sum, part) => sum + part.area, 0);
+  const minArea = Math.max(largestArea * 0.08, totalArea * 0.025, 4);
+  const selected = ranked
+    .filter((part) => part.area >= minArea)
+    .filter((part) => {
+      const width = part.box.maxX - part.box.minX;
+      const height = part.box.maxY - part.box.minY;
+      return width >= 2 && height >= 2;
+    })
+    .slice(0, 8)
+    .map((part) => part.points);
+  return selected.length ? selected : [ranked[0].points];
+}
+
+function offsetEnvelopePart(parts) {
+  const points = parts.flat();
+  if (points.length < 3) return [];
+  const hull = convexHull(points);
+  if (hull.length < 3) return [];
+  return roundedHullPoints(hull, 2.5);
+}
+
+function roundedHullPoints(hull, cornerRadius) {
+  const result = [];
+  const count = hull.length;
+  for (let i = 0; i < count; i += 1) {
+    const prev = hull[(i - 1 + count) % count];
+    const point = hull[i];
+    const next = hull[(i + 1) % count];
+    const d1 = Math.hypot(point.x - prev.x, point.y - prev.y) || 1;
+    const d2 = Math.hypot(next.x - point.x, next.y - point.y) || 1;
+    const r = Math.min(cornerRadius, d1 * 0.3, d2 * 0.3);
+    const a = { x: point.x + ((prev.x - point.x) / d1) * r, y: point.y + ((prev.y - point.y) / d1) * r };
+    const b = { x: point.x + ((next.x - point.x) / d2) * r, y: point.y + ((next.y - point.y) / d2) * r };
+    result.push(a);
+    for (let step = 1; step <= 3; step += 1) {
+      const t = step / 4;
+      result.push(quadraticBezierPoint(a, point, b, t));
+    }
+    result.push(b);
+  }
+  return cleanCurvePoints(result);
+}
+
+function quadraticBezierPoint(a, b, c, t) {
+  const mt = 1 - t;
+  return {
+    x: mt * mt * a.x + 2 * mt * t * b.x + t * t * c.x,
+    y: mt * mt * a.y + 2 * mt * t * b.y + t * t * c.y,
+  };
 }
 
 function selectPatchOutline(entities, formula) {
@@ -2591,7 +3116,7 @@ function buildTrainingExample() {
 }
 
 function describeOffsetGeneration(outline, formula) {
-  const baseParts = centeredPatchParts(outline, formula.patchRotation);
+  const baseParts = centeredOffsetParts(outline, formula.patchRotation);
   const partStrategies = baseParts.map((points, index) => {
     const box = bounds([{ points }]);
     const width = box.maxX - box.minX;
@@ -3158,9 +3683,10 @@ function render() {
   } else if (state.sourceType === "image-trace" && state.entities.length) {
     const pointCount = state.entities[0]?.points?.length || 0;
     const sizeNote = traceSizeStatus(state.imageTrace);
+    const engineNote = traceEngineLabel(state.imageTrace);
     els.fileSummary.textContent = state.generated.length
-      ? `${state.fileName}: template generated from ${pointCount} trace points`
-      : `${state.fileName}: compare original with ${pointCount} trace points, ${sizeNote}, then apply`;
+      ? `${state.fileName}: template generated from ${pointCount} ${engineNote} trace points`
+      : `${state.fileName}: compare original with ${pointCount} ${engineNote} trace points, ${sizeNote}, then apply`;
   } else if (state.sourceType === "image-trace" && state.fileName) {
     els.fileSummary.textContent = `${state.fileName}: original imported, no closed trace found; adjust sensitivity/detail`;
   } else if (state.fileName && !state.entities.length) {
@@ -3177,6 +3703,11 @@ function render() {
   }
   if (els.issueList) renderIssues();
   renderPreview();
+}
+
+function traceEngineLabel(trace) {
+  if (trace?.engine === "potrace-browser") return "Potrace";
+  return "built-in";
 }
 
 function traceSizeStatus(trace) {
