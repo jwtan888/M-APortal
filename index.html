@@ -960,10 +960,14 @@
             </div>
 
             <!-- Laser Charts: Volume + SLA side by side (same size) -->
-            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
                     <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Laser Cut Loading (Daily)</h3>
                     <div class="h-[300px]"><canvas id="laserTrendChart"></canvas></div>
+                </div>
+                <div class="bg-white p-6 rounded-xl border shadow-sm">
+                    <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Consumption Loading (Daily)</h3>
+                    <div class="h-[300px]"><canvas id="laserConsumptionTrendChart"></canvas></div>
                 </div>
                 <div class="bg-white p-6 rounded-xl border shadow-sm">
                     <h3 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Completion Rate (Within 6hr)</h3>
@@ -2196,7 +2200,7 @@
         function templatePatchMatchesRow(row, patch) {
             if (!row || !patch) return false;
             const keys = [
-                'requestor', 'section', 'style', 'jobNo', 'protoStage', 'templateType',
+                'requestor', 'section', 'season', 'style', 'jobNo', 'protoStage', 'templateType',
                 'description', 'machine', 'requiredDate', 'templateNo', 'pic',
                 'completeDateDisplay', 'qty', 'complexity', 'dfm', 'remark', 'cancelled', 'status'
             ];
@@ -3571,7 +3575,7 @@
                 }
             }, 250);
         }
-        let laserTrendChart = null;
+        let laserTrendChart = null, laserConsumptionTrendChart = null;
 
         // Proto stages that qualify for pending consumption tracking
         const pendingProtoStages = ['p1','p2','p3','p4','p5','p6','concept','ggp',
@@ -3596,6 +3600,7 @@
                 const pendingTbody = document.getElementById('ld-pending-table');
                 if (pendingTbody) pendingTbody.innerHTML = '<tr><td colspan="7" class="p-6 text-center italic text-slate-400">All caught up! No pending consumption.</td></tr>';
                 if (laserTrendChart) { laserTrendChart.destroy(); laserTrendChart = null; }
+                if (laserConsumptionTrendChart) { laserConsumptionTrendChart.destroy(); laserConsumptionTrendChart = null; }
                 return;
             }
             const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -3775,6 +3780,59 @@
                             {
                                 label: workingDayAverageLabel(laserTrendAvg, laserWorkingDays),
                                 data: sortedDays.map(() => laserTrendAvg),
+                                borderColor: '#94a3b8',
+                                borderWidth: 1,
+                                tension: 0,
+                                fill: false,
+                                pointRadius: 0,
+                                pointStyle: 'line'
+                            }
+                        ]
+                    },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { labels: { usePointStyle: true } } } }
+                });
+            }
+
+            const consumptionTrendFiltered = allLaserRows.filter(r => {
+                const startDate = rawToLocalDate(getVal(r, ['Consumption Start Date','ConsumptionStartDate','Cons Start']));
+                if (!startDate) return false;
+                if (sharedMonthVal === 'ALL') return true;
+                return `${months[startDate.getMonth()]}-${startDate.getFullYear()}` === sharedMonthVal;
+            });
+            const consumptionDayCounts = {};
+            consumptionTrendFiltered.forEach(r => {
+                const startDate = rawToLocalDate(getVal(r, ['Consumption Start Date','ConsumptionStartDate','Cons Start']));
+                if (!startDate) return;
+                const dayKey = `${startDate.getMonth()+1}/${startDate.getDate()}/${startDate.getFullYear()}`;
+                consumptionDayCounts[dayKey] = (consumptionDayCounts[dayKey] || 0) + 1;
+            });
+            const consumptionDays = Object.keys(consumptionDayCounts).sort((a, b) => {
+                const [ma,da,ya] = a.split('/'), [mb,db,yb] = b.split('/');
+                return new Date(parseInt(ya),parseInt(ma)-1,parseInt(da)) - new Date(parseInt(yb),parseInt(mb)-1,parseInt(db));
+            });
+            const consumptionValues = consumptionDays.map(d => consumptionDayCounts[d]);
+            const consumptionTotal = consumptionValues.reduce((sum, count) => sum + count, 0);
+            const consumptionAvg = laserWorkingDays ? consumptionTotal / laserWorkingDays : 0;
+            if (laserConsumptionTrendChart) laserConsumptionTrendChart.destroy();
+            const consumptionCtx = document.getElementById('laserConsumptionTrendChart');
+            if (consumptionCtx) {
+                laserConsumptionTrendChart = new Chart(consumptionCtx, {
+                    type: 'line',
+                    data: {
+                        labels: consumptionDays,
+                        datasets: [
+                            {
+                                label: 'Consumption Jobs',
+                                data: consumptionValues,
+                                borderColor: '#f59e0b',
+                                tension: 0.3,
+                                fill: true,
+                                backgroundColor: 'rgba(245,158,11,0.09)',
+                                pointRadius: 4
+                            },
+                            {
+                                label: workingDayAverageLabel(consumptionAvg, laserWorkingDays),
+                                data: consumptionDays.map(() => consumptionAvg),
                                 borderColor: '#94a3b8',
                                 borderWidth: 1,
                                 tension: 0,
@@ -5089,7 +5147,7 @@
                     <td class="p-3">${isAdmin
                         ? `<input id="section-${t.id}" class="manual-input" style="width:100px" value="${t.section!=='---'?t.section:''}">`
                         : `<span class="text-[11px]">${t.section}</span>`}</td>
-                    <td class="p-3">${isAdmin
+                    <td class="p-3">${canEdit
                         ? `<input id="season-${t.id}" class="manual-input" style="width:70px" value="${t.season!=='---'?t.season:''}" placeholder="Season">`
                         : `<span class="text-[11px] font-semibold text-slate-700">${t.season}</span>`}</td>
                     <td class="p-3">${isAdmin
@@ -5175,6 +5233,7 @@
 
             const tComplexity  = preserveTextValue(document.getElementById(`complexity-${simpleId}`)?.value, record.complexity);
             const tDFM         = preserveTextValue(document.getElementById(`dfm-${simpleId}`)?.value, record.dfm);
+            const tSeason      = preserveTextValue(document.getElementById(`season-${simpleId}`)?.value, record.season);
             const recordIdValue = String(record.id);
             const picValue = String(tPic);
             const hasEditedDate = !!sanitizeTemplateValue(tDateRaw);
@@ -5215,18 +5274,20 @@
                 ]);
             }
 
+            assignIfPresent(payload, [
+                ['season', tSeason],
+                ['Season', tSeason]
+            ]);
+
             if (isAdminUser) {
                 const tRequestor = preserveTextValue(document.getElementById(`requestor-${simpleId}`)?.value, record.requestor);
                 const tSection = preserveTextValue(document.getElementById(`section-${simpleId}`)?.value, record.section);
-                const tSeason = preserveTextValue(document.getElementById(`season-${simpleId}`)?.value, record.season);
                 const tTemplateType = preserveTextValue(document.getElementById(`templatetype-${simpleId}`)?.value, record.templateType);
                 assignIfPresent(payload, [
                     ['requestor', tRequestor],
                     ['Requestor', tRequestor],
                     ['section', tSection],
                     ['Section', tSection],
-                    ['season', tSeason],
-                    ['Season', tSeason],
                     ['templateType', tTemplateType],
                     ['Template Type', tTemplateType],
                     ['Template Request Type', tTemplateType],
@@ -5268,10 +5329,10 @@
                     if (tNoInput) {
                         record.templateNo = payload.templateNo || record.templateNo;
                     }
+                    record.season = payload.season || record.season;
                     if (isAdminUser) {
                         record.requestor = payload.requestor || record.requestor;
                         record.section = payload.section || record.section;
-                        record.season = payload.season || record.season;
                         record.templateType = payload.templateType || record.templateType;
                         record.complexity = tComplexity || record.complexity;
                         record.dfm = tDFM || record.dfm;
@@ -7377,6 +7438,7 @@
                     ],
                     charts: [
                         { id: 'laserTrendChart', title: 'Laser Cut Loading (Daily)' },
+                        { id: 'laserConsumptionTrendChart', title: 'Consumption Loading (Daily)' },
                         { id: 'laserSLAChart', title: 'Completion Rate (Within 6hr)' }
                     ],
                     tables: [
