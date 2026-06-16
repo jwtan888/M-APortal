@@ -1043,7 +1043,13 @@ function traceRaster(raster) {
 }
 
 async function traceRasterWithSelectedEngine(raster) {
-  return traceRasterWithBrowserPotrace(raster);
+  try {
+    return await traceRasterWithBrowserPotrace(raster);
+  } catch (error) {
+    console.warn("Potrace unavailable; using built-in trace.", error);
+    state.importStatus = `Potrace unavailable, using built-in trace (${readableImportError(error)})`;
+    return traceRaster(raster);
+  }
 }
 
 async function traceRasterWithBrowserPotrace(raster) {
@@ -1082,9 +1088,10 @@ function loadBrowserPotrace() {
   if (window.Potrace) return Promise.resolve(window.Potrace);
   return new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = new URL("potrace.js?v=20260616", APP_BASE_URL).href;
-    script.onload = () => window.Potrace ? resolve(window.Potrace) : reject(new Error("Potrace browser script not loaded"));
-    script.onerror = () => reject(new Error("Potrace browser script missing"));
+    const url = new URL("potrace.js?v=20260616-root", APP_BASE_URL).href;
+    script.src = url;
+    script.onload = () => window.Potrace ? resolve(window.Potrace) : reject(new Error(`Potrace script loaded but window.Potrace missing: ${url}`));
+    script.onerror = () => reject(new Error(`Potrace script missing: ${url}`));
     document.head.appendChild(script);
   });
 }
