@@ -28,6 +28,7 @@ const APP_CONFIG = window.PATCH_TEMPLATE_CONFIG || {};
 const POWER_AUTOMATE_TRAINING_URL = APP_CONFIG.powerAutomateTrainingUrl || "";
 const POWER_AUTOMATE_READ_URL = APP_CONFIG.powerAutomateReadUrl || "";
 const PATCH_MODEL_URL = APP_CONFIG.patchModelUrl || "pytorch/data/patch-template-training-data.json";
+const APP_BASE_URL = appBaseUrl();
 const DEFAULT_FORMULA = {
   boardWidth: 150,
   boardHeight: 180,
@@ -111,6 +112,12 @@ function getTemplateNumberFromQuery() {
   const params = new URLSearchParams(window.location.search);
   const value = params.get("templateNo") || params.get("templateNumber") || params.get("template");
   return value ? value.trim() : "";
+}
+
+function appBaseUrl() {
+  const scripts = [...document.querySelectorAll("script[src]")];
+  const appScript = [...scripts].reverse().find((script) => /(?:^|\/)app\.js(?:[?#].*)?$/.test(script.getAttribute("src") || ""));
+  return new URL(".", appScript?.src || window.location.href).href;
 }
 
 if (els.templateNumber) {
@@ -1075,7 +1082,7 @@ function loadBrowserPotrace() {
   if (window.Potrace) return Promise.resolve(window.Potrace);
   return new Promise((resolve, reject) => {
     const script = document.createElement("script");
-    script.src = "assets/potrace.js?v=20260616";
+    script.src = new URL("potrace.js?v=20260616", APP_BASE_URL).href;
     script.onload = () => window.Potrace ? resolve(window.Potrace) : reject(new Error("Potrace browser script not loaded"));
     script.onerror = () => reject(new Error("Potrace browser script missing"));
     document.head.appendChild(script);
