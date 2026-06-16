@@ -4,6 +4,7 @@ const state = {
   simpleShape: null,
   imageTrace: null,
   imagePreviewOpacity: 0.35,
+  pendingScanCrop: null,
   importStatus: "",
   importError: "",
   rawEntityTypes: {},
@@ -84,6 +85,8 @@ const els = {
   scanTraceDetail: document.querySelector("#scanTraceDetail"),
   scanImageOpacity: document.querySelector("#scanImageOpacity"),
   scanCropButton: document.querySelector("#scanCropButton"),
+  scanConfirmCropButton: document.querySelector("#scanConfirmCropButton"),
+  scanCancelCropButton: document.querySelector("#scanCancelCropButton"),
   scanResetCropButton: document.querySelector("#scanResetCropButton"),
   templateNumber: document.querySelector("#templateNumber"),
   patchRelX: document.querySelector("#patchRelX"),
@@ -200,6 +203,7 @@ function clearArtboard() {
   state.simpleShape = null;
   state.imageTrace = null;
   state.imagePreviewOpacity = 0.35;
+  state.pendingScanCrop = null;
   state.rawEntityTypes = {};
   state.entities = [];
   state.generated = [];
@@ -228,6 +232,7 @@ async function handleImageFile(file) {
   state.importError = "";
   state.simpleShape = null;
   state.imageTrace = null;
+  state.pendingScanCrop = null;
   state.entities = [];
   state.generated = [];
   els.applyButton.disabled = true;
@@ -625,7 +630,9 @@ els.scanImageOpacity.addEventListener("input", () => {
   state.imagePreviewOpacity = getScanImageOpacity();
   render();
 });
-els.scanCropButton?.addEventListener("click", cropScanToCurrentView);
+els.scanCropButton?.addEventListener("click", previewScanCrop);
+els.scanConfirmCropButton?.addEventListener("click", applyPreviewedScanCrop);
+els.scanCancelCropButton?.addEventListener("click", cancelScanCropPreview);
 els.scanResetCropButton?.addEventListener("click", resetScanCrop);
 
 function isSupportedImportFile(file) {
@@ -637,6 +644,7 @@ function loadDxf(text, fileName) {
   state.sourceType = "dxf";
   state.simpleShape = null;
   state.imageTrace = null;
+  state.pendingScanCrop = null;
   state.importStatus = "";
   state.importError = "";
   state.imagePreviewOpacity = 0.35;
@@ -662,6 +670,7 @@ function loadImageTrace(trace, fileName) {
   state.sourceType = "image-trace";
   state.simpleShape = null;
   state.imageTrace = trace;
+  state.pendingScanCrop = null;
   state.importStatus = "";
   state.importError = "";
   state.imagePreviewOpacity = getScanImageOpacity();
@@ -684,6 +693,7 @@ function loadImageImportError(fileName, error) {
   state.sourceType = "image-trace";
   state.simpleShape = null;
   state.imageTrace = null;
+  state.pendingScanCrop = null;
   state.importStatus = "";
   state.importError = readableImportError(error);
   state.rawEntityTypes = { IMPORT_ERROR: 1 };
@@ -757,7 +767,25 @@ function scanTraceFeatureInput() {
   };
 }
 
-function cropScanToCurrentView() {
+function previewScanCrop() {
+  const pending = currentViewRasterCrop();
+  if (!pending) return;
+  state.pendingScanCrop = pending;
+  render();
+}
+
+function applyPreviewedScanCrop() {
+  const pending = state.pendingScanCrop || currentViewRasterCrop();
+  if (!pending) return;
+  cropScanToRasterCrop(pending.crop);
+}
+
+function cancelScanCropPreview() {
+  state.pendingScanCrop = null;
+  render();
+}
+
+function currentViewRasterCrop() {
   const trace = state.imageTrace;
   if (!trace?.raster || !state.viewBox) return;
   const image = imagePreviewEntity(trace, getScanTraceWidth());
@@ -788,6 +816,13 @@ function cropScanToCurrentView() {
     height: rawCrop.height + pad * 2,
   }, raster);
   if (crop.width < 8 || crop.height < 8) return;
+  return { crop };
+}
+
+function cropScanToRasterCrop(crop) {
+  const trace = state.imageTrace;
+  if (!trace?.raster || !crop) return;
+  const raster = trace.raster;
   const croppedRaster = cropRaster(raster, crop);
   const traced = traceRaster(croppedRaster);
   state.imageTrace = {
@@ -801,6 +836,7 @@ function cropScanToCurrentView() {
       height: crop.height,
     },
   };
+  state.pendingScanCrop = null;
   applyDetectedTraceWidth(state.imageTrace);
   state.entities = traceHasParts(state.imageTrace) ? [imageTraceEntity(state.imageTrace, getScanTraceWidth())] : [];
   state.generated = [];
@@ -822,6 +858,7 @@ function resetScanCrop() {
     raster: trace.originalRaster,
     crop: null,
   };
+  state.pendingScanCrop = null;
   applyDetectedTraceWidth(state.imageTrace);
   state.entities = traceHasParts(state.imageTrace) ? [imageTraceEntity(state.imageTrace, getScanTraceWidth())] : [];
   state.generated = [];
@@ -880,6 +917,7 @@ function refreshImageTracePreview(options = {}) {
   if (!state.imageTrace?.raster) return;
   const traced = traceRaster(state.imageTrace.raster);
   state.imageTrace = { ...state.imageTrace, ...traced };
+  state.pendingScanCrop = null;
   state.rawEntityTypes = { IMAGE_TRACE: 1 };
   state.entities = traceHasParts(state.imageTrace) ? [imageTraceEntity(state.imageTrace, getScanTraceWidth())] : [];
   state.generated = [];
@@ -1392,7 +1430,9 @@ function traceMaskParts(mask, width, height) {
   return components
     .filter((component) => component.length >= minArea)
     .slice(0, 40)
-    .map((component) => simplifyPoints(boundaryLoop(maskFromComponent(component, mask.length), width, height), tolerance))
+    .flatMap((component) => boundaryLoops(maskFromComponent(component, mask.length), width, height))
+    .filter((points) => Math.abs(signedArea(points)) >= minArea)
+    .map((points) => simplifyPoints(points, tolerance))
     .filter((points) => points.length >= 3)
     .sort((a, b) => Math.abs(signedArea(b)) - Math.abs(signedArea(a)));
 }
@@ -1439,6 +1479,10 @@ function connectedBinaryComponents(mask, width, height) {
 }
 
 function boundaryLoop(mask, width, height) {
+  return boundaryLoops(mask, width, height)[0] || [];
+}
+
+function boundaryLoops(mask, width, height) {
   const edges = [];
   const isSet = (x, y) => x >= 0 && x < width && y >= 0 && y < height && mask[y * width + x];
   for (let y = 0; y < height; y += 1) {
@@ -1451,7 +1495,7 @@ function boundaryLoop(mask, width, height) {
     }
   }
   const loops = linkBoundaryEdges(edges);
-  return loops.sort((a, b) => Math.abs(signedArea(b)) - Math.abs(signedArea(a)))[0] || [];
+  return loops.sort((a, b) => Math.abs(signedArea(b)) - Math.abs(signedArea(a)));
 }
 
 function edgePoint(x1, y1, x2, y2) {
@@ -1541,6 +1585,22 @@ function imagePreviewEntity(trace, widthMm) {
     width: raster.width * mmPerPixel,
     height: raster.height * mmPerPixel,
     opacity: state.imagePreviewOpacity,
+  };
+}
+
+function scanCropPreviewEntity(trace, crop, widthMm) {
+  const image = imagePreviewEntity(trace, widthMm);
+  const raster = trace?.raster;
+  if (!image || !raster || !crop) return null;
+  const mmPerPixelX = image.width / raster.width;
+  const mmPerPixelY = image.height / raster.height;
+  return {
+    type: "RECT",
+    layer: "AI_SCAN_CROP_PREVIEW",
+    x: image.x + crop.x * mmPerPixelX,
+    y: image.y + crop.y * mmPerPixelY,
+    width: crop.width * mmPerPixelX,
+    height: crop.height * mmPerPixelY,
   };
 }
 
@@ -3040,6 +3100,12 @@ function bounds(entities) {
   entities.forEach((entity) => {
     if (entity.points) points.push(...entity.points);
     if (entity.point) points.push(entity.point);
+    if (entity.type === "RECT") {
+      points.push(
+        { x: entity.x, y: -entity.y },
+        { x: entity.x + entity.width, y: -(entity.y + entity.height) },
+      );
+    }
   });
   if (!points.length) return { minX: 0, minY: 0, maxX: 100, maxY: 60 };
   return {
@@ -3078,7 +3144,10 @@ function render() {
   if (els.saveTrainingButton) els.saveTrainingButton.disabled = !state.entities.length;
   if (els.exportTrainingButton) els.exportTrainingButton.disabled = state.trainingExamples.length === 0;
   if (els.scanAdjustPanel) els.scanAdjustPanel.classList.toggle("hidden", state.sourceType !== "image-trace");
-  if (els.scanCropButton) els.scanCropButton.disabled = state.sourceType !== "image-trace" || !state.imageTrace?.raster;
+  const hasScanRaster = state.sourceType === "image-trace" && Boolean(state.imageTrace?.raster);
+  if (els.scanCropButton) els.scanCropButton.disabled = !hasScanRaster || Boolean(state.pendingScanCrop);
+  if (els.scanConfirmCropButton) els.scanConfirmCropButton.classList.toggle("hidden", !state.pendingScanCrop);
+  if (els.scanCancelCropButton) els.scanCancelCropButton.classList.toggle("hidden", !state.pendingScanCrop);
   if (els.scanResetCropButton) els.scanResetCropButton.disabled = !state.imageTrace?.crop;
   if (state.importStatus) {
     els.fileSummary.textContent = state.importStatus;
@@ -3196,14 +3265,15 @@ function renderPreview() {
 }
 
 function drawableEntities(entities) {
-  return entities.filter((entity) => isShapeEntity(entity) || entity.type === "LINE" || entity.type === "TEXT" || entity.type === "IMAGE");
+  return entities.filter((entity) => isShapeEntity(entity) || entity.type === "LINE" || entity.type === "TEXT" || entity.type === "IMAGE" || entity.type === "RECT");
 }
 
 function selectedSourcePreviewEntities() {
   if (state.sourceType === "image-trace" && state.imageTrace) {
     const image = imagePreviewEntity(state.imageTrace, getScanTraceWidth());
     const outline = state.entities.length ? selectPatchOutline(state.entities, getFormula()) : null;
-    return [image, outline && { ...outline, layer: "AI_SELECTED_SOURCE_PREVIEW" }].filter(Boolean);
+    const crop = scanCropPreviewEntity(state.imageTrace, state.pendingScanCrop?.crop, getScanTraceWidth());
+    return [image, outline && { ...outline, layer: "AI_SELECTED_SOURCE_PREVIEW" }, crop].filter(Boolean);
   }
   if (!state.entities.length) return [];
   const outline = selectPatchOutline(state.entities, getFormula());
@@ -3267,6 +3337,16 @@ function drawEntity(entity, className, rendered = null) {
       preserveAspectRatio: "none",
     });
     els.preview.prepend(image);
+  }
+  if (entity.type === "RECT") {
+    const rect = svgEl("rect", {
+      x: entity.x,
+      y: entity.y,
+      width: entity.width,
+      height: entity.height,
+      class: "scan-crop-preview",
+    });
+    els.preview.appendChild(rect);
   }
 }
 

@@ -524,7 +524,8 @@ input[type="range"] {
 #preview path,
 #preview line,
 #preview circle,
-#preview image {
+#preview image,
+#preview rect {
   vector-effect: non-scaling-stroke;
 }
 
@@ -702,6 +703,14 @@ input[type="range"] {
 }
 
 .scan-preview-image {
+  pointer-events: none;
+}
+
+.scan-crop-preview {
+  fill: rgba(49, 95, 214, 0.12);
+  stroke: #315fd6;
+  stroke-width: 1.4;
+  stroke-dasharray: 6 3;
   pointer-events: none;
 }
 
