@@ -1068,10 +1068,10 @@ async function traceRasterWithBrowserPotrace(raster) {
   });
   window.Potrace.loadImageFromUrl(url);
   await new Promise((resolve) => window.Potrace.process(resolve));
-  const parts = svgToTraceParts(window.Potrace.getSVG(1), getTraceSimplifyTolerance())
+  const parts = filterTracePartsForMode(svgToTraceParts(window.Potrace.getSVG(1), getTraceSimplifyTolerance())
     .map((points) => scaleTracePoints(points, scaleBack))
     .filter((points) => points.length >= 3)
-    .sort((a, b) => Math.abs(signedArea(b)) - Math.abs(signedArea(a)));
+    .sort((a, b) => Math.abs(signedArea(b)) - Math.abs(signedArea(a))));
   if (!parts.length) return { ...traceRaster(raster), engine: "potrace-browser-empty" };
   return {
     imageWidthPx: raster.width,
@@ -1082,6 +1082,27 @@ async function traceRasterWithBrowserPotrace(raster) {
     parts,
     engine: "potrace-browser",
   };
+}
+
+function filterTracePartsForMode(parts) {
+  if (getTraceMode() === "dark") return parts;
+  return outerTraceParts(parts);
+}
+
+function outerTraceParts(parts) {
+  return parts.filter((points, index) => {
+    const center = polygonCentroid(points);
+    return !parts.some((other, otherIndex) => {
+      if (otherIndex === index) return false;
+      if (Math.abs(signedArea(other)) <= Math.abs(signedArea(points))) return false;
+      return pointInPolygon(center, other);
+    });
+  });
+}
+
+function polygonCentroid(points) {
+  const box = bounds([{ points }]);
+  return { x: (box.minX + box.maxX) / 2, y: (box.minY + box.maxY) / 2 };
 }
 
 function loadBrowserPotrace() {
