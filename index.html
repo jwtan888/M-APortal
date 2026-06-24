@@ -7195,15 +7195,25 @@
             const sourceRows = Array.from(document.querySelectorAll('#pic-workload-table tr'));
             return sourceRows.map(row => {
                 const cells = Array.from(row.children);
-                const pic = (cells[0]?.textContent || '').replace(/\s+/g, ' ').trim() || 'Unassigned';
+                const rawPic = (cells[0]?.textContent || '').replace(/\s+/g, ' ').trim() || 'Unassigned';
+                const pendingMatch = rawPic.match(/(\d+)\s+pending/i);
+                const delayedMatch = rawPic.match(/(\d+)\s+delayed/i);
+                const pic = rawPic
+                    .replace(/\s*\d+\s+delayed\b/i, '')
+                    .replace(/\s*\d+\s+pending\b/i, '')
+                    .replace(/\s*·\s*/g, ' ')
+                    .replace(/\s+/g, ' ')
+                    .trim() || 'Unassigned';
                 const items = Array.from(cells[1]?.querySelectorAll('button, span, a') || [])
                     .map(node => (node.textContent || '').replace(/\s+/g, ' ').trim())
                     .filter(Boolean);
                 return {
                     pic: truncateReportPdfText(pic, 28),
-                    items: truncateReportPdfText(items.slice(0, 12).join(', '), 150) || 'No pending items'
+                    pendingCount: pendingMatch ? Number(pendingMatch[1]) : items.length,
+                    delayedCount: delayedMatch ? Number(delayedMatch[1]) : 0,
+                    items
                 };
-            }).filter(row => row.pic || row.items);
+            }).filter(row => row.pic || row.items.length);
         }
 
         const DASHBOARD_PDF_THEME = {
@@ -7349,6 +7359,18 @@
             }
         }
 
+        function formatTemplatePendingSummary(row, sampleLimit = 6, maxLength = 120) {
+            const pieces = [];
+            pieces.push(`${row.pendingCount || row.items.length || 0} pending`);
+            if (row.delayedCount) pieces.push(`${row.delayedCount} delayed`);
+            const sample = (row.items || []).slice(0, sampleLimit);
+            if (sample.length) {
+                const remaining = Math.max(0, (row.items || []).length - sample.length);
+                pieces.push(`${sample.join(', ')}${remaining ? ` +${remaining} more` : ''}`);
+            }
+            return truncateReportPdfText(pieces.join(' - '), maxLength);
+        }
+
         function getAvailableDashboardCharts(charts) {
             return (charts || []).filter(chart => {
                 const canvas = document.getElementById(chart.id);
@@ -7426,7 +7448,7 @@
                         { type: 'deliveryKpi', title: 'KPI- On Time Delivery To Production', prefix: 'kpi-prod' }
                     ],
                     tables: [
-                        { title: 'Pending Template Styles By PIC', selector: '#pic-workload-table', maxRows: 8, mode: 'picPending' }
+                        { title: 'Pending Template Styles By PIC', selector: '#pic-workload-table', maxRows: 99, mode: 'picPending' }
                     ]
                 },
                 'Laser Tracking': {
@@ -7512,6 +7534,12 @@
         }
 
         function getDashboardTablePdfRows(selector, maxRows = 8, mode = 'default', options = {}) {
+            if (mode === 'picPending' && selector === '#pic-workload-table') {
+                return getTemplatePendingPdfRows().map(row => [
+                    row.pic,
+                    formatTemplatePendingSummary(row, 3, 86)
+                ]).slice(0, maxRows);
+            }
             const rows = Array.from(document.querySelectorAll(`${selector} tbody tr, ${selector} tr`));
             return rows.map(row => {
                 if (row.querySelector('th') && !row.querySelector('td')) return null;
@@ -7563,17 +7591,18 @@
 
         function addPdfTableCard(pdf, title, selector, x, y, w, h, options = {}) {
             const mode = options.mode || 'default';
+            const compact = options.compact;
             const rows = getDashboardTablePdfRows(selector, options.maxRows || 8, mode, options);
             setPdfRgb(pdf, 'setDrawColor', DASHBOARD_PDF_THEME.border);
             setPdfRgb(pdf, 'setFillColor', DASHBOARD_PDF_THEME.card);
             pdf.roundedRect(x, y, w, h, 4, 4, 'FD');
             pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(7.2);
+            pdf.setFontSize(compact ? 6.5 : 7.2);
             setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.ink);
-            pdf.text(truncateReportPdfText(String(title || ''), 58), x + 4, y + 6.8);
+            pdf.text(truncateReportPdfText(String(title || ''), 58), x + 4, y + (compact ? 5 : 6.8));
             setPdfRgb(pdf, 'setFillColor', DASHBOARD_PDF_THEME.tableHead);
-            pdf.rect(x, y + 10.4, w, 6.2, 'F');
-            pdf.setFontSize(5);
+            pdf.rect(x, y + (compact ? 7.5 : 10.4), w, compact ? 5 : 6.2, 'F');
+            pdf.setFontSize(compact ? 4.5 : 5);
             setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.muted);
             const customHeaders = Array.isArray(options.headers) ? options.headers : null;
             const colCount = mode === 'picPending' ? 2 : (customHeaders ? customHeaders.length : 5);
@@ -7585,10 +7614,10 @@
                 : ['Style', 'Stage', 'Season', 'Requestor', 'Date / Status']);
             let headerX = x + 4;
             for (let i = 0; i < colCount; i += 1) {
-                pdf.text(headers[i], headerX, y + 14.7);
+                pdf.text(headers[i], headerX, y + (compact ? 11 : 14.7));
                 headerX += colWidths[i] || 24;
             }
-            let cursorY = y + 21.2;
+            let cursorY = y + (compact ? 14 : 21.2);
             if (!rows.length) {
                 pdf.setFont('helvetica', 'normal');
                 pdf.setFontSize(5.8);
@@ -7596,10 +7625,13 @@
                 pdf.text('No rows to report.', x + 4, cursorY);
                 return;
             }
+            const rowLineOff = compact ? 1.5 : 4.8;
+            const rowBgOff = compact ? 1 : 4.3;
+            const minRowH = compact ? 5 : 5.6;
             rows.forEach((row, rowIndex) => {
                 if (cursorY > y + h - 6) return;
                 const cells = Array.isArray(row) ? row : [String(row)];
-                let rowHeight = 5.6;
+                let rowHeight = minRowH;
                 const wrappedCells = cells.slice(0, colCount).map((cell, index) => {
                     const wrapped = pdf.splitTextToSize(String(cell || '-'), Math.max(10, (colWidths[index] || 24) - 3));
                     rowHeight = Math.max(rowHeight, wrapped.length * 2.55 + 2.1);
@@ -7608,10 +7640,10 @@
                 if (cursorY + rowHeight > y + h - 2.5) return;
                 if (rowIndex % 2 === 0) {
                     setPdfRgb(pdf, 'setFillColor', [252, 253, 255]);
-                    pdf.rect(x + 0.6, cursorY - 4.3, w - 1.2, rowHeight, 'F');
+                    pdf.rect(x + 0.6, cursorY - rowBgOff, w - 1.2, rowHeight, 'F');
                 }
                 setPdfRgb(pdf, 'setDrawColor', DASHBOARD_PDF_THEME.line);
-                pdf.line(x, cursorY - 4.8, x + w, cursorY - 4.8);
+                pdf.line(x, cursorY - rowLineOff, x + w, cursorY - rowLineOff);
                 let cellX = x + 4;
                 for (let i = 0; i < colCount; i += 1) {
                     pdf.setFont('helvetica', i === 0 ? 'bold' : 'normal');
@@ -7791,40 +7823,66 @@
 
             const charts = getAvailableDashboardCharts(config.charts || []);
             const chartCount = Math.min(3, charts.length);
+            const isTemplate = title === 'Template';
+            const chartH = isTemplate ? 58 : DASHBOARD_PDF_LAYOUT.chartH;
             if (chartCount > 0) {
                 addPdfSectionLabel(pdf, 'Analytics', margin, DASHBOARD_PDF_LAYOUT.analyticsLabelY, pageW - margin * 2);
                 if (chartCount === 1) {
-                    addPdfChartPanel(pdf, charts[0].id, charts[0].title, margin, DASHBOARD_PDF_LAYOUT.chartY, pageW - margin * 2, DASHBOARD_PDF_LAYOUT.chartH);
+                    addPdfChartPanel(pdf, charts[0].id, charts[0].title, margin, DASHBOARD_PDF_LAYOUT.chartY, pageW - margin * 2, chartH);
                 } else {
                     const chartW = (pageW - margin * 2 - gap * (chartCount - 1)) / chartCount;
                     charts.slice(0, chartCount).forEach((chart, index) => {
-                        addPdfChartPanel(pdf, chart.id, chart.title, margin + index * (chartW + gap), DASHBOARD_PDF_LAYOUT.chartY, chartW, DASHBOARD_PDF_LAYOUT.chartH);
+                        addPdfChartPanel(pdf, chart.id, chart.title, margin + index * (chartW + gap), DASHBOARD_PDF_LAYOUT.chartY, chartW, chartH);
                     });
                 }
             }
 
-            const bottomY = chartCount > 0 ? DASHBOARD_PDF_LAYOUT.detailY : DASHBOARD_PDF_LAYOUT.noChartDetailY;
-            const bottomH = chartCount > 0 ? DASHBOARD_PDF_LAYOUT.detailH : DASHBOARD_PDF_LAYOUT.noChartDetailH;
-            const detailLabelY = chartCount > 0 ? DASHBOARD_PDF_LAYOUT.detailLabelY : DASHBOARD_PDF_LAYOUT.noChartDetailLabelY;
+            let bottomY, bottomH, detailLabelY;
             const detailCards = config.detailCards || [];
             const tables = config.tables || [];
-            const bottomCards = [
-                ...detailCards.slice(0, 2).map(card => ({ ...card, kind: 'delivery' })),
-                ...tables.slice(0, 2).map(table => ({ ...table, kind: 'table' }))
-            ].slice(0, 3);
+            if (isTemplate) {
+                const chartEndY = DASHBOARD_PDF_LAYOUT.chartY + chartH;
+                detailLabelY = chartEndY + 3;
+                const deliveryCards = detailCards.slice(0, 2);
+                if (deliveryCards.length) {
+                    const kpiY = chartEndY + 7;
+                    const kpiH = 37;
+                    const kpiW = (pageW - margin * 2 - gap) / deliveryCards.length;
+                    deliveryCards.forEach((card, i) => {
+                        addPdfDeliveryKpiCard(pdf, card.title, card.prefix, margin + i * (kpiW + gap), kpiY, kpiW, kpiH);
+                    });
+                    bottomY = kpiY + kpiH + 3;
+                } else {
+                    bottomY = chartEndY + 10;
+                }
+                bottomH = 206 - bottomY;
+            } else {
+                bottomY = chartCount > 0 ? DASHBOARD_PDF_LAYOUT.detailY : DASHBOARD_PDF_LAYOUT.noChartDetailY;
+                bottomH = chartCount > 0 ? DASHBOARD_PDF_LAYOUT.detailH : DASHBOARD_PDF_LAYOUT.noChartDetailH;
+                detailLabelY = chartCount > 0 ? DASHBOARD_PDF_LAYOUT.detailLabelY : DASHBOARD_PDF_LAYOUT.noChartDetailLabelY;
+            }
+            const bottomCards = isTemplate
+                ? tables.slice(0, 1).map(table => ({ ...table, kind: 'table' }))
+                : [
+                    ...detailCards.slice(0, 2).map(card => ({ ...card, kind: 'delivery' })),
+                    ...tables.slice(0, 2).map(table => ({ ...table, kind: 'table' }))
+                ].slice(0, 3);
             if (bottomCards.length) {
-                addPdfSectionLabel(pdf, chartCount > 0 ? 'Detail Review' : 'Review', margin, detailLabelY, pageW - margin * 2);
-                const bottomW = (pageW - margin * 2 - gap * (bottomCards.length - 1)) / bottomCards.length;
+                addPdfSectionLabel(pdf, isTemplate ? 'Pending By PIC' : (chartCount > 0 ? 'Detail Review' : 'Review'), margin, detailLabelY, pageW - margin * 2);
+                const bottomW = isTemplate
+                    ? pageW - margin * 2
+                    : (pageW - margin * 2 - gap * (bottomCards.length - 1)) / bottomCards.length;
                 bottomCards.forEach((card, index) => {
-                    const x = margin + index * (bottomW + gap);
+                    const x = isTemplate ? margin : margin + index * (bottomW + gap);
                     if (card.kind === 'delivery') {
                         addPdfDeliveryKpiCard(pdf, card.title, card.prefix, x, bottomY, bottomW, bottomH);
                     } else {
                 addPdfTableCard(pdf, card.title, card.selector, x, bottomY, bottomW, bottomH, {
                             mode: card.mode,
-                            maxRows: chartCount > 0 ? Math.min(card.maxRows || 8, card.mode === 'picPending' ? 6 : 8) : Math.min(card.maxRows || 12, 12),
+                            maxRows: chartCount > 0 ? Math.min(card.maxRows || 8, card.mode === 'picPending' ? 99 : 8) : Math.min(card.maxRows || 12, 12),
                             headers: card.headers,
-                            countOnly: card.countOnly
+                            countOnly: card.countOnly,
+                            compact: isTemplate
                         });
                     }
                 });
@@ -9648,6 +9706,80 @@
             }
         }
 
+        let portalLastVisibleAt = Date.now();
+        let portalResumeTimer = null;
+
+        function getActivePortalTab() {
+            const active = Array.from(document.querySelectorAll('.tab-content'))
+                .find(el => !el.classList.contains('hidden'));
+            return active?.id ? active.id.replace(/^content-/, '') : 'dashboard';
+        }
+
+        function repaintPortalFromMemory() {
+            const activeTab = getActivePortalTab();
+            if (!allTemplates.length && !allLaserRows.length && !allSupportRows.length && !allPatchRows.length && !allConsumptionRows.length && !allDownRows.length) {
+                hydrateDashboardFromSnapshot();
+            }
+
+            if (activeTab === 'dashboard') {
+                updateDashboard();
+                if (allLaserRows.length) {
+                    renderLaserDashboard();
+                    requestAnimationFrame(() => renderLaserSLA());
+                }
+                if (allSupportRows.length) renderSupportDashboard();
+                if (allPatchRows.length) renderPatchDashboard();
+                if (allConsumptionRows.length) renderConsumptionDashboard();
+                if (allDownRows.length) renderDownDashboard();
+                refreshDashboardReportChartLabels();
+            } else if (activeTab === 'template' && allTemplates.length && canPortalAutoRender('template')) {
+                applyTempFilters(false);
+            } else if (activeTab === 'laser' && allLaserRows.length && canPortalAutoRender('laser')) {
+                renderLaserTable();
+                renderLaserDashboard();
+            } else if (activeTab === 'support' && allSupportRows.length && canPortalAutoRender('support')) {
+                renderSupportTable();
+                renderSupportDashboard();
+            } else if (activeTab === 'patch' && allPatchRows.length && canPortalAutoRender('patch')) {
+                renderPatchTable();
+                renderPatchDashboard();
+            } else if (activeTab === 'consumption' && allConsumptionRows.length && canPortalAutoRender('consumption')) {
+                renderConsumptionTable();
+                renderConsumptionDashboard();
+            } else if (activeTab === 'downfilling' && allDownRows.length && canPortalAutoRender('downfilling')) {
+                renderDownTable();
+                renderDownDashboard();
+            }
+
+            updateDailyReportButton();
+            enableTableScrollControls();
+        }
+
+        function handlePortalResume() {
+            if (portalResumeTimer) clearTimeout(portalResumeTimer);
+            portalResumeTimer = setTimeout(() => {
+                portalResumeTimer = null;
+                safeRun(() => repaintPortalFromMemory());
+                setTimeout(() => safeRun(() => repaintPortalFromMemory()), 300);
+            }, 80);
+        }
+
+        function initPortalResumeRecovery() {
+            document.addEventListener('visibilitychange', () => {
+                if (document.hidden) {
+                    portalLastVisibleAt = Date.now();
+                    return;
+                }
+                handlePortalResume();
+            });
+            window.addEventListener('pageshow', handlePortalResume);
+            window.addEventListener('focus', () => {
+                if (!document.hidden && Date.now() - portalLastVisibleAt > 30000) {
+                    handlePortalResume();
+                }
+            });
+        }
+
         function loadInitialDashboardData() {
             [
                 [0, () => refreshTemplateLogs()],
@@ -9669,6 +9801,7 @@
             updateLaserPicDisplay();
             updateConsumptionPicDisplay();
             updateDownPicDisplay();
+            initPortalResumeRecovery();
             // If redirected from Skills page with a PIC filter, auto-apply it
             try {
                 const skillPic = localStorage.getItem('ma_skill_filter_pic');
