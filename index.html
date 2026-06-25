@@ -6623,8 +6623,7 @@
             if (!target) return false;
             let updated = false;
             allSupportRows = allSupportRows.map(row => {
-                const id = row['__PowerAppsId__'] || row['Id'] || row['ID'];
-                if (String(id) !== target) return row;
+                if (!rowPortalIds(row).includes(target)) return row;
                 updated = true;
                 return { ...row, ...payload };
             });
@@ -8087,21 +8086,7 @@
                 try { d = JSON.parse(rawText); } catch(pe) {
                     throw new Error(`Bad JSON: ${rawText.substring(0, 200)}`);
                 }
-                let rows = [];
-                if (Array.isArray(d)) {
-                    rows = d;
-                } else if (d && Array.isArray(d.value)) {
-                    rows = d.value;
-                } else if (d && d.body && Array.isArray(d.body.value)) {
-                    rows = d.body.value;  // Body token wraps as {body:{value:[]}}
-                } else if (d && d.body && Array.isArray(d.body)) {
-                    rows = d.body;
-                } else {
-                    // Last resort: find any array key
-                    for (const k of Object.keys(d || {})) {
-                        if (Array.isArray(d[k]) && d[k].length > 0) { rows = d[k]; break; }
-                    }
-                }
+                let rows = extractRows(d);
                 // Sort by received time descending — newest first
                 rows.sort((a, b) => {
                     const ra = rawToLocalDate(getVal(a, ['Received Time','ReceivedTime']));
@@ -8312,8 +8297,7 @@
             if (s && e && e > s) elapsed = ((e - s) / 3600000).toFixed(2);
             // Find existing row to preserve PIC if already set
             const existingRow = allSupportRows.find(r => {
-                const id = r['__PowerAppsId__'] || r['Id'] || r['ID'];
-                return String(id) === String(sid);
+                return rowPortalIds(r).includes(String(sid));
             });
             const existingPic = existingRow ? getMAPic(existingRow) : '---';
             const picToSave   = (!existingPic || existingPic === '---') ? currentUser : existingPic;
@@ -8364,7 +8348,12 @@
                     'Remark': remarkVal,
                     remark: remarkVal
                 });
-                showPortalSaveSuccess(btn, { after: () => refreshSupportData(true) });
+                showPortalSaveSuccess(btn, {
+                    after: () => {
+                        refreshSupportData(true);
+                        setTimeout(() => refreshSupportData(true), 10000);
+                    }
+                });
             } catch(e) {
                 btn.innerText = 'ERROR'; btn.disabled = false;
                 alert(e.name === 'AbortError' ? 'Timed out. Data was not updated. Check Power Automate flow is running.' : (e.message || 'Support update failed. Data was not updated.'));
