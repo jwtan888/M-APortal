@@ -6618,6 +6618,24 @@
             }
         }
 
+        function applySupportSavePatch(sid, payload) {
+            const target = String(sid || '').trim();
+            if (!target) return false;
+            let updated = false;
+            allSupportRows = allSupportRows.map(row => {
+                const id = row['__PowerAppsId__'] || row['Id'] || row['ID'];
+                if (String(id) !== target) return row;
+                updated = true;
+                return { ...row, ...payload };
+            });
+            if (updated) {
+                writeDashboardSnapshot();
+                if (canPortalAutoRender('support')) renderSupportTable();
+                renderSupportDashboard();
+            }
+            return updated;
+        }
+
         function switchTab(t) { 
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(`content-${t}`).classList.remove('hidden');
@@ -8334,6 +8352,18 @@
                 });
                 clearTimeout(t);
                 await readPortalWriteResult(res, 'Support update');
+                applySupportSavePatch(sid, {
+                    'Start Time': startNorm,
+                    StartTime: startNorm,
+                    'Complete Time': endNorm,
+                    CompleteTime: endNorm,
+                    'Job Elapsed Calendar Hrs': elapsed,
+                    elapsedHrs: elapsed,
+                    'M&A PIC': picToSave,
+                    pic: picToSave,
+                    'Remark': remarkVal,
+                    remark: remarkVal
+                });
                 showPortalSaveSuccess(btn, { after: () => refreshSupportData(true) });
             } catch(e) {
                 btn.innerText = 'ERROR'; btn.disabled = false;
