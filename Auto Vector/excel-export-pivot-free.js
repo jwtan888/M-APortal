@@ -18,7 +18,11 @@
   const clone=o=>o==null?o:JSON.parse(JSON.stringify(o));
   const unique=a=>{const s=new Set(),o=[];(a||[]).forEach(v=>{const t=clean(v);if(!t||t==='-'||s.has(t))return;s.add(t);o.push(t);});return o;};
   function val(c){const v=c?c.value:null;if(v&&typeof v==='object'){if(v.result!==undefined)return v.result;if(v.text!==undefined)return v.text;if(Array.isArray(v.richText))return v.richText.map(p=>p.text||'').join('');return null;}return v;}
-  function needsArtwork(p){return /run machine|perforated/i.test(String(p||''));}
+  function needsArtwork(p){
+    const text = String(p || '');
+    return /run machine|perforated/i.test(text) ||
+      (/place\s*(?:&|\/|and)\s*remove\s+panels/i.test(text) && />\s*50\s*cm/i.test(text));
+  }
   function safeName(v){return String(v||'').replace(/[^A-Za-z0-9 _-]+/g,' ').replace(/\s+/g,' ').trim();}
   function filename(p){const d=new Date();const dt=`${d.getDate()} ${d.toLocaleString('en-US',{month:'long'}).toUpperCase()} ${d.getFullYear()}`;const parts=[p.season,p.style,p.protoStage,dt].map(safeName).filter(Boolean);return `${parts.join(' ')||'Auto Consumption'}.xlsx`;}
   function fill(c,argb){c.fill={type:'pattern',pattern:'solid',fgColor:{argb}};}
@@ -74,5 +78,5 @@
 
   function writeSummary(wb,rows){const ws=wb.getWorksheet('Summary ');if(!ws)return;summaryHeader(ws);const tplDetail=ws.getRow(3);let tplGrand=ws.getRow(6);for(let r=4;r<=30;r++){if(String(ws.getRow(r).getCell(1).value||'').trim()==='Grand Total'){tplGrand=ws.getRow(r);break;}}const groups=group(rows,r=>r.productionCat||'(blank)');let out=3,gB=0,gC=0,gD=0,gE=0,gF=0,gG=0,gH=0,gI=0;groups.forEach((items,cat)=>{const ms=sum(items,'machinePlus20Sec'),hs=sum(items,'handlingPlus20Sec'),mm=ms/60,hm=hs/60,costH=hm*0.09,costM=mm*0.3,preNike=sum(items,'preLaminateNikeCosting'),preVN=sum(items,'preLaminateActualCost'),prodMM=sum(items,'productionMachineMin'),prodHM=sum(items,'productionHandlingMin');gB+=costH;gC+=costM;gD+=preNike;gE+=mm;gF+=hm;gG+=prodMM;gH+=prodHM;gI+=preVN;const r=ws.getRow(out++);copyFmt(tplDetail,r,9);[cat,rnd(costH,4),rnd(costM,4),rnd(preNike,4),rnd(mm,4),rnd(hm,4),rnd(prodMM,4),rnd(prodHM,4),rnd(preVN,4)].forEach((v,i)=>r.getCell(i+1).value=v);styleSummaryRow(r,'detail');});const tr=ws.getRow(out++);copyFmt(tplGrand,tr,9);['Grand Total',rnd(gB,4),rnd(gC,4),rnd(gD,4),rnd(gE,4),rnd(gF,4),rnd(gG,4),rnd(gH,4),rnd(gI,4)].forEach((v,i)=>tr.getCell(i+1).value=v);styleSummaryRow(tr,'grand');['B','C','D','I'].forEach(c=>ws.getColumn(c).numFmt='$0.0000');['E','F','G','H'].forEach(c=>ws.getColumn(c).numFmt='0.0000');clearAll(ws,out,9);}
 
-  window.generateExcelBrowser=async function(payload,helpers){const wb=await loadTemplateWorkbook();const master=readMaster(wb);const rows=buildRows(payload.rows||[],master);if(!rows.length)throw new Error('No calculator rows were supplied.');writeData(wb,rows);writeBreakdown(wb,rows);writeSummary(wb,rows);wb.calcProperties=wb.calcProperties||{};wb.calcProperties.fullCalcOnLoad=true;wb.calcProperties.forceFullCalc=true;wb.calcProperties.calcMode='auto';const buffer=await wb.xlsx.writeBuffer();helpers.downloadBlob(new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),filename(payload));};
+  window.generateExcelBrowser=async function(payload,helpers){const wb=await loadTemplateWorkbook();const master=readMaster(wb);const rows=buildRows(payload.rows||[],master);if(!rows.length)throw new Error('No calculator rows were supplied.');writeData(wb,rows);writeBreakdown(wb,rows);writeSummary(wb,rows);wb.calcProperties=wb.calcProperties||{};wb.calcProperties.fullCalcOnLoad=true;wb.calcProperties.forceFullCalc=true;wb.calcProperties.calcMode='auto';const buffer=await wb.xlsx.writeBuffer();helpers.downloadBlob(new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),filename(payload));return buffer;};
 })();
