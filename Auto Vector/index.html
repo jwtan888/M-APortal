@@ -1,0 +1,3074 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Auto Vector Measure</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 68 48'%3E%3Cg fill='%230514ff'%3E%3Cpath d='M9 4h7L7 44H0z'/%3E%3Cpath d='M21 4h12L24 44H12z'/%3E%3Cpath d='M44 4h21c2 0 3 2 3 4l-7 28c-1 5-5 8-10 8H34c-4 0-7-3-6-7l7-26c1-4 5-7 9-7z'/%3E%3C/g%3E%3C/svg%3E">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+
+    :root {
+      --bg: #dfe1ea;
+      --surface: rgba(255, 255, 255, 0.9);
+      --surface2: #f8fafc;
+      --border: rgba(91, 104, 138, 0.12);
+      --border2: rgba(91, 104, 138, 0.18);
+      --text-1: #1a1d25;
+      --text-2: #7d8598;
+      --accent: #1e57d8;
+      --accent-h: #1748b4;
+      --accent-lime: #c7f13b;
+      --radius-lg: 1.35rem;
+      --radius-md: 1rem;
+      --radius-sm: 0.75rem;
+      --shadow-sm: 0 8px 20px rgba(48, 59, 86, 0.08);
+      --shadow-md: 0 12px 28px rgba(48, 59, 86, 0.06);
+    }
+
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      background: var(--bg);
+      color: var(--text-1);
+      -webkit-font-smoothing: antialiased;
+      min-height: 100vh;
+    }
+
+    body::before {
+      content: ''; position: fixed; inset: 0; pointer-events: none; z-index: -1;
+      background:
+        radial-gradient(circle at top left, rgba(255, 255, 255, 0.55), transparent 26rem),
+        linear-gradient(180deg, #dfe1ea 0%, #d9dbe6 100%);
+    }
+
+    .topbar {
+      display: flex; justify-content: flex-end; gap: 1rem; align-items: end;
+      padding: 18px 0 0; margin-bottom: 1rem;
+    }
+    .nav-tabs {
+      display: inline-flex; gap: 0.45rem; padding: 0.35rem; border-radius: 999px;
+      background: rgba(255,255,255,0.7); border: 1px solid var(--border);
+    }
+    .nav-tab {
+      color: var(--text-2); text-decoration: none; padding: 0.78rem 1rem;
+      border-radius: 999px; font-weight: 800; font-size: 0.88rem; white-space: nowrap;
+    }
+    .nav-tab.is-active {
+      background: #fff; color: var(--text-1); box-shadow: var(--shadow-sm);
+    }
+
+    /* ─── PAGE ─── */
+    .page { padding-top: 0; }
+    .container { max-width: 1440px; margin: 0 auto; padding: 0 1rem; }
+
+    /* ─── HERO ─── */
+    .hero {
+      padding: 32px 0 22px;
+      text-align: left;
+    }
+    .hero-eyebrow {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 0.78rem; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase;
+      color: #0071e3; margin-bottom: 16px;
+    }
+    .hero-eyebrow span { width: 6px; height: 6px; background: #0071e3; border-radius: 50%; display: block; }
+    .hero h1 {
+      font-size: clamp(2rem, 5vw, 3.2rem);
+      font-weight: 700; letter-spacing: -0.03em; line-height: 1.08;
+      color: #1d1d1f; margin-bottom: 14px;
+    }
+    .hero p {
+      font-size: 1.05rem; color: #6e6e73; line-height: 1.6;
+      max-width: 620px; margin: 0 0 8px;
+    }
+    .hero-notice {
+      display: inline-flex; align-items: center; gap: 6px;
+      background: #fff3cd; border: 1px solid #ffc107; border-radius: 8px;
+      padding: 7px 14px; font-size: 0.82rem; color: #6b4c00; margin-top: 14px;
+    }
+    .hero-notice svg { flex-shrink: 0; width: 14px; height: 14px; }
+
+    /* ─── UPLOAD CARD ─── */
+    .upload-card {
+      background: var(--surface); border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md);
+      border: 1px solid var(--border);
+      padding: 1.5rem; margin-bottom: 1rem;
+    }
+    .portal-band {
+      display: grid; grid-template-columns: minmax(280px, 0.9fr) 1.1fr;
+      gap: 18px; align-items: stretch;
+    }
+    @media (max-width: 900px) { .portal-band { grid-template-columns: 1fr; } }
+
+    .drop-zone {
+      border: 1px dashed #d1d5db;
+      border-radius: 1.25rem; padding: 48px 24px; text-align: center;
+      cursor: pointer; transition: all 0.22s ease;
+      background: #fafafa;
+    }
+    .drop-zone:hover, .drop-zone.dragover {
+      border-color: var(--accent); background: rgba(30, 87, 216, 0.08);
+    }
+    .drop-zone.dragover { transform: scale(1.01); }
+    .drop-zone-icon {
+      width: 52px; height: 52px; margin: 0 auto 16px;
+      background: transparent; border: 2px solid #151515;
+      border-radius: 14px; display: flex; align-items: center; justify-content: center;
+    }
+    .drop-zone-icon svg { width: 26px; height: 26px; color: #151515; }
+    .drop-zone h3 { font-size: 1rem; font-weight: 600; color: #1d1d1f; margin-bottom: 6px; }
+    .drop-zone p { font-size: 0.85rem; color: #6e6e73; }
+    .drop-zone .format-tags { display: flex; gap: 8px; justify-content: center; margin-top: 14px; }
+    .format-tag {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 3px 10px; border-radius: 100px; border: 1px solid;
+    }
+    .tag-dxf { background: #e8f4fd; color: #0071e3; border-color: #b8dbf5; }
+    .tag-pdf { background: #fce8e8; color: #d93025; border-color: #f5b8b8; }
+    .tag-svg { background: #e8f5e9; color: #188038; border-color: #b8e0bb; }
+
+    /* ─── FILE LIST ─── */
+    .file-list { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; }
+    .file-item {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px; background: #f5f5f7; border-radius: 10px;
+      border: 1px solid rgba(0,0,0,0.06); transition: background 0.15s;
+    }
+    .file-item:hover { background: #ebebed; }
+    .file-item-left { display: flex; align-items: center; gap: 10px; min-width: 0; }
+    .file-ext {
+      font-size: 0.68rem; font-weight: 800; letter-spacing: 0.06em; text-transform: uppercase;
+      padding: 2px 8px; border-radius: 6px; flex-shrink: 0;
+    }
+    .ext-dxf { background: #e8f4fd; color: #0071e3; }
+    .ext-pdf { background: #fce8e8; color: #d93025; }
+    .ext-svg { background: #e8f5e9; color: #188038; }
+    .file-name { font-size: 0.9rem; font-weight: 500; color: #1d1d1f; truncate: ellipsis; white-space: nowrap; overflow: hidden; max-width: 340px; }
+    .file-size { font-size: 0.78rem; color: #6e6e73; flex-shrink: 0; }
+    .file-remove {
+      background: none; border: none; cursor: pointer; padding: 4px; color: #aaa;
+      border-radius: 6px; transition: color 0.15s, background 0.15s; flex-shrink: 0;
+    }
+    .file-remove:hover { color: #d93025; background: #fce8e8; }
+
+    /* ─── CALCULATE BUTTON ─── */
+    .calc-btn {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 10px 22px; border-radius: 980px; border: none; cursor: pointer;
+      background: var(--accent);
+      color: #fff; font-size: 0.9rem; font-weight: 600; letter-spacing: -0.01em;
+      transition: background 0.2s, transform 0.15s;
+      margin-bottom: 20px;
+    }
+    .calc-btn:hover { background: #0077ed; transform: translateY(-1px); }
+    .calc-btn:active { transform: translateY(0); }
+    .calc-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    /* ─── LOADING ─── */
+    .loading-wrap { text-align: center; padding: 48px 0; }
+    .spinner {
+      width: 40px; height: 40px; border: 3px solid #e5e7eb; border-top-color: #0071e3;
+      border-radius: 50%; animation: spin 0.7s linear infinite; margin: 0 auto 16px;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .loading-wrap p { font-size: 0.92rem; color: #6e6e73; font-weight: 500; }
+
+    /* ─── SUMMARY TABLE ─── */
+    .summary-card {
+      background: #fff; border-radius: 16px;
+      box-shadow: 0 1px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04);
+      overflow: hidden; margin-bottom: 20px;
+    }
+    .summary-header {
+      padding: 18px 24px; background: #f5f5f7; border-bottom: 1px solid rgba(0,0,0,0.06);
+      display: flex; align-items: center; justify-content: space-between;
+    }
+    .summary-header h3 { font-size: 0.85rem; font-weight: 700; color: #1d1d1f; letter-spacing: -0.01em; }
+    .section-divider {
+      font-size: 0.72rem; font-weight: 600; letter-spacing: 0.07em; text-transform: uppercase;
+      color: #6e6e73;
+    }
+    .summary-table { width: 100%; border-collapse: collapse; }
+    .summary-table th {
+      text-align: left; padding: 10px 24px 10px;
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase;
+      color: #6e6e73; border-bottom: 1px solid rgba(0,0,0,0.06); background: #fafafa;
+    }
+    .summary-table th:last-child, .summary-table td:last-child { text-align: right; }
+    .summary-table td {
+      padding: 12px 24px; font-size: 0.88rem; color: #1d1d1f;
+      border-bottom: 1px solid rgba(0,0,0,0.04);
+    }
+    .summary-table tr:last-child td { border-bottom: none; }
+    .summary-table tbody tr:hover td { background: #f5f5f7; }
+    .summary-table .total-row td {
+      background: #f5f5f7; font-weight: 700; font-size: 0.9rem;
+      border-top: 1px solid rgba(0,0,0,0.08);
+    }
+    .length-val {
+      font-weight: 600; color: #0071e3; cursor: pointer; transition: color 0.15s;
+      font-variant-numeric: tabular-nums;
+    }
+    .length-val:hover { color: #007aff; text-decoration: underline; }
+    .length-val.copied { color: #188038; }
+
+    /* ─── FILE DETAIL CARDS ─── */
+    .file-detail-card {
+      background: #fff; border-radius: 16px;
+      box-shadow: 0 1px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04);
+      overflow: hidden; margin-bottom: 16px;
+    }
+    .file-detail-header {
+      padding: 18px 24px; display: flex; align-items: center; justify-content: space-between;
+      border-bottom: 1px solid rgba(0,0,0,0.06); cursor: pointer; user-select: none;
+    }
+    .file-detail-header:hover { background: #fafafa; }
+    .fh-left { display: flex; align-items: center; gap: 12px; }
+    .fh-icon {
+      width: 36px; height: 36px; border-radius: 9px;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .fh-icon-dxf { background: #e8f4fd; }
+    .fh-icon-pdf { background: #fce8e8; }
+    .fh-icon-svg { background: #e8f5e9; }
+    .fh-icon svg { width: 18px; height: 18px; }
+    .fh-name { font-size: 0.92rem; font-weight: 600; color: #1d1d1f; }
+    .fh-sub { font-size: 0.78rem; color: #6e6e73; margin-top: 1px; }
+    .fh-right { display: flex; align-items: center; gap: 16px; }
+    .fh-total { font-size: 1.3rem; font-weight: 700; color: #0071e3; letter-spacing: -0.02em; }
+    .chevron { transition: transform 0.25s ease; color: #aaa; }
+    .chevron.open { transform: rotate(180deg); }
+
+    .file-detail-body { display: none; }
+    .file-detail-body.open { display: block; }
+
+    .file-body-grid {
+      display: grid; grid-template-columns: 220px 1fr;
+      gap: 0; border-bottom: 1px solid rgba(0,0,0,0.05);
+    }
+    @media (max-width: 640px) {
+      .file-body-grid { grid-template-columns: 1fr; }
+    }
+    .preview-pane {
+      background: #f5f5f7; padding: 16px;
+      display: flex; align-items: center; justify-content: center;
+      border-right: 1px solid rgba(0,0,0,0.05);
+    }
+    .preview-pane canvas { border-radius: 8px; }
+    .entity-pane { padding: 0; overflow-y: auto; max-height: 320px; }
+
+    .entity-row {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 9px 20px; border-bottom: 1px solid rgba(0,0,0,0.04);
+      transition: background 0.12s;
+    }
+    .entity-row:last-child { border-bottom: none; }
+    .entity-row:hover { background: #f5f5f7; }
+    .entity-left { display: flex; align-items: center; gap: 10px; }
+    .entity-dot { width: 8px; height: 8px; border-radius: 50%; flex-shrink: 0; }
+    .entity-info { font-size: 0.82rem; color: #1d1d1f; }
+    .entity-info .etype { font-weight: 600; }
+    .entity-info .elayer { color: #6e6e73; }
+    .entity-len {
+      font-size: 0.82rem; font-weight: 600; color: #0071e3;
+      cursor: pointer; transition: color 0.15s; font-variant-numeric: tabular-nums;
+      white-space: nowrap;
+    }
+    .entity-len:hover { color: #007aff; text-decoration: underline; }
+    .entity-len.copied { color: #188038; }
+
+    .entity-subtotal {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 11px 20px; background: #f5f5f7; border-top: 1px solid rgba(0,0,0,0.07);
+      font-size: 0.85rem; font-weight: 700; color: #1d1d1f;
+    }
+
+    /* ─── ERROR ─── */
+    .error-file-card {
+      background: #fff; border-radius: 16px;
+      border-left: 4px solid #d93025;
+      box-shadow: 0 1px 8px rgba(0,0,0,0.06), 0 0 0 1px rgba(0,0,0,0.04);
+      padding: 18px 24px; margin-bottom: 16px;
+    }
+    .error-title { font-size: 0.9rem; font-weight: 600; color: #1d1d1f; margin-bottom: 4px; }
+    .error-msg { font-size: 0.82rem; color: #d93025; }
+
+    /* ─── GLOBAL ERROR ─── */
+    .global-error {
+      background: #fff0f0; border: 1px solid #fca5a5; border-radius: 12px;
+      padding: 14px 18px; margin-top: 16px; font-size: 0.85rem; color: #b91c1c;
+      display: none;
+    }
+
+    /* ─── ACTIONS ROW ─── */
+    .actions-row { display: flex; gap: 10px; margin-top: 4px; }
+    .btn-secondary {
+      flex: 1; padding: 12px; border-radius: var(--radius-sm); border: 1px solid var(--border2);
+      background: var(--surface2); font-size: 0.82rem; font-weight: 800; color: #1d1d1f;
+      cursor: pointer; transition: background 0.15s, border-color 0.15s;
+      display: flex; align-items: center; justify-content: center; gap: 6px;
+    }
+    .btn-secondary:hover { background: #f5f5f7; border-color: rgba(0,0,0,0.18); }
+    .btn-export { color: #0071e3; border-color: #0071e3; }
+    .btn-export:hover { background: #f0f7ff; }
+
+    /* ─── CONSUMPTION CALCULATOR ─── */
+    .consumption-card {
+      background: var(--surface); border-radius: var(--radius-lg);
+      box-shadow: var(--shadow-md); border: 1px solid var(--border);
+      margin: 20px 0; overflow: hidden;
+    }
+    .consumption-header {
+      padding: 18px 24px; background: var(--surface2); border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; justify-content: space-between; gap: 16px;
+    }
+    .consumption-header h2 { font-size: 1rem; font-weight: 700; color: #1d1d1f; }
+    .consumption-header p { font-size: 0.82rem; color: #6e6e73; margin-top: 3px; }
+    .consumption-body { padding: 24px; }
+    .form-grid {
+      display: grid; grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 14px 16px;
+    }
+    .form-field { display: flex; flex-direction: column; gap: 6px; min-width: 0; }
+    .form-field label {
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 0.04em;
+      text-transform: uppercase; color: #6e6e73;
+    }
+    .form-field input, .form-field select {
+      width: 100%; border: 1px solid var(--border2); border-radius: var(--radius-sm);
+      padding: 10px 11px; font: inherit; font-size: 0.88rem; background: var(--surface2); color: var(--text-1);
+      min-height: 40px;
+    }
+    .form-field input:focus, .form-field select:focus {
+      outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(0,113,227,0.15); background: #fff;
+    }
+    .field-span-2 { grid-column: span 2; }
+    .field-span-3 { grid-column: span 3; }
+    .field-span-4 { grid-column: span 3; }
+    .calculator-actions {
+      display: flex; flex-wrap: wrap; gap: 10px; justify-content: flex-end;
+      margin-top: 18px; padding-top: 18px; border-top: 1px solid rgba(0,0,0,0.06);
+    }
+    .btn-primary {
+      padding: 11px 16px; border-radius: var(--radius-sm); border: 0; cursor: pointer;
+      background: var(--accent); color: #fff; font-size: 0.88rem; font-weight: 800;
+      display: inline-flex; align-items: center; justify-content: center; gap: 7px;
+    }
+    .btn-primary:hover { background: var(--accent-h); }
+    .btn-primary:disabled, .btn-secondary:disabled { opacity: 0.45; cursor: not-allowed; }
+    .preview-wrap {
+      margin-top: 20px; border: 1px solid rgba(0,0,0,0.06);
+      border-radius: 12px; overflow: auto;
+    }
+    .consumption-table { width: 100%; border-collapse: collapse; min-width: 980px; }
+    .consumption-table th {
+      text-align: left; padding: 10px 12px; background: #fafafa;
+      border-bottom: 1px solid rgba(0,0,0,0.06); color: #6e6e73;
+      font-size: 0.7rem; letter-spacing: 0.05em; text-transform: uppercase;
+    }
+    .consumption-table td {
+      padding: 10px 12px; border-bottom: 1px solid rgba(0,0,0,0.04);
+      font-size: 0.84rem; vertical-align: top;
+    }
+    .consumption-table tr:last-child td { border-bottom: 0; }
+    .row-action {
+      border: 0; border-radius: 999px; background: #eef3ff; color: var(--accent);
+      font-size: 0.78rem; font-weight: 700; padding: 7px 9px; cursor: pointer;
+    }
+    .row-action.danger { background: #fff0f0; color: #b91c1c; }
+    .row-action:disabled { opacity: 0.35; cursor: not-allowed; }
+    .form-field input[readonly] { color: var(--text-2); background: #eef1f6; }
+    .calculator-status { margin-top: 12px; font-size: 0.83rem; color: #6e6e73; }
+    .calculator-status.error { color: #b91c1c; }
+    .calculator-status.success { color: #188038; }
+    @media (max-width: 860px) {
+      .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .field-span-4 { grid-column: span 2; }
+    }
+    @media (max-width: 560px) {
+      .form-grid { grid-template-columns: 1fr; }
+      .field-span-2, .field-span-4 { grid-column: span 1; }
+      .calculator-actions { justify-content: stretch; }
+      .calculator-actions button { flex: 1; }
+    }
+
+    /* ─── UTILITY ─── */
+    .hidden { display: none !important; }
+    .mt-5 { margin-top: 20px; }
+
+    /* ─── ELORM-UI STYLE TOKENS (marker modal) ─── */
+    .marker-modal {
+      --mbg: #fff;
+      --msurface: #f5f5f7;
+      --msurface-hover: #eeeef0;
+      --mtext: #1d1d1f;
+      --mtext-muted: #86868b;
+      --mtext-dim: #aeaeb2;
+      --mborder: #e5e5e7;
+      --mborder-soft: #eeeef0;
+      --mradius: 14px;
+      --mradius-sm: 10px;
+      --maccent: #2563eb;
+      --maccent-hover: #1d4ed8;
+      --msuccess: #22c55e;
+      --mdanger: #ef4444;
+      --mshadow-sm: 0 1px 3px rgba(0,0,0,0.06);
+      --mshadow-md: 0 4px 12px rgba(0,0,0,0.08);
+      --mshadow-lg: 0 12px 40px rgba(0,0,0,0.12);
+    }
+
+    /* ─── MARKER MODAL ─── */
+    .modal-overlay {
+      position: fixed; inset: 0; z-index: 1000;
+      background: rgba(0,0,0,0.35);
+      display: flex; align-items: center; justify-content: center;
+      backdrop-filter: blur(2px);
+    }
+    .modal-content {
+      background: var(--mbg); border-radius: var(--mradius);
+      box-shadow: var(--mshadow-lg);
+      max-width: 95vw; max-height: 95vh;
+      display: flex; flex-direction: column;
+      overflow: hidden;
+    }
+    .marker-modal { width: 1300px; height: 85vh; }
+    .modal-header {
+      display: flex; justify-content: space-between; align-items: center;
+      padding: 1rem 1.5rem;
+      border-bottom: 1px solid var(--mborder);
+    }
+    .modal-header h2 { font-size: 1.1rem; font-weight: 600; margin: 0; color: var(--mtext); }
+    .modal-close {
+      background: none; border: none; font-size: 1.5rem;
+      cursor: pointer; color: var(--mtext-muted); line-height: 1;
+      border-radius: 6px; width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      transition: background 0.15s, color 0.15s;
+    }
+    .modal-close:hover { background: var(--msurface); color: var(--mtext); }
+    .modal-body {
+      flex: 1; overflow: hidden;
+      display: flex; flex-direction: column;
+    }
+    .marker-toolbar {
+      display: flex; flex-direction: column; gap: 0.5rem;
+      padding: 0.75rem 1.5rem;
+      border-bottom: 1px solid var(--mborder);
+      background: var(--msurface);
+      flex-shrink: 0;
+    }
+    .marker-controls {
+      display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;
+    }
+    .marker-status {
+      font-size: 0.82rem; color: var(--mtext-muted);
+      padding: 0.3rem 0.75rem;
+      background: var(--mbg); border-radius: var(--mradius-sm);
+      border: 1px solid var(--mborder-soft);
+      align-self: stretch;
+    }
+    .marker-controls label {
+      display: flex; align-items: center; gap: 0.3rem;
+      font-size: 0.82rem; color: var(--mtext-muted);
+    }
+    .marker-controls input, .marker-controls select {
+      border: 1px solid var(--mborder); border-radius: var(--mradius-sm);
+      padding: 0.3rem 0.5rem; font-size: 0.82rem;
+      background: var(--mbg);
+      color: var(--mtext);
+      transition: border-color 0.15s;
+    }
+    .marker-controls input:focus, .marker-controls select:focus {
+      outline: none; border-color: var(--maccent);
+      box-shadow: 0 0 0 2px rgba(37,99,235,0.15);
+    }
+    .marker-controls .btn {
+      padding: 0.4rem 0.9rem; border-radius: var(--mradius-sm);
+      border: 1px solid var(--mborder);
+      background: var(--mbg); cursor: pointer;
+      font-size: 0.82rem; font-weight: 500;
+      color: var(--mtext);
+      transition: background 0.15s, border-color 0.15s, box-shadow 0.15s;
+    }
+    .marker-controls .btn:hover {
+      background: var(--msurface-hover); border-color: var(--mborder);
+    }
+    .marker-controls .btn:active {
+      transform: scale(0.97);
+    }
+    .marker-controls .btn-primary {
+      background: var(--maccent); color: #fff; border-color: var(--maccent);
+      font-weight: 600;
+    }
+    .marker-controls .btn-primary:hover { background: var(--maccent-hover); border-color: var(--maccent-hover); }
+    .marker-controls .btn-stop {
+      background: var(--mdanger); color: #fff; border-color: var(--mdanger);
+      font-weight: 600;
+    }
+    .marker-controls .btn-stop:hover { background: #dc2626; border-color: #dc2626; }
+    .marker-controls .btn-accept {
+      background: var(--msuccess); color: #fff; border-color: var(--msuccess);
+      font-weight: 600;
+    }
+    .marker-controls .btn-accept:hover { background: #16a34a; border-color: #16a34a; }
+    .marker-controls .btn-pan { background: #6b7280; border-color: #6b7280; color: #fff; }
+    .marker-controls .btn-pan:hover { background: #4b5563; border-color: #4b5563; }
+    .marker-controls .btn-pan.active { background: #374151; border-color: #374151; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3); }
+    .marker-progress-wrap {
+      display: flex; align-items: center; gap: 0.625rem; flex: 1; max-width: 320px;
+    }
+    .marker-progress-bar {
+      flex: 1; height: 6px; background: var(--mborder-soft); border-radius: 3px; overflow: hidden;
+    }
+    .marker-progress-fill {
+      height: 100%; background: var(--maccent); border-radius: 3px;
+      transition: width 0.25s ease; width: 0%;
+    }
+    .marker-progress-label {
+      font-size: 0.72rem; color: var(--mtext-muted); white-space: nowrap; min-width: 3.5rem;
+    }
+    .marker-layout {
+      flex: 1; display: flex; overflow: hidden;
+    }
+    .marker-canvas-wrap {
+      flex: 1; overflow: auto;
+      display: flex; align-items: flex-start; justify-content: flex-start;
+      padding: 1rem;
+      background: var(--msurface);
+    }
+    .marker-canvas-wrap canvas {
+      border: 1px solid var(--mborder);
+      border-radius: var(--mradius-sm);
+      background: #fff;
+      box-shadow: var(--mshadow-sm);
+    }
+    .marker-sidebar {
+      flex: 0 0 380px; width: 380px;
+      border-left: 1px solid var(--mborder);
+      padding: 1rem;
+      overflow-y: auto;
+      background: var(--mbg);
+    }
+    .marker-sidebar h4 {
+      font-size: 0.85rem; font-weight: 600; margin: 0 0 0.75rem;
+      color: var(--mtext);
+      text-transform: uppercase; letter-spacing: 0.04em;
+    }
+    #markerPartList {
+      display: flex; flex-direction: column; gap: 0.35rem;
+    }
+    .file-group { margin-bottom: 4px; }
+    .file-label {
+      display: flex; flex-direction: column; gap: 2px;
+      padding: 6px 10px; font-size: 0.82rem; font-weight: 600; cursor: pointer;
+      border-radius: var(--mradius-sm); min-height: 48px;
+      transition: background 0.12s;
+    }
+    .file-label:hover { background: var(--msurface); }
+    .file-label .file-row1 {
+      display: flex; align-items: center; gap: 8px; width: 100%;
+    }
+    .file-label .file-row2 {
+      display: flex; align-items: center; gap: 12px; padding-left: 36px;
+    }
+    .file-label .file-name-text {
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1;
+    }
+    .entity-list { padding-left: 12px; display: flex; flex-direction: column; gap: 1px; }
+    .entity-label {
+      display: flex; flex-direction: column; gap: 1px;
+      padding: 4px 8px; font-size: 0.75rem; cursor: pointer;
+      border-radius: var(--mradius-sm); min-height: 52px;
+      transition: background 0.12s;
+    }
+    .entity-label:hover { background: var(--msurface); }
+    .entity-label .entity-row1 {
+      display: flex; align-items: center; gap: 6px; width: 100%; min-height: 24px;
+    }
+    .entity-label .entity-row2 {
+      display: flex; align-items: center; gap: 10px; padding-left: 36px; min-height: 22px;
+    }
+    .entity-label .entity-dot { width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0; }
+    .entity-label .entity-name-text {
+      overflow: hidden; text-overflow: ellipsis; white-space: nowrap; min-width: 0; flex: 1;
+    }
+    .entity-label .entity-len {
+      color: #6e6e73; font-size: 0.72rem; white-space: nowrap; margin-left: auto;
+    }
+    .entity-label .cb-label-text { font-size: 0.65rem; color: var(--mtext-muted); user-select: none; }
+    #markerPartList input[type="checkbox"] {
+      accent-color: var(--maccent);
+      margin: 0; width: 18px; height: 18px; min-width: 18px;
+    }
+    #markerPartList input[type="checkbox"]:hover {
+      cursor: pointer;
+    }
+    #markerPartList .pg-group {
+      display: inline-flex; align-items: center; gap: 4px;
+      user-select: none;
+    }
+    #markerPartList .pg-group input[type="checkbox"] {
+      width: 16px; height: 16px; min-width: 16px;
+    }
+    #markerPartList .pg-group .pg-label {
+      color: var(--mtext-dim); font-size: 0.72rem; white-space: nowrap;
+      pointer-events: none;
+    }
+    #markerPartList .pg-group input, #markerPartList .pg-group select {
+      pointer-events: auto;
+    }
+    #markerPartList .pg-group select.group-sel {
+      font-size: 0.7rem; padding: 1px 2px; width: 48px;
+      border: 1px solid var(--mborder); border-radius: var(--mradius-sm);
+      background: var(--mbg); color: var(--mtext); cursor: pointer;
+    }
+    #markerPartList .mini-btn {
+      font-size: 0.65rem; padding: 1px 6px; min-width: 24px; height: 20px;
+      border: 1px solid var(--mborder); border-radius: var(--mradius-sm);
+      background: var(--msurface); color: var(--mtext); cursor: pointer;
+      line-height: 1;
+    }
+    #markerPartList .mini-btn:hover { background: var(--maccent); color: #fff; border-color: var(--maccent); }
+    .entity-cb-wrap {
+      display: inline-flex; align-items: center; gap: 3px;
+    }
+    #markerBreakdown {
+      font-size: 0.72rem; color: var(--mtext-muted);
+      margin-bottom: 6px; line-height: 1.3;
+      padding: 0.4rem 0.5rem;
+      background: var(--msurface);
+      border-radius: var(--mradius-sm);
+    }
+
+  </style>
+</head>
+<body>
+
+<div class="page">
+  <div class="container">
+    <div class="topbar">
+      <nav class="nav-tabs" aria-label="Navigation">
+        <a class="nav-tab" href="../index.html">M&amp;A Portal</a>
+        <a class="nav-tab is-active" href="./">Auto Consumption</a>
+      </nav>
+    </div>
+
+    <!-- HERO -->
+    <div class="hero">
+      <h1>Auto Vector Measuring Consumption Calculator</h1>
+    </div>
+
+    <!-- UPLOAD CARD -->
+    <div class="upload-card">
+      <div id="dropZone" class="drop-zone">
+        <div class="drop-zone-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+            <polyline points="17 8 12 3 7 8"/>
+            <line x1="12" y1="3" x2="12" y2="15"/>
+          </svg>
+        </div>
+        <h3>Drag &amp; drop files here</h3>
+        <p>or click to browse your files</p>
+        <div class="format-tags">
+          <span class="format-tag tag-dxf">DXF</span>
+          <span class="format-tag tag-pdf">PDF</span>
+          <span class="format-tag tag-svg">SVG</span>
+        </div>
+        <input type="file" id="fileInput" accept=".dxf,.pdf,.svg" multiple style="display:none" />
+      </div>
+
+      <div id="fileList" class="file-list hidden"></div>
+
+      <!-- ACTION BUTTONS — inside card -->
+      <div style="margin-top:20px; display:flex; justify-content:space-between; align-items:center;">
+        <button id="clearBtn" class="calc-btn hidden" style="background:#6e6e73;">
+          Clear All
+        </button>
+        <button id="calculateBtn" class="calc-btn hidden">
+          Calculate Vector Lengths
+        </button>
+        <div style="display:flex;gap:6px">
+          <button id="markerBtn" type="button" class="calc-btn hidden" onclick="openMarkerModal()" style="background:#7B68EE;border-color:#7B68EE;color:#fff" disabled title="Coming Soon">Marker (Coming Soon)</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- LOADING -->
+    <div id="loading" class="hidden">
+      <div class="loading-wrap">
+        <div class="spinner"></div>
+        <p id="loadingText">Processing files…</p>
+      </div>
+    </div>
+
+    <!-- RESULTS -->
+    <div id="results" class="hidden mt-5">
+
+      <!-- Summary table + file cards injected here -->
+      <div id="fileResults"></div>
+
+      <!-- Consumption Calculator -->
+      <section id="consumptionCalculator" class="consumption-card">
+        <div class="consumption-header">
+          <div>
+            <h2>Consumption Calculator</h2>
+            <p>Map measured artwork length to the Excel costing template.</p>
+          </div>
+          <span class="section-divider">Template XLSX export</span>
+        </div>
+        <div class="consumption-body">
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="styleName">Style / Project Name</label>
+              <input id="styleName" placeholder="Auto from filename" autocomplete="off">
+            </div>
+            <div class="form-field">
+              <label for="seasonName">Season</label>
+              <input id="seasonName" placeholder="SP27" autocomplete="off">
+            </div>
+            <div class="form-field">
+              <label for="protoStage">Proto stage</label>
+              <input id="protoStage" placeholder="Auto from filename" autocomplete="off">
+            </div>
+            <div class="form-field">
+              <label for="laserBondingPart">Laser bonding part</label>
+              <input id="laserBondingPart" placeholder="Manual entry" autocomplete="off">
+            </div>
+            <div class="form-field">
+              <label for="units">Units</label>
+              <input id="units" type="number" min="0" step="1" value="1">
+            </div>
+            <div class="form-field">
+              <label for="im">Nike IM</label>
+              <input id="im" list="imOptions" placeholder="Select from Material list" autocomplete="off">
+              <datalist id="imOptions"></datalist>
+            </div>
+
+            <div class="form-field">
+              <label for="yards">Yards</label>
+              <select id="yards"><option>Y</option><option>N</option></select>
+            </div>
+            <div class="form-field">
+              <label for="slitReadyRollFabricPanel">Slit / Roll / Panel</label>
+              <input id="slitReadyRollFabricPanel" value="N" placeholder="Auto from IM" autocomplete="off" readonly>
+            </div>
+            <div class="form-field">
+              <label for="materialType">Material Type</label>
+              <input id="materialType" placeholder="Auto from Nike IM" autocomplete="off" readonly>
+            </div>
+            <div class="form-field">
+              <label for="supplier">Supplier</label>
+              <input id="supplier" placeholder="Auto from Nike IM" autocomplete="off" readonly>
+            </div>
+            <div class="form-field">
+              <label for="supplierItem">Supplier Item</label>
+              <input id="supplierItem" placeholder="Auto from Nike IM" autocomplete="off" readonly>
+            </div>
+
+            <div class="form-field">
+              <label for="materialWidthMm">Material Width (mm)</label>
+              <input id="materialWidthMm" placeholder="Auto from Nike IM" readonly>
+            </div>
+            <div class="form-field field-span-2">
+              <label for="process">Process / Action</label>
+              <select id="process"></select>
+            </div>
+            <div class="form-field">
+              <label for="productionCat">Production Category</label>
+              <input id="productionCat" list="productionCatOptions" value="sub-con" autocomplete="off">
+              <datalist id="productionCatOptions"></datalist>
+            </div>
+
+            <div class="form-field">
+              <label for="laserColourCode">Laser colour code</label>
+              <select id="laserColourCode"></select>
+            </div>
+
+            <div class="form-field">
+              <label for="machineSpeed">Machine Speed cm/sec</label>
+              <input id="machineSpeed" type="number" min="0" step="0.0001" value="3">
+            </div>
+            <div class="form-field">
+              <label for="artworkLengthCm">Artwork length cm</label>
+              <input id="artworkLengthCm" type="number" min="0" step="0.0001" placeholder="0.0000">
+            </div>
+            <div class="form-field">
+              <label for="consumptionMGmt">Consumption (m/gmt)</label>
+              <input id="consumptionMGmt" type="number" min="0" step="0.0001" placeholder="0.0000">
+            </div>
+            <input id="costMargin" type="hidden" value="60">
+            <input id="handlingSam" type="hidden">
+          </div>
+
+          <div class="calculator-actions">
+            <button type="button" class="btn-secondary" onclick="fillArtworkLengthFromVector()">Copy measured length</button>
+            <button type="button" class="btn-secondary" onclick="clearCalculatorData()">Clear calculator data</button>
+            <button type="button" class="btn-primary" onclick="addConsumptionRow()">Add Row</button>
+            <button type="button" id="generateExcelBtn" class="btn-primary" onclick="generateExcel()">Generate Excel</button>
+          </div>
+
+          <div class="preview-wrap">
+            <table class="consumption-table">
+              <thead>
+                <tr>
+                  <th>Part</th><th>Units</th><th>IM</th><th>Slit / Roll / Panel</th><th>Type</th><th>Supplier</th>
+                  <th>Process</th><th>Prod. Cat.</th><th>Colour</th><th>Speed</th><th>Artwork cm</th><th></th>
+                </tr>
+              </thead>
+              <tbody id="consumptionRows">
+                <tr><td colspan="13" style="color:#6e6e73">No calculator rows added yet.</td></tr>
+              </tbody>
+            </table>
+          </div>
+          <div id="calculatorStatus" class="calculator-status"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- GLOBAL ERROR -->
+    <div id="error" class="global-error">
+      <strong>Error:</strong> <span id="errorMessage"></span>
+    </div>
+
+    <div style="height:48px;"></div>
+  </div>
+</div>
+
+<!-- ── Marker Nesting Modal ── -->
+<div id="markerModal" class="modal-overlay" style="display:none">
+  <div class="modal-content marker-modal">
+    <div class="modal-header">
+      <h2>Marker Nesting Workspace</h2>
+      <button class="modal-close" onclick="closeMarkerModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <div class="marker-toolbar">
+        <div class="marker-controls">
+          <select id="nestingQuality" style="font-size:0.75rem;padding:2px 4px;vertical-align:middle">
+            <option value="shuffle-10">Standard (10 passes, MaxRects)</option>
+            <option value="strip-50" selected>Good (50 angles, polygon strip pack)</option>
+            <option value="strip-200">Best (200 angles, polygon strip pack + compaction)</option>
+            <option value="row-3">Rows (3 row arrangement)</option>
+          </select>
+          <label>Copies:
+            <input type="number" id="markerCopies" value="1" min="1" max="99" onfocus="this.select()" style="width:50px">
+          </label>
+          <label>Width mm:
+            <input type="number" id="markerWidthMm" onfocus="this.select()" style="width:80px">
+          </label>
+          <button class="btn btn-primary" onclick="runMarkerNesting()">Nest</button>
+          <button class="btn btn-stop" id="markerStopBtn" style="display:none" onclick="stopNesting()">Stop &amp; Accept</button>
+          <label>Angle:
+            <input type="number" id="markerAngle" value="0" min="-360" max="360" step="1" style="width:50px" oninput="onAngleInput()">
+          </label>
+          <button class="btn" onclick="rotate90()" title="Rotate selected part 90\u00b0">Rotate</button>
+          <button class="btn" onclick="deleteSelectedParts()" title="Delete selected parts">Delete</button>
+          <button class="btn" onclick="clearMarkerCanvas()">Clear</button>
+          <button class="btn btn-accept" onclick="applyMarkerConsumption()">Apply Consumption</button>
+          <span class="zoom-group">
+            <button class="btn" onclick="markerZoomOut()" title="Zoom out">&minus;</button>
+            <span id="markerZoomLevel" style="font-size:0.75rem;min-width:2.5rem;display:inline-block;text-align:center">100%</span>
+            <button class="btn" onclick="markerZoomIn()" title="Zoom in">+</button>
+            <button class="btn" onclick="markerZoomReset()" title="Fit to view">Fit</button>
+            <button class="btn btn-pan" id="markerPanBtn" onclick="togglePanMode()" title="Pan mode (hand tool)">Pan</button>
+          </span>
+          <button class="btn" onclick="exportMarkerPDF()" title="Export marker layout as PDF">Export PDF</button>
+        </div>
+        <div class="marker-status" id="markerStatus">Ready</div>
+        <div class="marker-progress-wrap" id="markerProgressWrap" style="display:none">
+          <div class="marker-progress-bar">
+            <div class="marker-progress-fill" id="markerProgressFill"></div>
+          </div>
+          <span class="marker-progress-label" id="markerProgressLabel"></span>
+        </div>
+      </div>
+      <div class="marker-layout">
+        <div class="marker-canvas-wrap">
+          <canvas id="markerCanvas" width="800" height="600"></canvas>
+        </div>
+        <div class="marker-sidebar">
+          <h4>Selected Parts</h4>
+          <div id="markerBreakdown" style="font-size:0.72rem;color:#6e6e73;margin-bottom:4px;line-height:1.3"></div>
+          <div id="markerPartList">
+            <p style="color:#6e6e73">Select rows with vector files to nest.</p>
+          </div>
+          <hr style="margin:8px 0;border:none;border-top:1px solid #e5e5e5">
+          <h4 style="margin:0 0 4px 0">Consumption</h4>
+          <div id="markerConsumption" style="font-size:0.72rem;color:#1d1d1f;line-height:1.5">Run nesting to see consumption.</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="dxf-parser.js"></script>
+<script src="pdf-parser.js"></script>
+<script src="svg-parser.js"></script>
+<script src="app.js?v=pf2"></script>
+<script src="template-embedded.js?v=summary-breakdown-v10"></script>
+<script src="excel-export-pivot-free.js?v=summary-breakdown-v10"></script>
+<script src="marker-nesting.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+<script>
+  /* ── patch app.js displayResults to use new card layout ── */
+
+  /* Override renderFileList to use new markup */
+  const _origRenderFileList = renderFileList;
+  function renderFileList() {
+    const fl = document.getElementById('fileList');
+    const cb = document.getElementById('calculateBtn');
+    const cl = document.getElementById('clearBtn');
+    const mb = document.getElementById('markerBtn');
+    cb.classList.remove('hidden');
+    if (cl) cl.classList.remove('hidden');
+    if (mb) mb.classList.remove('hidden');
+    if (uploadedFiles.length === 0) {
+      fl.classList.add('hidden');
+      return;
+    }
+    fl.classList.remove('hidden');
+    document.getElementById('results').classList.add('hidden');
+
+    fl.innerHTML = uploadedFiles.map((file, i) => {
+      const ext = file.name.split('.').pop().toUpperCase();
+      const extClass = `ext-${ext.toLowerCase()}`;
+      return `
+        <div class="file-item">
+          <div class="file-item-left">
+            <span class="file-ext ${extClass}">${ext}</span>
+            <span class="file-name" title="${file.name}">${file.name}</span>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px">
+            <span class="file-size">${formatFileSize(file.size)}</span>
+            <button class="file-remove" onclick="removeFile(${i})" title="Remove">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+            </button>
+          </div>
+        </div>`;
+    }).join('');
+  }
+  renderFileList();
+
+  /* Override calculateAll to work with or without uploaded files */
+  const _origCalculateAll = calculateAll;
+  calculateAll = async function() {
+    if (uploadedFiles.length === 0) {
+      calculationResults = [];
+      window.calculationResults = calculationResults;
+      displayResults();
+      return;
+    }
+    const result = await _origCalculateAll();
+    window.calculationResults = calculationResults;
+    return result;
+  };
+
+  /* Override displayResults to use new card layout */
+  function displayResults() {
+    const fileResultsDiv = document.getElementById('fileResults');
+    fileResultsDiv.innerHTML = '';
+
+    let grandTotalCm = 0;
+    const validResults = calculationResults.filter(r => !r.error);
+
+    /* ── Summary table ── */
+    if (validResults.length > 0) {
+      let html = `
+        <div class="summary-card">
+          <div class="summary-header">
+            <h3>All Files Summary</h3>
+            <span class="section-divider">${validResults.length} file${validResults.length > 1 ? 's' : ''}</span>
+          </div>
+          <table class="summary-table">
+            <thead>
+              <tr>
+                <th>File</th>
+                <th>Type</th>
+                <th>Vectors</th>
+                <th>Length (cm)</th>
+              </tr>
+            </thead>
+            <tbody>`;
+      for (const r of validResults) {
+        html += `
+          <tr>
+            <td><span class="length-val copy-val" data-copy="${escHtml(fileNameWithoutExtension(r.fileName))}" style="color:#1d1d1f">${escHtml(r.fileName)}</span></td>
+            <td><span class="file-ext ext-${r.fileType.toLowerCase()}" style="font-size:0.7rem;padding:2px 7px;border-radius:5px">${r.fileType}</span></td>
+            <td style="color:#6e6e73">${r.entityCount}</td>
+            <td><span class="length-val copy-val" data-copy="${r.totalLengthCm.toFixed(4)}">${r.totalLengthCm.toFixed(4)}</span></td>
+          </tr>`;
+        grandTotalCm += r.totalLengthCm;
+      }
+      html += `
+              <tr class="total-row">
+                <td colspan="3">Grand Total</td>
+                <td><span class="length-val copy-val" data-copy="${grandTotalCm.toFixed(4)}">${grandTotalCm.toFixed(4)}</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </div>`;
+      fileResultsDiv.innerHTML += html;
+    }
+
+    /* ── Per-file detail cards ── */
+    calculationResults.forEach((result, index) => {
+      if (result.error) {
+        fileResultsDiv.innerHTML += `
+          <div class="error-file-card">
+            <div class="error-title">${escHtml(result.fileName)}</div>
+            <div class="error-msg">${result.error}</div>
+          </div>`;
+        return;
+      }
+
+      const canvasId = `preview-${index}`;
+      const ext = result.fileType.toLowerCase();
+
+      let entityRows = '';
+      result.entities.forEach(entity => {
+        const colorHex = entityColorHex(entity);
+        entityRows += `
+          <div class="entity-row" onclick="blinkHighlightEntity('${canvasId}', calculationResults[${index}].rawEntities, ${entity.rawIndex})" style="cursor:pointer">
+            <div class="entity-left">
+              <div class="entity-dot" style="background:${colorHex}"></div>
+              <div class="entity-info">
+                <span class="etype">#${entity.index} ${entity.type}</span>
+                <span class="elayer"> · ${escHtml(entity.layer)}</span>
+              </div>
+            </div>
+            <span class="entity-len copy-val" data-copy="${entity.lengthCm.toFixed(4)}">${entity.lengthCm.toFixed(4)} cm</span>
+          </div>`;
+      });
+
+      const iconColors = { dxf: '#0071e3', pdf: '#d93025', svg: '#188038' };
+      const iconSvgs = {
+        dxf: `<svg viewBox="0 0 24 24" fill="none" stroke="${iconColors.dxf}" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>`,
+        pdf: `<svg viewBox="0 0 24 24" fill="none" stroke="${iconColors.pdf}" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
+        svg: `<svg viewBox="0 0 24 24" fill="none" stroke="${iconColors.svg}" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M8.56 2.75c4.37 6.03 6.02 9.42 8.03 17.72m2.54-15.38c-3.72 4.35-8.94 5.66-16.88 5.85m19.5 1.9c-3.5-.93-6.63-.82-8.94 0-2.58.92-5.01 2.86-7.44 6.32"/></svg>`
+      };
+
+      const card = document.createElement('div');
+      card.className = 'file-detail-card';
+      card.innerHTML = `
+        <div class="file-detail-header" onclick="toggleCard(this)">
+          <div class="fh-left">
+            <div class="fh-icon fh-icon-${ext}">${iconSvgs[ext] || iconSvgs.svg}</div>
+            <div>
+              <div class="fh-name">${escHtml(result.fileName)}</div>
+              <div class="fh-sub">${result.entityCount} vectors</div>
+            </div>
+          </div>
+          <div class="fh-right">
+            <span class="fh-total copy-val" data-copy="${result.totalLengthCm.toFixed(4)}">${result.totalLengthCm.toFixed(4)} cm</span>
+            <svg class="chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><polyline points="6 9 12 15 18 9"/></svg>
+          </div>
+        </div>
+        <div class="file-detail-body">
+          <div class="file-body-grid">
+            <div class="preview-pane">
+              <canvas id="${canvasId}" width="190" height="170"></canvas>
+            </div>
+            <div class="entity-pane">
+              ${entityRows}
+              <div class="entity-subtotal">
+                <span>File Total</span>
+                <span class="copy-val" style="color:#0071e3;cursor:pointer" data-copy="${result.totalLengthCm.toFixed(4)}">${result.totalLengthCm.toFixed(4)} cm</span>
+              </div>
+            </div>
+          </div>
+        </div>`;
+
+      fileResultsDiv.appendChild(card);
+
+      setTimeout(() => {
+        renderVectorPreview(canvasId, result.rawEntities);
+        // Attach click handlers to entity rows for highlight
+        const entityRows = card.querySelectorAll('.entity-row');
+        entityRows.forEach(function(row, ei) {
+          row.addEventListener('click', function() {
+            blinkHighlightEntity(canvasId, result.rawEntities, ei);
+          });
+          row.style.cursor = 'pointer';
+        });
+      }, 80);
+    });
+
+    document.getElementById('results').classList.remove('hidden');
+    applyDetectedLaserColour();
+  }
+
+  /* Toggle accordion card */
+  function toggleCard(header) {
+    const body = header.nextElementSibling;
+    const chevron = header.querySelector('.chevron');
+    const isOpen = body.classList.contains('open');
+    body.classList.toggle('open', !isOpen);
+    chevron.classList.toggle('open', !isOpen);
+  }
+
+  const consumptionRows = [];
+
+  /* Override clearAll to also clear consumption data */
+  const _origClearAll2 = clearAll;
+  clearAll = function() {
+    consumptionRows.length = 0;
+    var tb = document.getElementById('consumptionRows');
+    if (tb) tb.innerHTML = '';
+    var cc = document.querySelector('.consumption-card');
+    if (cc) cc.classList.add('hidden');
+    _origClearAll2();
+  };
+  let materialMasterData = { materials: [], actions: [], colors: [], options: {} };
+  let editingConsumptionRowIndex = null;
+
+  function inferStyleFromFileName(name) {
+    // Recognize style/project code only when filename contains clear pattern like IU3284 / IR3811.
+    const match = String(name || '').match(/\b[A-Z]{2}\d{4}\b/i);
+    return match ? match[0].toUpperCase() : '';
+  }
+
+  function inferSeasonFromFileName(name) {
+    // Recognize season only when filename contains clear pattern like SP'27, SP27, FA27, HO27.
+    const match = String(name || '').match(/\b(?:SP|SU|FA|HO|FW|SS|AW)\s*'?(\d{2})\b/i);
+    return match ? `${match[0].replace(/[\s']/g, '').toUpperCase()}` : '';
+  }
+
+  function inferProtoStageFromFileName(name) {
+    const text = String(name || '').replace(/[_-]+/g, ' ').toUpperCase();
+    const stagePatterns = [
+      { regex: /\bSIZE\s*SET\b|\bSIZESET\b/, value: 'Size Set' },
+      { regex: /\bFADP\b/, value: 'FADP' },
+      { regex: /\bSMS\b/, value: 'SMS' },
+      { regex: /\bPROTO\b|\bPROTOTYPE\b/, value: 'Proto' },
+      { regex: /\bPP\b|\bPRE\s*PRODUCTION\b/, value: 'PP' },
+      { regex: /\bTOP\b/, value: 'TOP' }
+    ];
+    const matched = stagePatterns.find(item => item.regex.test(text));
+    return matched ? matched.value : '';
+  }
+
+  function updateStyleFromUploadedFiles() {
+    const files = uploadedFiles || [];
+    if (!files.length) return;
+
+    const firstStyle = files.map(file => inferStyleFromFileName(file.name)).find(Boolean) || '';
+    const firstSeason = files.map(file => inferSeasonFromFileName(file.name)).find(Boolean) || '';
+    const firstProtoStage = files.map(file => inferProtoStageFromFileName(file.name)).find(Boolean) || '';
+
+    // Important: overwrite stale values from previous uploads.
+    // If filename has no recognizable style/season/proto data, leave field blank for PIC.
+    document.getElementById('styleName').value = firstStyle;
+    document.getElementById('seasonName').value = firstSeason;
+    document.getElementById('protoStage').value = firstProtoStage;
+  }
+
+  const _consumptionOriginalAddFiles = addFiles;
+  addFiles = function(files) {
+    _consumptionOriginalAddFiles(files);
+    updateStyleFromUploadedFiles();
+  };
+
+  function setDatalistOptions(id, values) {
+    const datalist = document.getElementById(id);
+    if (!datalist) return;
+    datalist.innerHTML = (values || []).map(value => `<option value="${escHtml(String(value))}"></option>`).join('');
+  }
+
+  function setSelectOptions(id, values, currentValue = '') {
+    const select = document.getElementById(id);
+    if (!select) return;
+    const options = (values || []).filter(Boolean);
+    select.innerHTML = options.map(value => `<option value="${escHtml(String(value))}">${escHtml(String(value))}</option>`).join('');
+    if (currentValue && options.some(value => normalizeText(value) === normalizeText(currentValue))) {
+      select.value = options.find(value => normalizeText(value) === normalizeText(currentValue));
+    } else if (options.length) {
+      select.value = options[0];
+    }
+  }
+
+  async function loadMaterialMasterData() {
+    try {
+      materialMasterData = await window.readMaterialMasterDataBrowser();
+      setDatalistOptions('imOptions', materialMasterData.options.im);
+      const defaultProcess = materialMasterData.options.action.find(a => /place\s*[&/]\s*remove\s*material/i.test(a)) || materialMasterData.options.action[0];
+      setSelectOptions('process', materialMasterData.options.action, defaultProcess);
+      setDatalistOptions('productionCatOptions', materialMasterData.options.productionCat);
+      setSelectOptions('laserColourCode', materialMasterData.options.color, 'BLUE');
+      applyMaterialDefaults();
+      applyActionDefaults();
+      setCalculatorStatus('Browser-only mode: Material dropdowns loaded from latest template.xlsx.', 'success');
+    } catch (err) {
+      setCalculatorStatus(`${err.message}. Check that template.xlsx and ExcelJS loaded correctly.`, 'error');
+    }
+  }
+
+  function findMaterialByIm(im) {
+    const target = normalizeText(im);
+    if (!target) return undefined;
+    return materialMasterData.materials.find(row => normalizeText(row.im) === target);
+  }
+
+  function findActionByName(action) {
+    const target = normalizeText(action);
+    return materialMasterData.actions.find(row => normalizeText(row.action) === target);
+  }
+
+  function getSelectedAction() {
+    return findActionByName(getFieldValue('process'));
+  }
+
+  function findColorByName(color) {
+    const target = normalizeText(color);
+    return materialMasterData.colors.find(row => normalizeText(row.color) === target && row.machineSpeed);
+  }
+
+  function normalizeText(value) {
+    return String(value || '').replace(/\s+/g, ' ').trim().toLowerCase();
+  }
+
+  function fileNameWithoutExtension(name) {
+    return String(name || '').replace(/\.(dxf|pdf|svg)$/i, '');
+  }
+
+  function applyMaterialDefaults() {
+    const material = findMaterialByIm(getFieldValue('im'));
+    document.getElementById('materialType').value = material?.type || 'NA';
+    document.getElementById('supplier').value = material?.supplier || 'NA';
+    document.getElementById('supplierItem').value = material?.supplierItem || 'NA';
+    document.getElementById('materialWidthMm').value = material?.widthMm || 'NA';
+    document.getElementById('slitReadyRollFabricPanel').value = material?.slit || 'N';
+    applyYardsDefaults();
+  }
+
+  function applyYardsDefaults() {
+    document.getElementById('slitReadyRollFabricPanel').value = getFieldValue('yards') === 'N' ? 'Y' : 'N';
+  }
+
+  function applyActionDefaults() {
+    const action = getSelectedAction();
+    if (action) {
+      document.getElementById('handlingSam').value = action.sam || '';
+      document.getElementById('productionCat').value = action.productionCat || getFieldValue('productionCat');
+      if (!getFieldValue('laserColourCode') && action.color) document.getElementById('laserColourCode').value = action.color;
+      if (!getFieldValue('machineSpeed') && action.machineSpeed) document.getElementById('machineSpeed').value = action.machineSpeed;
+    }
+
+    const color = findColorByName(getFieldValue('laserColourCode'));
+    if (color && color.machineSpeed) document.getElementById('machineSpeed').value = color.machineSpeed;
+
+    if (!processNeedsArtworkLength(getFieldValue('process'))) {
+      document.getElementById('artworkLengthCm').value = '';
+      document.getElementById('machineSpeed').value = '';
+      document.getElementById('laserColourCode').value = '';
+    }
+  }
+
+  function detectLaserColourFromVectors(resultSet = calculationResults) {
+    const colorCounts = new Map();
+    (resultSet || []).filter(result => !result.error).forEach(result => {
+      (result.entities || []).forEach(entity => {
+        const color = normalizeDetectedColor(entity);
+        if (!color) return;
+        colorCounts.set(color, (colorCounts.get(color) || 0) + Number(entity.lengthCm || 0));
+      });
+    });
+
+    if (colorCounts.size === 0) return '';
+    return [...colorCounts.entries()].sort((a, b) => b[1] - a[1])[0][0];
+  }
+
+  function normalizeDetectedColor(entity) {
+    const hex = entityColorHex(entity).toLowerCase();
+    if (hex === '#ff0000') return 'RED';
+    if (hex === '#0000ff') return 'BLUE';
+    if (hex === '#00ff00' || hex === '#008000') return 'Green';
+    return '';
+  }
+
+  function applyDetectedLaserColour() {
+    const detected = detectLaserColourFromVectors();
+    if (!detected) return;
+    const select = document.getElementById('laserColourCode');
+    const match = [...select.options].find(option => normalizeText(option.value) === normalizeText(detected));
+    if (!match) return;
+    select.value = match.value;
+    applyActionDefaults();
+    setCalculatorStatus(`Laser colour detected from vector entities: ${match.value}.`, 'success');
+  }
+
+  function initConsumptionCalculator() {
+    loadMaterialMasterData();
+    document.getElementById('im').addEventListener('change', applyMaterialDefaults);
+    document.getElementById('im').addEventListener('input', applyMaterialDefaults);
+    document.getElementById('yards').addEventListener('change', applyYardsDefaults);
+    document.getElementById('process').addEventListener('change', applyActionDefaults);
+    document.getElementById('laserColourCode').addEventListener('change', applyActionDefaults);
+  }
+
+  function getMeasuredLengthCm() {
+    if (Array.isArray(calculationResults) && calculationResults.length > 0) {
+      const total = calculationResults
+        .filter(r => !r.error)
+        .reduce((sum, r) => sum + Number(r.totalLengthCm || 0), 0);
+      if (Number.isFinite(total) && total > 0) return total;
+    }
+
+    if (typeof totalLengthCm !== 'undefined') return Number(totalLengthCm);
+    if (typeof measuredLengthCm !== 'undefined') return Number(measuredLengthCm);
+    if (typeof totalLength !== 'undefined') return Number(totalLength);
+
+    const output = document.querySelector('#measurementResult, #lengthOutput, #totalLength');
+    if (output) {
+      const number = parseFloat(output.textContent.replace(/[^0-9.]/g, ''));
+      if (Number.isFinite(number)) return number;
+    }
+
+    throw new Error('Measured vector length not found. Run vector measurement first or enter artwork length manually.');
+  }
+
+  function fillArtworkLengthFromVector() {
+    try {
+      const length = getMeasuredLengthCm();
+      document.getElementById('artworkLengthCm').value = length.toFixed(4);
+      applyDetectedLaserColour();
+      setCalculatorStatus('Measured vector length copied into artwork length.', 'success');
+    } catch (err) {
+      setCalculatorStatus(err.message, 'error');
+    }
+  }
+
+  function resetMarkerState() {
+    markerPlacements = [];
+    window.markerPlacements = [];
+    markerParts = [];
+    markerSourceResults = [];
+    markerSelectedIdx = -1;
+    markerSelectedIndices = [];
+    markerDragIdx = -1;
+    markerDragOffset = null;
+    _markerZoom = 1;
+    _markerPanX = 0; _markerPanY = 0;
+    _markerPanMode = false;
+    _isPanning = false;
+    _angleInputBase = 0;
+    _manualPartName = '';
+    _canvasTransform = null;
+    _nestInset = 10;
+    // Reset marker inputs to defaults
+    var copiesInput = document.getElementById('markerCopies');
+    if (copiesInput) copiesInput.value = '1';
+    var widthInput = document.getElementById('markerWidthMm');
+    if (widthInput) widthInput.value = '1500';
+    var qualitySelect = document.getElementById('nestingQuality');
+    if (qualitySelect) qualitySelect.value = 'strip-50';
+    var angleInput = document.getElementById('markerAngle');
+    if (angleInput) angleInput.value = '0';
+    var zoomLabel = document.getElementById('markerZoomLevel');
+    if (zoomLabel) zoomLabel.textContent = '100%';
+    var panBtn = document.getElementById('markerPanBtn');
+    if (panBtn) panBtn.classList.remove('active');
+    var canvas = document.getElementById('markerCanvas');
+    if (canvas) {
+      var ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      canvas.style.cursor = 'default';
+    }
+    var st = document.getElementById('markerStatus');
+    if (st) st.textContent = 'Ready';
+    var prog = document.getElementById('markerProgressWrap');
+    if (prog) prog.style.display = 'none';
+    var bd = document.getElementById('markerBreakdown');
+    if (bd) bd.textContent = '';
+  }
+
+  function clearCalculatorData() {
+    editingConsumptionRowIndex = null;
+    document.getElementById('laserBondingPart').value = '';
+    document.getElementById('units').value = '1';
+    document.getElementById('im').value = '';
+    document.getElementById('yards').value = 'Y';
+    document.getElementById('slitReadyRollFabricPanel').value = 'N';
+    document.getElementById('productionCat').value = 'sub-con';
+    document.getElementById('laserColourCode').value = '';
+    document.getElementById('machineSpeed').value = '';
+    document.getElementById('artworkLengthCm').value = '';
+    document.getElementById('handlingSam').value = '';
+    applyMaterialDefaults();
+    applyActionDefaults();
+    resetMarkerState();
+    setCalculatorStatus('Calculator input fields cleared.', 'success');
+  }
+
+  function getFieldValue(id) {
+    return document.getElementById(id).value.trim();
+  }
+
+  function getNumberField(id) {
+    const value = getFieldValue(id);
+    return value === '' ? null : Number(value);
+  }
+
+  function collectConsumptionRow(overrides = {}) {
+    const action = getSelectedAction();
+    return {
+      sourceFileName: overrides.sourceFileName || '',
+      laserBondingPart: overrides.laserBondingPart ?? getFieldValue('laserBondingPart'),
+      units: overrides.units ?? getNumberField('units'),
+      im: overrides.im ?? getFieldValue('im'),
+      yards: overrides.yards ?? getFieldValue('yards'),
+      slitReadyRollFabricPanel: overrides.slitReadyRollFabricPanel ?? getFieldValue('slitReadyRollFabricPanel'),
+      type: overrides.type ?? getFieldValue('materialType'),
+      supplier: overrides.supplier ?? getFieldValue('supplier'),
+      supplierItem: overrides.supplierItem ?? getFieldValue('supplierItem'),
+      materialWidthMm: overrides.materialWidthMm ?? getFieldValue('materialWidthMm'),
+      process: overrides.process ?? getFieldValue('process'),
+      productionCat: overrides.productionCat ?? getFieldValue('productionCat'),
+      laserColourCode: overrides.laserColourCode ?? getFieldValue('laserColourCode'),
+      machineSpeed: overrides.machineSpeed ?? getNumberField('machineSpeed'),
+      artworkLengthCm: overrides.artworkLengthCm ?? getNumberField('artworkLengthCm'),
+      consumptionMGmt: overrides.consumptionMGmt ?? getNumberField('consumptionMGmt'),
+      costMargin: overrides.costMargin ?? 60,
+      handlingSam: overrides.handlingSam ?? (action && action.sam !== null && action.sam !== undefined ? Number(action.sam) : null)
+    };
+  }
+
+  function buildExportMetadata() {
+    return {
+      season: getFieldValue('seasonName'),
+      style: getFieldValue('styleName'),
+      protoStage: getFieldValue('protoStage')
+    };
+  }
+
+  function processNeedsArtworkLength(process) {
+    return /run machine|perforated/i.test(process || '');
+  }
+
+  function validateConsumptionRow(row) {
+    if (!row.laserBondingPart) return 'Laser bonding part is required.';
+    if (!Number.isFinite(row.units) || row.units <= 0) return 'Units must be greater than zero.';
+    if (!row.process) return 'Process / Action is required.';
+    if (processNeedsArtworkLength(row.process) && (!Number.isFinite(row.machineSpeed) || row.machineSpeed <= 0)) return 'Machine speed must be greater than zero for machine-running process.';
+    if (processNeedsArtworkLength(row.process) && (!Number.isFinite(row.artworkLengthCm) || row.artworkLengthCm <= 0)) return 'Artwork length cm is required for machine-running process.';
+    return '';
+  }
+
+  function addSingleConsumptionRow(overrides = {}) {
+    const row = collectConsumptionRow(overrides);
+    const error = validateConsumptionRow(row);
+    if (error) {
+      setCalculatorStatus(error, 'error');
+      return;
+    }
+
+    if (editingConsumptionRowIndex !== null) {
+      consumptionRows[editingConsumptionRowIndex] = row;
+      editingConsumptionRowIndex = null;
+      setCalculatorStatus('Calculator row updated.', 'success');
+    } else {
+      consumptionRows.push(row);
+      setCalculatorStatus('Calculator row added.', 'success');
+    }
+    updateConsumptionPreviewTable();
+    if (/place\s*[&/]\s*remove\s*material/i.test(row.process || '')) {
+      const runMachineOption = (materialMasterData.options.action || []).find(a => a.toLowerCase().includes('run machine') && !a.toLowerCase().includes('perforated'));
+      if (runMachineOption) {
+        document.getElementById('process').value = runMachineOption;
+        applyActionDefaults();
+      }
+    }
+  }
+
+  function addConsumptionRow(overrides = {}) {
+    addSingleConsumptionRow(overrides);
+  }
+
+  function editConsumptionRow(index) {
+    const row = consumptionRows[index];
+    if (!row) return;
+    editingConsumptionRowIndex = index;
+    document.getElementById('laserBondingPart').value = row.laserBondingPart || '';
+    document.getElementById('units').value = row.units ?? '';
+    document.getElementById('im').value = row.im || '';
+    document.getElementById('yards').value = row.yards || 'Y';
+    document.getElementById('slitReadyRollFabricPanel').value = row.slitReadyRollFabricPanel || 'N';
+    document.getElementById('materialType').value = row.type || '';
+    document.getElementById('supplier').value = row.supplier || '';
+    document.getElementById('supplierItem').value = row.supplierItem || '';
+    document.getElementById('materialWidthMm').value = row.materialWidthMm ?? '';
+    document.getElementById('process').value = row.process || '';
+    document.getElementById('productionCat').value = row.productionCat || '';
+    document.getElementById('laserColourCode').value = row.laserColourCode || '';
+    document.getElementById('machineSpeed').value = row.machineSpeed ?? '';
+    document.getElementById('artworkLengthCm').value = row.artworkLengthCm ?? '';
+    document.getElementById('consumptionMGmt').value = row.consumptionMGmt ?? '';
+    document.getElementById('costMargin').value = row.costMargin ?? '';
+    document.getElementById('handlingSam').value = row.handlingSam ?? '';
+    setCalculatorStatus('Editing row. Click Add Row to save changes.', '');
+  }
+
+  function removeConsumptionRow(index) {
+    consumptionRows.splice(index, 1);
+    if (editingConsumptionRowIndex === index) editingConsumptionRowIndex = null;
+    updateConsumptionPreviewTable();
+    setCalculatorStatus('Calculator row removed.', 'success');
+  }
+
+  function updatePartName(index, newName) {
+    if (consumptionRows[index]) {
+      consumptionRows[index].laserBondingPart = newName.trim();
+      setCalculatorStatus('Part name updated.', 'success');
+    }
+  }
+
+  function moveConsumptionRow(index, direction) {
+    const targetIndex = index + direction;
+    if (targetIndex < 0 || targetIndex >= consumptionRows.length) return;
+    const [row] = consumptionRows.splice(index, 1);
+    consumptionRows.splice(targetIndex, 0, row);
+    if (editingConsumptionRowIndex === index) editingConsumptionRowIndex = targetIndex;
+    updateConsumptionPreviewTable();
+    setCalculatorStatus('Row sequence updated.', 'success');
+  }
+
+  function updateConsumptionPreviewTable() {
+    const tbody = document.getElementById('consumptionRows');
+    if (consumptionRows.length === 0) {
+      tbody.innerHTML = '<tr><td colspan="13" style="color:#6e6e73">No calculator rows added yet.</td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = consumptionRows.map((row, index) => `
+      <tr>
+        <td contenteditable="true" onblur="updatePartName(${index}, this.textContent)" style="cursor:text">${escHtml(row.laserBondingPart || '')}</td>
+        <td>${row.units ?? ''}</td>
+        <td>${escHtml(row.im || '')}</td>
+        <td>${escHtml(row.slitReadyRollFabricPanel || '')}</td>
+        <td>${escHtml(row.type || '')}</td>
+        <td>${escHtml(row.supplier || '')}</td>
+        <td>${escHtml(row.process || '')}</td>
+        <td>${escHtml(row.productionCat || '')}</td>
+        <td>${escHtml(row.laserColourCode || '')}</td>
+        <td>${row.machineSpeed ?? ''}</td>
+        <td>${Number.isFinite(row.artworkLengthCm) ? Number(row.artworkLengthCm).toFixed(4) : ''}</td>
+        <td style="white-space:nowrap">
+          <button type="button" class="row-action" onclick="moveConsumptionRow(${index}, -1)" ${index === 0 ? 'disabled' : ''}>Up</button>
+          <button type="button" class="row-action" onclick="moveConsumptionRow(${index}, 1)" ${index === consumptionRows.length - 1 ? 'disabled' : ''}>Down</button>
+          <button type="button" class="row-action" onclick="editConsumptionRow(${index})">Edit</button>
+          <button type="button" class="row-action danger" onclick="removeConsumptionRow(${index})">Delete</button>
+        </td>
+      </tr>
+    `).join('');
+  }
+
+  async function generateExcel() {
+    if (consumptionRows.length === 0) {
+      setCalculatorStatus('Add at least one calculator row before generating Excel.', 'error');
+      return;
+    }
+
+    const button = document.getElementById('generateExcelBtn');
+    button.disabled = true;
+    setCalculatorStatus('Generating pivot-free Excel workbook in browser...', '');
+
+    try {
+      await window.generateExcelBrowser(
+        { ...buildExportMetadata(), rows: consumptionRows },
+        { downloadBlob }
+      );
+      setCalculatorStatus('Pivot-free Excel workbook downloaded. No pivot cache repair expected.', 'success');
+    } catch (err) {
+      setCalculatorStatus(err.message || String(err), 'error');
+    } finally {
+      button.disabled = false;
+    }
+  }
+
+  function setCalculatorStatus(message, state) {
+    const status = document.getElementById('calculatorStatus');
+    status.textContent = message || '';
+    status.classList.toggle('error', state === 'error');
+    status.classList.toggle('success', state === 'success');
+  }
+
+  document.body.addEventListener('click', e => {
+    const el = e.target.closest('.copy-val');
+    if (!el) return;
+    const val = el.dataset.copy;
+    if (!val) return;
+    navigator.clipboard.writeText(val).then(() => {
+      const orig = el.textContent;
+      el.classList.add('copied');
+      el.textContent = '✓ copied';
+      setTimeout(() => { el.textContent = orig; el.classList.remove('copied'); }, 900);
+    });
+  });
+
+  /* ── Marker Modal Functions ── */
+  let markerParts = [];
+  let markerPlacements = [];
+  window.markerPlacements = markerPlacements;
+  let markerSourceResults = [];
+  let markerSelectedIdx = -1;
+  let markerSelectedIndices = [];
+  let markerDragIdx = -1;
+  let markerDragOffset = null;
+  let markerWidthMm = 1500;
+  let _angleInputBase = 0;
+  let _manualPartName = '';
+  let _nestStartTime = 0;
+  let _nestInset = 10;
+
+  async function openMarkerModal() {
+    // Auto-parse uploaded files if not yet parsed
+    if (typeof uploadedFiles !== 'undefined' && uploadedFiles.length > 0 && calculationResults.length === 0) {
+      if (typeof calculateAll === 'function') {
+        await calculateAll();
+      }
+    }
+    
+    const modal = document.getElementById('markerModal');
+    const widthInput = document.getElementById('markerWidthMm');
+    const partList = document.getElementById('markerPartList');
+    
+    // Preserve existing placements - don't clear on reopen
+    // Only rebuild part list, keep nesting results intact
+    var savedPlacements = markerPlacements;
+    var savedTransform = _canvasTransform;
+    resetMarkerState();
+    markerPlacements = savedPlacements;
+    window.markerPlacements = savedPlacements;
+    _canvasTransform = savedTransform;
+
+    const firstWidth = consumptionRows.find(r => r.materialWidthMm);
+    widthInput.value = firstWidth ? firstWidth.materialWidthMm : '1500';
+
+    markerSourceResults = [];
+    partList.innerHTML = '';
+
+    let hasFiles = false;
+    calculationResults.forEach((result, idx) => {
+      if (!result.rawEntities || result.rawEntities.length === 0) return;
+      hasFiles = true;
+      const units = result.units || 'mm';
+      const fallbackPalette = ['#4A90D9','#7B68EE','#2E8B57','#CD853F','#DC143C','#FF8C00','#20B2AA','#9370DB'];
+      const entityColors = result.rawEntities.map(function(e, ei) {
+        if (typeof entityColorHex === 'function') {
+          var c = entityColorHex(e);
+          if (c !== '#6b7280') return c;
+        }
+        return fallbackPalette[ei % fallbackPalette.length];
+      });
+      const parts = MarkerNesting.convertEntitiesToParts(result.rawEntities, { units: units, entityColors: entityColors });
+      parts.forEach(p => {
+        p.sourceResultIndex = idx;
+        p.sourceFileName = result.fileName;
+        markerParts.push(p);
+      });
+      markerSourceResults.push({ index: idx, fileName: result.fileName, partCount: parts.length });
+      var entityRows = '';
+      result.entities.forEach(function(entity, ei) {
+        var eColor = entityColorHex(result.rawEntities[ei]);
+        entityRows += '<label class="entity-label">' +
+          '<span class="entity-row1">' +
+          '<span class="entity-cb-wrap">' +
+          '<input type="checkbox" checked class="entity-cb" data-result="' + idx + '" data-entity="' + ei + '">' +
+          '<span class="cb-label-text">Select</span>' +
+          '</span>' +
+          '<span class="entity-dot" style="background:' + eColor + '"></span>' +
+          '<span class="entity-name-text" style="cursor:default">#' + entity.index + ' ' + escHtml(entity.type) + ' &middot; ' + escHtml(entity.layer) + '</span>' +
+          '<span class="entity-len">' + entity.lengthCm.toFixed(4) + ' cm</span>' +
+          '</span>' +
+          '<span class="entity-row2">' +
+          '<span class="pg-group"><input type="checkbox" class="pair-cb" data-result="' + idx + '" data-entity="' + ei + '" title="Mirror opposite pair"><span class="pg-label">Mirror</span></span>' +
+          '<span class="pg-group"><select class="group-sel" data-result="' + idx + '" data-entity="' + ei + '" title="Group as composite"><option value="">None</option><option value="A">A</option><option value="B">B</option><option value="C">C</option><option value="D">D</option></select><span class="pg-label">Group</span></span>' +
+          '</span>' +
+          '</label>';
+      });
+      partList.innerHTML +=
+        '<div class="file-group" data-result="' + idx + '">' +
+        '<label class="file-label">' +
+        '<span class="file-row1">' +
+        '<input type="checkbox" checked class="file-cb" data-result="' + idx + '">' +
+        '<span class="pg-group"><input type="checkbox" class="file-pair-cb" data-result="' + idx + '" title="Mirror all entities in this file"><span class="pg-label">Mirror all</span></span>' +
+        '<span class="file-name-text" contenteditable="true" onblur="updateFileName(' + idx + ', this.textContent)" style="cursor:text">' + escHtml(result.fileName) + '</span>' +
+        '<span style="color:#6e6e73;font-size:0.75rem;white-space:nowrap">(' + parts.length + ' parts, ' + units + ')</span>' +
+        '</span>' +
+        '<span class="file-row2">' +
+        '<span class="pg-group"><button class="mini-btn" data-action="group-sel" data-result="' + idx + '" data-group="A" title="Assign group A to selected entities">A</button></span>' +
+        '<span class="pg-group"><button class="mini-btn" data-action="group-sel" data-result="' + idx + '" data-group="B" title="Assign group B to selected entities">B</button></span>' +
+        '<span class="pg-group"><button class="mini-btn" data-action="group-sel" data-result="' + idx + '" data-group="clear" title="Clear groups on selected entities">Clr</button></span>' +
+        '</span>' +
+        '</label>' +
+        '<div class="entity-list">' + entityRows + '</div>' +
+        '</div>';
+    });
+
+    if (!hasFiles) {
+      partList.innerHTML = '<p style="color:#6e6e73">No parsed vector files available. Upload and calculate first.</p>';
+      document.getElementById('markerStatus').textContent = 'Upload DXF/PDF/SVG files and run calculation first.';
+    } else {
+      document.getElementById('markerStatus').textContent = `${markerParts.length} parts from ${markerSourceResults.length} file(s). Click Nest to arrange.`;
+      document.querySelectorAll('#markerPartList input[type="checkbox"]').forEach(function(cb) {
+        cb.addEventListener('change', updateMarkerBreakdown);
+      });
+      // Stop propagation on all inner checkboxes so they don't toggle parent label's checkbox
+      document.querySelectorAll('#markerPartList .entity-cb, #markerPartList .pair-cb, #markerPartList .group-sel, #markerPartList .file-pair-cb').forEach(function(el) {
+        el.addEventListener('click', function(e) { e.stopPropagation(); });
+      });
+      // File-cb toggles all entity-cb in the group
+      document.querySelectorAll('#markerPartList .file-cb').forEach(function(cb) {
+        cb.addEventListener('change', function() {
+          var group = this.closest('.file-group');
+          var checked = this.checked;
+          group.querySelectorAll('.entity-cb').forEach(function(ecb) { ecb.checked = checked; });
+          updateMarkerBreakdown();
+        });
+      });
+      // Entity-cb updates file-cb state (all or partial)
+      document.querySelectorAll('#markerPartList .entity-cb').forEach(function(cb) {
+        cb.addEventListener('change', function() {
+          var group = this.closest('.file-group');
+          var allChecked = group.querySelectorAll('.entity-cb:checked').length === group.querySelectorAll('.entity-cb').length;
+          group.querySelector('.file-cb').checked = allChecked;
+          updateMarkerBreakdown();
+        });
+      });
+      // File-pair-cb toggles all pair-cb in the group
+      document.querySelectorAll('#markerPartList .file-pair-cb').forEach(function(cb) {
+        cb.addEventListener('change', function() {
+          var group = this.closest('.file-group');
+          var checked = this.checked;
+          group.querySelectorAll('.pair-cb').forEach(function(pcb) { pcb.checked = checked; });
+          updateMarkerBreakdown();
+        });
+      });
+      // Entity pair-cb update the file-level bulk checkbox state
+      document.querySelectorAll('#markerPartList .pair-cb').forEach(function(cb) {
+        cb.addEventListener('change', function() {
+          var group = this.closest('.file-group');
+          var allPair = group.querySelectorAll('.pair-cb:checked').length === group.querySelectorAll('.pair-cb').length;
+          group.querySelector('.file-pair-cb').checked = allPair;
+          updateMarkerBreakdown();
+        });
+      });
+      // Group-sel change → update breakdown
+      document.querySelectorAll('#markerPartList .group-sel').forEach(function(sel) {
+        sel.addEventListener('change', updateMarkerBreakdown);
+      });
+      // Mini-btn: assign group letter to all selected entities in file
+      document.querySelectorAll('#markerPartList [data-action="group-sel"]').forEach(function(btn) {
+        btn.addEventListener('click', function() {
+          var group = this.closest('.file-group');
+          var gVal = this.dataset.group;
+          var selEntityCbs = group.querySelectorAll('.entity-cb:checked');
+          selEntityCbs.forEach(function(ecb) {
+            var ei = ecb.dataset.entity;
+            var gSel = group.querySelector('.group-sel[data-entity="' + ei + '"]');
+            if (gSel) gSel.value = gVal === 'clear' ? '' : gVal;
+          });
+          updateMarkerBreakdown();
+        });
+      });
+      document.getElementById('markerCopies').addEventListener('input', updateMarkerBreakdown);
+      // Add Enter key handlers for copies and width to trigger nesting
+      document.getElementById('markerCopies').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); runMarkerNesting(); }
+      });
+      document.getElementById('markerWidthMm').addEventListener('keydown', function(e) {
+        if (e.key === 'Enter') { e.preventDefault(); runMarkerNesting(); }
+      });
+      updateMarkerBreakdown();
+    }
+    modal.style.display = 'flex';
+    // Re-render canvas if existing placements exist
+    if (markerPlacements.length > 0) {
+      renderMarkerCanvas();
+    }
+  }
+
+  function updateMarkerBreakdown() {
+    var bd = document.getElementById('markerBreakdown');
+    var fileGroups = document.querySelectorAll('#markerPartList .file-group');
+    var checkedFiles = 0, totalParts = 0;
+    var groupCounts = {};
+    fileGroups.forEach(function(g) {
+      var ecbs = g.querySelectorAll('.entity-cb');
+      var anyChecked = false;
+      ecbs.forEach(function(cb) { if (cb.checked) { anyChecked = true; totalParts++; } });
+      if (anyChecked) checkedFiles++;
+      g.querySelectorAll('.group-sel').forEach(function(sel) {
+        var v = sel.value;
+        if (v) groupCounts[v] = (groupCounts[v] || 0) + 1;
+      });
+    });
+    var copies = parseInt(document.getElementById('markerCopies').value) || 1;
+    var pairs = document.querySelectorAll('#markerPartList .pair-cb:checked').length;
+    var groupLabels = Object.keys(groupCounts).sort();
+    var totalGrouped = groupLabels.reduce(function(s, k) { return s + groupCounts[k]; }, 0);
+    if (totalParts === 0) {
+      bd.textContent = 'No parts selected';
+    } else {
+      var pieces = totalParts * copies;
+      var pairPieces = pairs > 0 ? Math.ceil(pieces * pairs / totalParts) : 0;
+      var partsStr;
+      if (pairPieces > 0) {
+        partsStr = pieces + ' originals + ' + pairPieces + ' mirrors = ' + (pieces + pairPieces) + ' pieces';
+      } else {
+        partsStr = pieces + ' part' + (pieces !== 1 ? 's' : '');
+      }
+      var extra = '';
+      if (totalGrouped > 0) {
+        extra = ', groups: ' + groupLabels.map(function(k) { return k + '(' + groupCounts[k] + ')'; }).join(' ');
+      }
+      bd.textContent = checkedFiles + ' file' + (checkedFiles !== 1 ? 's' : '') + ', ' + totalParts + ' entity' + (totalParts !== 1 ? 'ies' : 'y') + ' \u00d7 ' + copies + ' copy' + (copies !== 1 ? 's' : '') + ' = ' + partsStr + extra;
+    }
+  }
+
+  function updateFileName(resultIndex, newName) {
+    if (calculationResults[resultIndex]) {
+      calculationResults[resultIndex].fileName = newName.trim();
+      setCalculatorStatus('File name updated.', 'success');
+    }
+  }
+
+  function updateConsumptionPartName(rowIndex, newName) {
+    var trimmed = newName.trim();
+    if (trimmed) {
+      _manualPartName = trimmed;
+      if (rowIndex >= 0 && rowIndex < consumptionRows.length) {
+        consumptionRows[rowIndex].laserBondingPart = trimmed;
+      }
+      setCalculatorStatus('Part name updated.', 'success');
+      var allSpans = document.querySelectorAll('#markerConsumption [data-row-index="' + rowIndex + '"]');
+      for (var i = 0; i < allSpans.length; i++) {
+        if ('value' in allSpans[i]) {
+          if (allSpans[i].value !== trimmed) allSpans[i].value = trimmed;
+        } else if (allSpans[i].textContent !== trimmed) {
+          allSpans[i].textContent = trimmed;
+        }
+      }
+      if (typeof updateConsumptionPreviewTable === 'function') {
+        updateConsumptionPreviewTable();
+      }
+    }
+  }
+
+  function selectEditableText(el) {
+    var range = document.createRange();
+    range.selectNodeContents(el);
+    var sel = window.getSelection();
+    sel.removeAllRanges();
+    sel.addRange(range);
+  }
+
+  function syncConsumptionPartNameSpans(rowIndex, newName, sourceEl) {
+    var trimmed = newName.trim();
+    if (!trimmed || rowIndex < 0 || rowIndex >= consumptionRows.length) return;
+    consumptionRows[rowIndex].laserBondingPart = trimmed;
+    var allSpans = document.querySelectorAll('#markerConsumption [data-row-index="' + rowIndex + '"]');
+    for (var i = 0; i < allSpans.length; i++) {
+      if (allSpans[i] !== sourceEl) {
+        if ('value' in allSpans[i]) {
+          if (allSpans[i].value !== trimmed) allSpans[i].value = trimmed;
+        } else if (allSpans[i].textContent !== trimmed) {
+          allSpans[i].textContent = trimmed;
+        }
+      }
+    }
+  }
+
+  function saveConsumptionPartName(rowIndex) {
+    var el = document.getElementById('markerPartNameEdit_' + rowIndex);
+    if (!el) return;
+    updateConsumptionPartName(rowIndex, el.value);
+    displayMarkerConsumption();
+  }
+
+  function closeMarkerModal() {
+    document.getElementById('markerModal').style.display = 'none';
+    _angleInputBase = 0;
+  }
+
+  if (document.readyState !== 'loading') { initMarkerCanvas(); }
+  else { document.addEventListener('DOMContentLoaded', initMarkerCanvas); }
+
+  function stopNesting() {
+    document.getElementById('markerStopBtn').style.display = 'none';
+    document.getElementById('markerProgressLabel').textContent = 'Stopping...';
+    MarkerNesting.stop();
+    if (markerPlacements.length > 0) {
+      var len = MarkerNesting.computeMarkerLength(markerPlacements);
+      var elapsed = _nestStartTime > 0 ? fmtTime(Date.now() - _nestStartTime) : '';
+      document.getElementById('markerStatus').textContent = 'Stopped: best length: ' + (len / 1000).toFixed(4) + ' m' + (elapsed ? '  [' + elapsed + ']' : '');
+    }
+  }
+
+  function fmtTime(ms) {
+    if (ms < 1000) return (ms / 1000).toFixed(1) + 's';
+    var s = Math.floor(ms / 1000), m = Math.floor(s / 60); s %= 60;
+    return m > 0 ? m + 'm ' + s + 's' : s + '.' + Math.floor(ms % 1000 / 100) + 's';
+  }
+
+  async function runMarkerNesting() {
+    // Immediate UI feedback - disable Nest button and show loading
+    const nestBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Nest' || b.textContent.trim() === 'Nesting...');
+    if (nestBtn && nestBtn.disabled) return; // debounce
+    if (nestBtn) { nestBtn.disabled = true; nestBtn.textContent = 'Nesting...'; }
+    const status = document.getElementById('markerStatus');
+    status.textContent = 'Preparing parts...';
+    const copies = parseInt(document.getElementById('markerCopies').value) || 1;
+    const startTime = Date.now(); _nestStartTime = startTime;
+
+    // Rebuild parts from selected entities, not pre-built markerParts
+    // Source of truth: entity-cb checkboxes, NOT file-cb
+    var allParts = [];
+    var pairFlags = {};   // key: fileIdx-entityIdx
+    var groupFlags = {};  // key: fileIdx-entityIdx
+    var fallbackPalette = ['#4A90D9','#7B68EE','#2E8B57','#CD853F','#DC143C','#FF8C00','#20B2AA','#9370DB'];
+    document.querySelectorAll('#markerPartList .file-group').forEach(function(group) {
+      var idx = parseInt(group.dataset.result);
+      var resultData = calculationResults[idx];
+      if (!resultData || !resultData.rawEntities || resultData.rawEntities.length === 0) return;
+      var entityCbs = group.querySelectorAll('.entity-cb:checked');
+      if (entityCbs.length === 0) return;
+      var selectedEntitySet = {};
+      entityCbs.forEach(function(ecb) {
+        var ei = parseInt(ecb.dataset.entity);
+        selectedEntitySet[ei] = true;
+        // Read per-entity P flag and G group
+        var pPair = group.querySelector('.pair-cb[data-entity="' + ei + '"]');
+        var pGroup = group.querySelector('.group-sel[data-entity="' + ei + '"]');
+        if (pPair && pPair.checked) pairFlags[idx + '-' + ei] = true;
+        if (pGroup && pGroup.value) groupFlags[idx + '-' + ei] = pGroup.value;
+      });
+      // Also check file-level mirror-all
+      var filePairCb = group.querySelector('.file-pair-cb');
+      if (filePairCb && filePairCb.checked) {
+        entityCbs.forEach(function(ecb) {
+          var ei = parseInt(ecb.dataset.entity);
+          pairFlags[idx + '-' + ei] = true;
+        });
+      }
+      var filteredEntities = resultData.rawEntities.filter(function(e, ei) { return selectedEntitySet[ei]; });
+      if (filteredEntities.length === 0) return;
+      var entityColors = filteredEntities.map(function(e) {
+        if (typeof entityColorHex === 'function') {
+          var c = entityColorHex(e);
+          if (c !== '#6b7280') return c;
+        }
+        return fallbackPalette[Math.floor(Math.random() * fallbackPalette.length)];
+      });
+      var filteredToOrigIdx = [];
+      resultData.rawEntities.forEach(function(e, ei) {
+        if (selectedEntitySet[ei]) filteredToOrigIdx.push(ei);
+      });
+      var units = resultData.units || 'mm';
+      var parts = MarkerNesting.convertEntitiesToParts(filteredEntities, { units: units, entityColors: entityColors, entityOrigIndices: filteredToOrigIdx });
+      parts.forEach(function(p) {
+        p.sourceResultIndex = idx;
+        p.sourceFileName = resultData.fileName;
+        var origEi = p._origEntityIndex != null ? p._origEntityIndex : p.sourceId;
+        p._pairFlag = !!pairFlags[idx + '-' + origEi];
+        p._groupId = groupFlags[idx + '-' + origEi] || '';
+        allParts.push(p);
+      });
+    });
+    markerParts = allParts;
+    markerSourceResults = [];
+    var parts = allParts;
+    if (markerParts.length === 0) {
+      status.textContent = 'No parts selected. Check at least one file or entity.';
+      return;
+    }
+
+    // Group flagged parts into composites
+    parts = MarkerNesting.createCompositeParts(parts);
+
+    var qualityStr = document.getElementById('nestingQuality').value;
+    var parts_ = qualityStr.split('-');
+    var mode = parts_[0] || 'shuffle';
+    var iterations = parseInt(parts_[1]) || 10;
+
+    var hasPair = parts.some(function(p) { return p._pairFlag; });
+    // Also check if file-level mirror-all is enabled for any file
+    var hasFileMirror = false;
+    document.querySelectorAll('.file-pair-cb:checked').forEach(function(cb) { hasFileMirror = true; });
+    hasPair = hasPair || hasFileMirror;
+    var inset = 10; _nestInset = inset;
+    var rowMode = mode === 'row';
+    var rowCount = rowMode ? parseInt(parts_[1]) || 3 : 0;
+
+    if (hasPair || copies > 1) {
+      // Mirror layout is optimized by strip worker via pairEn — do not pre-build mirror copies
+      parts = MarkerNesting.createPartsWithCopies(parts, copies, { skipMirrors: hasPair });
+    }
+
+    // Build composite _sP mapping before offset (lost after worker packs hull)
+    var spByPartId = {};
+    parts.forEach(function(p) {
+      if (p._sP && Array.isArray(p._sP) && p._sP.length > 0) {
+        spByPartId[p.id] = p._sP;
+        if (p.sourceId != null) spByPartId[p.sourceId] = p._sP;
+      }
+    });
+
+    // Apply 1mm offset to all parts before nesting (packing shape = offset polygon)
+    parts.forEach(function(p) {
+      if (p._sP) {
+        // Composite: store original children, use offset hull as packing shape
+        p._originalSP = p._sP.map(function(sp) { return sp.map(function(v) { return {x: v.x, y: v.y}; }); });
+        p._originalPoints = p.points.map(function(v) { return {x: v.x, y: v.y}; });
+        p.points = MarkerNesting.computeAutoOffset(p, 1);
+      } else {
+        // Individual: store original polygon, offset for packing
+        p._originalPoints = p.points.map(function(v) { return {x: v.x, y: v.y}; });
+        p.points = MarkerNesting.offsetPolygon(p.points, 1);
+      }
+    });
+
+    status.textContent = `Nesting ${parts.length} pieces (${copies} input copy/copies, ${hasPair ? 'mirror on' : 'mirror off'}, 1mm offset)...`;
+    document.getElementById('markerProgressWrap').style.display = 'flex';
+    document.getElementById('markerProgressFill').style.width = '0%';
+    document.getElementById('markerProgressLabel').textContent = '0%';
+    document.getElementById('markerStopBtn').style.display = '';
+
+    function bbCentroid(pts) {
+      var mx = Infinity, nx = -mx, my = mx, ny = -mx;
+      MarkerNesting.forEachPoint(pts, function(v) {
+        if (v.x < mx) mx = v.x; if (v.x > nx) nx = v.x;
+        if (v.y < my) my = v.y; if (v.y > ny) ny = v.y;
+      });
+      return isFinite(mx) ? { minX: mx, maxX: nx, minY: my, maxY: ny, cx: (mx + nx) / 2, cy: (my + ny) / 2 } : null;
+    }
+
+    function _applyRot(pts, rot, cx, cy) {
+      if (!rot || rot === 0) return pts;
+      if (rot === 90) return pts.map(function(v) { return { x: -(v.y - cy) + cx, y: (v.x - cx) + cy }; });
+      if (rot === 180 || rot === '180') return pts.map(function(v) { return { x: -(v.x - cx) + cx, y: -(v.y - cy) + cy }; });
+      if (rot === 270 || rot === '270') return pts.map(function(v) { return { x: (v.y - cy) + cx, y: -(v.x - cx) + cy }; });
+      return pts;
+    }
+
+    function attachPartData(placements) {
+      placements.forEach(function(pl) {
+        var srcId = pl.sourceId != null ? pl.sourceId : pl.id;
+        var refPart = parts.find(function(p) { return p.id === srcId || p.sourceId === srcId; });
+        if (!refPart) return;
+
+        if (!pl.sourceFileName) pl.sourceFileName = refPart.sourceFileName;
+        if (!pl.origColor) pl.origColor = refPart.origColor;
+
+        var mirror = pl._m || false;
+        var rot = pl.rotation;
+
+        // Transform original (pre-offset) geometry using min-corner alignment
+        if (!pl._originalPoints && refPart._originalPoints) {
+          var pts = refPart._originalPoints;
+          var mirror = pl._m || false;
+          var rot = pl.rotation;
+
+          if (mirror) {
+            // Mirror around own center, then compute translation from reference OFFSET
+            var refBBC = bbCentroid(pts);
+            pts = pts.map(function(v) {
+              return { x: -(v.x - refBBC.cx) + refBBC.cx, y: v.y };
+            });
+            // Mirror the reference offset too to compute correct translation
+            var refOffBBC = bbCentroid(refPart.points);
+            var refOffMirrored = refPart.points.map(function(v) {
+              return { x: -(v.x - refOffBBC.cx) + refOffBBC.cx, y: v.y };
+            });
+            var refOffMirrMinX = Infinity, refOffMirrMinY = Infinity;
+            for (var ro = 0; ro < refOffMirrored.length; ro++) {
+              if (refOffMirrored[ro].x < refOffMirrMinX) refOffMirrMinX = refOffMirrored[ro].x;
+              if (refOffMirrored[ro].y < refOffMirrMinY) refOffMirrMinY = refOffMirrored[ro].y;
+            }
+            if (rot) pts = _applyRot(pts, rot, refBBC.cx, refBBC.cy);
+            
+            var plPts = Array.isArray(pl.points) ? pl.points : [];
+            var plMinX = Infinity, plMinY = Infinity;
+            for (var pi = 0; pi < plPts.length; pi++) {
+              if (plPts[pi].x < plMinX) plMinX = plPts[pi].x;
+              if (plPts[pi].y < plMinY) plMinY = plPts[pi].y;
+            }
+            var dx = plMinX - refOffMirrMinX;
+            var dy = plMinY - refOffMirrMinY;
+            pl._originalPoints = pts.map(function(v) { return { x: v.x + dx, y: v.y + dy }; });
+          } else {
+            var _bbc = bbCentroid(refPart.points);
+            if (rot) pts = _applyRot(pts, rot, _bbc.cx, _bbc.cy);
+            
+            // Align min-corners
+            var refMinX = Infinity, refMinY = Infinity;
+            for (var ri = 0; ri < pts.length; ri++) {
+              if (pts[ri].x < refMinX) refMinX = pts[ri].x;
+              if (pts[ri].y < refMinY) refMinY = pts[ri].y;
+            }
+            var plPts = Array.isArray(pl.points) ? pl.points : [];
+            var plMinX = Infinity, plMinY = Infinity;
+            for (var pi = 0; pi < plPts.length; pi++) {
+              if (plPts[pi].x < plMinX) plMinX = plPts[pi].x;
+              if (plPts[pi].y < plMinY) plMinY = plPts[pi].y;
+            }
+            var dx = plMinX - refMinX;
+            var dy = plMinY - refMinY;
+            pl._originalPoints = pts.map(function(v) { return { x: v.x + dx, y: v.y + dy }; });
+          }
+        }
+
+        // Transform composite sub-parts to placement position
+        var sp = spByPartId[pl.id] || spByPartId[srcId];
+        if (sp && Array.isArray(sp) && sp.length > 0 && !pl._sP) {
+          pl._sP = sp.map(function(spGroup) {
+            var g = spGroup;
+            var sBBC = bbCentroid(g);
+            if (mirror) {
+              g = g.map(function(v) { return { x: -(v.x - sBBC.cx) + sBBC.cx, y: v.y }; });
+            }
+            if (rot) g = _applyRot(g, rot, sBBC.cx, sBBC.cy);
+            
+            // Align min-corners
+            var gMinX = Infinity, gMinY = Infinity;
+            for (var gi = 0; gi < g.length; gi++) {
+              if (g[gi].x < gMinX) gMinX = g[gi].x;
+              if (g[gi].y < gMinY) gMinY = g[gi].y;
+            }
+            var plPts = Array.isArray(pl.points) ? pl.points : [];
+            var plMinX = Infinity, plMinY = Infinity;
+            for (var pi = 0; pi < plPts.length; pi++) {
+              if (plPts[pi].x < plMinX) plMinX = plPts[pi].x;
+              if (plPts[pi].y < plMinY) plMinY = plPts[pi].y;
+            }
+            var _dx = plMinX - gMinX;
+            var _dy = plMinY - gMinY;
+            return g.map(function(v) { return { x: v.x + _dx, y: v.y + _dy }; });
+          });
+        }
+      });
+    }
+
+    function isValidPlacement(pl, bw, ins) {
+      var pts = pl.points || [];
+      if (pts.length === 0) return false;
+      var allPts = [];
+      MarkerNesting.forEachPoint(pts, function(p) { allPts.push(p); });
+      if (pl._sP) {
+        pl._sP.forEach(function(sp) { MarkerNesting.forEachPoint(sp, function(p) { allPts.push(p); }); });
+      }
+      if (pl._originalPoints) {
+        MarkerNesting.forEachPoint(pl._originalPoints, function(p) { allPts.push(p); });
+      }
+      for (var qi = 0; qi < allPts.length; qi++) {
+        if (!isFinite(allPts[qi].x) || !isFinite(allPts[qi].y)) return false;
+        if (allPts[qi].x < ins - 0.5 || allPts[qi].x > bw - ins + 0.5) return false;
+        if (allPts[qi].y < -0.5) return false;
+      }
+      return true;
+    }
+
+    try {
+      const result = await MarkerNesting.runNesting(parts, markerWidthMm, {
+        mode: rowMode ? 'row' : mode,
+        iterations: iterations,
+        pairEn: hasPair,
+        inset: inset,
+        rows: rowCount,
+        onProgress: function(pass, total, bestLen, placements, pct, phase) {
+          var elapsed = fmtTime(Date.now() - startTime);
+          if (typeof pct === 'number') {
+            var phaseLabel = phase === 'coarse' ? 'Scanning angles' : (phase === 'refine' ? 'Refining' : 'Fine-tuning');
+            status.textContent = `Nesting: ${phaseLabel}... best length: ${(bestLen / 1000).toFixed(4)} m  [${elapsed}]`;
+            document.getElementById('markerProgressFill').style.width = pct + '%';
+            document.getElementById('markerProgressLabel').textContent = pct + '%';
+          } else {
+            status.textContent = `Nesting: ${pass}/${total}, best length: ${(bestLen / 1000).toFixed(4)} m  [${elapsed}]`;
+          }
+          if (placements) {
+            attachPartData(placements);
+            markerPlacements = MarkerNesting.expandCompositePlacements(placements);
+            window.markerPlacements = markerPlacements;
+            markerSelectedIdx = -1;
+            markerSelectedIndices = [];
+            renderMarkerCanvas();
+          }
+        }
+      });
+      var rawPl = result.placements || [];
+      attachPartData(rawPl);
+      var expandedPl = MarkerNesting.expandCompositePlacements(rawPl);
+      // Validate all placements are within boundary
+      var validPl = [];
+      for (var vi = 0; vi < expandedPl.length; vi++) {
+        if (isValidPlacement(expandedPl[vi], markerWidthMm, inset)) {
+          validPl.push(expandedPl[vi]);
+        }
+      }
+      markerPlacements = validPl;
+      window.markerPlacements = validPl;
+      const markerLen = MarkerNesting.computeMarkerLength(markerPlacements);
+      var totalTime = fmtTime(Date.now() - startTime);
+      if (validPl.length < expandedPl.length) {
+        status.textContent = `Nesting warning: ${expandedPl.length - validPl.length} placement(s) violated boundary, removed. Marker length: ${(markerLen / 1000).toFixed(4)} m  [${totalTime}]`;
+      } else {
+        status.textContent = `Nesting complete: ${(markerLen / 1000).toFixed(4)} m  [${totalTime}]` +
+          (validPl.length < parts.length ? ` (${parts.length - validPl.length} unplaced)` : '');
+      }
+
+      markerSelectedIdx = -1;
+      markerSelectedIndices = [];
+      markerDragIdx = -1;
+      _angleInputBase = 0;
+      renderMarkerCanvas();
+      document.getElementById('markerProgressWrap').style.display = 'none';
+      document.getElementById('markerStopBtn').style.display = 'none';
+      // Re-enable Nest button
+      var nb = Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Nesting...');
+      if (nb) { nb.disabled = false; nb.textContent = 'Nest'; }
+    } catch (err) {
+      var elapsedErr = fmtTime(Date.now() - startTime);
+      status.textContent = 'Nesting failed: ' + (err.message || err) + '  [' + elapsedErr + ']';
+      markerSelectedIdx = -1;
+      markerSelectedIndices = [];
+      document.getElementById('markerProgressWrap').style.display = 'none';
+      document.getElementById('markerStopBtn').style.display = 'none';
+      // Re-enable Nest button
+      var nb = Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Nesting...');
+      if (nb) { nb.disabled = false; nb.textContent = 'Nest'; }
+      markerDragIdx = -1;
+      _angleInputBase = 0;
+      renderMarkerCanvas();
+    }
+  }
+
+  function clearMarkerCanvas() {
+    resetMarkerState();
+    document.getElementById('markerStatus').textContent = 'Canvas cleared.';
+  }
+
+  function pointInPolygon(px, py, pts) {
+    var inside = false;
+    for (var i = 0, j = pts.length - 1; i < pts.length; j = i++) {
+      var xi = pts[i].x, yi = pts[i].y;
+      var xj = pts[j].x, yj = pts[j].y;
+      if ((yi > py) !== (yj > py) && px < (xj - xi) * (py - yi) / (yj - yi) + xi) {
+        inside = !inside;
+      }
+    }
+    return inside;
+  }
+
+  function findPartAtCanvas(cx, cy) {
+    var tr = _canvasTransform;
+    if (!tr) return -1;
+
+    // First pass: exact polygon hit (click inside area)
+    for (var i = markerPlacements.length - 1; i >= 0; i--) {
+      var pts = markerPlacements[i].points || [];
+      var dataPts = pts.map(function(p) {
+        return { x: tr.tx(p.x), y: tr.ty(p.y) };
+      });
+      if (pointInPolygon(cx, cy, dataPts)) return i;
+    }
+    // Second pass: distance-based fallback for thin parts
+    var THRESHOLD = 12;
+    var bestDist = THRESHOLD, bestIdx = -1;
+    for (var i = markerPlacements.length - 1; i >= 0; i--) {
+      var pts = markerPlacements[i].points || [];
+      var dataPts = pts.map(function(p) {
+        return { x: tr.tx(p.x), y: tr.ty(p.y) };
+      });
+      for (var j = 0; j < dataPts.length; j++) {
+        var k = (j + 1) % dataPts.length;
+        var d = distToSegment(cx, cy, dataPts[j].x, dataPts[j].y, dataPts[k].x, dataPts[k].y);
+        if (d < bestDist) { bestDist = d; bestIdx = i; }
+      }
+    }
+    return bestIdx;
+  }
+
+  function distToSegment(px, py, x1, y1, x2, y2) {
+    var dx = x2 - x1, dy = y2 - y1;
+    var lenSq = dx * dx + dy * dy;
+    if (lenSq === 0) return Math.sqrt((px - x1) * (px - x1) + (py - y1) * (py - y1));
+    var t = Math.max(0, Math.min(1, ((px - x1) * dx + (py - y1) * dy) / lenSq));
+    var cx2 = x1 + t * dx, cy2 = y1 + t * dy;
+    return Math.sqrt((px - cx2) * (px - cx2) + (py - cy2) * (py - cy2));
+  }
+
+  function getPartAABB(pts) {
+    var minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (var i = 0; i < pts.length; i++) {
+      if (pts[i].x < minX) minX = pts[i].x;
+      if (pts[i].y < minY) minY = pts[i].y;
+      if (pts[i].x > maxX) maxX = pts[i].x;
+      if (pts[i].y > maxY) maxY = pts[i].y;
+    }
+    return { minX: minX, minY: minY, maxX: maxX, maxY: maxY };
+  }
+
+  function aabbsOverlap(a, b) {
+    return !(a.maxX <= b.minX || a.minX >= b.maxX || a.maxY <= b.minY || a.minY >= b.maxY);
+  }
+
+  function polygonsIntersect(ptsA, ptsB) {
+    if (!ptsA || !ptsB || ptsA.length < 3 || ptsB.length < 3) return false;
+    for (var i = 0; i < ptsA.length; i++) { if (pointInPolygon(ptsA[i].x, ptsA[i].y, ptsB)) return true; }
+    for (var i = 0; i < ptsB.length; i++) { if (pointInPolygon(ptsB[i].x, ptsB[i].y, ptsA)) return true; }
+    var j, k, l, o1, o2, o3, o4;
+    for (j = 0; j < ptsA.length; j++) {
+      var a1 = ptsA[j], a2 = ptsA[(j + 1) % ptsA.length];
+      for (k = 0; k < ptsB.length; k++) {
+        var b1 = ptsB[k], b2 = ptsB[(k + 1) % ptsB.length];
+        o1 = (a2.x - a1.x) * (b1.y - a1.y) - (a2.y - a1.y) * (b1.x - a1.x);
+        o2 = (a2.x - a1.x) * (b2.y - a1.y) - (a2.y - a1.y) * (b2.x - a1.x);
+        o3 = (b2.x - b1.x) * (a1.y - b1.y) - (b2.y - b1.y) * (a1.x - b1.x);
+        o4 = (b2.x - b1.x) * (a2.y - b1.y) - (b2.y - b1.y) * (a2.x - b1.x);
+        if ((o1 > 0) !== (o2 > 0) && (o3 > 0) !== (o4 > 0)) return true;
+      }
+    }
+    return false;
+  }
+
+  var _markerZoom = 1;
+  var _markerPanX = 0, _markerPanY = 0;
+  var _markerPanMode = false;
+  var _isPanning = false;
+
+  function setMarkerPanMode(enabled, statusText) {
+    _markerPanMode = !!enabled;
+    var btn = document.getElementById('markerPanBtn');
+    var canvas = document.getElementById('markerCanvas');
+    if (btn) btn.classList.toggle('active', _markerPanMode);
+    if (canvas) canvas.style.cursor = _markerPanMode ? 'grab' : 'default';
+    if (statusText) document.getElementById('markerStatus').textContent = statusText;
+    _isPanning = false;
+  }
+
+  function markerZoomIn() {
+    _markerZoom = Math.min(5, _markerZoom * 1.25);
+    document.getElementById('markerZoomLevel').textContent = Math.round(_markerZoom * 100) + '%';
+    setMarkerPanMode(true, 'Pan mode active. Drag to inspect zoomed marker.');
+    renderMarkerCanvas();
+  }
+
+  function markerZoomOut() {
+    _markerZoom = Math.max(0.1, _markerZoom / 1.25);
+    document.getElementById('markerZoomLevel').textContent = Math.round(_markerZoom * 100) + '%';
+    renderMarkerCanvas();
+  }
+
+  function markerZoomReset() {
+    _markerZoom = 1;
+    _markerPanX = 0; _markerPanY = 0;
+    document.getElementById('markerZoomLevel').textContent = '100%';
+    setMarkerPanMode(false, 'Select mode active. Fit to view.');
+    renderMarkerCanvas();
+  }
+
+  function togglePanMode() {
+    setMarkerPanMode(!_markerPanMode, !_markerPanMode ? 'Pan mode active. Drag to pan canvas.' : 'Select mode active. Click to select parts.');
+  }
+
+  var _canvasTransform = null;
+
+  function initMarkerCanvas() {
+    var canvas = document.getElementById('markerCanvas');
+
+    var dragStartWorldX = 0, dragStartWorldY = 0;
+    var panStartX = 0, panStartY = 0;
+
+    function canvasToWorld(cx, cy) {
+      if (_canvasTransform) {
+        return { x: _canvasTransform.worldX(cx), y: _canvasTransform.worldY(cy) };
+      }
+      var w = canvas.width, h = canvas.height;
+      var margin = 40;
+      var bounds = MarkerNesting.computeBounds(markerPlacements);
+      var mlen = Math.max(bounds.maxY || markerWidthMm, 2);
+      var s = Math.min((w - margin * 2) / markerWidthMm, (h - margin * 2) / mlen) * _markerZoom;
+      return { x: (cx - w / 2) / s + markerWidthMm / 2, y: (cy - h / 2) / s + mlen / 2, scale: s };
+    }
+
+    canvas.addEventListener('mousedown', function(e) {
+      var rect = canvas.getBoundingClientRect();
+      var cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+      var status = document.getElementById('markerStatus');
+
+      if (_markerPanMode) {
+        _isPanning = true;
+        canvas.style.cursor = 'grabbing';
+        panStartX = cx - _markerPanX;
+        panStartY = cy - _markerPanY;
+        return;
+      }
+
+      var idx = findPartAtCanvas(cx, cy);
+      if (idx !== -1) {
+        if (e.shiftKey) {
+          var pos = markerSelectedIndices.indexOf(idx);
+          if (pos === -1) { markerSelectedIndices.push(idx); }
+          else { markerSelectedIndices.splice(pos, 1); }
+          markerSelectedIdx = markerSelectedIndices.length > 0
+            ? markerSelectedIndices[markerSelectedIndices.length - 1] : -1;
+        } else {
+          markerSelectedIndices = [idx];
+          markerSelectedIdx = idx;
+        }
+        markerDragIdx = idx;
+        var cw = canvasToWorld(cx, cy);
+        dragStartWorldX = cw.x;
+        dragStartWorldY = cw.y;
+        var placement = markerPlacements[idx];
+        if (!placement._origPoints) {
+          if (!Array.isArray(placement.points)) {
+            console.warn('drag: skipping composite placement idx=' + idx + ' id=' + placement.id);
+            return;
+          }
+          placement._origPoints = placement.points.map(function(p) { return { x: p.x, y: p.y }; });
+        }
+        _angleInputBase = 0;
+        document.getElementById('markerAngle').value = '0';
+        status.textContent = 'Part ' + (placement.sourceId || placement.id) + ' selected (' + markerSelectedIndices.length + ' total). Drag to move.';
+        renderMarkerCanvas();
+      } else {
+        markerSelectedIdx = -1;
+        markerSelectedIndices = [];
+        markerDragIdx = -1;
+        markerDragOffset = null;
+        _angleInputBase = 0;
+        document.getElementById('markerAngle').value = '0';
+        renderMarkerCanvas();
+      }
+    });
+
+    document.addEventListener('mousemove', function(e) {
+      var rect = canvas.getBoundingClientRect();
+      var cx = e.clientX - rect.left, cy = e.clientY - rect.top;
+
+      if (_markerPanMode && _isPanning) {
+        _markerPanX = cx - panStartX;
+        _markerPanY = cy - panStartY;
+        renderMarkerCanvas();
+        return;
+      }
+
+      if (markerDragIdx === -1) return;
+      var cw = canvasToWorld(cx, cy);
+      var dx = cw.x - dragStartWorldX;
+      var dy = cw.y - dragStartWorldY;
+      var placement = markerPlacements[markerDragIdx];
+      var orig = placement._origPoints;
+      if (!orig) return;
+      var pts = placement.points;
+      var candidate = orig.map(function(p) { return { x: p.x + dx, y: p.y + dy }; });
+      var ca = getPartAABB(candidate);
+      var bounds = MarkerNesting.computeBounds(markerPlacements);
+      var mlen = Math.max(bounds.maxY || markerWidthMm, 2);
+
+      var boundary = typeof _nestInset === 'number' ? _nestInset : 10;
+      if (ca.minX < boundary) { dx += boundary - ca.minX; candidate = orig.map(function(p) { return { x: p.x + dx, y: p.y + dy }; }); ca = getPartAABB(candidate); }
+      if (ca.minY < boundary) { dy += boundary - ca.minY; candidate = orig.map(function(p) { return { x: p.x + dx, y: p.y + dy }; }); ca = getPartAABB(candidate); }
+      if (ca.maxX > markerWidthMm - boundary) { dx -= ca.maxX - (markerWidthMm - boundary); candidate = orig.map(function(p) { return { x: p.x + dx, y: p.y + dy }; }); ca = getPartAABB(candidate); }
+
+      for (var i = 0; i < pts.length; i++) {
+        pts[i].x = candidate[i].x;
+        pts[i].y = candidate[i].y;
+      }
+      renderMarkerCanvas();
+    });
+
+    document.addEventListener('mouseup', function(e) {
+      if (_markerPanMode) {
+        _isPanning = false;
+        if (canvas) canvas.style.cursor = 'grab';
+        return;
+      }
+      if (markerDragIdx === -1) return;
+      var p = markerPlacements[markerDragIdx];
+      var pts = p.points || [];
+      var orig = p._origPoints;
+      delete p._origPoints;
+      var ca = getPartAABB(pts);
+      for (var i = 0; i < markerPlacements.length; i++) {
+        if (i === markerDragIdx) continue;
+        if (aabbsOverlap(ca, getPartAABB(markerPlacements[i].points)) &&
+            polygonsIntersect(pts, markerPlacements[i].points)) {
+          for (var j = 0; j < pts.length; j++) {
+            pts[j].x = orig[j].x;
+            pts[j].y = orig[j].y;
+          }
+          document.getElementById('markerStatus').textContent = 'Overlaps another part. Drag to a clear area.';
+          renderMarkerCanvas();
+          markerDragIdx = -1;
+          markerDragOffset = null;
+          return;
+        }
+      }
+      var SNAP = 4, snapX = 0, snapY = 0;
+      for (var si = 0; si < markerPlacements.length; si++) {
+        if (si === markerDragIdx) continue;
+        var ob = getPartAABB(markerPlacements[si].points || []);
+        if (Math.abs(ca.minX - ob.minX) < SNAP) snapX = ob.minX - ca.minX;
+        if (Math.abs(ca.maxX - ob.maxX) < SNAP) snapX = ob.maxX - ca.maxX;
+        if (Math.abs(ca.maxX - ob.minX) < SNAP) snapX = ob.minX - ca.maxX;
+        if (Math.abs(ca.minX - ob.maxX) < SNAP) snapX = ob.maxX - ca.minX;
+        if (Math.abs(ca.minY - ob.minY) < SNAP) snapY = ob.minY - ca.minY;
+        if (Math.abs(ca.maxY - ob.maxY) < SNAP) snapY = ob.maxY - ca.maxY;
+        if (Math.abs(ca.maxY - ob.minY) < SNAP) snapY = ob.minY - ca.maxY;
+        if (Math.abs(ca.minY - ob.maxY) < SNAP) snapY = ob.maxY - ca.minY;
+      }
+      if (snapX !== 0 || snapY !== 0) {
+        var snapped = pts.map(function(p) { return { x: p.x + snapX, y: p.y + snapY }; });
+        var snappedAabb = getPartAABB(snapped);
+        var snapBound = typeof _nestInset === 'number' ? _nestInset : 10;
+        if (snappedAabb.minX >= snapBound && snappedAabb.minY >= snapBound && snappedAabb.maxX <= markerWidthMm - snapBound) {
+          var snapOk = true;
+          for (var si = 0; si < markerPlacements.length; si++) {
+            if (si === markerDragIdx) continue;
+            if (aabbsOverlap(snappedAabb, getPartAABB(markerPlacements[si].points)) &&
+                polygonsIntersect(snapped, markerPlacements[si].points)) {
+              snapOk = false; break;
+            }
+          }
+          if (snapOk) {
+            for (var j = 0; j < pts.length; j++) {
+              pts[j].x = snapped[j].x;
+              pts[j].y = snapped[j].y;
+            }
+          }
+        }
+      }
+      var len = MarkerNesting.computeMarkerLength(markerPlacements);
+      document.getElementById('markerStatus').textContent = 'Moved. Marker length: ' + (len / 1000).toFixed(4) + ' m';
+      markerDragIdx = -1;
+      markerDragOffset = null;
+    });
+
+    canvas.addEventListener('mouseleave', function() { });
+
+    document.addEventListener('keydown', function(e) {
+      if (document.getElementById('markerModal').style.display !== 'flex') return;
+      var tag = (e.target || {}).tagName || '';
+      if (tag === 'INPUT' || tag === 'TEXTAREA' || tag === 'SELECT') return;
+      if (e.key === 'Delete' || e.key === 'Backspace') {
+        if (markerSelectedIndices.length === 0) return;
+        e.preventDefault();
+        var indices = markerSelectedIndices.slice().sort(function(a,b) { return b - a; });
+        for (var i = 0; i < indices.length; i++) {
+          markerPlacements.splice(indices[i], 1);
+        }
+        markerSelectedIdx = -1;
+        markerSelectedIndices = [];
+        _angleInputBase = 0;
+        var len = MarkerNesting.computeMarkerLength(markerPlacements);
+        document.getElementById('markerStatus').textContent =
+          markerPlacements.length === 0
+            ? 'All parts deleted.'
+            : 'Deleted. Marker length: ' + (len / 1000).toFixed(4) + ' m';
+        renderMarkerCanvas();
+      }
+    });
+  }
+
+  function displayMarkerConsumption() {
+    var el = document.getElementById('markerConsumption');
+    if (!el) return;
+    if (!markerPlacements || markerPlacements.length === 0) {
+      el.textContent = 'Run nesting to see consumption.';
+      el.style.color = '#6e6e73'; return;
+    }
+    var info = buildMarkerConsumptionInfo();
+    el.style.color = '#1d1d1f';
+    el.innerHTML = info.lines.join('<br>');
+  }
+
+  function renderMarkerCanvas() {
+    var canvas = document.getElementById('markerCanvas');
+    var nestInset = typeof _nestInset === 'number' ? _nestInset : 10;
+    _canvasTransform = MarkerNesting.renderToCanvas(canvas, markerPlacements, markerWidthMm, { inset: nestInset, zoom: _markerZoom, panX: _markerPanX, panY: _markerPanY });
+    if (!_canvasTransform) return;
+    displayMarkerConsumption();
+    if (markerSelectedIndices.length === 0) return;
+    var ctx = canvas.getContext('2d');
+    var tr = _canvasTransform;
+
+    for (var si = 0; si < markerSelectedIndices.length; si++) {
+      var idx = markerSelectedIndices[si];
+      var p = markerPlacements[idx];
+      if (!p) continue;
+      var pts = p.points || [];
+      if (pts.length < 3) continue;
+      // Validate coordinates
+      var valid = true;
+      for (var _vi = 0; _vi < pts.length; _vi++) { if (!isFinite(pts[_vi].x) || !isFinite(pts[_vi].y)) { valid = false; break; } }
+      if (!valid) continue;
+      ctx.strokeStyle = idx === markerSelectedIdx ? '#FFD700' : '#FF8C00';
+      ctx.lineWidth = idx === markerSelectedIdx ? 3 : 2;
+      ctx.beginPath();
+      ctx.moveTo(tr.tx(pts[0].x), tr.ty(pts[0].y));
+      for (var i = 1; i < pts.length; i++) ctx.lineTo(tr.tx(pts[i].x), tr.ty(pts[i].y));
+      ctx.closePath();
+      ctx.stroke();
+    }
+  }
+
+  function buildMarkerConsumptionInfo() {
+    var info = { lines: [], dxfName: '', dxfQty: 1, im: '', materialType: '', materialWidth: 0, garmentQty: 0, markerLenM: 0, mPerGmt: 0 };
+    if (!markerPlacements || markerPlacements.length === 0) return info;
+    var totalPieces = markerPlacements.length;
+    info.markerLenM = (_canvasTransform && _canvasTransform.markerLengthMm ? _canvasTransform.markerLengthMm : 0) / 1000;
+    // Find matching consumption row from the first file source
+    var matchedRow = null;
+    var firstFile = markerSourceResults && markerSourceResults[0];
+    if (firstFile) {
+      var calcResult = calculationResults[firstFile.index];
+      if (calcResult) {
+        var fileName = calcResult.fileName || '';
+        info.dxfName = fileName.replace(/\.[^.]+$/, '').replace(/^.*[/\\]/, '');
+        // Find consumption row by matching fileName or materialWidthMm
+        var mw = parseInt(document.getElementById('markerWidthMm').value) || 0;
+        for (var ri = 0; ri < consumptionRows.length; ri++) {
+          var cr = consumptionRows[ri];
+          if (!cr) continue;
+          if (cr.sourceFileName && fileName.indexOf(cr.sourceFileName) !== -1) { matchedRow = cr; break; }
+          if (cr.materialWidthMm && Math.abs(Number(cr.materialWidthMm) - mw) < 1) { matchedRow = cr; break; }
+        }
+        if (!matchedRow && consumptionRows.length > 0) matchedRow = consumptionRows[0];
+        if (matchedRow) {
+          info.dxfName = matchedRow.laserBondingPart || info.dxfName;
+          info.dxfQty = Number(matchedRow.units) || 1;
+          info.im = matchedRow.im || '';
+          info.materialType = matchedRow.type || '';
+          info.materialWidth = Number(matchedRow.materialWidthMm) || 0;
+        }
+      }
+    }
+    info.garmentQty = info.dxfQty > 0 ? Math.round(totalPieces / info.dxfQty) : totalPieces;
+    info.mPerGmt = info.garmentQty > 0 ? info.markerLenM / info.garmentQty : 0;
+    var w = info.materialWidth > 0 ? info.materialWidth : (parseInt(document.getElementById('markerWidthMm').value) || 0);
+    var partName = _manualPartName || info.dxfName || 'Part';
+    var rowIndex = consumptionRows.indexOf(matchedRow);
+    if (rowIndex < 0 && consumptionRows.length > 0) rowIndex = 0;
+    var editStyle = 'width:86px;min-width:86px;max-width:150px;font:inherit;padding:2px 4px;border:1px solid #007AFF;border-radius:3px;background:#f5faff;color:#1d1d1f';
+    var saveStyle = 'margin-left:4px;padding:2px 6px;border:1px solid #007AFF;border-radius:3px;background:#007AFF;color:#fff;font:inherit;cursor:pointer';
+    var editId = 'markerPartNameEdit_' + rowIndex;
+    var nameHtml = '<input id="' + editId + '" type="text" data-row-index="' + rowIndex + '" value="' + escHtml(partName) + '" onkeydown="if(event.key===\'Enter\'){event.preventDefault();saveConsumptionPartName(' + rowIndex + ');}" onfocus="this.select()" style="' + editStyle + '" title="Edit part name"><button type="button" onclick="saveConsumptionPartName(' + rowIndex + ')" style="' + saveStyle + '">Save</button>';
+    info.lines.push(nameHtml);
+    info.lines.push(escHtml(partName) + ' x' + info.dxfQty);
+    if (info.im || info.materialType || w > 0) {
+      var detail = '';
+      if (info.im) detail += 'IM#' + info.im;
+      if (info.materialType) detail += (detail ? ' - ' : '') + info.materialType;
+      if (w > 0) detail += (detail ? ' - ' : '') + w + 'mm';
+      info.lines.push(detail);
+    }
+    info.lines.push(escHtml(partName) + ' x' + info.dxfQty + ' = ' + info.garmentQty + 'gmt');
+    info.lines.push(info.markerLenM.toFixed(3) + 'm / ' + info.garmentQty + ' = ' + info.mPerGmt.toFixed(4) + 'm/gmt');
+    return info;
+  }
+
+  function exportMarkerPDF() {
+    var canvas = document.getElementById('markerCanvas');
+    if (!canvas) return;
+    if (!markerPlacements || markerPlacements.length === 0) {
+      document.getElementById('markerStatus').textContent = 'Nothing to export. Run nesting first.';
+      return;
+    }
+    try {
+      var widthMm = parseInt(document.getElementById('markerWidthMm').value) || 0;
+      var inset = typeof _nestInset === 'number' ? _nestInset : 10;
+      var bounds = MarkerNesting.computeBounds(markerPlacements);
+      var markerLenMm = Math.max(bounds.maxY || widthMm, 2) + inset;
+
+      // A4 portrait: 210mm x 297mm. Render at 12px/mm for high-res output.
+      var pxPerMm = 12;
+      var a4Wmm = 210;
+      var a4Hmm = 297;
+      var marginMm = 12;
+      var headerHmm = 30;
+
+      var imgAreaW = a4Wmm - marginMm * 2;
+      var imgAreaH = a4Hmm - marginMm * 2 - headerHmm;
+      var markerAsp = markerLenMm > 0 && widthMm > 0 ? markerLenMm / widthMm : 1;
+      var areaAsp = imgAreaH / imgAreaW;
+      var finalWmm, finalHmm;
+      if (markerAsp <= areaAsp) {
+        finalWmm = imgAreaW;
+        finalHmm = imgAreaW * markerAsp;
+      } else {
+        finalHmm = imgAreaH;
+        finalWmm = imgAreaH / markerAsp;
+      }
+
+      var markerPxW = Math.round(finalWmm * pxPerMm);
+      var markerPxH = Math.round(finalHmm * pxPerMm);
+
+      var offscreen = document.createElement('canvas');
+      offscreen.width = markerPxW;
+      offscreen.height = markerPxH;
+      MarkerNesting.renderToCanvas(offscreen, markerPlacements, widthMm, { inset: inset, zoom: 1, panX: 0, panY: 0, margin: 0 });
+
+      var imgData = offscreen.toDataURL('image/png');
+      var info = buildMarkerConsumptionInfo();
+      var markerLenM = info.markerLenM;
+      var quality = document.getElementById('nestingQuality').value;
+      var copies = document.getElementById('markerCopies').value;
+      var now = new Date();
+      var dateStr = now.toLocaleDateString() + ' ' + now.toLocaleTimeString();
+
+      var pdf = new window.jspdf.jsPDF({ orientation: 'portrait', unit: 'mm', format: 'a4' });
+      var pw = pdf.internal.pageSize.getWidth();
+
+      var y = marginMm + 10;
+      pdf.setFontSize(9);
+
+      // Part name (first info line — strip HTML, extract value)
+      var partNameText = '';
+      var remainingLines = [];
+      if (info.lines.length > 0) {
+        var m = info.lines[0].match(/value="([^"]*)"/);
+        partNameText = m ? m[1] : '';
+        for (var li = 1; li < info.lines.length; li++) {
+          var clean = info.lines[li].replace(/<[^>]+>/g, '').trim();
+          if (clean) remainingLines.push(clean);
+        }
+      }
+      if (partNameText) {
+        pdf.text(partNameText, marginMm, y);
+        y += 5;
+      }
+
+      // Marker image below part name
+      var imgAreaY = y + 1;
+      var imgAvailH = a4Hmm - imgAreaY - marginMm;
+      var markerAsp = markerLenMm > 0 && widthMm > 0 ? markerLenMm / widthMm : 1;
+      var areaAsp = imgAvailH / imgAreaW;
+      var fW, fH;
+      if (markerAsp <= areaAsp) { fW = imgAreaW; fH = imgAreaW * markerAsp; }
+      else { fH = imgAvailH; fW = imgAvailH / markerAsp; }
+      pdf.addImage(imgData, 'PNG', (a4Wmm - fW) / 2, imgAreaY, fW, fH);
+
+      // Remaining consumption lines below image
+      var linesY = imgAreaY + fH + 4;
+      if (linesY + remainingLines.length * 3.5 < a4Hmm - marginMm) {
+        pdf.setFontSize(9);
+        remainingLines.forEach(function(line) {
+          pdf.text(line, marginMm, linesY);
+          linesY += 3.5;
+        });
+      }
+      pdf.save('marker-nest-' + Date.now() + '.pdf');
+    } catch (err) {
+      document.getElementById('markerStatus').textContent = 'PDF export failed: ' + (err.message || err);
+    }
+  }
+
+  function deleteSelectedParts() {
+    if (markerSelectedIndices.length === 0) {
+      document.getElementById('markerStatus').textContent = 'Select part(s) first (Ctrl+click for multiple).';
+      return;
+    }
+    var indices = markerSelectedIndices.slice().sort(function(a,b) { return b - a; });
+    for (var i = 0; i < indices.length; i++) {
+      markerPlacements.splice(indices[i], 1);
+    }
+    markerSelectedIdx = -1;
+    markerSelectedIndices = [];
+    _angleInputBase = 0;
+    var len = MarkerNesting.computeMarkerLength(markerPlacements);
+    document.getElementById('markerStatus').textContent =
+      markerPlacements.length === 0
+        ? 'All parts deleted.'
+        : 'Deleted. Marker length: ' + (len / 1000).toFixed(4) + ' m';
+    renderMarkerCanvas();
+  }
+
+  function fill1D(refParts, offX, offY, rotStep) {
+    var placed = 0;
+    var step = 2;
+    while (true) {
+      step++;
+      var thisOffX = offX * (step - 1);
+      var thisOffY = offY * (step - 1);
+      var thisRot = rotStep * (step - 1);
+      var anyValid = false;
+      var batch = [];
+      for (var pi = 0; pi < refParts.length; pi++) {
+        var src = refParts[pi];
+        if (!Array.isArray(src.points)) { console.warn('fill1D: skipping composite part', src.id); continue; }
+        var copyPts = src.points.map(function(p) { return { x: p.x + thisOffX, y: p.y + thisOffY }; });
+        if (thisRot !== 0) {
+          var cxx = 0, cyy = 0, nn = copyPts.length || 1;
+          for (var ri = 0; ri < nn; ri++) { cxx += copyPts[ri].x; cyy += copyPts[ri].y; }
+          cxx /= nn; cyy /= nn;
+          var rad = thisRot * Math.PI / 180;
+          var cs = Math.cos(rad), sn = Math.sin(rad);
+          copyPts = copyPts.map(function(p) {
+            var dx = p.x - cxx, dy = p.y - cyy;
+            return { x: dx * cs - dy * sn + cxx, y: dx * sn + dy * cs + cyy };
+          });
+        }
+        var ca = getPartAABB(copyPts);
+        if (ca.minX < 0 || ca.minY < 0 || ca.maxX > markerWidthMm) continue;
+        var blocked = false;
+        for (var ei = 0; ei < markerPlacements.length; ei++) {
+          if (aabbsOverlap(ca, getPartAABB(markerPlacements[ei].points)) &&
+              polygonsIntersect(copyPts, markerPlacements[ei].points)) {
+            blocked = true; break;
+          }
+        }
+        if (blocked) continue;
+        anyValid = true;
+        batch.push({
+          id: markerPlacements.length + 1, sourceId: src.sourceId || src.id,
+          points: copyPts, rotation: (src.rotation || 0) + thisRot
+        });
+      }
+      if (!anyValid) break;
+      batch.forEach(function(b) { markerPlacements.push(b); placed++; });
+    }
+    return placed;
+  }
+
+  function centroidOf(pts) {
+    var cx = 0, cy = 0, n = pts.length || 1;
+    pts.forEach(function(p) { cx += p.x; cy += p.y; });
+    return { x: cx / n, y: cy / n };
+  }
+
+  function duplicatePattern() {
+    var order = markerSelectedIndices.slice();
+    if (order.length < 2) {
+      document.getElementById('markerStatus').textContent = 'Select at least 2 parts (teach 1st and 2nd arrangement), then click Pattern Fill.';
+      return;
+    }
+
+    if (order.length >= 3) {
+      var ref = markerPlacements[order[0]];
+      var col = markerPlacements[order[1]];
+      var row = markerPlacements[order[2]];
+      var cRef = centroidOf(ref.points || []);
+      var cCol = centroidOf(col.points || []);
+      var cRow = centroidOf(row.points || []);
+      var dy = cCol.y - cRef.y, dx = cRow.x - cRef.x;
+      if (Math.abs(dy) < 1 && Math.abs(dx) < 1) {
+        document.getElementById('markerStatus').textContent = 'Parts too close. Spread them apart.';
+        return;
+      }
+      var rotCol = ((col.rotation || 0) - (ref.rotation || 0) + 360) % 360;
+      var rotRow = ((row.rotation || 0) - (ref.rotation || 0) + 360) % 360;
+      if (Math.abs(dy) < 1) { dy = 0; rotCol = 0; }
+      if (Math.abs(dx) < 1) { dx = 0; rotRow = 0; }
+      var placed = 0, maxRows = 30, maxCols = 30;
+      for (var ri = 0; ri < maxRows; ri++) {
+        var rr = rotRow * ri, yy = dy * ri;
+        for (var ci = 0; ci < maxCols; ci++) {
+          if (ri === 0 && ci === 0) continue;
+          var xx = dx * ci;
+          var anyOk = false;
+          var gBatch = [];
+          for (var pi = 0; pi < 1; pi++) {
+            var src = ref;
+            if (!Array.isArray(src.points)) { console.warn('fill2D: skipping composite part', src.id); continue; }
+            var pts = src.points.map(function(p) { return { x: p.x + xx, y: p.y + yy }; });
+            var totalRot = rr + rotCol * ci;
+            if (totalRot !== 0) {
+              var c = centroidOf(pts);
+              var rad = totalRot * Math.PI / 180;
+              var cs = Math.cos(rad), sn = Math.sin(rad);
+              pts = pts.map(function(p) {
+                var dx2 = p.x - c.x, dy2 = p.y - c.y;
+                return { x: dx2 * cs - dy2 * sn + c.x, y: dx2 * sn + dy2 * cs + c.y };
+              });
+            }
+            var ca = getPartAABB(pts);
+            if (ca.minX < 0 || ca.minY < 0 || ca.maxX > markerWidthMm) continue;
+            var blocked = false;
+            for (var ei = 0; ei < markerPlacements.length; ei++) {
+              if (aabbsOverlap(ca, getPartAABB(markerPlacements[ei].points)) &&
+                  polygonsIntersect(pts, markerPlacements[ei].points)) {
+                blocked = true; break;
+              }
+            }
+            if (blocked) continue;
+            anyOk = true;
+            gBatch.push({ id: markerPlacements.length + 1, sourceId: src.sourceId || src.id, points: pts, rotation: (src.rotation || 0) + totalRot });
+          }
+          if (!anyOk) break;
+          gBatch.forEach(function(b) { markerPlacements.push(b); placed++; });
+        }
+      }
+      markerSelectedIdx = -1; markerSelectedIndices = []; _angleInputBase = 0;
+      var len = MarkerNesting.computeMarkerLength(markerPlacements);
+      document.getElementById('markerStatus').textContent =
+        'Grid fill: ' + placed + ' copies placed (col ' + dx.toFixed(1) + ', row ' + dy.toFixed(1) + '). Length: ' + (len / 1000).toFixed(4) + ' m';
+      renderMarkerCanvas();
+      return;
+    }
+
+    var sel = order.slice().sort(function(a,b) { return a - b; });
+    var half = Math.floor(sel.length / 2);
+    var arr1 = sel.slice(0, half).map(function(i) { return markerPlacements[i]; });
+    var arr2 = sel.slice(half).map(function(i) { return markerPlacements[i]; });
+
+    var offsetX = 0, offsetY = 0, rotDelta = 0, pairs = 0;
+    for (var ai = 0; ai < arr1.length && ai < arr2.length; ai++) {
+      var c1 = centroidOf(arr1[ai].points || []);
+      var c2 = centroidOf(arr2[ai].points || []);
+      offsetX += c2.x - c1.x;
+      offsetY += c2.y - c1.y;
+      rotDelta += ((arr2[ai].rotation || 0) - (arr1[ai].rotation || 0) + 360) % 360;
+      pairs++;
+    }
+    if (pairs === 0) {
+      document.getElementById('markerStatus').textContent = 'Cannot compute offset between arrangements.';
+      return;
+    }
+    offsetX /= pairs; offsetY /= pairs; rotDelta = Math.round(rotDelta / pairs);
+
+    if (Math.abs(offsetX) < 1 && Math.abs(offsetY) < 1 && rotDelta === 0) {
+      document.getElementById('markerStatus').textContent = 'Arrangements are identical. Move or rotate the 2nd differently.';
+      return;
+    }
+
+    var placed = fill1D(arr1, offsetX, offsetY, rotDelta);
+    markerSelectedIdx = -1; markerSelectedIndices = []; _angleInputBase = 0;
+    var len = MarkerNesting.computeMarkerLength(markerPlacements);
+    document.getElementById('markerStatus').textContent =
+      'Pattern fill: ' + placed + ' copies placed' +
+      (Math.abs(offsetX) >= 1 || Math.abs(offsetY) >= 1 ? ' (step ' + offsetX.toFixed(1) + ', ' + offsetY.toFixed(1) + ')' : '') +
+      (rotDelta !== 0 ? ' (rotate ' + rotDelta + '\u00b0 each)' : '') +
+      '. Marker length: ' + (len / 1000).toFixed(4) + ' m';
+    renderMarkerCanvas();
+  }
+
+  function translatePts(pts, dx, dy) {
+    return pts.map(function(p) { return { x: p.x + dx, y: p.y + dy }; });
+  }
+
+  function rotatePartAtIdx(idx, degrees) {
+    if (degrees === 0) return true;
+    var p = markerPlacements[idx];
+    if (!p || !p.points) return true;
+    if (!Array.isArray(p.points)) {
+      console.warn('rotatePartAtIdx: skipping composite placement idx=' + idx + ' id=' + p.id);
+      return true;
+    }
+    var radians = degrees * Math.PI / 180;
+    var cx = 0, cy = 0;
+    MarkerNesting.forEachPoint(p.points, function(pt) { cx += pt.x; cy += pt.y; });
+    var n = p.points.length || 1;
+    cx /= n; cy /= n;
+    var cos = Math.cos(radians), sin = Math.sin(radians);
+    var candidate = p.points.map(function(pt) {
+      var dx = pt.x - cx, dy = pt.y - cy;
+      return { x: dx * cos - dy * sin + cx, y: dx * sin + dy * cos + cy };
+    });
+    var ca = getPartAABB(candidate);
+    var shiftX = 0, shiftY = 0;
+    if (ca.minX < 0) shiftX = -ca.minX;
+    if (ca.minY < 0) shiftY = -ca.minY;
+    if (ca.maxX > markerWidthMm) shiftX = markerWidthMm - ca.maxX;
+    if (shiftX !== 0 || shiftY !== 0) candidate = translatePts(candidate, shiftX, shiftY);
+    for (var i = 0; i < markerPlacements.length; i++) {
+      if (i === idx) continue;
+      var otherPts = markerPlacements[i].points;
+      var other = Array.isArray(otherPts) ? otherPts : [];
+      if (aabbsOverlap(getPartAABB(candidate), getPartAABB(other)) && polygonsIntersect(candidate, other)) {
+        return false;
+      }
+    }
+    for (var j = 0; j < p.points.length; j++) {
+      p.points[j].x = candidate[j].x;
+      p.points[j].y = candidate[j].y;
+    }
+    p.rotation = ((p.rotation || 0) + degrees) % 360;
+    if (p._origPoints) {
+      for (var j = 0; j < p._origPoints.length; j++) {
+        p._origPoints[j].x = candidate[j].x;
+        p._origPoints[j].y = candidate[j].y;
+      }
+    }
+    return true;
+  }
+
+  function onAngleInput() {
+    rotateSelectedPart();
+  }
+
+  function rotateSelectedPart() {
+    if (markerSelectedIdx === -1 || !markerPlacements[markerSelectedIdx]) {
+      document.getElementById('markerStatus').textContent = 'Click a part to select it first.';
+      return;
+    }
+    var val = parseFloat(document.getElementById('markerAngle').value) || 0;
+    var delta = val - _angleInputBase;
+    if (delta === 0) return;
+    if (rotatePartAtIdx(markerSelectedIdx, delta)) {
+      _angleInputBase = val;
+      var len = MarkerNesting.computeMarkerLength(markerPlacements);
+      document.getElementById('markerStatus').textContent = 'Rotated ' + delta + '\u00b0. Marker length: ' + (len / 1000).toFixed(4) + ' m';
+      renderMarkerCanvas();
+    } else {
+      document.getElementById('markerAngle').value = _angleInputBase;
+    }
+  }
+
+  function rotate90() {
+    if (markerSelectedIdx === -1 || !markerPlacements[markerSelectedIdx]) {
+      document.getElementById('markerStatus').textContent = 'Click a part to select it first.';
+      return;
+    }
+    if (rotatePartAtIdx(markerSelectedIdx, 90)) {
+      _angleInputBase = 0;
+      document.getElementById('markerAngle').value = '0';
+      var len = MarkerNesting.computeMarkerLength(markerPlacements);
+      document.getElementById('markerStatus').textContent = 'Rotated 90\u00b0. Marker length: ' + (len / 1000).toFixed(4) + ' m';
+      renderMarkerCanvas();
+    } else {
+      document.getElementById('markerStatus').textContent = 'Rotation blocked: would overlap another part.';
+    }
+  }
+
+  function applyMarkerConsumption() {
+    if (markerPlacements.length === 0) {
+      setCalculatorStatus('Run nesting first.', 'error');
+      return;
+    }
+    const markerLenM = MarkerNesting.computeMarkerLength(markerPlacements) / 1000;
+    if (!markerLenM || markerLenM <= 0) {
+      setCalculatorStatus('Invalid marker length.', 'error');
+      return;
+    }
+
+    const checkedResultIndices = [...document.querySelectorAll('#markerPartList .file-cb:checked')].map(cb => parseInt(cb.dataset.result));
+    let appliedCount = 0;
+    checkedResultIndices.forEach(resultIdx => {
+      const result = calculationResults[resultIdx];
+      const matchedRows = consumptionRows.filter(r => r.sourceFileName === result.fileName);
+      matchedRows.forEach(row => {
+        row.consumptionMGmt = markerLenM;
+        appliedCount++;
+      });
+    });
+
+    updateConsumptionPreviewTable();
+    closeMarkerModal();
+    setCalculatorStatus(`Marker ${markerLenM.toFixed(4)} m/gmt applied to ${appliedCount} consumption row(s).`, 'success');
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initConsumptionCalculator);
+  } else {
+    initConsumptionCalculator();
+  }
+</script>
+</body>
+</html>
