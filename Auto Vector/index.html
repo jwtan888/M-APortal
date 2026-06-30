@@ -693,7 +693,7 @@
           Calculate Vector Lengths
         </button>
         <div style="display:flex;gap:6px">
-          <button id="markerBtn" type="button" class="calc-btn hidden" onclick="openMarkerModal()" style="background:#7B68EE;border-color:#7B68EE;color:#fff" disabled title="Coming Soon">Marker (Coming Soon)</button>
+          <button id="markerBtn" type="button" class="calc-btn" onclick="openMarkerModal()" style="background:#7B68EE;border-color:#7B68EE;color:#fff">Marker</button>
         </div>
       </div>
     </div>
@@ -1445,7 +1445,9 @@
   }
 
   function processNeedsArtworkLength(process) {
-    return /run machine|perforated/i.test(process || '');
+    const text = String(process || '');
+    return /run machine|perforated/i.test(text) ||
+      (/place\s*(?:&|\/|and)\s*remove\s+panels/i.test(text) && />\s*50\s*cm/i.test(text));
   }
 
   function validateConsumptionRow(row) {
@@ -2017,6 +2019,29 @@
       }
     });
 
+    // Translate each part so its bounding box min corner is at (0,0)
+    // Ensures the nesting library packs within [0, effWidth] without shape edges
+    // extending outside the packing space due to negative DXF coordinates.
+    parts.forEach(function(p) {
+      var allVerts = [];
+      if (p._sP) {
+        p._sP.forEach(function(sp) { sp.forEach(function(v) { allVerts.push(v); }); });
+      } else {
+        p.points.forEach(function(v) { allVerts.push(v); });
+      }
+      var minX = Infinity, minY = Infinity;
+      for (var ti = 0; ti < allVerts.length; ti++) {
+        if (allVerts[ti].x < minX) minX = allVerts[ti].x;
+        if (allVerts[ti].y < minY) minY = allVerts[ti].y;
+      }
+      if (minX !== 0 || minY !== 0) {
+        if (p._sP) {
+          p._sP = p._sP.map(function(sp) { return sp.map(function(v) { return { x: v.x - minX, y: v.y - minY }; }); });
+        }
+        p.points = p.points.map(function(v) { return { x: v.x - minX, y: v.y - minY }; });
+      }
+    });
+
     // Apply 1mm offset to all parts before nesting (packing shape = offset polygon)
     parts.forEach(function(p) {
       if (p._sP) {
@@ -2152,21 +2177,32 @@
       });
     }
 
+    window._rejectedPlacements = [];
     function isValidPlacement(pl, bw, ins) {
       var pts = pl.points || [];
-      if (pts.length === 0) return false;
+      if (pts.length === 0) { window._rejectedPlacements.push({ id: pl.id, reason: 'empty points', mirror: pl._m, rot: pl.rotation }); return false; }
+      var isect = 0; // 0=offset, 1=_sP, 2=_originalPoints
       var allPts = [];
-      MarkerNesting.forEachPoint(pts, function(p) { allPts.push(p); });
+      MarkerNesting.forEachPoint(pts, function(p) { allPts.push({ x: p.x, y: p.y, src: 0 }); });
       if (pl._sP) {
-        pl._sP.forEach(function(sp) { MarkerNesting.forEachPoint(sp, function(p) { allPts.push(p); }); });
+        pl._sP.forEach(function(sp) { MarkerNesting.forEachPoint(sp, function(p) { allPts.push({ x: p.x, y: p.y, src: 1 }); }); });
       }
       if (pl._originalPoints) {
-        MarkerNesting.forEachPoint(pl._originalPoints, function(p) { allPts.push(p); });
+        MarkerNesting.forEachPoint(pl._originalPoints, function(p) { allPts.push({ x: p.x, y: p.y, src: 2 }); });
       }
       for (var qi = 0; qi < allPts.length; qi++) {
-        if (!isFinite(allPts[qi].x) || !isFinite(allPts[qi].y)) return false;
-        if (allPts[qi].x < ins - 0.5 || allPts[qi].x > bw - ins + 0.5) return false;
-        if (allPts[qi].y < -0.5) return false;
+        if (!isFinite(allPts[qi].x) || !isFinite(allPts[qi].y)) {
+          window._rejectedPlacements.push({ id: pl.id, mirror: pl._m, rot: pl.rotation, idx: qi, src: allPts[qi].src, reason: 'non-finite', pt: allPts[qi] });
+          return false;
+        }
+        if (allPts[qi].x < ins - 0.5 || allPts[qi].x > bw - ins + 0.5) {
+          window._rejectedPlacements.push({ id: pl.id, mirror: pl._m, rot: pl.rotation, idx: qi, src: allPts[qi].src, reason: 'x out of bounds', pt: allPts[qi], ins: ins, bw: bw });
+          return false;
+        }
+        if (allPts[qi].y < -0.5) {
+          window._rejectedPlacements.push({ id: pl.id, mirror: pl._m, rot: pl.rotation, idx: qi, src: allPts[qi].src, reason: 'y out of bounds', pt: allPts[qi] });
+          return false;
+        }
       }
       return true;
     }
@@ -2201,6 +2237,17 @@
       var rawPl = result.placements || [];
       attachPartData(rawPl);
       var expandedPl = MarkerNesting.expandCompositePlacements(rawPl);
+      // Diagnostic: capture expanded placements before validation
+      if (!window._preValidation) window._preValidation = [];
+      window._preValidation = expandedPl.map(function(p) {
+        var mx=Infinity, nx=-Infinity, my=Infinity, ny=-Infinity;
+        var pts = p.points || [];
+        for (var di=0; di<pts.length; di++) {
+          if (pts[di].x < mx) mx = pts[di].x; if (pts[di].x > nx) nx = pts[di].x;
+          if (pts[di].y < my) my = pts[di].y; if (pts[di].y > ny) ny = pts[di].y;
+        }
+        return { id: p.id, mirror: p._m, rot: p.rotation, minX: mx, maxX: nx, minY: my, maxY: ny, ptCount: pts.length };
+      });
       // Validate all placements are within boundary
       var validPl = [];
       for (var vi = 0; vi < expandedPl.length; vi++) {
