@@ -1,0 +1,14 @@
+{
+  "name": "auto-vector-web",
+  "private": true,
+  "scripts": {
+    "test": "node tests/run.mjs",
+    "test:headed": "node tests/run.mjs --headed"
+  },
+  "devDependencies": {
+    "playwright": "^1.61.0"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0"
+  }
+}
