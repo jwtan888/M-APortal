@@ -1250,18 +1250,22 @@
 
   function applyActionDefaults() {
     const action = getSelectedAction();
+    const needsMachine = processNeedsMachineSpeed(getFieldValue('process'));
     if (action) {
       document.getElementById('handlingSam').value = action.sam || '';
       document.getElementById('productionCat').value = action.productionCat || getFieldValue('productionCat');
-      if (!getFieldValue('laserColourCode') && action.color) document.getElementById('laserColourCode').value = action.color;
-      if (!getFieldValue('machineSpeed') && action.machineSpeed) document.getElementById('machineSpeed').value = action.machineSpeed;
+      if (needsMachine && !getFieldValue('laserColourCode') && action.color) document.getElementById('laserColourCode').value = action.color;
+      if (needsMachine && !getFieldValue('machineSpeed') && action.machineSpeed) document.getElementById('machineSpeed').value = action.machineSpeed;
     }
 
     const color = findColorByName(getFieldValue('laserColourCode'));
-    if (color && color.machineSpeed) document.getElementById('machineSpeed').value = color.machineSpeed;
+    if (needsMachine && color && color.machineSpeed) document.getElementById('machineSpeed').value = color.machineSpeed;
 
     if (!processNeedsArtworkLength(getFieldValue('process'))) {
       document.getElementById('artworkLengthCm').value = '';
+    }
+
+    if (!needsMachine) {
       document.getElementById('machineSpeed').value = '';
       document.getElementById('laserColourCode').value = '';
     }
@@ -1450,12 +1454,16 @@
       (/place\s*(?:&|\/|and)\s*remove\s+panels/i.test(text) && />\s*50\s*cm/i.test(text));
   }
 
+  function processNeedsMachineSpeed(process) {
+    return /run machine/i.test(process || '');
+  }
+
   function validateConsumptionRow(row) {
     if (!row.laserBondingPart) return 'Laser bonding part is required.';
     if (!Number.isFinite(row.units) || row.units <= 0) return 'Units must be greater than zero.';
     if (!row.process) return 'Process / Action is required.';
-    if (processNeedsArtworkLength(row.process) && (!Number.isFinite(row.machineSpeed) || row.machineSpeed <= 0)) return 'Machine speed must be greater than zero for machine-running process.';
-    if (processNeedsArtworkLength(row.process) && (!Number.isFinite(row.artworkLengthCm) || row.artworkLengthCm <= 0)) return 'Artwork length cm is required for machine-running process.';
+    if (processNeedsMachineSpeed(row.process) && (!Number.isFinite(row.machineSpeed) || row.machineSpeed <= 0)) return 'Machine speed must be greater than zero for machine-running process.';
+    if (processNeedsArtworkLength(row.process) && (!Number.isFinite(row.artworkLengthCm) || row.artworkLengthCm <= 0)) return 'Artwork length cm is required for this process.';
     return '';
   }
 
@@ -2034,14 +2042,20 @@
         if (allVerts[ti].x < minX) minX = allVerts[ti].x;
         if (allVerts[ti].y < minY) minY = allVerts[ti].y;
       }
+      console.log('PRE-TRANSLATE: id=' + p.id + ' p.points[0]=(' + p.points[0].x.toFixed(3) + ',' + p.points[0].y.toFixed(3) + ') minX=' + minX.toFixed(3) + ' minY=' + minY.toFixed(3));
       if (minX !== 0 || minY !== 0) {
         if (p._sP) {
           p._sP = p._sP.map(function(sp) { return sp.map(function(v) { return { x: v.x - minX, y: v.y - minY }; }); });
         }
         p.points = p.points.map(function(v) { return { x: v.x - minX, y: v.y - minY }; });
+        console.log('POST-TRANSLATE: id=' + p.id + ' p.points[0]=(' + p.points[0].x.toFixed(3) + ',' + p.points[0].y.toFixed(3) + ')');
+      } else {
+        console.log('TRANSLATE SKIPPED: id=' + p.id + ' (already at origin)');
       }
     });
 
+    // Diagnostic: check if parts have _sP
+    parts.forEach(function(p) { console.log('HASS: id=' + p.id + ' _sP=' + (p._sP ? 'yes(' + p._sP.length + ')' : 'no') + ' ptsLen=' + (p.points ? p.points.length : 0)); });
     // Apply 1mm offset to all parts before nesting (packing shape = offset polygon)
     parts.forEach(function(p) {
       if (p._sP) {
@@ -2053,6 +2067,10 @@
         // Individual: store original polygon, offset for packing
         p._originalPoints = p.points.map(function(v) { return {x: v.x, y: v.y}; });
         p.points = MarkerNesting.offsetPolygon(p.points, 1);
+        // Verify offset polygon min/max
+        var offMx = Infinity, offNx = -Infinity;
+        p.points.forEach(function(v) { if (v.x < offMx) offMx = v.x; if (v.x > offNx) offNx = v.x; });
+        console.log('OFFSET: id=' + p.id + ' minX=' + offMx.toFixed(3) + ' maxX=' + offNx.toFixed(3));
       }
     });
 
@@ -2235,6 +2253,17 @@
         }
       });
       var rawPl = result.placements || [];
+      // Diagnostic: capture raw placements before any main-thread processing
+      window._rawPlacementRanges = rawPl.map(function(p) {
+        var mx=Infinity, nx=-Infinity;
+        var pts = p.points || [];
+        if (pts.length === 0 && pts._sP) {
+          pts._sP.forEach(function(sp) { sp.forEach(function(v) { if (v.x < mx) mx = v.x; if (v.x > nx) nx = v.x; }); });
+        } else {
+          for (var di=0; di<pts.length; di++) { if (pts[di].x < mx) mx = pts[di].x; if (pts[di].x > nx) nx = pts[di].x; }
+        }
+        return { id: p.id, x: [mx, nx], hasOrig: !!p._originalPoints, mirror: p._m };
+      });
       attachPartData(rawPl);
       var expandedPl = MarkerNesting.expandCompositePlacements(rawPl);
       // Diagnostic: capture expanded placements before validation
