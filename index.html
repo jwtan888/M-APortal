@@ -9025,36 +9025,78 @@
                 const powerAppsId = String(r['__PowerAppsId__'] || '').trim();
                 return excelId === String(rid) || powerAppsId === String(rid);
             }) || {};
+            if (!Object.keys(existingRow).length) {
+                alert(`Down filling row not found in current web data. Row key sent: ${rid}. Refresh Down Filling data and try again.`);
+                return;
+            }
             const rowPic = getMAPic(existingRow || {});
             const canEditDown = !!currentUser && (isPortalAdmin() || !rowPic || rowPic === '---' || rowPic === currentUser);
             if (!canEditDown) return alert(`Only ${rowPic || 'the assigned PIC'}, Gavin or Joe can edit this down filling row.`);
             const btn = event.target; btn.innerText = 'SAVING...'; btn.disabled = true;
             const g = (field) => document.getElementById(`dw-${field}-${rid}`)?.value.trim() || '';
-            const dateUpdateNorm = preparePortalDatePayload(g('dateUpdate'), convertExcelDate(getVal(existingRow, ['Date Update','DateUpdate'])), { allowNoAction: true });
-            const startNorm = preparePortalDatePayload(g('startTime'), convertExcelDate(getVal(existingRow, ['Start Time','StartTime'])), { allowNoAction: true });
-            const completeNorm = preparePortalDatePayload(g('completeTime'), convertExcelDate(getVal(existingRow, ['Complete Time','CompleteTime'])), { allowNoAction: true });
+            const existingText = (keys) => {
+                const value = getVal(existingRow, keys);
+                return value && value !== '---' ? String(value).trim() : '';
+            };
+            const fieldText = (field, keys) => {
+                const typed = g(field);
+                return typed !== '' ? typed : existingText(keys);
+            };
+            const dateUpdateNorm = preparePortalDateFieldPayload(g('dateUpdate'), getVal(existingRow, ['Date Update','DateUpdate']), { allowNoAction: true });
+            const startNorm = preparePortalDateFieldPayload(g('startTime'), getVal(existingRow, ['Start Time','StartTime','Start Time m/d/yyyy']), { allowNoAction: true });
+            const completeNorm = preparePortalDateFieldPayload(g('completeTime'), getVal(existingRow, ['Complete Time','CompleteTime','Complete Time m/d/yyyy']), { allowNoAction: true });
             if ([dateUpdateNorm, startNorm, completeNorm].some(v => v === null)) {
                 btn.innerText = 'ERROR'; btn.disabled = false;
                 alert('Invalid date format. Use m/d/yyyy, m/d/yyyy hh:mm, or - for no action.');
                 return;
             }
-            const downDescValue = g('downDesc');
+            const excelDateTimeText = (value) => {
+                const clean = String(value || '').trim();
+                if (!clean || clean === '-') return clean;
+                const date = rawToLocalDate(clean);
+                if (!date || isNaN(date.getTime())) return clean;
+                let hours = date.getHours();
+                const suffix = hours >= 12 ? 'PM' : 'AM';
+                hours = hours % 12 || 12;
+                const minutes = String(date.getMinutes()).padStart(2, '0');
+                return `${date.getMonth() + 1}/${date.getDate()}/${date.getFullYear()} ${hours}:${minutes} ${suffix}`;
+            };
+            const startExcelText = excelDateTimeText(startNorm);
+            const completeExcelText = excelDateTimeText(completeNorm);
+            const downDescValue = fieldText('downDesc', ['Down Description','DownDescription','Down Desc','DownDesc','Description']);
             const payload = {
                 recordID:        rid,
                 id:              rid,
                 Id:              rid,
                 ID:              rid,
                 powerAppsId:      existingRow['__PowerAppsId__'] || '',
+                debugSource:      'ma-portal-down-update',
+                debugRowKey:      rid,
                 dateUpdate:      dateUpdateNorm,
-                season:          g('season'),
-                bddPic:          g('bddPic'),
-                category:        g('category'),
-                style:           g('style'),
-                job:             g('job'),
-                layer:           g('layer'),
-                fabricItem:      g('fabricItem'),
-                downBagItem:     g('downBagItem'),
-                downItem:        g('downItem'),
+                DateUpdate:      dateUpdateNorm,
+                'Date Update':   dateUpdateNorm,
+                season:          fieldText('season', ['Season']),
+                Season:          fieldText('season', ['Season']),
+                bddPic:          fieldText('bddPic', ['BDD PIC','BDDPIC','BDD']),
+                BDDPIC:          fieldText('bddPic', ['BDD PIC','BDDPIC','BDD']),
+                'BDD PIC':       fieldText('bddPic', ['BDD PIC','BDDPIC','BDD']),
+                category:        fieldText('category', ['Category']),
+                Category:        fieldText('category', ['Category']),
+                style:           fieldText('style', ['Style','Style Number','StyleNumber']),
+                Style:           fieldText('style', ['Style','Style Number','StyleNumber']),
+                job:             fieldText('job', ['Job','Job Number','JobNumber']),
+                Job:             fieldText('job', ['Job','Job Number','JobNumber']),
+                layer:           fieldText('layer', ['Layer']),
+                Layer:           fieldText('layer', ['Layer']),
+                fabricItem:      fieldText('fabricItem', ['Fabric Item','FabricItem']),
+                FabricItem:      fieldText('fabricItem', ['Fabric Item','FabricItem']),
+                'Fabric Item':   fieldText('fabricItem', ['Fabric Item','FabricItem']),
+                downBagItem:     fieldText('downBagItem', ['Down Bag Item','DownBagItem']),
+                DownBagItem:     fieldText('downBagItem', ['Down Bag Item','DownBagItem']),
+                'Down Bag Item': fieldText('downBagItem', ['Down Bag Item','DownBagItem']),
+                downItem:        fieldText('downItem', ['Down Item','DownItem']),
+                DownItem:        fieldText('downItem', ['Down Item','DownItem']),
+                'Down Item':     fieldText('downItem', ['Down Item','DownItem']),
                 downDescription: downDescValue,
                 downDesc:        downDescValue,
                 downDescriptionText: downDescValue,
@@ -9065,27 +9107,71 @@
                 'Down Desc':     downDescValue,
                 Description:     downDescValue,
                 description:     downDescValue,
-                liningItem:      g('liningItem'),
-                needle:          g('needle'),
-                thread:          g('thread'),
-                upperRpm:        g('upperRpm') || '0',
-                lowerRpm:        g('lowerRpm') || '0',
-                inletPressure:   g('inletPressure') || '0',
-                outletPressure:  g('outletPressure') || '0',
-                humidity:        g('humidity'),
-                downRelaxedTime: g('relaxedTime'),
-                startTime:       startNorm,
-                completeTime:    completeNorm,
+                liningItem:      fieldText('liningItem', ['Lining Item','LiningItem']),
+                LiningItem:      fieldText('liningItem', ['Lining Item','LiningItem']),
+                'Lining Item':   fieldText('liningItem', ['Lining Item','LiningItem']),
+                needle:          fieldText('needle', ['Needle']),
+                Needle:          fieldText('needle', ['Needle']),
+                thread:          fieldText('thread', ['Thread']),
+                Thread:          fieldText('thread', ['Thread']),
+                upperRpm:        fieldText('upperRpm', ['Upper Chamber RPM','UpperChamberRPM','Upper RPM']) || '0',
+                UpperChamberRPM: fieldText('upperRpm', ['Upper Chamber RPM','UpperChamberRPM','Upper RPM']) || '0',
+                'Upper Chamber RPM': fieldText('upperRpm', ['Upper Chamber RPM','UpperChamberRPM','Upper RPM']) || '0',
+                lowerRpm:        fieldText('lowerRpm', ['Lower Chamber RPM','LowerChamberRPM','Lower RPM']) || '0',
+                LowerChamberRPM: fieldText('lowerRpm', ['Lower Chamber RPM','LowerChamberRPM','Lower RPM']) || '0',
+                'Lower Chamber RPM': fieldText('lowerRpm', ['Lower Chamber RPM','LowerChamberRPM','Lower RPM']) || '0',
+                inletPressure:   fieldText('inletPressure', ['Inlet Air Pressure (Mpa)','InletAirPressure','Inlet Pressure']) || '0',
+                InletAirPressure: fieldText('inletPressure', ['Inlet Air Pressure (Mpa)','InletAirPressure','Inlet Pressure']) || '0',
+                'Inlet Air Pressure (Mpa)': fieldText('inletPressure', ['Inlet Air Pressure (Mpa)','InletAirPressure','Inlet Pressure']) || '0',
+                outletPressure:  fieldText('outletPressure', ['Outlet Air Pressure (Mpa)','OutletAirPressure','Outlet Pressure']) || '0',
+                OutletAirPressure: fieldText('outletPressure', ['Outlet Air Pressure (Mpa)','OutletAirPressure','Outlet Pressure']) || '0',
+                'Outlet Air Pressure (Mpa)': fieldText('outletPressure', ['Outlet Air Pressure (Mpa)','OutletAirPressure','Outlet Pressure']) || '0',
+                humidity:        fieldText('humidity', ['Humidity']),
+                Humidity:        fieldText('humidity', ['Humidity']),
+                downRelaxedTime: fieldText('relaxedTime', ['Down Relaxed Time','DownRelaxedTime','Relaxed Time']),
+                DownRelaxedTime: fieldText('relaxedTime', ['Down Relaxed Time','DownRelaxedTime','Relaxed Time']),
+                'Down Relaxed Time': fieldText('relaxedTime', ['Down Relaxed Time','DownRelaxedTime','Relaxed Time']),
+                startTime:       startExcelText,
+                StartTime:       startExcelText,
+                'Start Time':    startExcelText,
+                'Start Time m/d/yyyy': startExcelText,
+                'Start Time m~1d~1yyyy': startExcelText,
+                'Start Time\nm/d/yyyy': startExcelText,
+                'Start Time\nm~1d~1yyyy': startExcelText,
+                'Start Time_x000a_m_x002f_d_x002f_yyyy': startExcelText,
+                'Start Time_x000a_m~1d~1yyyy': startExcelText,
+                completeTime:    completeExcelText,
+                CompleteTime:    completeExcelText,
+                'Complete Time': completeExcelText,
+                'Complete Time m/d/yyyy': completeExcelText,
+                'Complete Time m~1d~1yyyy': completeExcelText,
+                'Complete Time\nm/d/yyyy': completeExcelText,
+                'Complete Time\nm~1d~1yyyy': completeExcelText,
+                'Complete Time_x000a_m_x002f_d_x002f_yyyy': completeExcelText,
+                'Complete Time_x000a_m~1d~1yyyy': completeExcelText,
                 maPic:           isPortalAdmin() ? (g('maPic') || rowPic || currentUser) : (rowPic || currentUser),
                 'M&A PIC':       isPortalAdmin() ? (g('maPic') || rowPic || currentUser) : (rowPic || currentUser),
                 pic:             isPortalAdmin() ? (g('maPic') || rowPic || currentUser) : (rowPic || currentUser),
-                remark:          g('remark')
+                remark:          fieldText('remark', ['Remark','Remarks']),
+                Remark:          fieldText('remark', ['Remark','Remarks'])
             };
             try {
                 const res = await fetch(downUpdateURL, {
                     method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
                 });
-                await readPortalWriteResult(res, 'Down filling update');
+                const writeResult = await readPortalWriteResult(res, 'Down filling update');
+                console.info('[DownUpdate] payload', payload, 'response', writeResult);
+                const downResult = writeResult.parsedBody || {};
+                const updateCount = Number(
+                    downResult.rowsAffected ??
+                    downResult.updatedRows ??
+                    downResult.updatedCount ??
+                    downResult.updateCount ??
+                    downResult.count
+                );
+                if (Number.isFinite(updateCount) && updateCount <= 0) {
+                    throw new Error(`Down filling update did not change any Excel row. Check PA Update a row key: Id=${rid}.`);
+                }
                 Object.assign(existingRow, {
                     Id: payload.id,
                     ID: payload.id,
