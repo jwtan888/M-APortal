@@ -8862,7 +8862,7 @@
                 const startTime = convertExcelDate(getVal(row, ['Start Time','StartTime','Start Time m/d/yyyy']));
                 const completeTime = convertExcelDate(getVal(row, ['Complete Time','CompleteTime','Complete Time m/d/yyyy']));
                 const remark = getVal(row, ['Remark','Remarks']);
-                const rid = String(row['__PowerAppsId__'] || id).replace(/['"]/g,'');
+                const rid = String(id && id !== '---' ? id : row['__PowerAppsId__']).replace(/['"]/g,'');
                 const isAdminDown = isPortalAdmin();
                 const canEditDown = !!currentUser && (isAdminDown || !maPic || maPic === '---' || maPic === currentUser);
                 const isEditingDown = canEditDown && String(editingDownRowId) === String(rid);
@@ -9020,7 +9020,11 @@
         }
 
         async function saveDownRow(rid, event) {
-            const existingRow = allDownRows.find(r => String(r['__PowerAppsId__'] || getVal(r, ['ID','Id','id'])) === String(rid)) || {};
+            const existingRow = allDownRows.find(r => {
+                const excelId = String(getVal(r, ['ID','Id','id']) || '').trim();
+                const powerAppsId = String(r['__PowerAppsId__'] || '').trim();
+                return excelId === String(rid) || powerAppsId === String(rid);
+            }) || {};
             const rowPic = getMAPic(existingRow || {});
             const canEditDown = !!currentUser && (isPortalAdmin() || !rowPic || rowPic === '---' || rowPic === currentUser);
             if (!canEditDown) return alert(`Only ${rowPic || 'the assigned PIC'}, Gavin or Joe can edit this down filling row.`);
@@ -9038,6 +9042,9 @@
             const payload = {
                 recordID:        rid,
                 id:              rid,
+                Id:              rid,
+                ID:              rid,
+                powerAppsId:      existingRow['__PowerAppsId__'] || '',
                 dateUpdate:      dateUpdateNorm,
                 season:          g('season'),
                 bddPic:          g('bddPic'),
@@ -9080,6 +9087,8 @@
                 });
                 await readPortalWriteResult(res, 'Down filling update');
                 Object.assign(existingRow, {
+                    Id: payload.id,
+                    ID: payload.id,
                     'Date Update': payload.dateUpdate,
                     DateUpdate: payload.dateUpdate,
                     Season: payload.season,
@@ -9122,10 +9131,15 @@
                     CompleteTime: payload.completeTime,
                     Remark: payload.remark
                 });
+                writeDashboardSnapshot();
+                editingDownRowId = null;
+                clearPortalTabDirty('downfilling');
+                renderDownTable();
+                renderDownDashboard();
                 showPortalSaveSuccess(btn, {
                     after: () => {
-                        editingDownRowId = null;
                         refreshDownData(true);
+                        setTimeout(() => refreshDownData(true), 10000);
                     }
                 });
             } catch(e) {
