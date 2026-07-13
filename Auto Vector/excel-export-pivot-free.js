@@ -4,6 +4,7 @@
   const EXTRA_MATERIALS=[
     {im:'688027',type:'Adhesive Tape',supplier:'Bemis',supplierItem:'3840',mil:'4 mil',widthMm:1422,slit:''},
     {im:'720842',type:'Overlay Tape',supplier:'Bemis',supplierItem:'NYL100',mil:'3 mil',widthMm:457,slit:''},
+    {im:'1020604',type:'Overlay Tape',supplier:'Bemis',supplierItem:'RS4501',mil:'6 mil',widthMm:1000,slit:'Yes'},
     {im:'1024896',type:'SRT Tape',supplier:'Bemis',supplierItem:'SRT4000 RC',mil:'',widthMm:1372,slit:''}
   ];
   const BLUE='FF2F5597', LIGHT='FFD9E2F3', GROUP='FF8EAADB', YELLOW='FFFFC000', GREEN='FF70AD47', DARK_GREEN='FF548235', WHITE='FFFFFFFF', BLACK='FF000000', GRID='FF1F4E78';
