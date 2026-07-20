@@ -385,6 +385,36 @@
     .calculator-status { margin-top: 12px; font-size: 0.83rem; color: #6e6e73; }
     .calculator-status.error { color: #b91c1c; }
     .calculator-status.success { color: #188038; }
+    .template-choice-dialog {
+      width: min(24rem, calc(100vw - 32px)); background: #fff; border-radius: 1rem;
+      border: 1px solid #e2e8f0; overflow: hidden; padding: 20px;
+      box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
+    }
+    #templateChoiceModal { background: rgba(15, 23, 42, 0.4); backdrop-filter: none; }
+    .template-choice-copy { padding: 0; background: #fff; }
+    .template-choice-brand {
+      margin-bottom: 4px; color: #94a3b8; font-size: 11px;
+      font-weight: 700; letter-spacing: 0.16em; text-transform: uppercase;
+    }
+    .template-choice-dialog h2 { font-size: 1.125rem; margin-bottom: 7px; color: #0f172a; }
+    .template-choice-dialog p { color: #64748b; font-size: 0.86rem; line-height: 1.5; }
+    .template-choice-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 0; margin-top: 16px; }
+    .template-choice-option {
+      min-height: 34px; border-radius: 999px; padding: 8px 16px; cursor: pointer;
+      font: inherit; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; transition: background 0.2s ease;
+    }
+    .template-choice-option.quilting { background: #0f172a; color: #fff; border: 0; }
+    .template-choice-option.quilting:hover { background: #334155; }
+    .template-choice-option.laser { background: #fff; color: #475569; border: 1px solid #e2e8f0; }
+    .template-choice-option.laser:hover { background: #f8fafc; }
+    .quilting-table { min-width: 760px; }
+    .quilting-table input, .quilting-table select {
+      width: 100%; min-width: 78px; border: 1px solid var(--border2); border-radius: 6px;
+      padding: 7px 8px; font: inherit; font-size: 0.82rem; background: #fff;
+    }
+    .quilting-file-row td { background: #f8fafc; font-weight: 700; }
+    .template-switch { white-space: nowrap; }
     @media (max-width: 860px) {
       .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .field-span-4 { grid-column: span 2; }
@@ -394,6 +424,7 @@
       .field-span-2, .field-span-4 { grid-column: span 1; }
       .calculator-actions { justify-content: stretch; }
       .calculator-actions button { flex: 1; }
+      .template-choice-actions { grid-template-columns: 1fr; }
     }
 
     /* ─── UTILITY ─── */
@@ -519,17 +550,23 @@
     .marker-controls .btn-pan:hover { background: #4b5563; border-color: #4b5563; }
     .marker-controls .btn-pan.active { background: #374151; border-color: #374151; box-shadow: inset 0 2px 4px rgba(0,0,0,0.3); }
     .marker-progress-wrap {
-      display: flex; align-items: center; gap: 0.625rem; flex: 1; max-width: 320px;
+      display: flex; align-items: center; gap: 0.625rem;
+      align-self: stretch;
+      min-height: 1.25rem;
+      padding: 0 0.25rem;
     }
     .marker-progress-bar {
-      flex: 1; height: 6px; background: var(--mborder-soft); border-radius: 3px; overflow: hidden;
+      flex: 1; height: 0.55rem; background: #d7dde8;
+      border: 1px solid #c5ccd8;
+      border-radius: 999px; overflow: hidden;
     }
     .marker-progress-fill {
-      height: 100%; background: var(--maccent); border-radius: 3px;
+      height: 100%; background: var(--maccent); border-radius: 999px;
       transition: width 0.25s ease; width: 0%;
     }
     .marker-progress-label {
       font-size: 0.72rem; color: var(--mtext-muted); white-space: nowrap; min-width: 3.5rem;
+      text-align: right;
     }
     .marker-layout {
       flex: 1; display: flex; overflow: hidden;
@@ -693,7 +730,7 @@
           Calculate Vector Lengths
         </button>
         <div style="display:flex;gap:6px">
-          <button id="markerBtn" type="button" class="calc-btn" disabled title="Coming soon" style="background:#6e6e73;border-color:#6e6e73;color:#fff;cursor:not-allowed;opacity:0.7">Marker (Coming Soon)</button>
+          <button id="markerBtn" type="button" class="calc-btn" onclick="openMarkerModal()" style="background:#7B68EE;border-color:#7B68EE;color:#fff">Marker</button>
         </div>
       </div>
     </div>
@@ -713,7 +750,7 @@
       <div id="fileResults"></div>
 
       <!-- Consumption Calculator -->
-      <section id="consumptionCalculator" class="consumption-card">
+      <section id="consumptionCalculator" class="consumption-card hidden">
         <div class="consumption-header">
           <div>
             <h2>Consumption Calculator</h2>
@@ -828,6 +865,60 @@
           <div id="calculatorStatus" class="calculator-status"></div>
         </div>
       </section>
+
+      <section id="quiltingCalculator" class="consumption-card hidden">
+        <div class="consumption-header">
+          <div>
+            <h2>Quilting Consumption</h2>
+            <p>Measured vectors become quilting line lengths. PIC can enter transition lengths before export.</p>
+          </div>
+          <button type="button" class="btn-secondary template-switch" onclick="showConsumptionTemplateChoice()">Change template</button>
+        </div>
+        <div class="consumption-body">
+          <div class="form-grid">
+            <div class="form-field">
+              <label for="quiltingStyle">Style / Project Name</label>
+              <input id="quiltingStyle" placeholder="Auto from filename" autocomplete="off">
+            </div>
+            <div class="form-field">
+              <label for="quiltingStage">Sample stage</label>
+              <input id="quiltingStage" value="P2" autocomplete="off">
+            </div>
+            <div class="form-field">
+              <label for="quiltingTechnician">Technician</label>
+              <input id="quiltingTechnician" placeholder="Technician PIC name" autocomplete="off">
+            </div>
+            <div class="form-field">
+              <label for="quiltingDate">Date completed</label>
+              <input id="quiltingDate" type="date">
+            </div>
+            <div class="form-field">
+              <label for="quiltingStitchType">Default stitch type</label>
+              <select id="quiltingStitchType" onchange="applyQuiltingStitchTypeToRows(this.value)"><option>QUILTING STITCH</option><option>STAY STITCH</option></select>
+            </div>
+            <div class="form-field">
+              <label for="quiltingRpm">Quilting RPM</label>
+              <input id="quiltingRpm" type="number" min="1" step="1" value="2200">
+            </div>
+            <div class="form-field">
+              <label for="quiltingTransitionRpm">Transition RPM</label>
+              <input id="quiltingTransitionRpm" type="number" min="1" step="1" value="2800">
+            </div>
+          </div>
+          <div class="preview-wrap">
+            <table class="consumption-table quilting-table">
+              <thead><tr><th>Part / line</th><th>Qty</th><th>Layer</th><th>Stitch type</th><th>Line length (cm)</th><th>Transition length (cm)</th><th></th></tr></thead>
+              <tbody id="quiltingRows"></tbody>
+            </table>
+          </div>
+          <div class="calculator-actions">
+            <button type="button" class="btn-secondary" onclick="showConsumptionTemplateChoice()">Change template</button>
+            <button type="button" class="btn-secondary" onclick="addQuiltingPart()">Add Part</button>
+            <button type="button" id="generateQuiltingExcelBtn" class="btn-primary" onclick="generateQuiltingExcel()">Generate Quilting Excel</button>
+          </div>
+          <div id="quiltingStatus" class="calculator-status"></div>
+        </div>
+      </section>
     </div>
 
     <!-- GLOBAL ERROR -->
@@ -836,6 +927,20 @@
     </div>
 
     <div style="height:48px;"></div>
+  </div>
+</div>
+
+<div id="templateChoiceModal" class="modal-overlay" style="display:none" role="dialog" aria-modal="true" aria-labelledby="templateChoiceTitle">
+  <div class="template-choice-dialog">
+    <div class="template-choice-copy">
+      <div class="template-choice-brand">M&amp;A Portal</div>
+      <h2 id="templateChoiceTitle">Choose consumption template</h2>
+      <p>Select the production workbook for the measured vectors.</p>
+    </div>
+    <div class="template-choice-actions">
+      <button type="button" id="chooseLaserTemplate" class="template-choice-option laser" onclick="selectConsumptionTemplate('laser')">Laser Consumption</button>
+      <button type="button" id="chooseQuiltingTemplate" class="template-choice-option quilting" onclick="selectConsumptionTemplate('quilting')">Quilting Consumption</button>
+    </div>
   </div>
 </div>
 
@@ -849,19 +954,14 @@
     <div class="modal-body">
       <div class="marker-toolbar">
         <div class="marker-controls">
-          <select id="nestingQuality" style="font-size:0.75rem;padding:2px 4px;vertical-align:middle">
-            <option value="shuffle-10">Standard (10 passes, MaxRects)</option>
-            <option value="strip-50" selected>Good (50 angles, polygon strip pack)</option>
-            <option value="strip-200">Best (200 angles, polygon strip pack + compaction)</option>
-            <option value="row-3">Rows (3 row arrangement)</option>
+          <select id="nestingQuality" style="display:none">
+            <option value="strip-200" selected>Adaptive Auto Nest</option>
           </select>
-          <label>Copies:
-            <input type="number" id="markerCopies" value="1" min="1" max="99" onfocus="this.select()" style="width:50px">
-          </label>
+          <input type="hidden" id="markerCopies" value="1">
           <label>Width mm:
             <input type="number" id="markerWidthMm" onfocus="this.select()" style="width:80px">
           </label>
-          <button class="btn btn-primary" onclick="runMarkerNesting()">Nest</button>
+          <button class="btn btn-primary" id="autoNestBtn" onclick="runMarkerNesting({ autoRows: 3 })">Auto Nest 3 Rows</button>
           <button class="btn btn-stop" id="markerStopBtn" style="display:none" onclick="stopNesting()">Stop &amp; Accept</button>
           <label>Angle:
             <input type="number" id="markerAngle" value="0" min="-360" max="360" step="1" style="width:50px" oninput="onAngleInput()">
@@ -912,6 +1012,9 @@
 <script src="app.js?v=pf2"></script>
 <script src="template-embedded.js?v=summary-breakdown-v10"></script>
 <script src="excel-export-pivot-free.js?v=summary-breakdown-v10"></script>
+<script src="quilting-template-embedded.js?v=1"></script>
+<script src="quilting-export.js?v=6"></script>
+<script src="https://cdn.jsdelivr.net/npm/clipper-lib@6.4.2/clipper.js"></script>
 <script src="marker-nesting.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -1101,6 +1204,7 @@
 
     document.getElementById('results').classList.remove('hidden');
     applyDetectedLaserColour();
+    if (validResults.length > 0) showConsumptionTemplateChoice();
   }
 
   /* Toggle accordion card */
@@ -1113,15 +1217,271 @@
   }
 
   const consumptionRows = [];
+  let selectedConsumptionTemplate = '';
+  let quiltingRows = [];
 
   /* Override clearAll to also clear consumption data */
   const _origClearAll2 = clearAll;
   clearAll = function() {
     consumptionRows.length = 0;
+    quiltingRows = [];
+    selectedConsumptionTemplate = '';
     var tb = document.getElementById('consumptionRows');
     if (tb) tb.innerHTML = '';
+    document.getElementById('templateChoiceModal').style.display = 'none';
+    document.getElementById('consumptionCalculator').classList.add('hidden');
+    document.getElementById('quiltingCalculator').classList.add('hidden');
     _origClearAll2();
   };
+
+  function showConsumptionTemplateChoice() {
+    const validResults = (calculationResults || []).filter(result => !result.error);
+    if (!validResults.length) return;
+    const modal = document.getElementById('templateChoiceModal');
+    modal.style.display = 'flex';
+    setTimeout(() => document.getElementById('chooseLaserTemplate').focus(), 0);
+  }
+
+  function selectConsumptionTemplate(template) {
+    selectedConsumptionTemplate = template;
+    document.getElementById('templateChoiceModal').style.display = 'none';
+    const laser = document.getElementById('consumptionCalculator');
+    const quilting = document.getElementById('quiltingCalculator');
+    laser.classList.toggle('hidden', template !== 'laser');
+    quilting.classList.toggle('hidden', template !== 'quilting');
+
+    if (template === 'quilting') {
+      initializeQuiltingRows();
+      quilting.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } else {
+      laser.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  }
+
+  function quiltingResultKey() {
+    return (calculationResults || []).filter(result => !result.error).map(result =>
+      `${result.fileName}:${(result.entities || []).map(entity => `${Number(entity.lengthCm || 0).toFixed(4)}:${entity.color ?? ''}:${entity.trueColor ?? ''}`).join(',')}`
+    ).join('|');
+  }
+
+  function quiltingEntityRole(entity) {
+    const trueColor = Number(entity.trueColor);
+    if (Number.isFinite(trueColor) && trueColor > 0) {
+      const red = (trueColor >> 16) & 0xff;
+      const green = (trueColor >> 8) & 0xff;
+      const blue = trueColor & 0xff;
+      if (red >= 160 && green <= 80 && blue <= 80) return 'transition';
+      if (green >= 160 && red <= 80 && blue <= 80) return 'stay';
+      if (blue >= 160 && green >= 140 && red <= 80) return 'quilting';
+    }
+    const aci = Math.abs(Number(entity.color));
+    if (aci === 1) return 'transition';
+    if (aci === 3) return 'stay';
+    if (aci === 4) return 'quilting';
+    return 'quilting';
+  }
+
+  function quiltingLinesFromEntities(entities) {
+    const lines = [];
+    const transitions = [];
+    (entities || []).forEach(entity => {
+      const role = quiltingEntityRole(entity);
+      if (role === 'transition') {
+        transitions.push(Number(entity.lengthCm || 0));
+        return;
+      }
+      lines.push({
+        lineNumber: lines.length + 1,
+        layer: entity.layer || '',
+        lengthCm: Number(entity.lengthCm || 0),
+        transitionCm: 0,
+        stitchType: role === 'stay' ? 'STAY STITCH' : 'QUILTING STITCH'
+      });
+    });
+    transitions.forEach((lengthCm, index) => {
+      if (!lines.length) return;
+      lines[Math.min(index, lines.length - 1)].transitionCm += lengthCm;
+    });
+    return lines;
+  }
+
+  function initializeQuiltingRows() {
+    const resultKey = quiltingResultKey();
+    if (quiltingRows.resultKey !== resultKey) {
+      quiltingRows = (calculationResults || []).filter(result => !result.error).map(result => ({
+        partName: fileNameWithoutExtension(result.fileName),
+        quantity: 1,
+        lines: quiltingLinesFromEntities(result.entities)
+      }));
+      quiltingRows.resultKey = resultKey;
+      document.getElementById('quiltingStyle').value = getFieldValue('styleName') || fileNameWithoutExtension(calculationResults[0]?.fileName || '');
+      document.getElementById('quiltingStage').value = getFieldValue('protoStage') || 'P2';
+    }
+
+    const style = document.getElementById('quiltingStyle');
+    const stage = document.getElementById('quiltingStage');
+    if (!style.value) style.value = getFieldValue('styleName') || fileNameWithoutExtension(calculationResults[0]?.fileName || '');
+    if (!stage.value) stage.value = getFieldValue('protoStage') || 'P2';
+    const date = document.getElementById('quiltingDate');
+    if (!date.value) {
+      const now = new Date();
+      date.value = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+    }
+    renderQuiltingRows();
+  }
+
+  function renderQuiltingRows() {
+    const tbody = document.getElementById('quiltingRows');
+    tbody.innerHTML = quiltingRows.map((part, partIndex) => {
+      const header = `<tr class="quilting-file-row">
+        <td><input aria-label="Part name" value="${escHtml(part.partName)}" onchange="updateQuiltingPart(${partIndex}, 'partName', this.value)"></td>
+        <td><input aria-label="Part quantity" type="number" min="1" step="1" value="${part.quantity}" onchange="updateQuiltingPart(${partIndex}, 'quantity', this.value)"></td>
+        <td colspan="4">${part.lines.length} line${part.lines.length === 1 ? '' : 's'}</td>
+        <td><button type="button" class="row-action" onclick="addQuiltingRow(${partIndex})">Add Row</button></td>
+      </tr>`;
+      const lines = part.lines.map((line, lineIndex) => `<tr>
+        <td>Line ${line.lineNumber}</td>
+        <td></td>
+        <td>${escHtml(line.layer)}</td>
+        <td><select aria-label="Stitch type" onchange="updateQuiltingStitchType(${partIndex}, ${lineIndex}, this.value)">
+          <option${line.stitchType === 'QUILTING STITCH' ? ' selected' : ''}>QUILTING STITCH</option>
+          <option${line.stitchType === 'STAY STITCH' ? ' selected' : ''}>STAY STITCH</option>
+        </select></td>
+        <td><input aria-label="Line length cm" type="number" min="0" step="0.0001" value="${line.lengthCm.toFixed(4)}" onchange="updateQuiltingLength(${partIndex}, ${lineIndex}, this.value)"></td>
+        <td><input aria-label="Transition length cm" type="number" min="0" step="0.0001" value="${Number(line.transitionCm || 0).toFixed(4)}" onchange="updateQuiltingTransition(${partIndex}, ${lineIndex}, this.value)"></td>
+        <td><button type="button" class="row-action danger" onclick="removeQuiltingRow(${partIndex}, ${lineIndex})">Remove</button></td>
+      </tr>`).join('');
+      return header + lines;
+    }).join('');
+  }
+
+  function updateQuiltingPart(partIndex, field, value) {
+    const part = quiltingRows[partIndex];
+    if (!part) return;
+    part[field] = field === 'quantity' ? Math.max(1, Math.floor(Number(value) || 1)) : String(value || '').trim();
+  }
+
+  function updateQuiltingTransition(partIndex, lineIndex, value) {
+    const line = quiltingRows[partIndex]?.lines[lineIndex];
+    if (line) line.transitionCm = Math.max(0, Number(value) || 0);
+  }
+
+  function updateQuiltingLength(partIndex, lineIndex, value) {
+    const line = quiltingRows[partIndex]?.lines[lineIndex];
+    if (line) line.lengthCm = Math.max(0, Number(value) || 0);
+  }
+
+  function updateQuiltingStitchType(partIndex, lineIndex, value) {
+    const line = quiltingRows[partIndex]?.lines[lineIndex];
+    if (line) line.stitchType = value === 'QUILTING STITCH' ? 'QUILTING STITCH' : 'STAY STITCH';
+  }
+
+  function applyQuiltingStitchTypeToRows(value) {
+    quiltingRows.forEach(part => part.lines.forEach(line => { line.stitchType = value; }));
+    renderQuiltingRows();
+  }
+
+  function addQuiltingRow(partIndex) {
+    const part = quiltingRows[partIndex];
+    if (!part) return;
+    part.lines.push({
+      lineNumber: part.lines.length + 1,
+      layer: 'Manual',
+      stitchType: getFieldValue('quiltingStitchType') || 'STAY STITCH',
+      lengthCm: 0,
+      transitionCm: 0
+    });
+    renderQuiltingRows();
+  }
+
+  function addQuiltingPart() {
+    const partNumber = quiltingRows.length + 1;
+    quiltingRows.push({
+      partName: `New Part ${partNumber}`,
+      quantity: 1,
+      lines: [{
+        lineNumber: 1,
+        layer: 'Manual',
+        stitchType: getFieldValue('quiltingStitchType') || 'QUILTING STITCH',
+        lengthCm: 0,
+        transitionCm: 0
+      }]
+    });
+    renderQuiltingRows();
+  }
+
+  function removeQuiltingRow(partIndex, lineIndex) {
+    const part = quiltingRows[partIndex];
+    if (!part) return;
+    part.lines.splice(lineIndex, 1);
+    part.lines.forEach((line, index) => { line.lineNumber = index + 1; });
+    renderQuiltingRows();
+  }
+
+  function setQuiltingStatus(message, state) {
+    const status = document.getElementById('quiltingStatus');
+    status.textContent = message || '';
+    status.classList.toggle('error', state === 'error');
+    status.classList.toggle('success', state === 'success');
+  }
+
+  function buildQuiltingExportParts() {
+    return quiltingRows.map((part, index) => ({
+      ...part,
+      previewImage: document.getElementById(`preview-${index}`)?.toDataURL('image/png') || ''
+    }));
+  }
+
+  function buildQuiltingCoverImage(parts) {
+    const sources = parts.map((part, index) => ({
+      part,
+      canvas: document.getElementById(`preview-${index}`)
+    })).filter(item => item.canvas);
+    if (!sources.length) return '';
+    const canvas = document.createElement('canvas');
+    canvas.width = 1200;
+    canvas.height = 300;
+    const context = canvas.getContext('2d');
+    context.fillStyle = '#fff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    const cellWidth = canvas.width / sources.length;
+    sources.forEach((item, index) => {
+      context.fillStyle = '#1d1d1f';
+      context.font = 'bold 24px system-ui, sans-serif';
+      context.textAlign = 'center';
+      context.fillText(`${item.part.partName} x${item.part.quantity}`, cellWidth * (index + 0.5), 34);
+      const scale = Math.min((cellWidth - 28) / item.canvas.width, 230 / item.canvas.height);
+      const width = item.canvas.width * scale;
+      const height = item.canvas.height * scale;
+      context.drawImage(item.canvas, cellWidth * index + (cellWidth - width) / 2, 52, width, height);
+    });
+    return canvas.toDataURL('image/png');
+  }
+
+  async function generateQuiltingExcel() {
+    const button = document.getElementById('generateQuiltingExcelBtn');
+    button.disabled = true;
+    setQuiltingStatus('Generating quilting consumption workbook...', '');
+    try {
+      const parts = buildQuiltingExportParts();
+      await window.generateQuiltingExcelBrowser({
+        style: getFieldValue('quiltingStyle'),
+        stage: getFieldValue('quiltingStage'),
+        technician: getFieldValue('quiltingTechnician'),
+        completedDate: getFieldValue('quiltingDate'),
+        stitchType: getFieldValue('quiltingStitchType'),
+        rpm: getNumberField('quiltingRpm'),
+        transitionRpm: getNumberField('quiltingTransitionRpm'),
+        coverImage: buildQuiltingCoverImage(parts),
+        parts
+      }, { downloadBlob });
+      setQuiltingStatus('Quilting consumption workbook downloaded.', 'success');
+    } catch (err) {
+      setQuiltingStatus(err.message || String(err), 'error');
+    } finally {
+      button.disabled = false;
+    }
+  }
   let materialMasterData = { materials: [], actions: [], colors: [], options: {} };
   let editingConsumptionRowIndex = null;
 
@@ -1360,6 +1720,7 @@
     _isPanning = false;
     _angleInputBase = 0;
     _manualPartName = '';
+    _lastNestSummary = '';
     _canvasTransform = null;
     _nestInset = 10;
     // Reset marker inputs to defaults
@@ -1368,7 +1729,7 @@
     var widthInput = document.getElementById('markerWidthMm');
     if (widthInput) widthInput.value = '1500';
     var qualitySelect = document.getElementById('nestingQuality');
-    if (qualitySelect) qualitySelect.value = 'strip-50';
+    if (qualitySelect) qualitySelect.value = 'strip-200';
     var angleInput = document.getElementById('markerAngle');
     if (angleInput) angleInput.value = '0';
     var zoomLabel = document.getElementById('markerZoomLevel');
@@ -1632,6 +1993,7 @@
   let _manualPartName = '';
   let _nestStartTime = 0;
   let _nestInset = 10;
+  let _lastNestSummary = '';
 
   async function openMarkerModal() {
     // Auto-parse uploaded files if not yet parsed
@@ -1722,7 +2084,7 @@
       partList.innerHTML = '<p style="color:#6e6e73">No parsed vector files available. Upload and calculate first.</p>';
       document.getElementById('markerStatus').textContent = 'Upload DXF/PDF/SVG files and run calculation first.';
     } else {
-      document.getElementById('markerStatus').textContent = `${markerParts.length} parts from ${markerSourceResults.length} file(s). Click Nest to arrange.`;
+      document.getElementById('markerStatus').textContent = `${markerParts.length} parts from ${markerSourceResults.length} file(s). Click Auto Nest 3 Rows to arrange.`;
       document.querySelectorAll('#markerPartList input[type="checkbox"]').forEach(function(cb) {
         cb.addEventListener('change', updateMarkerBreakdown);
       });
@@ -1785,12 +2147,9 @@
         });
       });
       document.getElementById('markerCopies').addEventListener('input', updateMarkerBreakdown);
-      // Add Enter key handlers for copies and width to trigger nesting
-      document.getElementById('markerCopies').addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') { e.preventDefault(); runMarkerNesting(); }
-      });
+      // Width Enter uses the same automatic three-row workflow as the button.
       document.getElementById('markerWidthMm').addEventListener('keydown', function(e) {
-        if (e.key === 'Enter') { e.preventDefault(); runMarkerNesting(); }
+        if (e.key === 'Enter') { e.preventDefault(); runMarkerNesting({ autoRows: 3 }); }
       });
       updateMarkerBreakdown();
     }
@@ -1909,13 +2268,10 @@
 
   function stopNesting() {
     document.getElementById('markerStopBtn').style.display = 'none';
-    document.getElementById('markerProgressLabel').textContent = 'Stopping...';
+    document.getElementById('markerProgressLabel').textContent = 'Finalizing...';
     MarkerNesting.stop();
-    if (markerPlacements.length > 0) {
-      var len = MarkerNesting.computeMarkerLength(markerPlacements);
-      var elapsed = _nestStartTime > 0 ? fmtTime(Date.now() - _nestStartTime) : '';
-      document.getElementById('markerStatus').textContent = 'Stopped: best length: ' + (len / 1000).toFixed(4) + ' m' + (elapsed ? '  [' + elapsed + ']' : '');
-    }
+    var elapsed = _nestStartTime > 0 ? fmtTime(Date.now() - _nestStartTime) : '';
+    document.getElementById('markerStatus').textContent = 'Stopping: validating accepted layout' + (elapsed ? '  [' + elapsed + ']' : '');
   }
 
   function fmtTime(ms) {
@@ -1924,14 +2280,75 @@
     return m > 0 ? m + 'm ' + s + 's' : s + '.' + Math.floor(ms % 1000 / 100) + 's';
   }
 
-  async function runMarkerNesting() {
-    // Immediate UI feedback - disable Nest button and show loading
-    const nestBtn = Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Nest' || b.textContent.trim() === 'Nesting...');
+  function calculateAutoNestCopies(baseParts, widthMm, inset, mirrorOn, rows) {
+    var available = Math.max(1, widthMm - inset * 2);
+    var prepared = JSON.parse(JSON.stringify(baseParts || []));
+    var borders = [], preparedCount = 0;
+    prepared.forEach(function(part) {
+      MarkerNesting.normalizePartGeometry(part);
+      var border = part._sP ? MarkerNesting.computeAutoOffset(part, 1) : MarkerNesting.offsetPolygon(part.points || [], 1);
+      if (!border || border.length < 3) return;
+      borders.push(border);
+      preparedCount++;
+    });
+    if (preparedCount === 0) return 1;
+    var slotsPerRow = 1, bestConsumption = Infinity;
+    for (var angle = 0; angle < 180; angle += preparedCount === 1 ? 5 : 1) {
+      var radians = angle * Math.PI / 180, cos = Math.cos(radians), sin = Math.sin(radians);
+      var maxWidth = 0, maxHeight = 0, rotatedBorders = [];
+      borders.forEach(function(border) {
+        var minX = Infinity, maxX = -Infinity, minY = Infinity, maxY = -Infinity;
+        var rotated = border.map(function(point) {
+          var x = point.x * cos - point.y * sin;
+          var y = point.x * sin + point.y * cos;
+          minX = Math.min(minX, x); maxX = Math.max(maxX, x);
+          minY = Math.min(minY, y); maxY = Math.max(maxY, y);
+          return { x: x, y: y };
+        });
+        rotatedBorders.push(rotated.map(function(point) { return { x: point.x - minX, y: point.y - minY }; }));
+        maxWidth = Math.max(maxWidth, maxX - minX);
+        maxHeight = Math.max(maxHeight, maxY - minY);
+      });
+      if (!isFinite(maxWidth) || maxWidth <= 0 || !isFinite(maxHeight) || maxHeight <= 0) continue;
+      var angleSlots;
+      if (preparedCount === 1) {
+        var searchBorder = MarkerNesting._samplePoly(rotatedBorders[0], 180);
+        function overlapsAt(shift) {
+          var moved = searchBorder.map(function(point) { return { x: point.x + shift, y: point.y }; });
+          return MarkerNesting._polyOverlapStrict(searchBorder, moved);
+        }
+        var blocked = 0, clear = maxWidth;
+        for (var pitchPass = 0; pitchPass < 10; pitchPass++) {
+          var middle = (blocked + clear) / 2;
+          if (overlapsAt(middle)) blocked = middle;
+          else clear = middle;
+        }
+        var pitch = clear + 0.1;
+        angleSlots = Math.max(1, Math.floor((available - maxWidth) / pitch) + 1);
+        while (angleSlots > 1 && maxWidth + pitch * (angleSlots - 1) > available + 0.01) angleSlots--;
+      } else {
+        angleSlots = Math.max(1, Math.floor(available / (maxWidth + 0.5)));
+      }
+      var consumption = maxHeight / angleSlots;
+      if (consumption < bestConsumption) {
+        bestConsumption = consumption;
+        slotsPerRow = angleSlots;
+      }
+    }
+    var physicalRows = mirrorOn ? rows * 2 : rows;
+    var physicalPartsPerCopy = preparedCount * (mirrorOn ? 2 : 1);
+    return Math.max(1, Math.min(99, Math.floor(slotsPerRow * physicalRows / physicalPartsPerCopy)));
+  }
+
+  async function runMarkerNesting(options) {
+    options = options || {};
+    // Immediate UI feedback for the automatic three-row workflow.
+    const nestBtn = document.getElementById('autoNestBtn');
     if (nestBtn && nestBtn.disabled) return; // debounce
     if (nestBtn) { nestBtn.disabled = true; nestBtn.textContent = 'Nesting...'; }
     const status = document.getElementById('markerStatus');
     status.textContent = 'Preparing parts...';
-    const copies = parseInt(document.getElementById('markerCopies').value) || 1;
+    let copies = parseInt(document.getElementById('markerCopies').value) || 1;
     const startTime = Date.now(); _nestStartTime = startTime;
 
     // Rebuild parts from selected entities, not pre-built markerParts
@@ -2013,6 +2430,15 @@
     var rowMode = mode === 'row';
     var rowCount = rowMode ? parseInt(parts_[1]) || 3 : 0;
 
+    if (options.autoRows) {
+      mode = 'strip';
+      rowMode = false;
+      rowCount = options.autoRows;
+      copies = calculateAutoNestCopies(parts, markerWidthMm, inset, hasPair, options.autoRows);
+      document.getElementById('markerCopies').value = copies;
+      updateMarkerBreakdown();
+    }
+
     if (hasPair || copies > 1) {
       // Mirror layout is optimized by strip worker via pairEn — do not pre-build mirror copies
       parts = MarkerNesting.createPartsWithCopies(parts, copies, { skipMirrors: hasPair });
@@ -2027,54 +2453,51 @@
       }
     });
 
-    // Translate each part so its bounding box min corner is at (0,0)
-    // Ensures the nesting library packs within [0, effWidth] without shape edges
-    // extending outside the packing space due to negative DXF coordinates.
-    parts.forEach(function(p) {
-      var allVerts = [];
-      if (p._sP) {
-        p._sP.forEach(function(sp) { sp.forEach(function(v) { allVerts.push(v); }); });
-      } else {
-        p.points.forEach(function(v) { allVerts.push(v); });
-      }
-      var minX = Infinity, minY = Infinity;
-      for (var ti = 0; ti < allVerts.length; ti++) {
-        if (allVerts[ti].x < minX) minX = allVerts[ti].x;
-        if (allVerts[ti].y < minY) minY = allVerts[ti].y;
-      }
-      console.log('PRE-TRANSLATE: id=' + p.id + ' p.points[0]=(' + p.points[0].x.toFixed(3) + ',' + p.points[0].y.toFixed(3) + ') minX=' + minX.toFixed(3) + ' minY=' + minY.toFixed(3));
-      if (minX !== 0 || minY !== 0) {
-        if (p._sP) {
-          p._sP = p._sP.map(function(sp) { return sp.map(function(v) { return { x: v.x - minX, y: v.y - minY }; }); });
-        }
-        p.points = p.points.map(function(v) { return { x: v.x - minX, y: v.y - minY }; });
-        console.log('POST-TRANSLATE: id=' + p.id + ' p.points[0]=(' + p.points[0].x.toFixed(3) + ',' + p.points[0].y.toFixed(3) + ')');
-      } else {
-        console.log('TRANSLATE SKIPPED: id=' + p.id + ' (already at origin)');
-      }
-    });
+    parts.forEach(function(p) { MarkerNesting.normalizePartGeometry(p); });
 
-    // Diagnostic: check if parts have _sP
-    parts.forEach(function(p) { console.log('HASS: id=' + p.id + ' _sP=' + (p._sP ? 'yes(' + p._sP.length + ')' : 'no') + ' ptsLen=' + (p.points ? p.points.length : 0)); });
-    // Apply 1mm offset to all parts before nesting (packing shape = offset polygon)
+    var partBorderMm = 1;
+    var offsetCache = Object.create(null);
+    function clonePointList(list) {
+      return (list || []).map(function(v) { return { x: v.x, y: v.y }; });
+    }
+    // Apply outward border to all parts before nesting (packing shape = offset polygon)
     parts.forEach(function(p) {
+      var cacheKey = (p.sourceFileName || '') + '|' + p.sourceId + '|' + (p._groupId || '') + '|' + (p._sP ? 'group' : 'part');
+      var cached = offsetCache[cacheKey];
+      if (cached) {
+        p._originalPoints = clonePointList(cached.originalPoints);
+        p._originalSP = cached.originalSP ? cached.originalSP.map(clonePointList) : null;
+        p.points = clonePointList(cached.points);
+        if (cached.childOffsets) p.points._childOffsets = cached.childOffsets.map(clonePointList);
+        p._offsetValidated = cached.offsetValidated;
+        MarkerNesting.refreshPartBounds(p);
+        return;
+      }
       if (p._sP) {
         // Composite: store original children, use offset hull as packing shape
         p._originalSP = p._sP.map(function(sp) { return sp.map(function(v) { return {x: v.x, y: v.y}; }); });
         p._originalPoints = p.points.map(function(v) { return {x: v.x, y: v.y}; });
-        p.points = MarkerNesting.computeAutoOffset(p, 1);
+        p.points = MarkerNesting.computeAutoOffset(p, partBorderMm);
       } else {
         // Individual: store original polygon, offset for packing
         p._originalPoints = p.points.map(function(v) { return {x: v.x, y: v.y}; });
-        p.points = MarkerNesting.offsetPolygon(p.points, 1);
-        // Verify offset polygon min/max
-        var offMx = Infinity, offNx = -Infinity;
-        p.points.forEach(function(v) { if (v.x < offMx) offMx = v.x; if (v.x > offNx) offNx = v.x; });
-        console.log('OFFSET: id=' + p.id + ' minX=' + offMx.toFixed(3) + ' maxX=' + offNx.toFixed(3));
+        p.points = MarkerNesting.offsetPolygon(p._originalPoints, partBorderMm);
+        if (!MarkerNesting._validateOffsetContainment(p._originalPoints, p.points)) {
+          p.points = MarkerNesting.offsetPolygon(MarkerNesting.convexHull(p._originalPoints), partBorderMm);
+        }
+        p._offsetValidated = MarkerNesting._validateOffsetContainment(p._originalPoints, p.points);
       }
+      offsetCache[cacheKey] = {
+        originalPoints: clonePointList(p._originalPoints),
+        originalSP: p._originalSP ? p._originalSP.map(clonePointList) : null,
+        points: clonePointList(p.points),
+        childOffsets: p.points && p.points._childOffsets ? p.points._childOffsets.map(clonePointList) : null,
+        offsetValidated: !!p._offsetValidated
+      };
+      MarkerNesting.refreshPartBounds(p);
     });
 
-    status.textContent = `Nesting ${parts.length} pieces (${copies} input copy/copies, ${hasPair ? 'mirror on' : 'mirror off'}, 1mm offset)...`;
+    status.textContent = `Nesting ${parts.length} pieces (${copies} input copy/copies, ${hasPair ? 'mirror on' : 'mirror off'}, ${partBorderMm}mm border)...`;
     document.getElementById('markerProgressWrap').style.display = 'flex';
     document.getElementById('markerProgressFill').style.width = '0%';
     document.getElementById('markerProgressLabel').textContent = '0%';
@@ -2217,34 +2640,66 @@
           window._rejectedPlacements.push({ id: pl.id, mirror: pl._m, rot: pl.rotation, idx: qi, src: allPts[qi].src, reason: 'x out of bounds', pt: allPts[qi], ins: ins, bw: bw });
           return false;
         }
-        if (allPts[qi].y < -0.5) {
-          window._rejectedPlacements.push({ id: pl.id, mirror: pl._m, rot: pl.rotation, idx: qi, src: allPts[qi].src, reason: 'y out of bounds', pt: allPts[qi] });
+        if (allPts[qi].y < ins - 0.5) {
+          window._rejectedPlacements.push({ id: pl.id, mirror: pl._m, rot: pl.rotation, idx: qi, src: allPts[qi].src, reason: 'y out of bounds', pt: allPts[qi], ins: ins });
           return false;
         }
       }
       return true;
     }
 
+    function expectedPlacementCount() {
+      var expected = 0;
+      for (var pi = 0; pi < parts.length; pi++) {
+        var p = parts[pi];
+        expected += (p._sP && Array.isArray(p._sP)) ? p._sP.length : 1;
+      }
+      return hasPair ? expected * 2 : expected;
+    }
+
+    var actualExpected = expectedPlacementCount();
+
+    function previewLooksSafe(placements) {
+      if (!placements || placements.length !== actualExpected) return false;
+      return MarkerNesting._checkNestingValidity(placements, parts, markerWidthMm, inset, hasPair).valid;
+    }
+
+    var lastPreviewRender = 0;
+    var initialValidLength = 0;
+    var safePreview = MarkerNesting._deterministicFallbackRepack(parts, markerWidthMm, inset, hasPair, markerWidthMm - 2 * inset);
+    if (safePreview && safePreview.placements && safePreview.placements.length === actualExpected) {
+      markerPlacements = MarkerNesting.expandCompositePlacements(safePreview.placements);
+      window.markerPlacements = markerPlacements;
+      markerSelectedIdx = -1;
+      markerSelectedIndices = [];
+      renderMarkerCanvas();
+      initialValidLength = MarkerNesting.computeMarkerLength(markerPlacements) + inset;
+      await new Promise(function(next) { setTimeout(next, 0); });
+    }
     try {
-      const result = await MarkerNesting.runNesting(parts, markerWidthMm, {
+      let result = await MarkerNesting.runNesting(parts, markerWidthMm, {
         mode: rowMode ? 'row' : mode,
         iterations: iterations,
         pairEn: hasPair,
         inset: inset,
         rows: rowCount,
+        autoRows: options.autoRows || 0,
         onProgress: function(pass, total, bestLen, placements, pct, phase) {
           var elapsed = fmtTime(Date.now() - startTime);
+          // Cap progress at 95% until final validation is complete
+          var displayPct = Math.min(pct || 0, 95);
           if (typeof pct === 'number') {
-            var phaseLabel = phase === 'coarse' ? 'Scanning angles' : (phase === 'refine' ? 'Refining' : 'Fine-tuning');
+            var phaseLabel = phase === 'coarse' ? 'Scanning angles' : (phase === 'refine' ? 'Refining' : (phase === 'finalizing' ? 'Validating exact layout' : 'Fine-tuning'));
             status.textContent = `Nesting: ${phaseLabel}... best length: ${(bestLen / 1000).toFixed(4)} m  [${elapsed}]`;
-            document.getElementById('markerProgressFill').style.width = pct + '%';
-            document.getElementById('markerProgressLabel').textContent = pct + '%';
+            document.getElementById('markerProgressFill').style.width = displayPct + '%';
+            document.getElementById('markerProgressLabel').textContent = displayPct + '%';
           } else {
             status.textContent = `Nesting: ${pass}/${total}, best length: ${(bestLen / 1000).toFixed(4)} m  [${elapsed}]`;
           }
-          if (placements) {
-            attachPartData(placements);
-            markerPlacements = MarkerNesting.expandCompositePlacements(placements);
+          if (phase === 'validated' && placements && placements.length === actualExpected && Date.now() - lastPreviewRender >= 160) {
+            lastPreviewRender = Date.now();
+            var previewPlacements = MarkerNesting.expandCompositePlacements(placements);
+            markerPlacements = previewPlacements;
             window.markerPlacements = markerPlacements;
             markerSelectedIdx = -1;
             markerSelectedIndices = [];
@@ -2252,7 +2707,54 @@
           }
         }
       });
+      status.textContent = 'Validating nesting geometry...  [' + fmtTime(Date.now() - startTime) + ']';
+      document.getElementById('markerProgressFill').style.width = '95%';
+      document.getElementById('markerProgressLabel').textContent = 'Validating...';
+      if (result.stopped) {
+        var stoppedElapsed = fmtTime(Date.now() - startTime);
+        status.textContent = 'Stop accepted: validating final layout...  [' + stoppedElapsed + ']';
+        var stoppedPlacements = markerPlacements && markerPlacements.length === actualExpected ? markerPlacements : [];
+        var stoppedCheck = stoppedPlacements.length ? MarkerNesting._checkNestingValidity(stoppedPlacements, parts, markerWidthMm, inset, hasPair) : { valid: false };
+        var fallbackResult = stoppedCheck.valid
+          ? { placements: stoppedPlacements, markerLengthMm: MarkerNesting.computeMarkerLength(stoppedPlacements) }
+          : MarkerNesting._deterministicFallbackRepack(parts, markerWidthMm, inset, hasPair, markerWidthMm - 2 * inset);
+        if (fallbackResult && fallbackResult.placements && fallbackResult.placements.length > 0) {
+          var fv = MarkerNesting._checkNestingValidity(fallbackResult.placements, parts, markerWidthMm, inset, hasPair);
+          result = fv.valid
+            ? { placements: fallbackResult.placements, markerLengthMm: fallbackResult.markerLengthMm, validityIssues: [], stopped: true }
+            : { placements: [], markerLengthMm: 0, validityIssues: fv.issues, stopped: true };
+        } else {
+          result = { placements: [], markerLengthMm: 0, validityIssues: ['No valid stopped layout'], stopped: true };
+        }
+      }
+      // Check for validity issues from the strict gate
+      if (result.validityIssues && result.validityIssues.length > 0) {
+        status.textContent = 'Nesting FAILED validity: ' + result.validityIssues.slice(0, 3).join('; ') + (result.validityIssues.length > 3 ? '...' : '');
+        markerPlacements = [];
+        window.markerPlacements = [];
+        document.getElementById('markerProgressWrap').style.display = 'none';
+        document.getElementById('markerStopBtn').style.display = 'none';
+        var nb = document.getElementById('autoNestBtn');
+        if (nb) { nb.disabled = false; nb.textContent = 'Auto Nest 3 Rows'; }
+        markerSelectedIdx = -1; markerSelectedIndices = [];
+        markerDragIdx = -1; _angleInputBase = 0;
+        renderMarkerCanvas();
+        return;
+      }
       var rawPl = result.placements || [];
+      if (rawPl.length === 0) {
+        status.textContent = 'Nesting failed: no valid placement found.';
+        markerPlacements = [];
+        window.markerPlacements = [];
+        document.getElementById('markerProgressWrap').style.display = 'none';
+        document.getElementById('markerStopBtn').style.display = 'none';
+        var nb = document.getElementById('autoNestBtn');
+        if (nb) { nb.disabled = false; nb.textContent = 'Auto Nest 3 Rows'; }
+        markerSelectedIdx = -1; markerSelectedIndices = [];
+        markerDragIdx = -1; _angleInputBase = 0;
+        renderMarkerCanvas();
+        return;
+      }
       // Diagnostic: capture raw placements before any main-thread processing
       window._rawPlacementRanges = rawPl.map(function(p) {
         var mx=Infinity, nx=-Infinity;
@@ -2266,6 +2768,18 @@
       });
       attachPartData(rawPl);
       var expandedPl = MarkerNesting.expandCompositePlacements(rawPl);
+      if (expandedPl.length !== actualExpected) {
+        var repairResult = MarkerNesting._deterministicFallbackRepack(parts, markerWidthMm, inset, hasPair, markerWidthMm - 2 * inset);
+        if (repairResult && repairResult.placements && repairResult.placements.length > 0) {
+          var repairCheck = MarkerNesting._checkNestingValidity(repairResult.placements, parts, markerWidthMm, inset, hasPair);
+          if (repairCheck.valid) {
+            rawPl = repairResult.placements;
+            attachPartData(rawPl);
+            expandedPl = MarkerNesting.expandCompositePlacements(rawPl);
+            result.markerLengthMm = repairResult.markerLengthMm;
+          }
+        }
+      }
       // Diagnostic: capture expanded placements before validation
       if (!window._preValidation) window._preValidation = [];
       window._preValidation = expandedPl.map(function(p) {
@@ -2278,33 +2792,100 @@
         return { id: p.id, mirror: p._m, rot: p.rotation, minX: mx, maxX: nx, minY: my, maxY: ny, ptCount: pts.length };
       });
       // Validate all placements are within boundary
-      var validPl = [];
+      var invalidIds = [];
       for (var vi = 0; vi < expandedPl.length; vi++) {
-        if (isValidPlacement(expandedPl[vi], markerWidthMm, inset)) {
-          validPl.push(expandedPl[vi]);
+        if (!isValidPlacement(expandedPl[vi], markerWidthMm, inset)) {
+          invalidIds.push(vi);
         }
       }
-      markerPlacements = validPl;
-      window.markerPlacements = validPl;
-      const markerLen = MarkerNesting.computeMarkerLength(markerPlacements);
-      var totalTime = fmtTime(Date.now() - startTime);
-      if (validPl.length < expandedPl.length) {
-        status.textContent = `Nesting warning: ${expandedPl.length - validPl.length} placement(s) violated boundary, removed. Marker length: ${(markerLen / 1000).toFixed(4)} m  [${totalTime}]`;
-      } else {
-        status.textContent = `Nesting complete: ${(markerLen / 1000).toFixed(4)} m  [${totalTime}]` +
-          (validPl.length < parts.length ? ` (${parts.length - validPl.length} unplaced)` : '');
+      if (invalidIds.length > 0) {
+        status.textContent = `Nesting FAILED: ${invalidIds.length} placement(s) invalid (boundary/geometry).`;
+        markerPlacements = [];
+        window.markerPlacements = [];
+        document.getElementById('markerProgressWrap').style.display = 'none';
+        document.getElementById('markerStopBtn').style.display = 'none';
+        var nb = document.getElementById('autoNestBtn');
+        if (nb) { nb.disabled = false; nb.textContent = 'Auto Nest 3 Rows'; }
+        markerSelectedIdx = -1;
+        markerSelectedIndices = [];
+        markerDragIdx = -1;
+        _angleInputBase = 0;
+        renderMarkerCanvas();
+        return;
       }
+      if (expandedPl.length !== actualExpected) {
+        status.textContent = `Nesting FAILED: expected ${actualExpected} pieces, got ${expandedPl.length}.`;
+        markerPlacements = [];
+        window.markerPlacements = [];
+        document.getElementById('markerProgressWrap').style.display = 'none';
+        document.getElementById('markerStopBtn').style.display = 'none';
+        var nb = document.getElementById('autoNestBtn');
+        if (nb) { nb.disabled = false; nb.textContent = 'Auto Nest 3 Rows'; }
+        markerSelectedIdx = -1;
+        markerSelectedIndices = [];
+        markerDragIdx = -1;
+        _angleInputBase = 0;
+        renderMarkerCanvas();
+        return;
+      }
+      if (!result.validityChecked && !previewLooksSafe(expandedPl)) {
+        status.textContent = 'Nesting FAILED: overlap detected during final validation.';
+        markerPlacements = [];
+        window.markerPlacements = [];
+        document.getElementById('markerProgressWrap').style.display = 'none';
+        document.getElementById('markerStopBtn').style.display = 'none';
+        var nb = document.getElementById('autoNestBtn');
+        if (nb) { nb.disabled = false; nb.textContent = 'Auto Nest 3 Rows'; }
+        markerSelectedIdx = -1;
+        markerSelectedIndices = [];
+        markerDragIdx = -1;
+        _angleInputBase = 0;
+        renderMarkerCanvas();
+        return;
+      }
+      markerPlacements = expandedPl;
+      window.markerPlacements = expandedPl;
+      // Consumption includes the trailing material boundary, matching the
+      // marker frame and PDF rather than only the last vector coordinate.
+      const markerLen = MarkerNesting.computeMarkerLength(markerPlacements) + inset;
+      
+      var countMismatch = markerPlacements.length !== actualExpected;
+      
+      // Show finalizing status
+      status.textContent = `Finalizing... ${markerPlacements.length}/${actualExpected} pieces`;
+      document.getElementById('markerProgressFill').style.width = '98%';
+      document.getElementById('markerProgressLabel').textContent = '98%';
 
       markerSelectedIdx = -1;
       markerSelectedIndices = [];
       markerDragIdx = -1;
       _angleInputBase = 0;
       renderMarkerCanvas();
+
+      // Completion includes exact validation and the final canvas render.
+      document.getElementById('markerProgressFill').style.width = '100%';
+      document.getElementById('markerProgressLabel').textContent = '100%';
+      var totalTime = fmtTime(Date.now() - startTime);
+      function polygonArea(points) {
+        var area = 0;
+        for (var ai = 0, aj = points.length - 1; ai < points.length; aj = ai++) area += points[aj].x * points[ai].y - points[ai].x * points[aj].y;
+        return Math.abs(area) / 2;
+      }
+      var originalArea = markerPlacements.reduce(function(total, placement) {
+        var original = placement._originalPoints || [];
+        return total + (Array.isArray(original) && original.length >= 3 ? polygonArea(original) : 0);
+      }, 0);
+      var utilization = markerLen > 0 ? originalArea / (markerWidthMm * markerLen) * 100 : 0;
+      var savings = initialValidLength > 0 ? Math.max(0, (initialValidLength - markerLen) / initialValidLength * 100) : 0;
+      var statusMsg = `${result.stopped ? 'Nesting stopped/accepted' : 'Nesting complete'}: ${(markerLen / 1000).toFixed(4)} m, ${utilization.toFixed(1)}% utilization, ${savings.toFixed(1)}% saved, ${partBorderMm}mm border  [${totalTime}]`;
+      if (countMismatch) statusMsg += ` WARNING: expected ${actualExpected} pieces, got ${markerPlacements.length}`;
+      status.textContent = statusMsg;
+      _lastNestSummary = statusMsg;
       document.getElementById('markerProgressWrap').style.display = 'none';
       document.getElementById('markerStopBtn').style.display = 'none';
       // Re-enable Nest button
-      var nb = Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Nesting...');
-      if (nb) { nb.disabled = false; nb.textContent = 'Nest'; }
+      var nb = document.getElementById('autoNestBtn');
+      if (nb) { nb.disabled = false; nb.textContent = 'Auto Nest 3 Rows'; }
     } catch (err) {
       var elapsedErr = fmtTime(Date.now() - startTime);
       status.textContent = 'Nesting failed: ' + (err.message || err) + '  [' + elapsedErr + ']';
@@ -2313,8 +2894,8 @@
       document.getElementById('markerProgressWrap').style.display = 'none';
       document.getElementById('markerStopBtn').style.display = 'none';
       // Re-enable Nest button
-      var nb = Array.from(document.querySelectorAll('button')).find(b => b.textContent.trim() === 'Nesting...');
-      if (nb) { nb.disabled = false; nb.textContent = 'Nest'; }
+      var nb = document.getElementById('autoNestBtn');
+      if (nb) { nb.disabled = false; nb.textContent = 'Auto Nest 3 Rows'; }
       markerDragIdx = -1;
       _angleInputBase = 0;
       renderMarkerCanvas();
@@ -2421,7 +3002,9 @@
     var canvas = document.getElementById('markerCanvas');
     if (btn) btn.classList.toggle('active', _markerPanMode);
     if (canvas) canvas.style.cursor = _markerPanMode ? 'grab' : 'default';
-    if (statusText) document.getElementById('markerStatus').textContent = statusText;
+    if (statusText) {
+      document.getElementById('markerStatus').textContent = _lastNestSummary ? statusText + ' Last: ' + _lastNestSummary : statusText;
+    }
     _isPanning = false;
   }
 
@@ -2663,10 +3246,15 @@
     el.innerHTML = info.lines.join('<br>');
   }
 
+  function markerMaterialLengthMm() {
+    if (!markerPlacements || markerPlacements.length === 0) return 0;
+    return MarkerNesting.computeMarkerLength(markerPlacements) + (typeof _nestInset === 'number' ? _nestInset : 10);
+  }
+
   function renderMarkerCanvas() {
     var canvas = document.getElementById('markerCanvas');
     var nestInset = typeof _nestInset === 'number' ? _nestInset : 10;
-    _canvasTransform = MarkerNesting.renderToCanvas(canvas, markerPlacements, markerWidthMm, { inset: nestInset, zoom: _markerZoom, panX: _markerPanX, panY: _markerPanY });
+    _canvasTransform = MarkerNesting.renderToCanvas(canvas, markerPlacements, markerWidthMm, { inset: nestInset, zoom: _markerZoom, panX: _markerPanX, panY: _markerPanY, previewMaxPoints: 600 });
     if (!_canvasTransform) return;
     displayMarkerConsumption();
     if (markerSelectedIndices.length === 0) return;
@@ -2697,6 +3285,7 @@
     var info = { lines: [], dxfName: '', dxfQty: 1, im: '', materialType: '', materialWidth: 0, garmentQty: 0, markerLenM: 0, mPerGmt: 0 };
     if (!markerPlacements || markerPlacements.length === 0) return info;
     var totalPieces = markerPlacements.length;
+    var logicalPieces = markerPlacements.reduce(function(total, placement) { return total + (placement._m ? 0 : 1); }, 0) || totalPieces;
     info.markerLenM = (_canvasTransform && _canvasTransform.markerLengthMm ? _canvasTransform.markerLengthMm : 0) / 1000;
     // Find matching consumption row from the first file source
     var matchedRow = null;
@@ -2724,7 +3313,7 @@
         }
       }
     }
-    info.garmentQty = info.dxfQty > 0 ? Math.round(totalPieces / info.dxfQty) : totalPieces;
+    info.garmentQty = info.dxfQty > 0 ? Math.round(logicalPieces / info.dxfQty) : logicalPieces;
     info.mPerGmt = info.garmentQty > 0 ? info.markerLenM / info.garmentQty : 0;
     var w = info.materialWidth > 0 ? info.materialWidth : (parseInt(document.getElementById('markerWidthMm').value) || 0);
     var partName = _manualPartName || info.dxfName || 'Part';
@@ -3116,26 +3705,30 @@
       setCalculatorStatus('Run nesting first.', 'error');
       return;
     }
-    const markerLenM = MarkerNesting.computeMarkerLength(markerPlacements) / 1000;
+    const markerLenM = markerMaterialLengthMm() / 1000;
     if (!markerLenM || markerLenM <= 0) {
       setCalculatorStatus('Invalid marker length.', 'error');
       return;
     }
 
     const checkedResultIndices = [...document.querySelectorAll('#markerPartList .file-cb:checked')].map(cb => parseInt(cb.dataset.result));
+    const logicalPieces = markerPlacements.reduce((total, placement) => total + (placement._m ? 0 : 1), 0) || markerPlacements.length;
     let appliedCount = 0;
     checkedResultIndices.forEach(resultIdx => {
       const result = calculationResults[resultIdx];
       const matchedRows = consumptionRows.filter(r => r.sourceFileName === result.fileName);
       matchedRows.forEach(row => {
-        row.consumptionMGmt = markerLenM;
+        const unitsPerGarment = Number(row.units) || 1;
+        const garmentQty = logicalPieces / unitsPerGarment;
+        row.consumptionMGmt = garmentQty > 0 ? markerLenM / garmentQty : markerLenM;
         appliedCount++;
       });
     });
 
     updateConsumptionPreviewTable();
     closeMarkerModal();
-    setCalculatorStatus(`Marker ${markerLenM.toFixed(4)} m/gmt applied to ${appliedCount} consumption row(s).`, 'success');
+    const appliedInfo = buildMarkerConsumptionInfo();
+    setCalculatorStatus(`Marker ${appliedInfo.mPerGmt.toFixed(4)} m/gmt applied to ${appliedCount} consumption row(s).`, 'success');
   }
 
   if (document.readyState === 'loading') {

@@ -17,7 +17,7 @@ class DXFParser {
      * @returns {Object} Parsed DXF data
      */
     parse(content) {
-        const lines = content.split(/\r?\n/);
+        const lines = content.split(/\r\n|\n|\r/);
         this.data = { header: {}, entities: [], blocks: [] };
         
         let i = 0;
