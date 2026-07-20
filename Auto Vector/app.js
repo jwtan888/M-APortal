@@ -745,6 +745,7 @@ function aciColor(num) {
         86:'#7f0000',87:'#7f3f3f',88:'#4c0000',89:'#4c2626',
         90:'#ff0000',91:'#ff7f7f',92:'#cc0000',93:'#cc6666',94:'#990000',95:'#994c4c',
         96:'#7f0000',97:'#7f3f3f',98:'#4c0000',99:'#4c2626',
+        140:'#00ccff',
         240:'#414141',241:'#808080',242:'#b3b3b3',243:'#cccccc',244:'#e6e6e6',
         245:'#f2f2f2',246:'#ffffff',247:'#e6e6e6',248:'#cccccc',249:'#b3b3b3',
         250:'#808080',251:'#595959',252:'#414141',253:'#2c2c2c',254:'#1a1a1a',255:'#000000'
@@ -803,10 +804,10 @@ function renderVectorPreview(canvasId, entities, highlightIdx) {
 
     const scale = Math.min(drawW / dataW, drawH / dataH);
     const offsetX = padding + (drawW - dataW * scale) / 2 - cropped.minX * scale;
-    const offsetY = padding + (drawH - dataH * scale) / 2 - cropped.minY * scale;
+    const offsetY = padding + (drawH - dataH * scale) / 2 + cropped.maxY * scale;
 
     function tx(x) { return x * scale + offsetX; }
-    function ty(y) { return y * scale + offsetY; }
+    function ty(y) { return offsetY - y * scale; }
 
     const typeColors = {
         LINE: '#2563eb', CIRCLE: '#dc2626', ARC: '#d97706',

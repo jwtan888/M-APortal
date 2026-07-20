@@ -1277,7 +1277,7 @@
     const aci = Math.abs(Number(entity.color));
     if (aci === 1) return 'transition';
     if (aci === 3) return 'stay';
-    if (aci === 4) return 'quilting';
+    if (aci === 4 || aci === 140) return 'quilting';
     return 'quilting';
   }
 

@@ -106,14 +106,18 @@
       const row = 11 + index;
       const line = lines[index];
       worksheet.getCell(`B${row}`).value = index + 1;
-      worksheet.getCell(`C${row}`).value = line ? Number(line.lengthCm || 0) : null;
-      worksheet.getCell(`D${row}`).value = line ? Number(line.transitionCm || 0) : null;
+      worksheet.getCell(`C${row}`).value = line ? Number(Number(line.lengthCm || 0).toFixed(4)) : null;
+      worksheet.getCell(`D${row}`).value = line ? Number(Number(line.transitionCm || 0).toFixed(4)) : null;
+      worksheet.getCell(`C${row}`).numFmt = '0.0000';
+      worksheet.getCell(`D${row}`).numFmt = '0.0000';
       worksheet.getCell(`F${row}`).value = line ? (clean(line.stitchType) || clean(payload.stitchType) || 'STAY STITCH') : null;
     }
 
     worksheet.getCell('B32').value = 'Total';
     worksheet.getCell('C32').value = { formula: 'SUM(C11:C31)' };
     worksheet.getCell('D32').value = { formula: 'SUM(D11:D31)' };
+    worksheet.getCell('C32').numFmt = '0.0000';
+    worksheet.getCell('D32').numFmt = '0.0000';
     worksheet.getCell('B33').value = '%';
     worksheet.getCell('C33').value = { formula: 'IFERROR(C32/(C32+D32),0)' };
     worksheet.getCell('D33').value = { formula: 'IFERROR(D32/(D32+C32),0)' };
