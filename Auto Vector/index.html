@@ -381,6 +381,15 @@
     }
     .row-action.danger { background: #fff0f0; color: #b91c1c; }
     .row-action:disabled { opacity: 0.35; cursor: not-allowed; }
+    .quilting-drag-handle {
+      display: inline-flex; align-items: center; justify-content: center;
+      width: 20px; height: 28px; margin-right: 7px; color: #6e6e73;
+      font-weight: 800; cursor: grab; user-select: none;
+    }
+    .quilting-drag-handle:active { cursor: grabbing; }
+    .quilting-line-row.dragging { opacity: 0.45; }
+    .quilting-line-row.drop-before td { box-shadow: inset 0 2px 0 var(--accent); }
+    .quilting-line-row.drop-after td { box-shadow: inset 0 -2px 0 var(--accent); }
     .form-field input[readonly] { color: var(--text-2); background: #eef1f6; }
     .calculator-status { margin-top: 12px; font-size: 0.83rem; color: #6e6e73; }
     .calculator-status.error { color: #b91c1c; }
@@ -1219,6 +1228,7 @@
   const consumptionRows = [];
   let selectedConsumptionTemplate = '';
   let quiltingRows = [];
+  let quiltingRowDrag = null;
 
   /* Override clearAll to also clear consumption data */
   const _origClearAll2 = clearAll;
@@ -1414,8 +1424,8 @@
         <td colspan="4">${part.lines.length} line${part.lines.length === 1 ? '' : 's'}</td>
         <td><button type="button" class="row-action" onclick="addQuiltingRow(${partIndex})">Add Row</button></td>
       </tr>`;
-      const lines = part.lines.map((line, lineIndex) => `<tr>
-        <td>Line ${line.lineNumber}</td>
+      const lines = part.lines.map((line, lineIndex) => `<tr class="quilting-line-row" ondragover="dragOverQuiltingRow(event)" ondragleave="clearQuiltingDropTarget(event)" ondrop="dropQuiltingRow(event, ${partIndex}, ${lineIndex})">
+        <td><span class="quilting-drag-handle" draggable="true" title="Drag to reorder" aria-label="Drag line ${line.lineNumber} to reorder" ondragstart="startQuiltingRowDrag(event, ${partIndex}, ${lineIndex})" ondragend="finishQuiltingRowDrag()">::</span>Line ${line.lineNumber}</td>
         <td></td>
         <td>${escHtml(line.layer)}</td>
         <td><select aria-label="Stitch type" onchange="updateQuiltingStitchType(${partIndex}, ${lineIndex}, this.value)">
@@ -1505,6 +1515,54 @@
     lines.splice(targetIndex, 0, line);
     lines.forEach((item, index) => { item.lineNumber = index + 1; });
     renderQuiltingRows();
+  }
+
+  function placeQuiltingRow(partIndex, fromIndex, targetIndex, placeAfter) {
+    const lines = quiltingRows[partIndex]?.lines;
+    if (!lines || fromIndex < 0 || fromIndex >= lines.length || targetIndex < 0 || targetIndex >= lines.length) return;
+    let insertionIndex = targetIndex + (placeAfter ? 1 : 0);
+    const [line] = lines.splice(fromIndex, 1);
+    if (fromIndex < insertionIndex) insertionIndex--;
+    lines.splice(insertionIndex, 0, line);
+    lines.forEach((item, index) => { item.lineNumber = index + 1; });
+    renderQuiltingRows();
+  }
+
+  function startQuiltingRowDrag(event, partIndex, lineIndex) {
+    quiltingRowDrag = { partIndex, lineIndex };
+    event.dataTransfer.effectAllowed = 'move';
+    event.dataTransfer.setData('text/plain', `${partIndex}:${lineIndex}`);
+    event.currentTarget.closest('tr')?.classList.add('dragging');
+  }
+
+  function dragOverQuiltingRow(event) {
+    if (!quiltingRowDrag) return;
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    const row = event.currentTarget;
+    const placeAfter = event.clientY > row.getBoundingClientRect().top + row.getBoundingClientRect().height / 2;
+    row.classList.toggle('drop-before', !placeAfter);
+    row.classList.toggle('drop-after', placeAfter);
+  }
+
+  function clearQuiltingDropTarget(event) {
+    event.currentTarget.classList.remove('drop-before', 'drop-after');
+  }
+
+  function dropQuiltingRow(event, partIndex, lineIndex) {
+    event.preventDefault();
+    const row = event.currentTarget;
+    const placeAfter = event.clientY > row.getBoundingClientRect().top + row.getBoundingClientRect().height / 2;
+    row.classList.remove('drop-before', 'drop-after');
+    if (quiltingRowDrag?.partIndex === partIndex) {
+      placeQuiltingRow(partIndex, quiltingRowDrag.lineIndex, lineIndex, placeAfter);
+    }
+    quiltingRowDrag = null;
+  }
+
+  function finishQuiltingRowDrag() {
+    quiltingRowDrag = null;
+    document.querySelectorAll('.quilting-line-row').forEach(row => row.classList.remove('dragging', 'drop-before', 'drop-after'));
   }
 
   function setQuiltingStatus(message, state) {
