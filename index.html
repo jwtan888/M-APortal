@@ -791,6 +791,15 @@
         </div>
 
         <div id="content-dashboard" class="tab-content hidden">
+            <section class="mb-6">
+                <div class="mb-3 flex items-center gap-3">
+                    <div class="flex-1 border-t border-slate-200"></div>
+                    <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">Task Overview</span>
+                    <div class="flex-1 border-t border-slate-200"></div>
+                </div>
+                <div id="taskHubBoard" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4"></div>
+            </section>
+
             <div class="mb-4 flex items-center justify-between gap-3">
                 <div class="flex items-center gap-2 min-h-[38px]">
                     <button id="dailyReportPdfBtn" onclick="generateDashboardDailyReport()" class="dashboard-report-btn hidden">
@@ -1463,6 +1472,10 @@
                         </select>
                     </div>
                     <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Required Date</label>
+                        <input type="text" id="c_requiredDate" placeholder="m/d/yyyy or -" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Start Date</label>
                         <input type="text" id="c_startDate" placeholder="m/d/yyyy hh:mm or -" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
@@ -1512,6 +1525,7 @@
                             <th class="p-3">Request By</th>
                             <th class="p-3 text-purple-600">Proto Stage</th>
                             <th class="p-3 text-orange-600">Request Type</th>
+                            <th class="p-3 text-amber-600 date-col">Required Date</th>
                             <th class="p-3 date-col">Start Date</th>
                             <th class="p-3 text-emerald-600 date-col">Complete Date</th>
                             <th class="p-3">M&A PIC</th>
@@ -1520,7 +1534,7 @@
                         </tr>
                     </thead>
                     <tbody id="consumptionTable" class="text-slate-700">
-                        <tr><td colspan="13" class="p-6 text-center text-slate-400 italic text-xs">Loading consumption data...</td></tr>
+                        <tr><td colspan="14" class="p-6 text-center text-slate-400 italic text-xs">Loading consumption data...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -1601,6 +1615,10 @@
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Job</label>
                         <input type="text" id="d_job" placeholder="e.g. J001" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
+                    </div>
+                    <div class="flex flex-col gap-1">
+                        <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Proto Stage</label>
+                        <input type="text" id="d_protoStage" placeholder="e.g. P1" class="p-2 border rounded text-xs focus:ring-2 focus:ring-blue-500 outline-none">
                     </div>
                     <div class="flex flex-col gap-1">
                         <label class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Layer</label>
@@ -1704,6 +1722,7 @@
                             <th class="p-3">Category</th>
                             <th class="p-3">Style</th>
                             <th class="p-3">Job</th>
+                            <th class="p-3 text-purple-600">Proto Stage</th>
                             <th class="p-3 down-layer-col">Layer</th>
                             <th class="p-3 text-emerald-600">Fabric Item</th>
                             <th class="p-3 text-purple-600">Down Bag Item</th>
@@ -1725,7 +1744,7 @@
                         </tr>
                     </thead>
                     <tbody id="downTable" class="text-slate-700">
-                        <tr><td colspan="25" class="p-6 text-center text-slate-400 italic text-xs">Loading down filling data...</td></tr>
+                        <tr><td colspan="26" class="p-6 text-center text-slate-400 italic text-xs">Loading down filling data...</td></tr>
                     </tbody>
                 </table>
             </div>
@@ -2423,6 +2442,7 @@
             addPatchAlias(patch, ['Proto Stage', 'ProtoStage', 'Stage'], payloadValue(payload, ['protoStage', 'Proto Stage', 'ProtoStage', 'Stage']));
             addPatchAlias(patch, ['Request Type', 'RequestType'], payloadValue(payload, ['requestType', 'Request Type', 'RequestType']));
             addPatchAlias(patch, ['Request By', 'RequestBy', 'Requestor'], payloadValue(payload, ['requestBy', 'Request By', 'RequestBy', 'Requestor']));
+            addPatchAlias(patch, ['Required Date', 'RequiredDate', 'Required Date m/d/yyyy'], payloadValue(payload, ['requiredDate', 'Required Date', 'RequiredDate']));
             addPatchAlias(patch, ['Start Date m/d/yyyy', 'Start Date', 'StartDate'], payloadValue(payload, ['startDate', 'Start Date m/d/yyyy', 'Start Date', 'StartDate']));
             addPatchAlias(patch, ['Complete Date m/d/yyyy', 'Complete Date', 'CompleteDate'], payloadValue(payload, ['completeDate', 'Complete Date m/d/yyyy', 'Complete Date', 'CompleteDate']));
             addPatchAlias(patch, ['M&A PIC', 'MA PIC', 'PIC'], payloadValue(payload, ['maPic', 'pic', 'M&A PIC', 'MA PIC', 'PIC']));
@@ -3031,6 +3051,8 @@
             } catch (e) {
                 console.warn('Dashboard snapshot skipped:', e.message);
             }
+            const dashboardPage = document.getElementById('content-dashboard');
+            if (dashboardPage && !dashboardPage.classList.contains('hidden')) renderPendingTaskHub();
         }
 
         function hydrateDashboardFromSnapshot() {
@@ -3153,7 +3175,8 @@
                         complexity: getVal(i, ['Complexity Level','ComplexityLevel','Complexity']),
                         dfm: getVal(i, ['DFM']),
                         remark: getVal(i, ['Remark']), status: currentStatus,
-                        raw: getVal(i, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time'])
+                        raw: getVal(i, ['Start Date m/d/yyyy','Start Date','StartDate','Start time','Start Time']),
+                        portalRow: i
                     };
                 })
                 // Tag cancelled jobs (date field = "-") but KEEP them for the data table
@@ -4998,6 +5021,595 @@
             drillDownToPortalSearch('downfilling', 'downSearch', query, applyDownFilter, '#downTable', event);
         }
 
+        let pendingTaskHubItems = [];
+
+        const TASK_HUB_PRIORITY = {
+            [-1]: { label: 'Urgent', className: 'bg-rose-600 text-white' },
+            0: { label: 'Delay', className: 'bg-red-100 text-red-600' },
+            1: { label: 'Pending Material', className: 'bg-amber-100 text-amber-700' },
+            2: { label: 'In Progress', className: 'bg-blue-100 text-blue-600' },
+            3: { label: 'Pending', className: 'bg-amber-100 text-amber-700' }
+        };
+
+        function taskHubText(value) {
+            const text = String(value ?? '').trim();
+            if (!text || text === '---' || text.toLowerCase() === 'null' || text.toLowerCase() === 'undefined') return '';
+            return text;
+        }
+
+        function taskHubFirst(...values) {
+            for (const value of values) {
+                const text = taskHubText(value);
+                if (text) return text;
+            }
+            return '';
+        }
+
+        function taskHubPic(value) {
+            const text = taskHubText(value);
+            return (!text || text === '-') ? 'Unassigned' : text;
+        }
+
+function taskHubClosed(value) {
+  const text = taskHubText(value);
+  return !!text;
+}
+
+function taskHubNoAction(value) {
+  return taskHubText(value) === '-';
+}
+
+        function taskHubSubtitle(parts) {
+            return parts.map(taskHubText).filter(Boolean).join(' · ');
+        }
+
+        function taskHubDate(value) {
+            const text = taskHubText(value);
+            if (!text || text === '-') return null;
+            const raw = rawToLocalDate(text);
+            if (raw) return raw;
+            const parsed = parsePortalDisplayDate(convertExcelDate(text, true)) || parsePortalDisplayDate(text);
+            if (parsed) return parsed;
+            const fallback = new Date(text);
+            return Number.isNaN(fallback.getTime()) ? null : fallback;
+        }
+
+        function taskHubDisplayDate(value, isTimestamp = true) {
+            const text = taskHubText(value);
+            if (!text || text === '-') return '---';
+            const converted = convertExcelDate(text, isTimestamp);
+            return converted && converted !== '---' ? converted : text;
+        }
+
+        function taskHubShortDate(value) {
+            const date = taskHubDate(value);
+            if (!date) return '---';
+            const day = String(date.getDate()).padStart(2, '0');
+            const month = String(date.getMonth() + 1).padStart(2, '0');
+            return `${day}/${month}/${date.getFullYear()}`;
+        }
+
+        function taskHubCalendarParts(value) {
+            const date = taskHubDate(value);
+            if (!date) return { day: '--', month: '---' };
+            return {
+                day: String(date.getDate()).padStart(2, '0'),
+                month: date.toLocaleString('en-US', { month: 'short' }).toUpperCase()
+            };
+        }
+
+        function taskHubOverdue(value) {
+            const date = taskHubDate(value);
+            if (!date) return false;
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            date.setHours(0, 0, 0, 0);
+            return date < today;
+        }
+
+        function taskHubStatus(startDate, dueDate, pendingMaterial = false) {
+            if (taskHubText(startDate)) return { priority: 2, status: 'In Progress' };
+            if (taskHubOverdue(dueDate)) return { priority: 0, status: 'Delay' };
+            if (pendingMaterial) return { priority: 1, status: 'Pending Material' };
+            return { priority: 3, status: 'Pending' };
+        }
+
+        function taskHubTemplateStatus(row, startDate, dueDate) {
+            const dashboardStatus = taskHubText(row?.status).toUpperCase();
+            if (dashboardStatus === 'DELAYED') return { priority: 0, status: 'Delay' };
+            if (dashboardStatus === 'PENDING') return { priority: 3, status: 'Pending' };
+            return taskHubStatus(startDate, dueDate);
+        }
+
+        const TASK_HUB_URGENT_MARKER = '[URGENT]';
+
+        function taskHubRemark(row) {
+            return taskHubFirst(getVal(row, ['Remark', 'Remarks']), row?.remark);
+        }
+
+        function taskHubUrgent(row) {
+            const explicit = taskHubText(getVal(row, ['Urgent', 'Is Urgent', 'Priority'])).toLowerCase();
+            return /\[urgent\]/i.test(taskHubRemark(row)) || ['yes', 'true', 'urgent', '1'].includes(explicit);
+        }
+
+        function taskHubUrgentRemark(row, urgent) {
+            const remark = taskHubRemark(row).replace(/\s*\[urgent\]\s*/ig, ' ').trim();
+            return urgent ? [TASK_HUB_URGENT_MARKER, remark].filter(Boolean).join(' ') : remark;
+        }
+
+        function taskHubRecordId(tab, row) {
+            const aliases = {
+                template: ['Id', 'ID', 'id'],
+                laser: ['Id', 'ID', 'id'],
+                patch: ['No.', 'No_x002e_', 'No'],
+                consumption: ['Id', 'ID', 'id'],
+                support: ['Request ID', 'RequestID', 'Id', 'ID', 'ItemInternalId'],
+                downfilling: ['Id', 'ID', 'id', 'ItemInternalId']
+            };
+            return taskHubFirst(getVal(row, aliases[tab] || ['Id', 'ID', 'id']));
+        }
+
+        function taskHubUrgentRequest(tab, row, remark) {
+            const id = taskHubRecordId(tab, row);
+            const payload = { ...(['template', 'patch', 'consumption'].includes(tab) ? {} : row), remark, Remark: remark, remarks: remark, Remarks: remark };
+            const config = {
+                template: { url: updateURL, fetchUrl: templateFetchURL, id: { recordID: id, recordId: id, id, Id: id, ID: id } },
+                laser: { url: laserUpdateURL, fetchUrl: laserFetchURL, id: { recordID: id, id, Id: id, ID: id } },
+                patch: { url: patchUpdateURL, fetchUrl: patchFetchURL, id: { 'No.': id } },
+                consumption: { url: consumptionUpdateURL, fetchUrl: consumptionFetchURL, id: { recordID: id, id } },
+                support: { url: supportUpdateURL, fetchUrl: supportFetchURL, id: { recordID: id, 'Request ID': id } },
+                downfilling: { url: downUpdateURL, fetchUrl: downFetchURL, id: { recordID: id, id, Id: id, ID: id } }
+            }[tab];
+            if (!config || !id) throw new Error('This task has no shared record ID. Refresh and try again.');
+
+            Object.assign(payload, config.id);
+            const pic = taskHubFirst(row.pic, getMAPic(row));
+            if (pic) Object.assign(payload, { pic, PIC: pic, maPic: pic, 'M&A PIC': pic });
+            if (tab === 'template') {
+                const source = row.portalRow || row;
+                Object.assign(payload, {
+                    noAction: false,
+                    noActionDate: '',
+                    noActionQty: '',
+                    requestor: getVal(source, ['Requestor']),
+                    Requestor: getVal(source, ['Requestor']),
+                    section: getVal(source, ['Section']),
+                    Section: getVal(source, ['Section']),
+                    season: getVal(source, ['Season']),
+                    Season: getVal(source, ['Season']),
+                    templateType: getVal(source, ['Template Request Type', 'Template Type']),
+                    'Template Type': getVal(source, ['Template Request Type', 'Template Type']),
+                    'Template Request Type': getVal(source, ['Template Request Type', 'Template Type']),
+                    templateNo: getVal(source, ['Template No.', 'Template No', 'TemplateNo']),
+                    'Template No.': getVal(source, ['Template No.', 'Template No', 'TemplateNo']),
+                    complexity: getVal(source, ['Complexity Level', 'Complexity']),
+                    'Complexity Level': getVal(source, ['Complexity Level', 'Complexity']),
+                    dfm: getVal(source, ['DFM']),
+                    DFM: getVal(source, ['DFM'])
+                });
+            } else if (tab === 'laser') {
+                Object.assign(payload, {
+                    receivedTime: getVal(row, ['Received Time', 'ReceivedTime']),
+                    season: getVal(row, ['Season']),
+                    styleNumber: getVal(row, ['Style Number', 'StyleNumber', 'Style']),
+                    section: getVal(row, ['Section']),
+                    category: getVal(row, ['Category']),
+                    protoStage: getVal(row, ['Proto Stage', 'ProtoStage', 'Stage']),
+                    garmentQty: getVal(row, ['Garment Quantity', 'GarmentQty', 'Garment Qty']),
+                    laserParts: getVal(row, ['Laser Part Count', 'LaserPartCount', 'Laser Parts']),
+                    ironParts: getVal(row, ['Ironing Part Count', 'IroningPartCount', 'Iron Parts']),
+                    trimParts: getVal(row, ['Laser Trim Part Count', 'LaserTrimPartCount', 'Trim Parts']),
+                    startDate: getLaserStartDateRaw(row),
+                    completeDate: getLaserCompleteDateRaw(row),
+                    requiredDate: getLaserRequiredDateRaw(row),
+                    consStart: getVal(row, ['Consumption Start Date', 'ConsumptionStartDate']),
+                    consEnd: getVal(row, ['Consumption Complete Date', 'ConsumptionCompleteDate']),
+                    consumptionPic: getVal(row, ['Consumption PIC', 'ConsumptionPIC'])
+                });
+            } else if (tab === 'patch') {
+                [
+                    ['Season', ['Season']], ['Style Number', ['Style Number', 'StyleNumber']],
+                    ['Category', ['Category']], ['Job Number', ['Job Number', 'JobNo']],
+                    ['BDD PIC', ['BDD PIC', 'BDDPIC']], ['Patch Item', ['Patch Item', 'PatchItem']],
+                    ['Patch Description', ['Patch Description', 'PatchDescription']],
+                    ['Fabric Item', ['Fabric Item', 'FabricItem']],
+                    ['Fabric Description', ['Fabric Description', 'FabricDescription']],
+                    ['Thread Type', ['Thread Type', 'ThreadType']],
+                    ['Thread Color', ['Thread Color', 'ThreadColor']],
+                    ['Type Of Sample', ['Type Of Sample', 'TypeOfSample']],
+                    ['Quantity', ['Quantity', 'Qty']],
+                    ['Patch & Fabric Receive Date & Time m/d/yyyy', ['Patch & Fabric Receive Date & Time m/d/yyyy', 'Patch & Fabric Receive Date']],
+                    ['Template No.', ['Template No.', 'TemplateNo', 'Template No']],
+                    ['Machine No.', ['Machine No.', 'Machine No', 'MachineNo', 'Machine']],
+                    ['Start Date m/d/yyyy', ['Start Date m/d/yyyy', 'Start Date', 'StartDate']],
+                    ['Complete Date m/d/yyyy', ['Complete Date m/d/yyyy', 'Complete Date', 'CompleteDate']]
+                ].forEach(([key, aliases]) => { payload[key] = getVal(row, aliases); });
+            } else if (tab === 'support') {
+                const startTime = getVal(row, ['Start Time', 'StartTime']);
+                const completeTime = getVal(row, ['Complete Time', 'CompleteTime']);
+                const elapsedHrs = getVal(row, ['Job Elapsed Calendar Hrs', 'ElapsedHrs']);
+                Object.assign(payload, {
+                    startTime, 'Start Time': startTime,
+                    completeTime, 'Complete Time': completeTime,
+                    elapsedHrs, 'Job Elapsed Calendar Hrs': elapsedHrs
+                });
+            } else if (tab === 'consumption') {
+                Object.assign(payload, {
+                    requiredDate: getVal(row, ['Required Date', 'RequiredDate', 'Required Date m/d/yyyy']),
+                    startDate: getVal(row, ['Start Date m/d/yyyy', 'Start Date', 'StartDate']),
+                    completeDate: getVal(row, ['Complete Date m/d/yyyy', 'Complete Date', 'CompleteDate'])
+                });
+            } else if (tab === 'downfilling') {
+                [
+                    ['dateUpdate', ['Date Update', 'DateUpdate']],
+                    ['season', ['Season']], ['bddPic', ['BDD PIC', 'BDDPIC']],
+                    ['category', ['Category']], ['style', ['Style', 'Style Number']],
+                    ['job', ['Job', 'Job Number']], ['protoStage', ['Proto Stage', 'ProtoStage', 'Stage']], ['layer', ['Layer']],
+                    ['fabricItem', ['Fabric Item', 'FabricItem']],
+                    ['downBagItem', ['Down Bag Item', 'DownBagItem']],
+                    ['downItem', ['Down Item', 'DownItem']],
+                    ['downDescription', ['Down Description', 'DownDescription']],
+                    ['liningItem', ['Lining Item', 'LiningItem']], ['needle', ['Needle']],
+                    ['thread', ['Thread']], ['upperRpm', ['Upper Chamber RPM', 'UpperChamberRPM']],
+                    ['lowerRpm', ['Lower Chamber RPM', 'LowerChamberRPM']],
+                    ['inletPressure', ['Inlet Air Pressure (Mpa)', 'InletAirPressure']],
+                    ['outletPressure', ['Outlet Air Pressure (Mpa)', 'OutletAirPressure']],
+                    ['humidity', ['Humidity']], ['downRelaxedTime', ['Down Relaxed Time', 'DownRelaxedTime']],
+                    ['startTime', ['Start Time', 'StartTime']], ['completeTime', ['Complete Time', 'CompleteTime']]
+                ].forEach(([key, aliases]) => { payload[key] = getVal(row, aliases); });
+            }
+            return { url: config.url, fetchUrl: config.fetchUrl, tab, id, payload };
+        }
+
+        function taskHubUrgentRetryable(error) {
+            return /noresponse|upstream server|abort|timed?\s*out|429|502|503|504|busy|locked/i.test(String(error?.message || error || ''));
+        }
+
+        async function verifyTaskHubUrgent(fetchUrl, tab, id, expectedUrgent) {
+            const response = await postPortalJson(fetchUrl, {}, 40000);
+            if (!response.ok) throw new Error(`Verification failed (HTTP ${response.status}).`);
+            const rows = extractRows(await response.json());
+            const row = rows.find(item => taskHubRecordId(tab, item) === String(id));
+            return !!row && taskHubUrgent(row) === expectedUrgent;
+        }
+
+        async function saveTaskHubUrgent(url, payload, verify, onVerify) {
+            try {
+                const response = await postPortalJson(url, payload, 30000);
+                await readPortalWriteResult(response, 'Urgent status update');
+                return;
+            } catch (error) {
+                if (!taskHubUrgentRetryable(error)) throw error;
+            }
+
+            const verifyDelays = [3000, 7000, 15000];
+            for (let attempt = 0; attempt < verifyDelays.length; attempt++) {
+                if (onVerify) onVerify(attempt + 1, verifyDelays.length);
+                await delay(verifyDelays[attempt]);
+                try {
+                    if (await verify()) return;
+                } catch (error) {}
+            }
+            throw new Error('Power Automate finished, but the urgent status is not visible in the shared record yet. Refresh and try again.');
+        }
+
+        async function toggleTaskHubUrgent(taskId, event) {
+            event?.stopPropagation();
+            if (!isPortalAdmin()) return alert('Only an admin can change urgent status.');
+            const task = pendingTaskHubItems.find(item => item.id === taskId);
+            if (!task?.row) return alert('Task record not found. Please refresh and try again.');
+            const button = event?.currentTarget;
+            const nextUrgent = !task.urgent;
+            const remark = taskHubUrgentRemark(task.row, nextUrgent);
+            if (button) { button.disabled = true; button.innerText = 'SAVING...'; }
+            try {
+                const { url, fetchUrl, tab, id, payload } = taskHubUrgentRequest(task.tab, task.row, remark);
+                await saveTaskHubUrgent(url, payload, () => verifyTaskHubUrgent(fetchUrl, tab, id, nextUrgent), (attempt, total) => {
+                    if (button) button.innerText = `VERIFYING ${attempt}/${total}...`;
+                });
+                task.row.Remark = remark;
+                task.row.remark = remark;
+                if (task.tab === 'template') task.row.portalRow && (task.row.portalRow.Remark = remark);
+                renderPendingTaskHub();
+                setTimeout(() => {
+                    const refresh = {
+                        template: refreshTemplateLogs,
+                        laser: refreshLaserData,
+                        patch: refreshPatchData,
+                        consumption: refreshConsumptionData,
+                        support: refreshSupportData,
+                        downfilling: refreshDownData
+                    }[task.tab];
+                    if (refresh) refresh(true);
+                }, 3000);
+            } catch (error) {
+                alert(error.message || 'Urgent status was not updated.');
+                if (button) { button.disabled = false; button.innerText = nextUrgent ? 'MARK URGENT' : 'REMOVE URGENT'; }
+            }
+        }
+
+        function addPendingTask(items, task) {
+            const urgent = taskHubUrgent(task.row);
+            const statusPriority = Number.isFinite(task.priority) ? task.priority : 3;
+            const status = task.status || TASK_HUB_PRIORITY[statusPriority]?.label || 'Pending';
+            items.push({
+                id: `pending-task-${items.length}`,
+                dateLabel: '---',
+                query: '',
+                detail: '',
+                ...task,
+                urgent,
+                statusPriority,
+                priority: urgent ? -1 : statusPriority,
+                status
+            });
+        }
+
+        function collectPendingTaskHubItems() {
+            const items = [];
+
+            (Array.isArray(allTemplates) ? allTemplates : []).forEach(row => {
+                const complete = taskHubFirst(row.completeDate, row.completeDateDisplay, getVal(row, ['Complete Date\nm/d/yyyy', 'Complete Date m/d/yyyy', 'Complete Date', 'CompleteDate']));
+                if (taskHubClosed(complete)) return;
+                const style = taskHubFirst(row.style, row.styleNumber, getVal(row, ['Style Number', 'Style', 'Style No.']));
+                const job = taskHubFirst(row.jobNo, row.jobNumber, getVal(row, ['Job Number', 'Job No.', 'Job']));
+                const query = style || job;
+                if (!query) return;
+                const start = taskHubFirst(getVal(row, ['Start Date\nm/d/yyyy', 'Start Date m/d/yyyy', 'Start Date', 'Start Time\nm/d/yyyy', 'Start Time m/d/yyyy', 'Start Time']));
+                const required = taskHubFirst(getVal(row, ['Required Date', 'Required Date m/d/yyyy', 'Required Date\nm/d/yyyy']), row.receivedTime, row.requestDate, getVal(row, ['Received Time', 'Request Receive Time', 'Date Update', 'Date']));
+                const taskStatus = taskHubTemplateStatus(row, start, required);
+                addPendingTask(items, {
+                    source: 'Template',
+                    tab: 'template',
+                    row,
+                    pic: taskHubPic(taskHubFirst(row.pic, row.maPic, getMAPic(row))),
+                    title: query,
+                    detail: taskHubSubtitle([style && job && style !== job ? job : '', taskHubFirst(row.protoStage, getVal(row, ['Proto Stage', 'Stage', 'Type Of Sample'])), getVal(row, ['Season'])]),
+                    priority: taskStatus.priority,
+                    status: taskStatus.status,
+                    dateLabel: taskHubShortDate(required),
+                    sortDate: required,
+                    query
+                });
+            });
+
+            const laserRows = (Array.isArray(allLaserRows) && allLaserRows.length) ? allLaserRows : (Array.isArray(allRecords) ? allRecords : []);
+  laserRows.forEach(row => {
+    const complete = getLaserCompleteDateRaw(row);
+    if (taskHubNoAction(complete) || hasLaserCompleteDate(row)) return;
+                const style = taskHubFirst(getVal(row, ['Style Number', 'StyleNumber', 'Style']), row.styleNumber, row.style);
+                if (!style) return;
+                const required = getLaserRequiredDateRaw(row);
+                const start = getLaserStartDateRaw(row);
+                const taskStatus = taskHubStatus(start, required);
+                addPendingTask(items, {
+                    source: 'Laser',
+                    tab: 'laser',
+                    row,
+                    pic: taskHubPic(getMAPic(row)),
+                    title: style,
+                    detail: taskHubSubtitle([getVal(row, ['Proto Stage', 'Stage']), getVal(row, ['Season']), getVal(row, ['Section'])]),
+                    priority: taskStatus.priority,
+                    status: taskStatus.status,
+                    dateLabel: taskHubShortDate(required),
+                    sortDate: required,
+                    query: style
+                });
+            });
+
+            (Array.isArray(allPatchRows) ? allPatchRows : []).forEach(row => {
+                const complete = taskHubFirst(getVal(row, ['Complete Date\nm/d/yyyy', 'Complete Date m/d/yyyy', 'Complete Date', 'CompleteDate']));
+                if (taskHubClosed(complete)) return;
+                const style = taskHubFirst(getVal(row, ['Style Number', 'Style', 'Style No.']));
+                const job = taskHubFirst(getVal(row, ['Job Number', 'Job No.', 'Job']));
+                const query = style || job;
+                if (!query) return;
+                const materialDate = taskHubFirst(getVal(row, ['Patch & Fabric Receive Date & Time\nm/d/yyyy', 'Patch & Fabric Receive Date & Time m/d/yyyy', 'Patch & Fabric Receive Date', 'Receive Date']));
+                const start = taskHubFirst(getVal(row, ['Start Date\nm/d/yyyy', 'Start Date m/d/yyyy', 'Start Date', 'Start Time\nm/d/yyyy', 'Start Time m/d/yyyy', 'Start Time']));
+                const taskDate = materialDate || getVal(row, ['Request Receive Time (Auto Do Not Edit)', 'Date Update', 'Date']);
+                const taskStatus = taskHubStatus(start, taskDate, !materialDate);
+                addPendingTask(items, {
+                    source: 'Patch',
+                    tab: 'patch',
+                    row,
+                    pic: taskHubPic(getMAPic(row)),
+                    title: query,
+                    detail: taskHubSubtitle([style && job && style !== job ? job : '', getVal(row, ['Season']), getVal(row, ['BDD PIC'])]),
+                    priority: taskStatus.priority,
+                    status: taskStatus.status,
+                    dateLabel: taskHubShortDate(taskDate),
+                    sortDate: taskDate,
+                    query
+                });
+            });
+
+            (Array.isArray(allConsumptionRows) ? allConsumptionRows : []).forEach(row => {
+                const complete = taskHubFirst(getVal(row, ['Complete Date\nm/d/yyyy', 'Complete Date m/d/yyyy', 'Complete Date', 'CompleteDate']));
+                if (taskHubClosed(complete)) return;
+                const style = taskHubFirst(getVal(row, ['Style Number', 'Style', 'Style No.']));
+                if (!style) return;
+                const start = taskHubFirst(getVal(row, ['Start Date\nm/d/yyyy', 'Start Date m/d/yyyy', 'Start Date']));
+                const received = taskHubFirst(getVal(row, ['Received Time', 'Date Update', 'Date']));
+                const required = taskHubFirst(getVal(row, ['Required Date', 'Required Date m/d/yyyy', 'Required Date\nm/d/yyyy']), received);
+                const taskStatus = taskHubStatus(start, required);
+                addPendingTask(items, {
+                    source: 'Consumption',
+                    tab: 'consumption',
+                    row,
+                    pic: taskHubPic(getMAPic(row)),
+                    title: style,
+                    detail: taskHubSubtitle([getVal(row, ['Proto Stage', 'Stage']), getVal(row, ['Season']), getVal(row, ['Request Type'])]),
+                    priority: taskStatus.priority,
+                    status: taskStatus.status,
+                    dateLabel: taskHubShortDate(required),
+                    sortDate: required,
+                    query: style
+                });
+            });
+
+            (Array.isArray(allSupportRows) ? allSupportRows : []).forEach(row => {
+                const complete = taskHubFirst(getVal(row, ['Complete Time\nm/d/yyyy', 'Complete Time m/d/yyyy', 'Complete Time', 'CompleteDate']));
+                if (taskHubClosed(complete)) return;
+                const style = taskHubFirst(getVal(row, ['Style Number', 'Style', 'Style No.']));
+                const machine = taskHubFirst(getVal(row, ['Machine No.', 'Machine No', 'Machine']));
+                const query = style || machine;
+                if (!query) return;
+                const start = taskHubFirst(getVal(row, ['Start Time\nm/d/yyyy', 'Start Time m/d/yyyy', 'Start Time']));
+                const received = taskHubFirst(getVal(row, ['Received Time', 'Date Update', 'Date']));
+                const required = taskHubFirst(getVal(row, ['Required Date', 'Required Date m/d/yyyy', 'Required Date\nm/d/yyyy']), received);
+                const taskStatus = taskHubStatus(start, required);
+                addPendingTask(items, {
+                    source: 'Support',
+                    tab: 'support',
+                    row,
+                    pic: taskHubPic(getMAPic(row)),
+                    title: query,
+                    detail: taskHubSubtitle([style && machine && style !== machine ? machine : '', getVal(row, ['Support Type', 'Type']), getVal(row, ['Section'])]),
+                    priority: taskStatus.priority,
+                    status: taskStatus.status,
+                    dateLabel: taskHubShortDate(required),
+                    sortDate: required,
+                    query
+                });
+            });
+
+            (Array.isArray(allDownRows) ? allDownRows : []).forEach(row => {
+                const complete = taskHubFirst(getVal(row, ['Complete Time\nm/d/yyyy', 'Complete Time m/d/yyyy', 'Complete Time', 'CompleteDate']));
+                if (taskHubClosed(complete)) return;
+                const style = taskHubFirst(getVal(row, ['Style', 'Style Number', 'Style No.']));
+                const job = taskHubFirst(getVal(row, ['Job', 'Job Number', 'Job No.']));
+                const query = style || job;
+                if (!query) return;
+                const start = taskHubFirst(getVal(row, ['Start Time\nm/d/yyyy', 'Start Time m/d/yyyy', 'Start Time']));
+                const received = taskHubFirst(getVal(row, ['Received Time', 'Date Update', 'Date']));
+                const required = taskHubFirst(getVal(row, ['Required Date', 'Required Date m/d/yyyy', 'Required Date\nm/d/yyyy']), received);
+                const taskStatus = taskHubStatus(start, required);
+                addPendingTask(items, {
+                    source: 'Down Filling',
+                    tab: 'downfilling',
+                    row,
+                    pic: taskHubPic(getMAPic(row)),
+                    title: query,
+                    detail: taskHubSubtitle([style && job && style !== job ? job : '', getVal(row, ['Season']), getVal(row, ['Layer'])]),
+                    priority: taskStatus.priority,
+                    status: taskStatus.status,
+                    dateLabel: taskHubShortDate(required),
+                    sortDate: required,
+                    query
+                });
+            });
+
+            return items.sort((a, b) => {
+                if (a.priority !== b.priority) return a.priority - b.priority;
+                const aDate = taskHubDate(a.sortDate || a.dateLabel);
+                const bDate = taskHubDate(b.sortDate || b.dateLabel);
+                if (aDate && bDate && aDate.getTime() !== bDate.getTime()) return aDate.getTime() - bDate.getTime();
+                if (aDate && !bDate) return -1;
+                if (!aDate && bDate) return 1;
+                return `${a.pic}${a.source}${a.title}`.localeCompare(`${b.pic}${b.source}${b.title}`);
+            });
+        }
+
+        function openPendingTask(taskId, event) {
+            if (event && typeof event.stopPropagation === 'function') event.stopPropagation();
+            const task = pendingTaskHubItems.find(item => item.id === taskId);
+            if (!task) return;
+            const query = task.query || task.title;
+            if (task.tab === 'template') return drillDownTemplateSearch(query, event);
+            if (task.tab === 'patch') return drillDownPatchSearch(query, event);
+            if (task.tab === 'laser') return drillDownLaserSearch(query, event);
+            if (task.tab === 'consumption') return drillDownConsumption(query);
+            if (task.tab === 'support') return drillDownSupport(query);
+            if (task.tab === 'downfilling') return drillDownDownSearch(query, event);
+        }
+
+function renderPendingTaskHub() {
+  const boardEl = document.getElementById('taskHubBoard');
+  const searchEl = document.getElementById('taskHubSearch');
+  if (!boardEl) return;
+  const scrollPositions = new Map();
+  boardEl.querySelectorAll('[data-task-pic-scroll]').forEach(el => {
+    scrollPositions.set(el.dataset.taskPicScroll, el.scrollTop);
+  });
+  const items = collectPendingTaskHubItems();
+  pendingTaskHubItems = items;
+
+  const search = (searchEl ? searchEl.value : '').trim().toLowerCase();
+
+            const filteredItems = items.filter(item => {
+                if (!search) return true;
+                return [item.title, item.source, item.pic, item.detail, item.status, item.dateLabel]
+                    .join(' ').toLowerCase().includes(search);
+            });
+            const pics = [...new Set(filteredItems.map(item => item.pic || 'Unassigned'))]
+                .sort((a, b) => {
+                    if (a === 'Unassigned') return 1;
+                    if (b === 'Unassigned') return -1;
+                    return a.localeCompare(b);
+                });
+
+            boardEl.innerHTML = pics.map(pic => {
+                const picItems = filteredItems
+                    .filter(item => (item.pic || 'Unassigned') === pic)
+                    .sort((a, b) => a.priority - b.priority || (taskHubDate(a.sortDate) || 0) - (taskHubDate(b.sortDate) || 0) || String(a.title).localeCompare(String(b.title)));
+                const urgentCount = picItems.filter(item => item.urgent).length;
+                const delayCount = picItems.filter(item => item.priority === 0 || /delay|late/i.test(item.status || '')).length;
+                const pendingMaterialCount = picItems.filter(item => item.priority === 1 || /pending material/i.test(item.status || '')).length;
+                const pendingCount = picItems.filter(item => item.priority === 3 || /^pending$/i.test(item.status || '')).length;
+                return `
+                    <section class="bg-white border border-slate-200 border-t-4 border-t-blue-500 rounded-xl shadow-sm overflow-hidden">
+                        <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                            <div>
+                                <p class="text-[10px] font-black uppercase tracking-[0.18em] text-slate-400">M&A PIC</p>
+                                <h3 class="mt-0.5 text-lg font-black text-slate-900">${escapeHtml(pic)}</h3>
+                                <div class="mt-2 flex flex-wrap gap-1.5">
+                                    <span class="inline-flex items-center gap-1 rounded-md bg-rose-600 px-1.5 py-1 text-[9px] font-black text-white">Urgent <b>${urgentCount}</b></span>
+                                    <span class="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-1 text-[9px] font-black text-amber-700">Pending <b>${pendingCount}</b></span>
+                                    <span class="inline-flex items-center gap-1 rounded-md bg-red-50 px-1.5 py-1 text-[9px] font-black text-red-600">Delay <b>${delayCount}</b></span>
+                                    <span class="inline-flex items-center gap-1 rounded-md bg-amber-50 px-1.5 py-1 text-[9px] font-black text-amber-700">Pending Material <b>${pendingMaterialCount}</b></span>
+                                </div>
+                            </div>
+                            <span class="min-w-7 h-7 px-2 inline-flex items-center justify-center rounded-full bg-slate-100 text-slate-600 text-xs font-black">${picItems.length}</span>
+                        </div>
+                        <div data-task-pic-scroll="${escapeHtml(pic)}" class="p-3 space-y-2 max-h-[390px] overflow-y-auto">
+                            ${picItems.length ? picItems.map(item => {
+                                const priority = TASK_HUB_PRIORITY[item.statusPriority ?? item.priority] || TASK_HUB_PRIORITY[3];
+                                const calendar = taskHubCalendarParts(item.sortDate || item.dateLabel);
+                                return `
+                                    <div role="button" tabindex="0" onclick="openPendingTask('${item.id}', event)" onkeydown="if(event.target===event.currentTarget&&(event.key==='Enter'||event.key===' ')){event.preventDefault();openPendingTask('${item.id}',event)}" class="relative w-full text-left p-3 rounded-lg border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50 transition-colors cursor-pointer">
+                                        ${item.urgent ? '<span class="absolute -right-1 -top-1 rounded-full bg-red-500 ring-2 ring-white shadow-sm" style="width:14.4px;height:14.4px" role="img" aria-label="Urgent task" title="Urgent task"></span>' : ''}
+                                        <div class="flex items-start justify-between gap-2">
+                                            <span class="py-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">${escapeHtml(item.source)}</span>
+                                            <div class="shrink-0">
+                                                <span class="inline-flex flex-col overflow-hidden rounded-md border border-slate-200 bg-white text-center leading-none" title="Required date ${escapeHtml(item.dateLabel || '---')}">
+                                                    <span class="bg-slate-100 px-1.5 py-1 text-[8px] font-black tracking-widest text-slate-500">${escapeHtml(calendar.month)}</span>
+                                                    <span class="px-1.5 py-1.5 text-xs font-black text-slate-700">${escapeHtml(calendar.day)}</span>
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <p class="mt-2 text-sm font-black text-blue-700 leading-snug">${escapeHtml(item.title || 'Untitled Task')}</p>
+                                        <p class="mt-1 text-[11px] font-bold text-slate-500">${item.detail ? escapeHtml(item.detail) : 'Pending task'}</p>
+                                        <div class="mt-2 pt-2 border-t border-slate-100 flex items-center justify-between gap-2 text-[11px] font-bold">
+                                            <div class="flex flex-wrap items-center gap-1.5">
+                                                ${item.urgent ? '<span class="inline-flex rounded-md bg-red-600 px-2 py-1 text-[10px] font-black text-white">URGENT</span>' : ''}
+                                                <span class="inline-flex rounded-md px-2 py-1 text-[10px] font-black ${priority.className}">${escapeHtml(item.status || priority.label)}</span>
+                                            </div>
+                                            ${isPortalAdmin()
+                                                ? `<button type="button" onclick="toggleTaskHubUrgent('${item.id}', event)" class="rounded-md px-2 py-1 text-[9px] font-black tracking-wide ${item.urgent ? 'bg-slate-200 text-slate-600' : 'bg-rose-100 text-rose-700'}">${item.urgent ? 'REMOVE URGENT' : 'MARK URGENT'}</button>`
+                                                : '<span class="text-blue-600">Details →</span>'}
+                                        </div>
+                                    </div>
+                                `;
+                            }).join('') : '<div class="py-8 text-center text-xs font-bold text-slate-400">No pending tasks</div>'}
+                        </div>
+                    </section>
+                `;
+            }).join('');
+            boardEl.querySelectorAll('[data-task-pic-scroll]').forEach(el => {
+                el.scrollTop = scrollPositions.get(el.dataset.taskPicScroll) || 0;
+            });
+        }
+
         function sanitizeTemplateValue(value) {
             const text = String(value ?? '').trim();
             if (!text || text === '---' || text.toLowerCase() === 'null' || text.toLowerCase() === 'undefined') {
@@ -6057,19 +6669,47 @@
                 }
             });
 
-            // Chart 2: By Season (doughnut) — filtered, no cancelled
+            // Chart 2: By Season (bar) — filtered, no cancelled
             const seasonCounts = {};
             activePatch.forEach(r => {
                 const s = getVal(r,['Season'])||'Unknown';
                 seasonCounts[s] = (seasonCounts[s]||0)+1;
             });
-            const sColors = ['#6366f1','#10b981','#f59e0b','#3b82f6','#ef4444','#8b5cf6','#14b8a6'];
+            const patchSeasonRank = season => {
+                const raw = String(season || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                const prefixOrder = { SP: 0, SU: 1, FA: 2, HO: 3 };
+                const prefixMatch = raw.match(/^(SP|SU|FA|HO)/);
+                const yearMatch = raw.match(/(\d{2,4})/);
+                const yearValue = yearMatch ? parseInt(yearMatch[1], 10) : 9999;
+                return {
+                    year: yearValue < 100 ? 2000 + yearValue : yearValue,
+                    prefix: prefixMatch ? prefixOrder[prefixMatch[1]] : 99
+                };
+            };
+            const patchSeasonColor = season => {
+                const raw = String(season || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+                if (raw.startsWith('SP')) return '#38bdf8';
+                if (raw.startsWith('SU')) return '#22c55e';
+                if (raw.startsWith('FA')) return '#f59e0b';
+                if (raw.startsWith('HO')) return '#8b5cf6';
+                return '#94a3b8';
+            };
+            const sortedPatchSeasons = Object.entries(seasonCounts).sort((a,b)=>{
+                const ra = patchSeasonRank(a[0]);
+                const rb = patchSeasonRank(b[0]);
+                if (ra.year !== rb.year) return ra.year - rb.year;
+                if (ra.prefix !== rb.prefix) return ra.prefix - rb.prefix;
+                return String(a[0]).localeCompare(String(b[0]));
+            });
             if (patchSeasonChart) patchSeasonChart.destroy();
             const psCtx = el('patchSeasonChart');
             if (psCtx) patchSeasonChart = new Chart(psCtx, {
-                type: 'doughnut',
-                data: { labels: Object.keys(seasonCounts), datasets: [{ data: Object.values(seasonCounts), backgroundColor: sColors, borderWidth: 2 }] },
-                options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ position:'bottom', labels:{ font:{ size:10 }, boxWidth:10 } } } }
+                type: 'bar',
+                data: {
+                    labels: sortedPatchSeasons.map(e=>e[0]),
+                    datasets: [portalBarDataset({ label:'Records', data:sortedPatchSeasons.map(e=>e[1]), backgroundColor:sortedPatchSeasons.map(e=>patchSeasonColor(e[0])) })]
+                },
+                options: { responsive:true, maintainAspectRatio:false, plugins:{ legend:{ display:false } }, scales:{ y:{ beginAtZero:true, ticks:{ stepSize:1 } } } }
             });
 
             // Pending by PIC table — exclude cancelled ("-") rows
@@ -6655,6 +7295,7 @@
             if (t === 'dashboard' && allConsumptionRows.length) renderConsumptionDashboard();
             if (t === 'dashboard' && allDownRows.length) renderDownDashboard();
             if (t === 'dashboard') {
+                renderPendingTaskHub();
                 fetchAttendanceFromCloud(); // refresh capacity on every dashboard visit
                 loadAttData(); renderUtilization();
                 // Re-fetch attendance from cloud each time dashboard opens — keeps capacity fresh on all PCs
@@ -8058,6 +8699,8 @@
                 clearConsumptionSyncMessages();
             }
             updateDailyReportButton();
+            const dashboardPage = document.getElementById('content-dashboard');
+            if (dashboardPage && !dashboardPage.classList.contains('hidden')) renderPendingTaskHub();
         }
 
         function clearAllNA() {
@@ -8229,10 +8872,16 @@
 
                 const isDone      = completeTime && completeTime !== '---' && !isCompleteNoAction;
                 const isGavin     = isPortalAdmin();
-                // PIC-restricted: Gavin edits all; others only edit rows where PIC matches them or PIC is blank
+                // PIC-restricted: admins edit all; others only edit rows where PIC matches them or PIC is blank
                 const rowPic      = pic && pic !== '---' ? pic : null;
                 const canEdit     = !!currentUser && (isGavin || !rowPic || rowPic === currentUser);
                 const sid         = String(rawID).replace(/['"]/g,'');
+                const supportPicOptions = [...new Set([...ATT_MEMBERS, ...(rowPic ? [rowPic] : [])])];
+                const supportPicCell = canEdit && isGavin
+                    ? `<select id="sup-pic-${sid}" class="manual-input admin-input"><option value="">Select PIC</option>${supportPicOptions.map(p => `<option value="${p}" ${p === (rowPic || currentUser) ? 'selected' : ''}>${p}</option>`).join('')}</select>`
+                    : ((!pic || pic === '---') && canEdit && currentUser
+                        ? `<span class="text-blue-600">${currentUser} <span class="text-[9px] text-slate-400">(will be saved)</span></span>`
+                        : ((!pic || pic === '---') ? '---' : pic));
                 const riskColor   = riskType.toLowerCase().includes('quality') ? 'bg-red-100 text-red-600' :
                                     riskType.toLowerCase().includes('break') ? 'bg-orange-100 text-orange-600' :
                                     'bg-slate-100 text-slate-600';
@@ -8254,7 +8903,7 @@
                         ? `<input id="sup-end-${sid}" class="manual-input admin-input" value="${completeTime==='---'?'':completeTime}" placeholder="m/d/yyyy hh:mm or -" oninput="updateElapsedDisplay('${sid}')">`
                         : `<span class="${isDone?'text-emerald-600 font-bold':'text-slate-400'}">${completeTime}</span>`}</td>
                     <td class="p-3 font-bold" id="sup-elapsed-display-${sid}" style="color:${parseFloat(elapsed)>8?'#ef4444':'#334155'}">${elapsed !== '---' ? elapsed + ' hrs' : '---'}</td>
-                    <td class="p-3 font-bold ${(!pic || pic === '---') ? 'text-blue-600' : ''}">${(!pic || pic === '---') && canEdit && currentUser ? `<span class="text-blue-600">${currentUser} <span class="text-[9px] text-slate-400">(will be saved)</span></span>` : ((!pic || pic === '---') ? '---' : pic)}</td>
+                    <td class="p-3 font-bold ${(!pic || pic === '---') ? 'text-blue-600' : ''}">${supportPicCell}</td>
                     
                     
                     <td class="p-3">${canEdit
@@ -8304,7 +8953,11 @@
                 return rowPortalIds(r).includes(String(sid));
             });
             const existingPic = existingRow ? getMAPic(existingRow) : '---';
-            const picToSave   = (!existingPic || existingPic === '---') ? currentUser : existingPic;
+            const assignedPic = document.getElementById(`sup-pic-${sid}`)?.value.trim() || '';
+            const existingAssignedPic = existingPic && existingPic !== '---' ? existingPic : '';
+            const picToSave = isPortalAdmin()
+                ? (assignedPic || existingAssignedPic || currentUser)
+                : (existingAssignedPic || currentUser);
             const startNorm = preparePortalDatePayload(startVal, convertExcelDate(getVal(existingRow, ['Start Time','StartTime'])), { allowNoAction: true });
             const endNorm = preparePortalDatePayload(endVal, convertExcelDate(getVal(existingRow, ['Complete Time','CompleteTime'])), { allowNoAction: true });
             if ([startNorm, endNorm].some(v => v === null)) {
@@ -8323,6 +8976,8 @@
                 'Job Elapsed Calendar Hrs': elapsed,
                 elapsedHrs:                elapsed,
                 'M&A PIC':                 picToSave,
+                maPic:                     picToSave,
+                PIC:                       picToSave,
                 pic:                       picToSave,
 
 
@@ -8348,6 +9003,8 @@
                     'Job Elapsed Calendar Hrs': elapsed,
                     elapsedHrs: elapsed,
                     'M&A PIC': picToSave,
+                    maPic: picToSave,
+                    PIC: picToSave,
                     pic: picToSave,
                     'Remark': remarkVal,
                     remark: remarkVal
@@ -8786,7 +9443,7 @@
                     return;
                 }
                 const tbody = document.getElementById('downTable');
-                if (tbody) tbody.innerHTML = '<tr><td colspan="25" class="p-6 text-center text-amber-500 italic text-xs">Down filling data is still syncing. Retrying automatically...</td></tr>';
+                if (tbody) tbody.innerHTML = '<tr><td colspan="26" class="p-6 text-center text-amber-500 italic text-xs">Down filling data is still syncing. Retrying automatically...</td></tr>';
                 if (st) { st.innerText = 'Retrying...'; st.classList.remove('sync-active'); }
                 if (!isSilent) setTimeout(() => safeRun(() => refreshDownData(true)), 15000);
             }
@@ -8802,10 +9459,10 @@
             if (!allDownRows.length) {
                 setPortalFilterStatus('downFilterStatus', { search: downSearchQuery, month: downMonthQuery, mode: downPendingOnly ? 'In Progress' : '', shown: 0, total: 0 });
                 if (downDataLoading) {
-                    tbody.innerHTML = '<tr><td colspan="25" class="p-6 text-center text-slate-400 italic text-xs">Loading down filling data...</td></tr>';
+                    tbody.innerHTML = '<tr><td colspan="26" class="p-6 text-center text-slate-400 italic text-xs">Loading down filling data...</td></tr>';
                     return;
                 }
-                tbody.innerHTML = '<tr><td colspan="25" class="p-6 text-center text-slate-400 italic text-xs">No down filling records found.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="26" class="p-6 text-center text-slate-400 italic text-xs">No down filling records found.</td></tr>';
                 return;
             }
             const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
@@ -8844,6 +9501,7 @@
                 const category = getVal(row, ['Category']);
                 const style = getVal(row, ['Style','Style Number','StyleNumber']);
                 const job = getVal(row, ['Job','Job Number','JobNumber']);
+                const protoStage = getVal(row, ['Proto Stage','ProtoStage','Stage']);
                 const layer = getVal(row, ['Layer']);
                 const fabricItem = getVal(row, ['Fabric Item','FabricItem']);
                 const downBagItem = getVal(row, ['Down Bag Item','DownBagItem']);
@@ -8879,6 +9537,7 @@
                     <td class="p-3">${isEditingDown ? `<input id="dw-category-${rid}" class="manual-input admin-input" value="${category==='---'?'':category}">` : category}</td>
                     <td class="p-3">${isEditingDown ? `<input id="dw-style-${rid}" class="manual-input admin-input" value="${style==='---'?'':style}">` : portalSearchLink(style, 'drillDownDownSearch')}</td>
                     <td class="p-3">${isEditingDown ? `<input id="dw-job-${rid}" class="manual-input admin-input" value="${job==='---'?'':job}">` : portalSearchLink(job, 'drillDownDownSearch')}</td>
+                    <td class="p-3 text-purple-700">${isEditingDown ? `<input id="dw-protoStage-${rid}" class="manual-input admin-input" value="${protoStage==='---'?'':protoStage}">` : protoStage}</td>
                     <td class="p-3 down-layer-cell">${isEditingDown ? `<input id="dw-layer-${rid}" class="manual-input admin-input" style="width:260px" value="${layer==='---'?'':layer}">` : layer}</td>
                     <td class="p-3 font-bold text-emerald-600">${isEditingDown ? `<input id="dw-fabricItem-${rid}" class="manual-input admin-input" style="color:#059669;font-weight:bold" value="${fabricItem==='---'?'':fabricItem}">` : fabricItem}</td>
                     <td class="p-3 font-bold text-purple-600">${isEditingDown ? `<input id="dw-downBagItem-${rid}" class="manual-input admin-input" style="color:#7c3aed;font-weight:bold" value="${downBagItem==='---'?'':downBagItem}">` : downBagItem}</td>
@@ -8968,6 +9627,7 @@
                 category:        readDownInput('d_category'),
                 style:           readDownInput('d_style'),
                 job:             readDownInput('d_job'),
+                protoStage:      readDownInput('d_protoStage'),
                 layer:           readDownInput('d_layer'),
                 fabricItem:      readDownInput('d_fabricItem'),
                 downBagItem:     readDownInput('d_downBagItem'),
@@ -9005,7 +9665,7 @@
                 await readPortalWriteResult(res, 'Down filling add');
                 btn.innerText = 'ADDED!';
                 clearPortalTabDirty('downfilling');
-                ['d_dateUpdate','d_season','d_bddPic','d_category','d_style','d_job','d_layer',
+                ['d_dateUpdate','d_season','d_bddPic','d_category','d_style','d_job','d_protoStage','d_layer',
                  'd_fabricItem','d_downBagItem','d_downItem','d_downDesc','d_liningItem',
                  'd_needle','d_thread','d_upperRpm','d_lowerRpm','d_inletPressure','d_outletPressure',
                  'd_humidity','d_relaxedTime','d_startTime','d_completeTime','d_remark'].forEach(id => {
@@ -9086,6 +9746,9 @@
                 Style:           fieldText('style', ['Style','Style Number','StyleNumber']),
                 job:             fieldText('job', ['Job','Job Number','JobNumber']),
                 Job:             fieldText('job', ['Job','Job Number','JobNumber']),
+                protoStage:      fieldText('protoStage', ['Proto Stage','ProtoStage','Stage']),
+                ProtoStage:      fieldText('protoStage', ['Proto Stage','ProtoStage','Stage']),
+                'Proto Stage':   fieldText('protoStage', ['Proto Stage','ProtoStage','Stage']),
                 layer:           fieldText('layer', ['Layer']),
                 Layer:           fieldText('layer', ['Layer']),
                 fabricItem:      fieldText('fabricItem', ['Fabric Item','FabricItem']),
@@ -9185,6 +9848,8 @@
                     'Style Number': payload.style,
                     Job: payload.job,
                     'Job Number': payload.job,
+                    'Proto Stage': payload.protoStage,
+                    ProtoStage: payload.protoStage,
                     Layer: payload.layer,
                     'Fabric Item': payload.fabricItem,
                     FabricItem: payload.fabricItem,
@@ -9375,6 +10040,7 @@
                 requestBy: '',
                 protoStage: sanitizeTemplateValue(templateRow?.protoStage),
                 requestType: 'Quilting Details',
+                requiredDate: '',
                 startDate: '',
                 completeDate: '',
                 pic: '',
@@ -9439,6 +10105,7 @@
                         'Job Number': payload.jobNo,
                         'Proto Stage': payload.protoStage,
                         'Request Type': payload.requestType,
+                        'Required Date': payload.requiredDate,
                         'Remark': payload.remark
                     });
                 } catch (e) {
@@ -9544,7 +10211,7 @@
 
                 const tbody = document.getElementById('consumptionTable');
                 const message = e && e.name === 'AbortError' ? 'Fetch timed out' : e.message;
-                if (tbody) tbody.innerHTML = `<tr><td colspan="13" class="p-6 text-center text-red-400 italic text-xs">Failed to load: ${message}</td></tr>`;
+                if (tbody) tbody.innerHTML = `<tr><td colspan="14" class="p-6 text-center text-red-400 italic text-xs">Failed to load: ${message}</td></tr>`;
                 if (st) { st.innerText = 'Error'; st.classList.remove('sync-active'); }
             }
         }
@@ -9598,6 +10265,7 @@
                     getVal(r, ['Request By','RequestBy','Requestor']),
                     getVal(r, ['Proto Stage','ProtoStage']),
                     getVal(r, ['Request Type','RequestType']),
+                    getVal(r, ['Required Date','RequiredDate','Required Date m/d/yyyy']),
                     getMAPic(r),
                     getVal(r, ['Remark','Remarks']),
                     getConsumptionStatusLabel(r)
@@ -9613,7 +10281,7 @@
             });
 
             if (!rows.length) {
-                tbody.innerHTML = `<tr><td colspan="13" class="p-4 text-center">
+                tbody.innerHTML = `<tr><td colspan="14" class="p-4 text-center">
                     <p class="text-slate-400 italic text-xs mb-1">${consumptionSearchQuery||consumptionMonthQuery ? 'No results for current filter.' : 'No consumption records found.'}</p>
                 </td></tr>`;
                 return;
@@ -9629,6 +10297,7 @@
                 const reqBy    = getVal(i, ['Request By','RequestBy','Requestor']);
                 const proto    = getVal(i, ['Proto Stage','ProtoStage','Stage']);
                 const reqType  = getVal(i, ['Request Type','RequestType','Type']);
+                const requiredDt = convertExcelDate(getVal(i, ['Required Date','RequiredDate','Required Date m/d/yyyy']), false);
                 const startDt  = convertExcelDate(getVal(i, ['Start Date m/d/yyyy','Start Date','StartDate']));
                 const completeDt = convertExcelDate(getVal(i, ['Complete Date m/d/yyyy','Complete Date','CompleteDate']));
                 const pic      = getMAPic(i);
@@ -9656,6 +10325,9 @@
                     <td class="p-3 text-[10px]">${reqBy}</td>
                     <td class="p-3 font-semibold text-purple-700">${proto}</td>
                     <td class="p-3 text-orange-700 text-[10px] font-bold">${reqType}</td>
+                    <td class="p-3 text-[10px] text-amber-700">${canEdit
+                        ? `<input id="con-required-${sid}" class="manual-input admin-input" value="${requiredDt !== '---' ? requiredDt : ''}" placeholder="m/d/yyyy or -">`
+                        : requiredDt}</td>
                     <td class="p-3 text-[10px]">${canEdit
                         ? `<input id="con-start-${sid}" class="manual-input admin-input" value="${startDt !== '---' ? startDt : ''}" placeholder="m/d/yyyy hh:mm or -">`
                         : startDt}</td>
@@ -9681,11 +10353,13 @@
         async function addConsumptionRow() {
             if (!currentUser) return alert('Please login first.');
             const receivedTime = document.getElementById('c_receivedTime').value.trim() || nowAsLaserDate();
+            const requiredInput = document.getElementById('c_requiredDate').value.trim();
             const startInput = document.getElementById('c_startDate').value.trim();
             const completeInput = document.getElementById('c_completeDate').value.trim();
+            const requiredNorm = preparePortalDatePayload(requiredInput, '', { dateOnly: true, allowNoAction: true });
             const startNorm = prepareConsumptionDatePayload(startInput);
             const completeNorm = prepareConsumptionDatePayload(completeInput);
-            if ([startNorm, completeNorm].some(v => v === null)) {
+            if ([requiredNorm, startNorm, completeNorm].some(v => v === null)) {
                 alert('Invalid date format. Use m/d/yyyy, m/d/yyyy hh:mm, or - for no action.');
                 return;
             }
@@ -9697,6 +10371,7 @@
                 requestBy:     document.getElementById('c_requestBy').value.trim() || currentUser,
                 protoStage:    document.getElementById('c_protoStage').value.trim(),
                 requestType:   document.getElementById('c_requestType').value.trim(),
+                requiredDate:  requiredNorm,
                 startDate:     startNorm,
                 completeDate:  completeNorm,
                 pic:           currentUser,
@@ -9715,7 +10390,7 @@
                     btn.innerText = 'ADDED ✓';
                     clearPortalTabDirty('consumption');
                     ['c_receivedTime','c_season','c_style','c_jobNo','c_protoStage',
-                     'c_requestType','c_startDate','c_completeDate','c_remark'].forEach(id => {
+                     'c_requestType','c_requiredDate','c_startDate','c_completeDate','c_remark'].forEach(id => {
                         const el = document.getElementById(id); if (el) el.value = '';
                     });
                     const reqByEl = document.getElementById('c_requestBy');
@@ -9732,6 +10407,7 @@
         async function saveConsumptionRow(sid, event) {
             if (!currentUser) return alert('Please login first.');
             const btn = event.target; btn.innerText = 'SAVING...'; btn.disabled = true;
+            const requiredVal = document.getElementById(`con-required-${sid}`)?.value.trim() || '';
             const startVal    = document.getElementById(`con-start-${sid}`)?.value.trim() || '';
             const completeVal = document.getElementById(`con-complete-${sid}`)?.value.trim() || '';
             const remarkVal   = document.getElementById(`con-remark-${sid}`)?.value.trim() || '';
@@ -9745,9 +10421,10 @@
             const picToSave = isPortalAdmin()
                 ? selectedPic
                 : ((!existingPic || existingPic === '---') ? currentUser : existingPic);
+            const requiredNorm = preparePortalDateFieldPayload(requiredVal, getVal(existing, ['Required Date','RequiredDate','Required Date m/d/yyyy']), { dateOnly: true, preferDayFirst: true, allowNoAction: true });
             const startNorm = prepareConsumptionDatePayload(startVal, convertExcelDate(getVal(existing, ['Start Date m/d/yyyy','Start Date','StartDate'])));
             const completeNorm = prepareConsumptionDatePayload(completeVal, convertExcelDate(getVal(existing, ['Complete Date m/d/yyyy','Complete Date','CompleteDate'])));
-            if ([startNorm, completeNorm].some(v => v === null)) {
+            if ([requiredNorm, startNorm, completeNorm].some(v => v === null)) {
                 btn.innerText = 'ERROR'; btn.disabled = false;
                 alert('Invalid date format. Use m/d/yyyy, m/d/yyyy hh:mm, or - for no action.');
                 return;
@@ -9755,6 +10432,7 @@
             const payload = {
                 id:           sid,
                 recordID:     sid,
+                requiredDate: requiredNorm,
                 startDate:    startNorm,
                 completeDate: completeNorm,
                 pic:          picToSave,
