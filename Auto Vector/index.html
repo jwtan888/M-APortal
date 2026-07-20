@@ -1281,28 +1281,103 @@
     return 'quilting';
   }
 
-  function quiltingLinesFromEntities(entities) {
-    const lines = [];
+  function quiltingGeometry(rawEntity) {
+    const points = rawEntity?.type === 'SPLINE' ? (rawEntity.controlPoints || [])
+      : (rawEntity?.type === 'POLYLINE' || rawEntity?.type === 'LWPOLYLINE') ? (rawEntity.vertices || [])
+      : rawEntity?.x !== undefined ? [{ x: rawEntity.x, y: rawEntity.y }, { x: rawEntity.x1, y: rawEntity.y1 }]
+      : [];
+    if (!points.length) return null;
+    const xs = points.map(point => Number(point.x || 0));
+    const ys = points.map(point => Number(point.y || 0));
+    return {
+      endpoints: [points[0], points[points.length - 1]].map(point => ({ x: Number(point.x || 0), y: Number(point.y || 0) })),
+      minX: Math.min(...xs), maxY: Math.max(...ys)
+    };
+  }
+
+  function quiltingLinesFromEntities(entities, rawEntities) {
+    const stitches = [];
     const transitions = [];
     (entities || []).forEach(entity => {
       const role = quiltingEntityRole(entity);
+      const geometry = quiltingGeometry((rawEntities || [])[entity.rawIndex] || entity);
       if (role === 'transition') {
-        transitions.push(Number(entity.lengthCm || 0));
+        transitions.push({ lengthCm: Number(entity.lengthCm || 0), geometry });
         return;
       }
-      lines.push({
-        lineNumber: lines.length + 1,
+      stitches.push({
+        lineNumber: stitches.length + 1,
         layer: entity.layer || '',
         lengthCm: Number(entity.lengthCm || 0),
         transitionCm: 0,
-        stitchType: role === 'stay' ? 'STAY STITCH' : 'QUILTING STITCH'
+        stitchType: role === 'stay' ? 'STAY STITCH' : 'QUILTING STITCH',
+        geometry
       });
     });
-    transitions.forEach((lengthCm, index) => {
-      if (!lines.length) return;
-      lines[Math.min(index, lines.length - 1)].transitionCm += lengthCm;
+    if (!stitches.length) return [];
+
+    const endpointNodes = stitches.flatMap((stitch, stitchIndex) =>
+      (stitch.geometry?.endpoints || []).map((point, endpointIndex) => ({ stitchIndex, endpointIndex, point }))
+    );
+    const nearestNode = point => endpointNodes.reduce((best, node) => {
+      const distance = Math.hypot(point.x - node.point.x, point.y - node.point.y);
+      return !best || distance < best.distance ? { ...node, distance } : best;
+    }, null);
+    const links = transitions.map((transition, transitionIndex) => {
+      const endpoints = transition.geometry?.endpoints || [];
+      return endpoints.length === 2 ? {
+        transitionIndex,
+        from: nearestNode(endpoints[0]),
+        to: nearestNode(endpoints[1])
+      } : null;
+    }).filter(link => link?.from && link?.to);
+    const orderedStitchIndexes = stitches.map((_, index) => index).sort((a, b) =>
+      (stitches[b].geometry?.maxY ?? -Infinity) - (stitches[a].geometry?.maxY ?? -Infinity)
+      || (stitches[a].geometry?.minX ?? Infinity) - (stitches[b].geometry?.minX ?? Infinity)
+    );
+    const startEndpoint = stitchIndex => {
+      const endpoints = stitches[stitchIndex].geometry?.endpoints || [];
+      if (endpoints.length < 2) return 0;
+      return endpoints[1].x < endpoints[0].x || (endpoints[1].x === endpoints[0].x && endpoints[1].y > endpoints[0].y) ? 1 : 0;
+    };
+    const visitedStitches = new Set();
+    const usedTransitions = new Set();
+    const orderedLines = [];
+    let current = { stitchIndex: orderedStitchIndexes[0], endpointIndex: startEndpoint(orderedStitchIndexes[0]) };
+
+    while (visitedStitches.size < stitches.length) {
+      if (visitedStitches.has(current.stitchIndex)) {
+        const nextIndex = orderedStitchIndexes.find(index => !visitedStitches.has(index));
+        current = { stitchIndex: nextIndex, endpointIndex: startEndpoint(nextIndex) };
+      }
+      const line = stitches[current.stitchIndex];
+      visitedStitches.add(current.stitchIndex);
+      orderedLines.push(line);
+      const exitEndpoint = current.endpointIndex === 0 ? 1 : 0;
+      const link = links.find(candidate => {
+        if (usedTransitions.has(candidate.transitionIndex)) return false;
+        const fromExit = candidate.from.stitchIndex === current.stitchIndex && candidate.from.endpointIndex === exitEndpoint;
+        const toExit = candidate.to.stitchIndex === current.stitchIndex && candidate.to.endpointIndex === exitEndpoint;
+        const nextNode = fromExit ? candidate.to : toExit ? candidate.from : null;
+        return nextNode && (!visitedStitches.has(nextNode.stitchIndex) || visitedStitches.size === stitches.length);
+      });
+      if (link) {
+        usedTransitions.add(link.transitionIndex);
+        line.transitionCm += transitions[link.transitionIndex].lengthCm;
+        current = link.from.stitchIndex === current.stitchIndex && link.from.endpointIndex === exitEndpoint ? link.to : link.from;
+      } else if (visitedStitches.size < stitches.length) {
+        const nextIndex = orderedStitchIndexes.find(index => !visitedStitches.has(index));
+        current = { stitchIndex: nextIndex, endpointIndex: startEndpoint(nextIndex) };
+      }
+    }
+    transitions.forEach((transition, index) => {
+      if (!usedTransitions.has(index)) orderedLines[Math.min(index, orderedLines.length - 1)].transitionCm += transition.lengthCm;
     });
-    return lines;
+    orderedLines.forEach((line, index) => {
+      line.lineNumber = index + 1;
+      delete line.geometry;
+    });
+    return orderedLines;
   }
 
   function initializeQuiltingRows() {
@@ -1311,7 +1386,7 @@
       quiltingRows = (calculationResults || []).filter(result => !result.error).map(result => ({
         partName: fileNameWithoutExtension(result.fileName),
         quantity: 1,
-        lines: quiltingLinesFromEntities(result.entities)
+        lines: quiltingLinesFromEntities(result.entities, result.rawEntities)
       }));
       quiltingRows.resultKey = resultKey;
       document.getElementById('quiltingStyle').value = getFieldValue('styleName') || fileNameWithoutExtension(calculationResults[0]?.fileName || '');
@@ -1349,7 +1424,11 @@
         </select></td>
         <td><input aria-label="Line length cm" type="number" min="0" step="0.0001" value="${line.lengthCm.toFixed(4)}" onchange="updateQuiltingLength(${partIndex}, ${lineIndex}, this.value)"></td>
         <td><input aria-label="Transition length cm" type="number" min="0" step="0.0001" value="${Number(line.transitionCm || 0).toFixed(4)}" onchange="updateQuiltingTransition(${partIndex}, ${lineIndex}, this.value)"></td>
-        <td><button type="button" class="row-action danger" onclick="removeQuiltingRow(${partIndex}, ${lineIndex})">Remove</button></td>
+        <td>
+          <button type="button" class="row-action" onclick="moveQuiltingRow(${partIndex}, ${lineIndex}, -1)" ${lineIndex === 0 ? 'disabled' : ''}>Up</button>
+          <button type="button" class="row-action" onclick="moveQuiltingRow(${partIndex}, ${lineIndex}, 1)" ${lineIndex === part.lines.length - 1 ? 'disabled' : ''}>Down</button>
+          <button type="button" class="row-action danger" onclick="removeQuiltingRow(${partIndex}, ${lineIndex})">Remove</button>
+        </td>
       </tr>`).join('');
       return header + lines;
     }).join('');
@@ -1415,6 +1494,16 @@
     if (!part) return;
     part.lines.splice(lineIndex, 1);
     part.lines.forEach((line, index) => { line.lineNumber = index + 1; });
+    renderQuiltingRows();
+  }
+
+  function moveQuiltingRow(partIndex, lineIndex, direction) {
+    const lines = quiltingRows[partIndex]?.lines;
+    const targetIndex = lineIndex + direction;
+    if (!lines || targetIndex < 0 || targetIndex >= lines.length) return;
+    const [line] = lines.splice(lineIndex, 1);
+    lines.splice(targetIndex, 0, line);
+    lines.forEach((item, index) => { item.lineNumber = index + 1; });
     renderQuiltingRows();
   }
 
