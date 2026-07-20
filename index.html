@@ -5114,6 +5114,13 @@ function taskHubNoAction(value) {
             return { priority: 3, status: 'Pending' };
         }
 
+        function taskHubConsumptionStatus(startDate, requiredDate) {
+            if (!taskHubText(requiredDate)) return { priority: 3, status: 'Pending' };
+            if (taskHubOverdue(requiredDate)) return { priority: 0, status: 'Delay' };
+            if (taskHubText(startDate)) return { priority: 2, status: 'In Progress' };
+            return { priority: 3, status: 'Pending' };
+        }
+
         function taskHubTemplateStatus(row, startDate, dueDate) {
             const dashboardStatus = taskHubText(row?.status).toUpperCase();
             if (dashboardStatus === 'DELAYED') return { priority: 0, status: 'Delay' };
@@ -5429,9 +5436,8 @@ function taskHubNoAction(value) {
                 const style = taskHubFirst(getVal(row, ['Style Number', 'Style', 'Style No.']));
                 if (!style) return;
                 const start = taskHubFirst(getVal(row, ['Start Date\nm/d/yyyy', 'Start Date m/d/yyyy', 'Start Date']));
-                const received = taskHubFirst(getVal(row, ['Received Time', 'Date Update', 'Date']));
-                const required = taskHubFirst(getVal(row, ['Required Date', 'Required Date m/d/yyyy', 'Required Date\nm/d/yyyy']), received);
-                const taskStatus = taskHubStatus(start, required);
+                const required = taskHubFirst(getVal(row, ['Required Date', 'Required Date m/d/yyyy', 'Required Date\nm/d/yyyy']));
+                const taskStatus = taskHubConsumptionStatus(start, required);
                 addPendingTask(items, {
                     source: 'Consumption',
                     tab: 'consumption',
