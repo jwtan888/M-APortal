@@ -5108,9 +5108,9 @@ function taskHubNoAction(value) {
         }
 
         function taskHubStatus(startDate, dueDate, pendingMaterial = false) {
+            if (pendingMaterial) return { priority: 1, status: 'Pending Material' };
             if (taskHubText(startDate)) return { priority: 2, status: 'In Progress' };
             if (taskHubOverdue(dueDate)) return { priority: 0, status: 'Delay' };
-            if (pendingMaterial) return { priority: 1, status: 'Pending Material' };
             return { priority: 3, status: 'Pending' };
         }
 
@@ -5242,6 +5242,7 @@ function taskHubNoAction(value) {
                 });
             } else if (tab === 'consumption') {
                 Object.assign(payload, {
+                    season: getVal(row, ['Season']),
                     requiredDate: getVal(row, ['Required Date', 'RequiredDate', 'Required Date m/d/yyyy']),
                     startDate: getVal(row, ['Start Date m/d/yyyy', 'Start Date', 'StartDate']),
                     completeDate: getVal(row, ['Complete Date m/d/yyyy', 'Complete Date', 'CompleteDate'])
@@ -10040,7 +10041,7 @@ function renderPendingTaskHub() {
             const templatePic = sanitizeTemplateValue(templateRow?.pic);
             return {
                 receivedTime: getTemplateCompletionTimeForConsumption(templateRow),
-                season: '',
+                season: sanitizeTemplateValue(templateRow?.season),
                 styleNumber: sanitizeTemplateValue(templateRow?.style),
                 jobNo: sanitizeTemplateValue(templateRow?.jobNo),
                 requestBy: '',
@@ -10052,6 +10053,73 @@ function renderPendingTaskHub() {
                 pic: '',
                 remark: `Template M&A PIC: ${templatePic || '-'} / Auto from Template ID ${sanitizeTemplateValue(templateRow?.id)}${sanitizeTemplateValue(templateRow?.templateNo) ? ` / Template No. ${sanitizeTemplateValue(templateRow?.templateNo)}` : ''}`
             };
+        }
+
+        function getAutoQuiltingTemplateId(consumptionRow) {
+            const remark = String(getVal(consumptionRow, ['Remark', 'Remarks']) || '');
+            return remark.match(/Auto from Template ID\s+(\d+)/i)?.[1] || '';
+        }
+
+        function buildQuiltingSeasonBackfillPayload(row, season) {
+            const clean = aliases => {
+                const value = getVal(row, aliases);
+                return value === '---' ? '' : value;
+            };
+            const id = clean(['Id', 'ID', 'id']);
+            const pic = getMAPic(row);
+            return {
+                id,
+                recordID: id,
+                receivedTime: clean(['Received Time m/d/yyyy', 'Received Time', 'ReceivedTime']),
+                season,
+                styleNumber: clean(['Style Number', 'StyleNumber', 'Style']),
+                jobNo: clean(['Job Number', 'JobNo', 'Job No']),
+                requestBy: clean(['Request By', 'RequestBy', 'Requestor']),
+                protoStage: clean(['Proto Stage', 'ProtoStage', 'Stage']),
+                requestType: clean(['Request Type', 'RequestType', 'Type']),
+                requiredDate: clean(['Required Date', 'RequiredDate', 'Required Date m/d/yyyy']),
+                startDate: clean(['Start Date m/d/yyyy', 'Start Date', 'StartDate']),
+                completeDate: clean(['Complete Date m/d/yyyy', 'Complete Date', 'CompleteDate']),
+                pic: pic === '---' ? '' : pic,
+                remark: clean(['Remark', 'Remarks'])
+            };
+        }
+
+        async function backfillQuiltingConsumptionSeasons() {
+            const templatesById = new Map(allTemplates.map(row => [String(row?.id || ''), row]));
+            const candidates = allConsumptionRows.map(row => {
+                const requestType = String(getVal(row, ['Request Type', 'RequestType', 'Type']) || '').toLowerCase();
+                if (!requestType.includes('quilting')) return null;
+                if (sanitizeTemplateValue(getVal(row, ['Season']))) return null;
+                const template = templatesById.get(getAutoQuiltingTemplateId(row));
+                const season = sanitizeTemplateValue(template?.season);
+                const id = sanitizeTemplateValue(getVal(row, ['Id', 'ID', 'id']));
+                return template && season && id ? { row, season, id } : null;
+            }).filter(Boolean);
+
+            let updated = 0;
+            let failed = 0;
+            for (const candidate of candidates) {
+                const payload = buildQuiltingSeasonBackfillPayload(candidate.row, candidate.season);
+                try {
+                    const res = await fetch(consumptionUpdateURL, {
+                        method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(payload)
+                    });
+                    await readPortalWriteResult(res, 'Quilting consumption season backfill');
+                    candidate.row.Season = candidate.season;
+                    updated++;
+                } catch (error) {
+                    failed++;
+                    console.warn(`Quilting season backfill failed for Consumption ID ${candidate.id}`, error);
+                }
+            }
+            if (updated) {
+                writeDashboardSnapshot();
+                renderConsumptionTable();
+                renderConsumptionDashboard();
+                schedulePortalWriteRefresh(refreshConsumptionData);
+            }
+            return { updated, failed, candidates: candidates.length };
         }
 
         async function syncQuiltingTemplatesToConsumption(isSilent = true, options = {}) {
@@ -10107,6 +10175,7 @@ function renderPendingTaskHub() {
                     };
                     writeQuiltingConsumptionSyncMap(syncMap);
                     allConsumptionRows.push({
+                        'Season': payload.season,
                         'Style Number': payload.styleNumber,
                         'Job Number': payload.jobNo,
                         'Proto Stage': payload.protoStage,
@@ -10139,8 +10208,15 @@ function renderPendingTaskHub() {
             try {
                 await refreshTemplateLogs(true);
                 await refreshConsumptionData(true);
+                const seasonResult = await backfillQuiltingConsumptionSeasons();
                 const result = await syncQuiltingTemplatesToConsumption(false, { force: true });
-                if (statusEl && result?.created) statusEl.innerText = `Created ${result.created} Quilting Details row${result.created > 1 ? 's' : ''}.`;
+                if (statusEl) {
+                    const parts = [];
+                    if (seasonResult.updated) parts.push(`updated ${seasonResult.updated} missing season${seasonResult.updated > 1 ? 's' : ''}`);
+                    if (result?.created) parts.push(`created ${result.created} Quilting Details row${result.created > 1 ? 's' : ''}`);
+                    if (seasonResult.failed) parts.push(`${seasonResult.failed} season update${seasonResult.failed > 1 ? 's' : ''} failed`);
+                    statusEl.innerText = parts.length ? parts.join(' · ') : 'No Quilting Details updates needed.';
+                }
             } catch (e) {
                 if (statusEl) statusEl.innerText = `Manual sync failed: ${e.message}`;
             } finally {
@@ -10438,6 +10514,7 @@ function renderPendingTaskHub() {
             const payload = {
                 id:           sid,
                 recordID:     sid,
+                season:       getVal(existing, ['Season']),
                 requiredDate: requiredNorm,
                 startDate:    startNorm,
                 completeDate: completeNorm,
