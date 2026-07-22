@@ -44,8 +44,13 @@
 
   function dataHeader(ws){const fills={A:'FFFFFF00',B:'FFFFFF00',C:'FFFFFF00',D:'FFFFFF00',E:'FFE2F0D9',F:'FFE2F0D9',G:'FFE2F0D9',H:'FFE2F0D9',I:'FFE2F0D9',J:'FFFFFF00',K:'FF4472C4',L:'FFFFFF00',M:'FFA9D08E',N:'FFFFFFFF',O:'FFFFFF00',P:'FF4472C4',Q:'FF4472C4',R:'FF4472C4',S:'FF4472C4',T:'FF4472C4',U:'FF4472C4',V:'FFFFFF00',W:'FF4472C4',X:'FF4472C4'};Object.entries(fills).forEach(([col,argb])=>{const c=ws.getCell(`${col}1`);fill(c,argb);c.font={...(c.font||{}),bold:true,color:{argb:'FF002060'}};c.alignment={...(c.alignment||{}),vertical:'middle',horizontal:'left',wrapText:true};border(c,'FFBFBFBF');});}
 
+  function writeMaterialList(wb,materials){const ws=wb.getWorksheet('Material list');if(!ws)throw new Error('Template workbook is missing Material list.');const last=Math.max(ws.rowCount,materials.length+2);for(let r=3;r<=last;r++)for(let c=1;c<=7;c++)ws.getRow(r).getCell(c).value=null;materials.forEach((material,index)=>{const row=ws.getRow(index+3);[material.im,material.type,material.supplier,material.supplierItem,material.mil,material.widthMm,material.slit].forEach((value,column)=>row.getCell(column+1).value=value??'');});}
+
+  function calculated(formula,result){return{formula,result:result===''?null:result};}
+
   function breakdownHeader(ws){
     clearValues(ws,4,12);
+    ws.getRow(3).height=102;
     ws.columns=[{width:8.43},{width:19.125},{width:7.125},{width:11.875},{width:7.875},{width:8.25},{width:7.875},{width:7.875},{width:11.25},{width:11.25}];
     const cols=[BLUE,BLUE,BLUE,BLUE,BLUE,YELLOW,YELLOW,GREEN,GREEN,DARK_GREEN];
     const fcs=[WHITE,WHITE,WHITE,WHITE,WHITE,BLACK,BLACK,WHITE,WHITE,WHITE];
@@ -74,11 +79,51 @@
   }
   function styleSummaryRow(row,type){for(let c=1;c<=9;c++){const cell=row.getCell(c);cell.alignment={vertical:'middle',horizontal:c===1?'left':'right',wrapText:true};cell.font={...(cell.font||{}),size:11};if(type==='grand'){cell.font={...(cell.font||{}),bold:true,size:11};border(cell,GRID,'thin');cell.border.top={style:'medium',color:{argb:GRID}};cell.border.bottom={style:'double',color:{argb:GRID}};}else{border(cell);}}}
 
-  function writeData(wb,rows){const ws=wb.getWorksheet('DATA SHEET');if(!ws)throw new Error('DATA SHEET not found in template.');dataHeader(ws);const fmt=ws.getRow(2);clearValues(ws,2,24);const toNum=v=>v===''||v==='NA'||v===null||v===undefined||isNaN(Number(v))?v:Number(v);rows.forEach((r,i)=>writeAt(ws,2+i,fmt,[r.laserBondingPart,rnd(r.units,0),toNum(r.im),r.yards,r.slitReadyRollFabricPanel,r.type,r.supplier,toNum(r.supplierItem),rnd(r.materialWidthMm,4),r.process,r.productionCat,rnd(r.consumptionMGmt,4),r.preLaminateActualCost===''?'NA':rnd(r.preLaminateActualCost,4),r.preLaminateNikeCosting===''?'NA':rnd(r.preLaminateNikeCosting,4),r.laserColourCode||'NA',r.machineSpeed===''?'NA':rnd(r.machineSpeed,4),r.artworkLengthCm===''?'NA':rnd(r.artworkLengthCm,4),rnd(r.handlingInitialSec,4),rnd(r.handlingPlus20Sec,4),r.machineInitialSec===''?'NA':rnd(r.machineInitialSec,4),r.machinePlus20Sec===''?'NA':rnd(r.machinePlus20Sec,4),rnd(r.costMargin,4),rnd(r.productionHandlingMin,4),r.productionMachineMin===''?'NA':rnd(r.productionMachineMin,4)],24));clearAll(ws,2+rows.length,24);['L','M','N','Q','T','U','X'].forEach(c=>ws.getColumn(c).numFmt='0.0000');['P','S'].forEach(c=>ws.getColumn(c).numFmt='0.0');['I','R','V'].forEach(c=>ws.getColumn(c).numFmt='0');ws.getColumn('W').numFmt='0.000';ws.getColumn('B').numFmt='0';ws.getColumn('N').width=22.67;}
+  function writeData(wb,rows){
+    const ws=wb.getWorksheet('DATA SHEET');
+    if(!ws)throw new Error('DATA SHEET not found in template.');
+    dataHeader(ws);
+    const fmt=ws.getRow(2);
+    clearValues(ws,2,24);
+    const toNum=v=>v===''||v==='NA'||v===null||v===undefined||isNaN(Number(v))?v:Number(v);
+    rows.forEach((r,i)=>{
+      const n=2+i;
+      writeAt(ws,n,fmt,[
+        r.laserBondingPart,rnd(r.units,0),toNum(r.im),r.yards,
+        calculated(`IF(D${n}="Y","N","Y")`,r.yards==='Y'?'N':'Y'),
+        calculated(`IFERROR(VLOOKUP(C${n},'Material list'!$A:$G,2,FALSE),"NA")`,r.type),
+        calculated(`IFERROR(VLOOKUP(C${n},'Material list'!$A:$G,3,FALSE),"NA")`,r.supplier),
+        calculated(`IFERROR(VLOOKUP(C${n},'Material list'!$A:$G,4,FALSE),"NA")`,toNum(r.supplierItem)),
+        calculated(`IFERROR(VLOOKUP(C${n},'Material list'!$A:$G,6,FALSE),"NA")`,rnd(r.materialWidthMm,4)),
+        r.process,
+        calculated(`IFERROR(VLOOKUP(J${n},'Material list'!$Q:$S,3,FALSE),"NA")`,r.productionCat),
+        rnd(r.consumptionMGmt,4),
+        calculated(`IF(K${n}="Sub-con Pre-laminate in roll",L${n}*0.61*1.09361,"NA")`,r.preLaminateActualCost===''?'NA':rnd(r.preLaminateActualCost,4)),
+        calculated(`IF(K${n}="Sub-con Pre-laminate in roll",L${n}*3*1.09361,"NA")`,r.preLaminateNikeCosting===''?'NA':rnd(r.preLaminateNikeCosting,4)),
+        r.laserColourCode||'NA',
+        calculated(`IFERROR(VLOOKUP(O${n},'Material list'!$N:$O,2,FALSE),"NA")`,r.machineSpeed===''?'NA':rnd(r.machineSpeed,4)),
+        r.artworkLengthCm===''?'NA':rnd(r.artworkLengthCm,4),
+        calculated(`IFERROR(VLOOKUP(J${n},'Material list'!$Q:$S,2,FALSE)*B${n},"NA")`,rnd(r.handlingInitialSec,4)),
+        calculated(`IFERROR(R${n}*1.2,"NA")`,rnd(r.handlingPlus20Sec,4)),
+        calculated(`IFERROR(Q${n}/P${n}*B${n},"NA")`,r.machineInitialSec===''?'NA':rnd(r.machineInitialSec,4)),
+        calculated(`IFERROR(T${n}*1.2,"NA")`,r.machinePlus20Sec===''?'NA':rnd(r.machinePlus20Sec,4)),
+        rnd(r.costMargin,4),
+        calculated(`IFERROR(S${n}/60*(100-V${n})%,"NA")`,rnd(r.productionHandlingMin,4)),
+        calculated(`IFERROR(U${n}/60*(100-V${n})%,"NA")`,r.productionMachineMin===''?'NA':rnd(r.productionMachineMin,4))
+      ],24);
+    });
+    clearAll(ws,2+rows.length,24);
+    ['L','M','N','Q','T','U','X'].forEach(c=>ws.getColumn(c).numFmt='0.0000');
+    ['P','S'].forEach(c=>ws.getColumn(c).numFmt='0.0');
+    ['I','R','V'].forEach(c=>ws.getColumn(c).numFmt='0');
+    ws.getColumn('W').numFmt='0.000';
+    ws.getColumn('B').numFmt='0';
+    ws.getColumn('N').width=22.67;
+  }
 
   function writeBreakdown(wb,rows){const ws=wb.getWorksheet('Laser style Breakdown');if(!ws)return;clearAll(ws,3,12);breakdownHeader(ws);const tplGroup=ws.getRow(4),tplDetail=ws.getRow(5),tplSubtotal=ws.getRow(6);let tplGrand=ws.getRow(16);for(let r=7;r<=30;r++){if(String(ws.getRow(r).getCell(1).value||'').trim()==='Grand Total'){tplGrand=ws.getRow(r);break;}}const toNum=v=>v===''||v==='NA'||v===null||v===undefined||isNaN(Number(v))?v:Number(v);let out=4,gMS=0,gHS=0,gMM=0,gHM=0,gPrelam=0,gUnits=0;const byIm=group(rows,r=>r.im||'(blank)');byIm.forEach((imRows,im)=>{const gr=ws.getRow(out++);copyFmt(tplGroup,gr,10);for(let c=1;c<=10;c++)gr.getCell(c).value=null;gr.getCell(1).value=toNum(im);styleBD(gr,'group');const byCat=group(imRows,r=>r.productionCat||'(blank)');let iMS=0,iHS=0,iMM=0,iHM=0,iPrelam=0,iUnits=0;byCat.forEach((items,cat)=>{const ms=sum(items,'machinePlus20Sec'),hs=sum(items,'handlingPlus20Sec'),mm=ms/60,hm=hs/60,prelam=sum(items,'preLaminateNikeCosting'),units=sum(items,'units');iMS+=ms;iHS+=hs;iMM+=mm;iHM+=hm;iPrelam+=prelam;iUnits+=units;gMS+=ms;gHS+=hs;gMM+=mm;gHM+=hm;gPrelam+=prelam;gUnits+=units;const r=ws.getRow(out++);copyFmt(tplDetail,r,10);r.getCell(8).numFmt=r.getCell(9).numFmt;['',cat,rnd(units,0),rnd(ms,8),rnd(hs,4),rnd(mm,4),rnd(hm,4),rnd(mm*0.3,3),rnd(hm*0.09,3),rnd(prelam,3)].forEach((v,i)=>r.getCell(i+1).value=v);styleBD(r,'detail');});gr.getCell(3).value=rnd(iUnits,0);const sr=ws.getRow(out++);copyFmt(tplSubtotal,sr,10);sr.getCell(8).numFmt=sr.getCell(9).numFmt;[`${im} Total`,'',rnd(iUnits,0),rnd(iMS,8),rnd(iHS,4),rnd(iMM,4),rnd(iHM,4),rnd(iMM*0.3,3),rnd(iHM*0.09,3),rnd(iPrelam,3)].forEach((v,i)=>sr.getCell(i+1).value=v);styleBD(sr,'group');});const tr=ws.getRow(out++);copyFmt(tplGrand,tr,10);tr.getCell(8).numFmt=tr.getCell(9).numFmt;['Grand Total','',rnd(gUnits,0),rnd(gMS,8),rnd(gHS,4),rnd(gMM,4),rnd(gHM,4),rnd(gMM*0.3,3),rnd(gHM*0.09,3),rnd(gPrelam,3)].forEach((v,i)=>tr.getCell(i+1).value=v);styleBD(tr,'grand');ws.getColumn(7).numFmt='0.00';clearAll(ws,out,12);}
 
   function writeSummary(wb,rows){const ws=wb.getWorksheet('Summary ');if(!ws)return;summaryHeader(ws);const tplDetail=ws.getRow(3);let tplGrand=ws.getRow(6);for(let r=4;r<=30;r++){if(String(ws.getRow(r).getCell(1).value||'').trim()==='Grand Total'){tplGrand=ws.getRow(r);break;}}const groups=group(rows,r=>r.productionCat||'(blank)');let out=3,gB=0,gC=0,gD=0,gE=0,gF=0,gG=0,gH=0,gI=0;groups.forEach((items,cat)=>{const ms=sum(items,'machinePlus20Sec'),hs=sum(items,'handlingPlus20Sec'),mm=ms/60,hm=hs/60,costH=hm*0.09,costM=mm*0.3,preNike=sum(items,'preLaminateNikeCosting'),preVN=sum(items,'preLaminateActualCost'),prodMM=sum(items,'productionMachineMin'),prodHM=sum(items,'productionHandlingMin');gB+=costH;gC+=costM;gD+=preNike;gE+=mm;gF+=hm;gG+=prodMM;gH+=prodHM;gI+=preVN;const r=ws.getRow(out++);copyFmt(tplDetail,r,9);[cat,rnd(costH,4),rnd(costM,4),rnd(preNike,4),rnd(mm,4),rnd(hm,4),rnd(prodMM,4),rnd(prodHM,4),rnd(preVN,4)].forEach((v,i)=>r.getCell(i+1).value=v);styleSummaryRow(r,'detail');});const tr=ws.getRow(out++);copyFmt(tplGrand,tr,9);['Grand Total',rnd(gB,4),rnd(gC,4),rnd(gD,4),rnd(gE,4),rnd(gF,4),rnd(gG,4),rnd(gH,4),rnd(gI,4)].forEach((v,i)=>tr.getCell(i+1).value=v);styleSummaryRow(tr,'grand');['B','C','D','I'].forEach(c=>ws.getColumn(c).numFmt='$0.0000');['E','F','G','H'].forEach(c=>ws.getColumn(c).numFmt='0.0000');clearAll(ws,out,9);}
 
-  window.generateExcelBrowser=async function(payload,helpers){const wb=await loadTemplateWorkbook();const master=readMaster(wb);const rows=buildRows(payload.rows||[],master);if(!rows.length)throw new Error('No calculator rows were supplied.');writeData(wb,rows);writeBreakdown(wb,rows);writeSummary(wb,rows);wb.calcProperties=wb.calcProperties||{};wb.calcProperties.fullCalcOnLoad=true;wb.calcProperties.forceFullCalc=true;wb.calcProperties.calcMode='auto';const buffer=await wb.xlsx.writeBuffer();helpers.downloadBlob(new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),filename(payload));return buffer;};
+  window.generateExcelBrowser=async function(payload,helpers){const wb=await loadTemplateWorkbook();const master=readMaster(wb);const rows=buildRows(payload.rows||[],master);if(!rows.length)throw new Error('No calculator rows were supplied.');writeMaterialList(wb,master.materials);writeData(wb,rows);writeBreakdown(wb,rows);writeSummary(wb,rows);wb.calcProperties=wb.calcProperties||{};wb.calcProperties.fullCalcOnLoad=true;wb.calcProperties.forceFullCalc=true;wb.calcProperties.calcMode='auto';const buffer=await wb.xlsx.writeBuffer();helpers.downloadBlob(new Blob([buffer],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}),filename(payload));return buffer;};
 })();

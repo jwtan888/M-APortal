@@ -395,7 +395,7 @@
     .calculator-status.error { color: #b91c1c; }
     .calculator-status.success { color: #188038; }
     .template-choice-dialog {
-      width: min(24rem, calc(100vw - 32px)); background: #fff; border-radius: 1rem;
+      width: min(34rem, calc(100vw - 32px)); background: #fff; border-radius: 1rem;
       border: 1px solid #e2e8f0; overflow: hidden; padding: 20px;
       box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35);
     }
@@ -407,16 +407,14 @@
     }
     .template-choice-dialog h2 { font-size: 1.125rem; margin-bottom: 7px; color: #0f172a; }
     .template-choice-dialog p { color: #64748b; font-size: 0.86rem; line-height: 1.5; }
-    .template-choice-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; padding: 0; margin-top: 16px; }
+    .template-choice-actions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; padding: 0; margin-top: 16px; }
     .template-choice-option {
-      min-height: 34px; border-radius: 999px; padding: 8px 16px; cursor: pointer;
-      font: inherit; font-size: 0.75rem; font-weight: 700; letter-spacing: 0.08em;
+      width: 100%; min-height: 42px; border-radius: 999px; padding: 8px 12px; cursor: pointer;
+      font: inherit; font-size: 0.75rem; font-weight: 700; letter-spacing: 0;
       text-transform: uppercase; transition: background 0.2s ease;
     }
-    .template-choice-option.quilting { background: #0f172a; color: #fff; border: 0; }
-    .template-choice-option.quilting:hover { background: #334155; }
-    .template-choice-option.laser { background: #fff; color: #475569; border: 1px solid #e2e8f0; }
-    .template-choice-option.laser:hover { background: #f8fafc; }
+    .template-choice-option.quilting, .template-choice-option.laser { background: #0f172a; color: #fff; border: 0; }
+    .template-choice-option.quilting:hover, .template-choice-option.laser:hover { background: #334155; }
     .quilting-table { min-width: 760px; }
     .quilting-table input, .quilting-table select {
       width: 100%; min-width: 78px; border: 1px solid var(--border2); border-radius: 6px;
@@ -433,7 +431,8 @@
       .field-span-2, .field-span-4 { grid-column: span 1; }
       .calculator-actions { justify-content: stretch; }
       .calculator-actions button { flex: 1; }
-      .template-choice-actions { grid-template-columns: 1fr; }
+      .template-choice-actions { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .template-choice-option { padding-inline: 8px; font-size: 0.7rem; white-space: normal; }
     }
 
     /* ─── UTILITY ─── */
