@@ -834,18 +834,16 @@
                         <option value="Support">Support</option>
                         <option value="Down Filling">Down Filling</option>
                     </select>
+                    <button id="dailyReportPdfBtn" onclick="generateDashboardDailyReport()" class="dashboard-report-btn hidden">
+                        Daily Report PDF
+                    </button>
+                    <span id="dailyReportPdfProgress" class="dashboard-report-progress hidden"></span>
                     <div class="flex-1 border-t border-slate-200"></div>
                 </div>
                 <div id="taskHubBoard" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4"></div>
             </section>
 
-            <div class="mb-4 flex items-center justify-between gap-3">
-                <div class="flex items-center gap-2 min-h-[38px]">
-                    <button id="dailyReportPdfBtn" onclick="generateDashboardDailyReport()" class="dashboard-report-btn hidden">
-                        Daily Report PDF
-                    </button>
-                    <span id="dailyReportPdfProgress" class="dashboard-report-progress hidden"></span>
-                </div>
+            <div class="mb-4 flex items-center justify-end gap-3">
                 <div class="flex items-center gap-2 px-4 py-2 rounded-[var(--radius-md)]" style="background:var(--surface);border:1px solid var(--border);box-shadow:var(--shadow-sm)">
                     <span style="font-size:10px;font-weight:700;color:var(--text-3);letter-spacing:0.08em;text-transform:uppercase">Filter Month:</span>
                     <select id="monthFilter" onchange="updateDashboard()" class="text-xs font-bold outline-none cursor-pointer" style="border:none;background:transparent;color:var(--accent)">
@@ -7821,7 +7819,7 @@ function renderPendingTaskHub() {
             let current = { title: 'Task Overview', nodes: [] };
             Array.from(dashboard.children).forEach(node => {
                 if (node.id === 'slaModal') return;
-                if (node.querySelector && (node.querySelector('#monthFilter') || node.querySelector('#dailyReportPdfBtn'))) return;
+                if (node.querySelector && node.querySelector('#monthFilter')) return;
                 const dividerTitle = getDashboardDividerTitle(node);
                 if (dividerTitle) {
                     if (current.nodes.length) groups.push(current);
@@ -8719,6 +8717,28 @@ function renderPendingTaskHub() {
             const delayed = items.filter(item => item.statusPriority === 0 || /delay|late/i.test(item.status || '')).length;
             const pendingMaterial = items.filter(item => item.statusPriority === 1 || /pending material/i.test(item.status || '')).length;
             const assignedPics = new Set(items.map(item => item.pic).filter(pic => pic && pic !== 'Unassigned')).size;
+            const picMap = new Map();
+            items.forEach(item => {
+                const pic = item.pic || 'Unassigned';
+                const row = picMap.get(pic) || {
+                    pic, total: 0, urgent: 0, delayed: 0, pendingMaterial: 0,
+                    pending: 0, types: new Map(), styles: []
+                };
+                row.total++;
+                if (item.urgent) row.urgent++;
+                if (item.statusPriority === 0 || /delay|late/i.test(item.status || '')) row.delayed++;
+                else if (item.statusPriority === 1 || /pending material/i.test(item.status || '')) row.pendingMaterial++;
+                else row.pending++;
+                row.types.set(item.source, (row.types.get(item.source) || 0) + 1);
+                if (item.title && !row.styles.includes(item.title)) row.styles.push(item.title);
+                picMap.set(pic, row);
+            });
+            const picRows = Array.from(picMap.values()).sort((a, b) => {
+                const aUnassigned = a.pic === 'Unassigned';
+                const bUnassigned = b.pic === 'Unassigned';
+                if (aUnassigned !== bUnassigned) return aUnassigned ? 1 : -1;
+                return b.total - a.total || b.urgent - a.urgent || b.delayed - a.delayed || a.pic.localeCompare(b.pic);
+            });
             const margin = DASHBOARD_PDF_LAYOUT.margin;
             const pageW = DASHBOARD_PDF_LAYOUT.pageW;
             const gap = DASHBOARD_PDF_LAYOUT.gap;
@@ -8731,72 +8751,75 @@ function renderPendingTaskHub() {
             const cardW = (pageW - margin * 2 - gap * (cards.length - 1)) / cards.length;
             cards.forEach((card, index) => addPdfKpiCard(pdf, margin + index * (cardW + gap), DASHBOARD_PDF_LAYOUT.kpiY, cardW, card.label, card.value, card.color));
 
-            addPdfSectionLabel(pdf, `Priority Task Summary · ${pendingMaterial} Pending Material`, margin, 58, pageW - margin * 2);
-            const x = margin;
-            const y = 63;
-            const w = pageW - margin * 2;
-            const h = 135;
-            setPdfRgb(pdf, 'setDrawColor', DASHBOARD_PDF_THEME.border);
-            setPdfRgb(pdf, 'setFillColor', DASHBOARD_PDF_THEME.card);
-            pdf.roundedRect(x, y, w, h, 4, 4, 'FD');
-            setPdfRgb(pdf, 'setFillColor', DASHBOARD_PDF_THEME.tableHead);
-            pdf.rect(x, y + 10, w, 7, 'F');
+            addPdfSectionLabel(pdf, `PIC Workload Summary - ${pendingMaterial} Pending Material`, margin, 58, pageW - margin * 2);
+            const maxCards = 12;
+            const unassignedRow = picRows.find(row => row.pic === 'Unassigned');
+            const namedRows = picRows.filter(row => row.pic !== 'Unassigned');
+            const displayedRows = unassignedRow
+                ? [...namedRows.slice(0, maxCards - 1), unassignedRow]
+                : namedRows.slice(0, maxCards);
+            const cardGap = 4;
+            const columnCount = picRows.length > 8 ? 3 : 2;
+            const picCardW = (pageW - margin * 2 - cardGap * (columnCount - 1)) / columnCount;
+            const picCardH = 30.5;
+            const cardsY = 63;
 
-            const columns = [
-                { title: 'Task Type', width: 34 },
-                { title: 'M&A PIC', width: 30 },
-                { title: 'Style / Job', width: 43 },
-                { title: 'Detail', width: 91 },
-                { title: 'Status', width: 42 },
-                { title: 'Required', width: 29 }
-            ];
-            let headerX = x + 4;
-            pdf.setFont('helvetica', 'bold');
-            pdf.setFontSize(5.2);
-            setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.muted);
-            columns.forEach(column => {
-                pdf.text(column.title, headerX, y + 14.7);
-                headerX += column.width;
-            });
+            displayedRows.forEach((row, index) => {
+                const x = margin + (index % columnCount) * (picCardW + cardGap);
+                const y = cardsY + Math.floor(index / columnCount) * (picCardH + cardGap);
+                const isUnassigned = row.pic === 'Unassigned';
+                setPdfRgb(pdf, 'setDrawColor', DASHBOARD_PDF_THEME.border);
+                setPdfRgb(pdf, 'setFillColor', DASHBOARD_PDF_THEME.card);
+                pdf.roundedRect(x, y, picCardW, picCardH, 3, 3, 'FD');
 
-            const maxRows = 17;
-            let cursorY = y + 22;
-            items.slice(0, maxRows).forEach((item, rowIndex) => {
-                if (rowIndex % 2 === 0) {
-                    setPdfRgb(pdf, 'setFillColor', [252, 253, 255]);
-                    pdf.rect(x + 0.6, cursorY - 4.3, w - 1.2, 6.4, 'F');
-                }
-                setPdfRgb(pdf, 'setDrawColor', DASHBOARD_PDF_THEME.line);
-                pdf.line(x, cursorY - 4.8, x + w, cursorY - 4.8);
-                const status = item.urgent ? `URGENT · ${item.status}` : item.status;
-                const cells = [item.source, item.pic, item.title, item.detail || '-', status || 'Pending', item.dateLabel || '---'];
-                let cellX = x + 4;
-                cells.forEach((cell, index) => {
-                    pdf.setFont('helvetica', index === 2 ? 'bold' : 'normal');
-                    pdf.setFontSize(index === 3 ? 4.7 : 5.1);
-                    const color = index === 2
-                        ? DASHBOARD_PDF_THEME.blue
-                        : index === 4 && item.urgent
-                            ? DASHBOARD_PDF_THEME.red
-                            : DASHBOARD_PDF_THEME.ink;
-                    setPdfRgb(pdf, 'setTextColor', color);
-                    const text = pdf.splitTextToSize(truncateReportPdfText(cell, index === 3 ? 90 : 34), columns[index].width - 3).slice(0, 2);
-                    pdf.text(text, cellX, cursorY);
-                    cellX += columns[index].width;
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(7.2);
+                setPdfRgb(pdf, 'setTextColor', isUnassigned ? DASHBOARD_PDF_THEME.amber : DASHBOARD_PDF_THEME.blue);
+                pdf.text(truncateReportPdfText(row.pic, 30), x + 4, y + 6.2);
+                pdf.setFontSize(5.1);
+                setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.muted);
+                pdf.text(`WORKLOAD ${row.total}`, x + picCardW - 4, y + 6.1, { align: 'right' });
+
+                const metrics = [
+                    { label: 'URGENT', value: row.urgent, color: DASHBOARD_PDF_THEME.red },
+                    { label: 'DELAY', value: row.delayed, color: DASHBOARD_PDF_THEME.red },
+                    { label: 'PENDING MAT.', value: row.pendingMaterial, color: DASHBOARD_PDF_THEME.amber },
+                    { label: 'PENDING', value: row.pending, color: DASHBOARD_PDF_THEME.ink }
+                ];
+                const metricW = (picCardW - 8) / metrics.length;
+                metrics.forEach((metric, metricIndex) => {
+                    const metricX = x + 4 + metricIndex * metricW;
+                    pdf.setFont('helvetica', 'bold');
+                    pdf.setFontSize(4.4);
+                    setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.faint);
+                    pdf.text(metric.label, metricX, y + 12.4);
+                    pdf.setFontSize(8);
+                    setPdfRgb(pdf, 'setTextColor', metric.value > 0 ? metric.color : DASHBOARD_PDF_THEME.ink);
+                    pdf.text(String(metric.value), metricX, y + 18.5);
                 });
-                cursorY += 6.4;
+
+                setPdfRgb(pdf, 'setDrawColor', DASHBOARD_PDF_THEME.line);
+                pdf.line(x + 4, y + 21.5, x + picCardW - 4, y + 21.5);
+                const typeSummary = Array.from(row.types.entries()).map(([type, count]) => `${type} ${count}`).join(', ');
+                const styleLimit = 5;
+                const styleSummary = row.styles.slice(0, styleLimit).join(', ') + (row.styles.length > styleLimit ? ` +${row.styles.length - styleLimit} more` : '');
+                const workloadDetail = [typeSummary, styleSummary].filter(Boolean).join(' - ') || '-';
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(4.7);
+                setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.muted);
+                pdf.text(truncateReportPdfText(workloadDetail, 115), x + 4, y + 26.7, { maxWidth: picCardW - 8 });
             });
 
-            if (!items.length) {
+            if (!picRows.length) {
                 pdf.setFont('helvetica', 'normal');
                 pdf.setFontSize(7);
                 setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.faint);
-                pdf.text('No pending tasks.', x + 4, y + 27);
-            } else if (items.length > maxRows) {
+                pdf.text('No pending tasks.', margin, cardsY + 8);
+            } else if (picRows.length > maxCards) {
                 pdf.setFont('helvetica', 'bold');
                 pdf.setFontSize(5.2);
                 setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.faint);
-                pdf.text(`Showing highest priority ${maxRows} of ${items.length} pending tasks.`, x + w - 4, y + h - 4, { align: 'right' });
+                pdf.text(`Showing ${displayedRows.length} of ${picRows.length} PIC workload cards.`, pageW - margin, 202, { align: 'right' });
             }
         }
 
