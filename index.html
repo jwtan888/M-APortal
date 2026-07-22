@@ -5,8 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>M&A | Garment Automation Portal</title>
     <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 68 48'%3E%3Cg fill='%230514ff'%3E%3Cpath d='M9 4h7L7 44H0z'/%3E%3Cpath d='M21 4h12L24 44H12z'/%3E%3Cpath d='M44 4h21c2 0 3 2 3 4l-7 28c-1 5-5 8-10 8H34c-4 0-7-3-6-7l7-26c1-4 5-7 9-7z'/%3E%3C/g%3E%3C/svg%3E">
-    <script src="https://cdn.tailwindcss.com"></script>
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="./portal-tailwind.css">
+    <link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js" defer></script>
     <style>
         /* ── Apple-inspired Design System ── */
         :root {
@@ -95,9 +96,22 @@
         .slider:before { position: absolute; content: ""; height: 16px; width: 16px; left: 3px; bottom: 3px; background-color: white; transition: .3s cubic-bezier(0.4,0,0.2,1); border-radius: 50%; box-shadow: 0 1px 3px rgba(0,0,0,0.2); }
         input:checked + .slider { background-color: var(--accent); }
         input:checked + .slider:before { transform: translateX(22px); }
+        .portal-mode-switch .slider, .portal-mode-switch .slider:before { transition-duration: 0.18s; }
+        .portal-mode-switch input:checked + .slider { background-color: #34c759; }
+        .portal-mode-switch input:focus-visible + .slider { box-shadow: 0 0 0 3px rgba(0,113,227,0.2); }
 
         @keyframes pulse-green { 0%{opacity:1}50%{opacity:0.5}100%{opacity:1} }
         .sync-active { animation: pulse-green 2s infinite; }
+
+        @keyframes task-urgent-breathe {
+            0%, 100% { transform: scale(0.95); opacity: 0.6; }
+            50% { transform: scale(1.05); opacity: 1; }
+        }
+        .task-urgent-dot { animation: task-urgent-breathe 2s ease-in-out infinite; }
+        @media (prefers-reduced-motion: reduce) {
+            .task-urgent-dot { animation: none; opacity: 1; transform: none; }
+            .portal-mode-switch .slider, .portal-mode-switch .slider:before { transition: none; }
+        }
 
         .dashboard-report-btn {
             display: inline-flex;
@@ -643,7 +657,16 @@
                 </div>
                 <div id="activeUserView" class="hidden flex items-center justify-between gap-3">
                     <span class="text-sm font-semibold uppercase tracking-tight" style="color:var(--text-2)">Active: <span id="displayUserName" class="ml-1 font-bold" style="color:var(--accent)">---</span></span>
-                    <button onclick="logout()" class="text-xs font-bold px-3 py-2 rounded-[10px] border transition-all" style="color:#ef4444;border-color:rgba(239,68,68,0.25)">Logout</button>
+                    <div class="flex items-center gap-2">
+                        <div id="portalModeControl" class="flex items-center gap-2 px-2 py-1.5 rounded-[10px] border" style="background:var(--surface);border-color:var(--border2)">
+                            <span id="portalModeLabel" class="text-[10px] font-bold tracking-wide" style="color:var(--text-2)">EDIT MODE</span>
+                            <label class="switch portal-mode-switch">
+                                <input id="portalModeToggle" type="checkbox" onchange="togglePortalMode()" aria-label="View mode">
+                                <span class="slider"></span>
+                            </label>
+                        </div>
+                        <button onclick="logout()" class="text-xs font-bold px-3 py-2 rounded-[10px] border transition-all" style="color:#ef4444;border-color:rgba(239,68,68,0.25)">Logout</button>
+                    </div>
                 </div>
             </div>
         </header>
@@ -667,7 +690,6 @@
             <div class="bg-white p-6 rounded-xl border shadow-sm mb-4">
                 <div class="flex justify-between items-center mb-4 border-b pb-3">
                     <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">New Laser Entry</h2>
-                    <span id="laserSyncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Syncing...</span>
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
                     <div class="flex flex-col gap-1">
@@ -753,6 +775,7 @@
                     <option value="">All Months</option>
                 </select>
                 <button onclick="clearLaserSearch()" class="bg-slate-200 text-slate-600 px-4 py-2 rounded-lg text-xs font-bold hover:bg-slate-300">CLEAR</button>
+                <span id="laserSyncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Syncing...</span>
                 <div id="laserFilterStatus" class="basis-full text-[11px] font-semibold text-slate-500"></div>
             </div>
 
@@ -795,6 +818,16 @@
                 <div class="mb-3 flex items-center gap-3">
                     <div class="flex-1 border-t border-slate-200"></div>
                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">Task Overview</span>
+                    <select id="taskHubTypeFilter" onchange="schedulePendingTaskHubRender()" aria-label="Filter tasks by type" class="px-2 py-1 text-[10px] font-bold text-slate-600">
+                        <option value="ALL">All Task Types</option>
+                        <option value="Template">Template</option>
+                        <option value="Patch">Patch</option>
+                        <option value="Consumption">Consumption</option>
+                        <option value="Laser">Laser</option>
+                        <option value="Laser Consumption">Laser Consumption</option>
+                        <option value="Support">Support</option>
+                        <option value="Down Filling">Down Filling</option>
+                    </select>
                     <div class="flex-1 border-t border-slate-200"></div>
                 </div>
                 <div id="taskHubBoard" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 2xl:grid-cols-4 gap-4"></div>
@@ -1421,7 +1454,6 @@
             <div class="bg-white p-6 rounded-xl border shadow-sm mb-4">
                 <div class="flex justify-between items-center mb-4 border-b pb-3">
                     <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">New Consumption Entry</h2>
-                    <span id="consumptionSyncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Syncing...</span>
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
                     <div class="flex flex-col gap-1">
@@ -1507,7 +1539,7 @@
                         <button onclick="clearConsumptionSearch()" class="bg-slate-200 text-slate-600 px-4 rounded-lg text-xs font-bold hover:bg-slate-300 shrink-0">CLEAR</button>
                         <button id="manualQuiltingSyncBtn" onclick="manualSyncQuiltingConsumption(event)" class="hidden bg-orange-500 text-white px-4 py-2.5 rounded-lg text-xs font-bold hover:bg-orange-600 shrink-0">SYNC QUILTING</button>
                     </div>
-                    <div id="consumptionSyncStatus2" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest"></div>
+                    <div id="consumptionSyncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Syncing...</div>
                 </div>
                 <div id="consumptionFilterStatus" class="mt-3 text-[11px] font-semibold text-slate-500"></div>
             </div>
@@ -1589,7 +1621,6 @@
             <div class="bg-white p-6 rounded-xl border shadow-sm mb-4">
                 <div class="flex justify-between items-center mb-4 border-b pb-3">
                     <h2 class="text-xs font-bold text-slate-400 uppercase tracking-widest">New Down Filling Entry</h2>
-                    <span id="downSyncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Syncing...</span>
                 </div>
                 <div class="grid grid-cols-2 md:grid-cols-6 gap-3 mb-3">
                     <div class="flex flex-col gap-1">
@@ -1706,6 +1737,7 @@
                         <select id="downMonthFilter" onchange="applyDownFilter()" class="p-2.5 border rounded-lg bg-slate-50 text-xs font-bold text-blue-600 outline-none focus:ring-2 focus:ring-blue-500 shrink-0"><option value="">All Months</option></select>
                         <button onclick="clearDownSearch()" class="bg-slate-200 text-slate-600 px-4 rounded-lg text-xs font-bold hover:bg-slate-300 shrink-0">CLEAR</button>
                     </div>
+                    <div id="downSyncStatus" class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Syncing...</div>
                 </div>
                 <div id="downFilterStatus" class="mt-3 text-[11px] font-semibold text-slate-500"></div>
             </div>
@@ -2110,11 +2142,16 @@
         const PORTAL_PENDING_TTL = 30 * 60 * 1000;
         const PORTAL_PENDING_MERGE_MS = 30 * 60 * 1000;
         let allRecords = [], allTemplates = [], currentUser = sessionStorage.getItem('ma_session_user') || null;
+        let portalViewMode = sessionStorage.getItem('ma_portal_view_mode') === 'view';
         let editingSettingRowId = null;
         let templateDataLoaded = false, consumptionDataLoaded = false, quiltingConsumptionSyncing = false;
         let sectionChart = null, volumeChart = null, templateValueChart = null;
         function isPortalAdmin(user = currentUser) {
             return user === 'Gavin' || user === 'Joe';
+        }
+
+        function portalEditingEnabled() {
+            return !!currentUser && !portalViewMode;
         }
 
         function getTemplateBaseJobNumber(jobNo) {
@@ -3052,7 +3089,7 @@
                 console.warn('Dashboard snapshot skipped:', e.message);
             }
             const dashboardPage = document.getElementById('content-dashboard');
-            if (dashboardPage && !dashboardPage.classList.contains('hidden')) renderPendingTaskHub();
+            if (dashboardPage && !dashboardPage.classList.contains('hidden')) schedulePendingTaskHubRender();
         }
 
         function hydrateDashboardFromSnapshot() {
@@ -3521,7 +3558,7 @@
             renderUtilization();
             // Render down filling dashboard
             renderDownDashboard();
-            renderPendingTaskHub();
+            schedulePendingTaskHubRender();
         }
 
         // Store laser rows in memory
@@ -3980,7 +4017,7 @@
         function renderLaserTable() {
             const tbody = document.getElementById('laserTable');
             if (!tbody) return;
-            const isAdmin = (isPortalAdmin());
+            const isAdmin = isPortalAdmin() && portalEditingEnabled();
             const laserSearchEl = document.getElementById('laserSearch');
             if (laserSearchEl) laserSearchQuery = laserSearchEl.value.toLowerCase();
             if (!allLaserRows.length) {
@@ -4067,7 +4104,7 @@
                 const completeDate = isLaserNoAction ? '-' : convertExcelDate(rawCompleteDate);
                 const laserPendingStatus = renderLaserPendingStatusBadge(i);
                 const maPic        = getMAPic(i);
-                const canEditLaserCompletion = !!currentUser && (isAdmin || String(currentUser).trim() === String(maPic).trim());
+                const canEditLaserCompletion = portalEditingEnabled() && (isAdmin || String(currentUser).trim() === String(maPic).trim());
                 const consStart    = convertExcelDate(getVal(i, ['Consumption Start Date','ConsumptionStartDate','Cons Start']));
                 const consEnd      = convertExcelDate(getVal(i, ['Consumption Complete Date','ConsumptionCompleteDate','Cons End']));
                 const consPic      = getVal(i, ['Consumption PIC','ConsumptionPIC','Cons PIC']);
@@ -4138,7 +4175,7 @@
                     </tr>`;
                 } else {
                     // Regular users: once a row has a Consumption PIC owner, only that PIC or Gavin can edit it
-                    const canEditCons = !!currentUser && (!hasLockedConsOwner || canEditExistingConsOwner);
+                    const canEditCons = portalEditingEnabled() && (!hasLockedConsOwner || canEditExistingConsOwner);
                     return `<tr class="border-b hover:bg-slate-50" id="lrow-${rid}">
                         <td class="p-3 font-mono text-slate-400">${id}</td>
                         <td class="p-3 text-slate-500 date-cell">${received}</td>
@@ -4204,6 +4241,7 @@
 
         async function addLaserRow() {
             if (!currentUser) return alert('Please login first.');
+            if (!portalEditingEnabled()) return alert('Switch to Edit Mode to add a row.');
             const receivedTime = document.getElementById('l_receivedTime').value.trim() || nowAsLaserDate();
             const startDate = receivedTime;
             const payload = withLaserStartDateFields({
@@ -4576,6 +4614,7 @@
 
         async function addEntry() {
             if(!currentUser) return alert("Authentication Required:\nPlease login first.");
+            if (!portalEditingEnabled()) return alert('Switch to Edit Mode to add a row.');
             const machineVal = document.getElementById('mID').value;
             const fileVal    = document.getElementById('fName').value.trim();
             const sizeVal    = document.getElementById('fSize').value.trim();
@@ -4656,7 +4695,7 @@
 
         function canEditSettingRow(row) {
             const pic = String(row.pic || '').trim();
-            return !!currentUser && (isPortalAdmin() || !pic || pic === '---' || pic === currentUser);
+            return portalEditingEnabled() && (isPortalAdmin() || !pic || pic === '---' || pic === currentUser);
         }
 
         function settingMachineOptions(selected) {
@@ -5022,6 +5061,28 @@
         }
 
         let pendingTaskHubItems = [];
+        let taskHubLastRenderKey = '';
+        let taskHubRenderFrame = 0;
+        let taskHubRenderTimer = 0;
+        let taskHubScrollIdleUntil = 0;
+
+        function schedulePendingTaskHubRender() {
+            const boardEl = document.getElementById('taskHubBoard');
+            if (!boardEl || boardEl.closest('.tab-content')?.classList.contains('hidden')) return;
+            const waitMs = Math.max(0, taskHubScrollIdleUntil - Date.now());
+            if (waitMs > 0) {
+                clearTimeout(taskHubRenderTimer);
+                taskHubRenderTimer = setTimeout(schedulePendingTaskHubRender, waitMs + 16);
+                return;
+            }
+            if (taskHubRenderFrame) return;
+            clearTimeout(taskHubRenderTimer);
+            taskHubRenderTimer = 0;
+            taskHubRenderFrame = requestAnimationFrame(() => {
+                taskHubRenderFrame = 0;
+                renderPendingTaskHub();
+            });
+        }
 
         const TASK_HUB_PRIORITY = {
             [-1]: { label: 'Urgent', className: 'bg-rose-600 text-white' },
@@ -5575,7 +5636,14 @@ function taskHubNoAction(value) {
 function renderPendingTaskHub() {
   const boardEl = document.getElementById('taskHubBoard');
   const searchEl = document.getElementById('taskHubSearch');
+  const typeFilterEl = document.getElementById('taskHubTypeFilter');
   if (!boardEl) return;
+  if (!boardEl.dataset.scrollRenderGuard) {
+    boardEl.dataset.scrollRenderGuard = 'true';
+    boardEl.addEventListener('scroll', event => {
+      if (event.target?.hasAttribute('data-task-pic-scroll')) taskHubScrollIdleUntil = Date.now() + 180;
+    }, { capture: true, passive: true });
+  }
   const scrollPositions = new Map();
   boardEl.querySelectorAll('[data-task-pic-scroll]').forEach(el => {
     scrollPositions.set(el.dataset.taskPicScroll, el.scrollTop);
@@ -5584,12 +5652,23 @@ function renderPendingTaskHub() {
   pendingTaskHubItems = items;
 
   const search = (searchEl ? searchEl.value : '').trim().toLowerCase();
+  const typeFilter = typeFilterEl ? typeFilterEl.value : 'ALL';
 
             const filteredItems = items.filter(item => {
+                if (typeFilter !== 'ALL' && item.source !== typeFilter) return false;
                 if (!search) return true;
                 return [item.title, item.source, item.pic, item.detail, item.status, item.dateLabel]
                     .join(' ').toLowerCase().includes(search);
             });
+            const renderKey = JSON.stringify([
+                typeFilter,
+                portalEditingEnabled() && isPortalAdmin(),
+                filteredItems.map(item => [
+                    item.id, item.source, item.pic, item.title, item.detail, item.status,
+                    item.dateLabel, item.sortDate, item.priority, item.statusPriority, item.urgent
+                ])
+            ]);
+            if (renderKey === taskHubLastRenderKey) return;
             const pics = [...new Set(filteredItems.map(item => item.pic || 'Unassigned'))]
                 .sort((a, b) => {
                     if (a === 'Unassigned') return 1;
@@ -5626,7 +5705,7 @@ function renderPendingTaskHub() {
                                 const calendar = taskHubCalendarParts(item.sortDate || item.dateLabel);
                                 return `
                                     <div role="button" tabindex="0" onclick="openPendingTask('${item.id}', event)" onkeydown="if(event.target===event.currentTarget&&(event.key==='Enter'||event.key===' ')){event.preventDefault();openPendingTask('${item.id}',event)}" class="relative w-full text-left p-3 rounded-lg border border-slate-200 bg-white hover:border-blue-400 hover:bg-blue-50 transition-colors cursor-pointer">
-                                        ${item.urgent ? '<span class="absolute -right-1 -top-1 rounded-full bg-red-500 ring-2 ring-white shadow-sm" style="width:14.4px;height:14.4px" role="img" aria-label="Urgent task" title="Urgent task"></span>' : ''}
+                                        ${item.urgent ? '<span class="task-urgent-dot absolute -right-1 -top-1 rounded-full bg-red-500 ring-2 ring-white shadow-sm" style="width:14.4px;height:14.4px" role="img" aria-label="Urgent task" title="Urgent task"></span>' : ''}
                                         <div class="flex items-start justify-between gap-2">
                                             <span class="py-1 text-[10px] font-black uppercase tracking-[0.14em] text-slate-500">${escapeHtml(item.source)}</span>
                                             <div class="shrink-0">
@@ -5643,7 +5722,7 @@ function renderPendingTaskHub() {
                                                 ${item.urgent ? '<span class="inline-flex rounded-md bg-red-600 px-2 py-1 text-[10px] font-black text-white">URGENT</span>' : ''}
                                                 <span class="inline-flex rounded-md px-2 py-1 text-[10px] font-black ${priority.className}">${escapeHtml(item.status || priority.label)}</span>
                                             </div>
-                                            ${isPortalAdmin()
+                                            ${portalEditingEnabled() && isPortalAdmin()
                                                 ? `<button type="button" onclick="toggleTaskHubUrgent('${item.id}', event)" class="rounded-md px-2 py-1 text-[9px] font-black tracking-wide ${item.urgent ? 'bg-slate-200 text-slate-600' : 'bg-rose-100 text-rose-700'}">${item.urgent ? 'REMOVE URGENT' : 'MARK URGENT'}</button>`
                                                 : '<span class="text-blue-600">Details →</span>'}
                                         </div>
@@ -5657,6 +5736,7 @@ function renderPendingTaskHub() {
             boardEl.querySelectorAll('[data-task-pic-scroll]').forEach(el => {
                 el.scrollTop = scrollPositions.get(el.dataset.taskPicScroll) || 0;
             });
+            taskHubLastRenderKey = renderKey;
         }
 
         function sanitizeTemplateValue(value) {
@@ -5756,7 +5836,7 @@ function renderPendingTaskHub() {
         }
 
         function applyTempFilters(prioritySort = false) {
-            const sv = document.getElementById('tempSearch').value.toLowerCase(), isAdmin = (isPortalAdmin());
+            const sv = document.getElementById('tempSearch').value.toLowerCase(), isAdmin = isPortalAdmin() && portalEditingEnabled();
             const selMonth = document.getElementById('tempMonthFilter')?.value || '';
             const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
             let filtered = allTemplates.filter(t => {
@@ -5794,8 +5874,8 @@ function renderPendingTaskHub() {
                 const done = t.status === 'COMPLETED', isMine = (currentUser === t.pic);
                 const noAction = !!t.cancelled || String(t.status || '').toUpperCase() === 'NO ACTION';
                 const complexityValue = sanitizeTemplateValue(t.complexity) || getTemplateComplexityForType(t.templateType);
-                const canEdit    = isAdmin || (isMine && !done); // structural edits (Gavin always, PIC only when pending)
-                const canEditPIC = isAdmin || isMine;            // remark/date/qty: PIC can always update even after completion
+                const canEdit    = portalEditingEnabled() && (isAdmin || (isMine && !done)); // structural edits (Gavin always, PIC only when pending)
+                const canEditPIC = portalEditingEnabled() && (isAdmin || isMine);            // remark/date/qty: PIC can always update even after completion
                 const templateNoCell = isAdmin ? `<input type="text" id="edit-tno-${t.id}" class="manual-input admin-input" value="${t.templateNo === '---' ? '' : t.templateNo}" placeholder="Assign No.">` : `<span class="font-bold">${t.templateNo}</span>`;
                 const picCell = (isAdmin) ? `<select id="edit-pic-${t.id}" class="manual-input admin-input"><option value="">Select PIC</option>${picList.map(p => `<option value="${p}" ${p === t.pic ? 'selected' : ''}>${p}</option>`).join('')}</select>` : `<span>${t.pic}</span>`;
                 const completeDateValue = (done || noAction) && t.completeDateDisplay !== '---' ? t.completeDateDisplay : '';
@@ -7345,19 +7425,30 @@ function renderPendingTaskHub() {
             if (t === 'dashboard' && allDownRows.length) renderDownDashboard();
             if (t === 'dashboard') {
                 renderPendingTaskHub();
-                fetchAttendanceFromCloud(); // refresh capacity on every dashboard visit
                 loadAttData(); renderUtilization();
                 // Re-fetch attendance from cloud each time dashboard opens — keeps capacity fresh on all PCs
                 fetchAttendanceFromCloud().then(() => renderUtilization()).catch(() => {});
             }
+            if (t === 'laser' && allLaserRows.length) renderLaserTable();
+            if (t === 'setting') {
+                if (allRecords.length) applyFilters();
+                updateMachineImage();
+            }
             // Refresh support data when switching to support tab
-            if (t === 'support') refreshSupportData(true);
+            if (t === 'support') {
+                if (allSupportRows.length) renderSupportTable();
+                refreshSupportData(true);
+            }
             // Re-render patch/consumption with correct canEdit state each time tab is opened
             if (t === 'template' && allTemplates.length && canPortalAutoRender('template')) applyTempFilters(false);
             if (t === 'patch' && allPatchRows.length && canPortalAutoRender('patch')) renderPatchTable();
             if (t === 'consumption' && allConsumptionRows.length && canPortalAutoRender('consumption')) renderConsumptionTable();
             // Refresh down filling data when switching to down filling tab
-            if (t === 'downfilling') { refreshDownData(true); updateDownPicDisplay(); }
+            if (t === 'downfilling') {
+                if (allDownRows.length) renderDownTable();
+                refreshDownData(true);
+                updateDownPicDisplay();
+            }
             updateDailyReportButton();
         }
 
@@ -8695,50 +8786,72 @@ function renderPendingTaskHub() {
 
         function login() {
             currentUser = document.getElementById('userSelect').value;
+            portalViewMode = false;
             editingDownRowId = null;
             editingSettingRowId = null;
             sessionStorage.setItem('ma_session_user', currentUser);
+            sessionStorage.removeItem('ma_portal_view_mode');
             updateSessionUI();
             updateLaserPicDisplay();
             updateConsumptionPicDisplay();
             updateDownPicDisplay();
-            applyTempFilters(false);
-            renderLaserTable();
-            renderSupportTable();
-            renderPatchTable();
-            renderDownTable();
-            renderConsumptionTable();
-            applyFilters();
+            requestAnimationFrame(renderActivePortalRoleView);
         }
         function logout() {
             currentUser = null;
+            portalViewMode = false;
             editingDownRowId = null;
             editingSettingRowId = null;
             sessionStorage.removeItem('ma_session_user');
+            sessionStorage.removeItem('ma_portal_view_mode');
             updateSessionUI();
             updateLaserPicDisplay();
             updateConsumptionPicDisplay();
             updateDownPicDisplay();
-            applyTempFilters(false);
-            renderLaserTable();
-            renderSupportTable();
-            renderPatchTable();
-            renderDownTable();
-            renderConsumptionTable();
-            applyFilters();
+            requestAnimationFrame(renderActivePortalRoleView);
             clearConsumptionSyncMessages();
             setTimeout(clearConsumptionSyncMessages, 1500);
         }
-        function updateSessionUI() { 
+
+        function togglePortalMode() {
+            if (!currentUser) return;
+            portalViewMode = !portalViewMode;
+            editingDownRowId = null;
+            editingSettingRowId = null;
+            sessionStorage.setItem('ma_portal_view_mode', portalViewMode ? 'view' : 'edit');
+            updateSessionUI();
+            requestAnimationFrame(renderActivePortalRoleView);
+        }
+
+        function renderActivePortalRoleView() {
+            const activeTab = document.querySelector('nav button.tab-active')?.id.replace('tab-', '') || 'dashboard';
+            if (activeTab === 'template' && allTemplates.length) applyTempFilters(false);
+            if (activeTab === 'laser' && allLaserRows.length) renderLaserTable();
+            if (activeTab === 'support' && allSupportRows.length) renderSupportTable();
+            if (activeTab === 'patch' && allPatchRows.length) renderPatchTable();
+            if (activeTab === 'downfilling' && allDownRows.length) renderDownTable();
+            if (activeTab === 'consumption' && allConsumptionRows.length) renderConsumptionTable();
+            if (activeTab === 'setting' && allRecords.length) applyFilters();
+        }
+
+        function updateSessionUI() {
             const lv = document.getElementById('loginView'), av = document.getElementById('activeUserView');
+            const modeBtn = document.getElementById('portalModeToggle');
+            const modeLabel = document.getElementById('portalModeLabel');
+            const isViewMode = !!currentUser && portalViewMode;
             if (currentUser) {
                 lv.classList.add('hidden'); av.classList.remove('hidden');
                 document.getElementById('displayUserName').innerText = currentUser;
+                if (modeBtn) {
+                    modeBtn.checked = isViewMode;
+                    modeBtn.title = isViewMode ? 'Switch to Edit Mode' : 'Switch to View Mode';
+                }
+                if (modeLabel) modeLabel.innerText = isViewMode ? 'VIEW MODE' : 'EDIT MODE';
                 // Show Reset N/A button only for Gavin
                 const naBtn = document.getElementById('clearNA-btn');
-                if (naBtn) naBtn.classList.toggle('hidden', !isPortalAdmin());
+                if (naBtn) naBtn.classList.toggle('hidden', !isPortalAdmin() || isViewMode);
                 const quiltingSyncBtn = document.getElementById('manualQuiltingSyncBtn');
-                if (quiltingSyncBtn) quiltingSyncBtn.classList.toggle('hidden', !canManualSyncQuiltingDetails());
+                if (quiltingSyncBtn) quiltingSyncBtn.classList.toggle('hidden', !canManualSyncQuiltingDetails() || isViewMode);
             } else {
                 lv.classList.remove('hidden'); av.classList.add('hidden');
                 const naBtn = document.getElementById('clearNA-btn');
@@ -8747,9 +8860,14 @@ function renderPendingTaskHub() {
                 if (quiltingSyncBtn) quiltingSyncBtn.classList.add('hidden');
                 clearConsumptionSyncMessages();
             }
+            document.body.classList.toggle('portal-view-mode', isViewMode);
+            ['laserAddBtn', 'submitBtn', 'downAddBtn', 'consumptionAddBtn'].forEach(id => {
+                const panel = document.getElementById(id)?.closest('.bg-white');
+                if (panel) panel.classList.toggle('hidden', isViewMode);
+            });
             updateDailyReportButton();
             const dashboardPage = document.getElementById('content-dashboard');
-            if (dashboardPage && !dashboardPage.classList.contains('hidden')) renderPendingTaskHub();
+            if (dashboardPage && !dashboardPage.classList.contains('hidden')) schedulePendingTaskHubRender();
         }
 
         function clearAllNA() {
@@ -8920,10 +9038,10 @@ function renderPendingTaskHub() {
                 const remark      = getVal(i, ['Remark','Remarks']);
 
                 const isDone      = completeTime && completeTime !== '---' && !isCompleteNoAction;
-                const isGavin     = isPortalAdmin();
+                const isGavin     = isPortalAdmin() && portalEditingEnabled();
                 // PIC-restricted: admins edit all; others only edit rows where PIC matches them or PIC is blank
                 const rowPic      = pic && pic !== '---' ? pic : null;
-                const canEdit     = !!currentUser && (isGavin || !rowPic || rowPic === currentUser);
+                const canEdit     = portalEditingEnabled() && (isGavin || !rowPic || rowPic === currentUser);
                 const sid         = String(rawID).replace(/['"]/g,'');
                 const supportPicOptions = [...new Set([...ATT_MEMBERS, ...(rowPic ? [rowPic] : [])])];
                 const supportPicCell = canEdit && isGavin
@@ -8935,7 +9053,7 @@ function renderPendingTaskHub() {
                                     riskType.toLowerCase().includes('break') ? 'bg-orange-100 text-orange-600' :
                                     'bg-slate-100 text-slate-600';
                 const typeColor   = suppType.toLowerCase().includes('repair') ? 'bg-blue-100 text-blue-600' : 'bg-purple-100 text-purple-600';
-                return `<tr class="border-b hover:bg-slate-50${!canEdit&&!!currentUser?' opacity-60':''}">
+                return `<tr class="border-b hover:bg-slate-50${portalEditingEnabled()&&!canEdit?' opacity-60':''}">
                     <td class="p-3 text-slate-500 text-[10px] date-cell">${received}</td>
                     <td class="p-3 font-mono text-[10px] text-slate-400">${requestID}</td>
                     <td class="p-3 text-xs">${name}</td>
@@ -9250,7 +9368,7 @@ function renderPendingTaskHub() {
                 return;
             }
 
-            const isGavinP = isPortalAdmin();
+            const isGavinP = isPortalAdmin() && portalEditingEnabled();
             tbody.innerHTML = rows.map(i => {
                 // Use No. (No_x002e_) as the row key — this is what PA's Key Column is set to
                 const noVal     = String(i['No_x002e_'] ?? i['No.'] ?? getVal(i,['No.','No']) ?? '').trim();
@@ -9279,10 +9397,10 @@ function renderPendingTaskHub() {
                 const pic       = getMAPic(i);
                 const remark    = getVal(i,['Remark','Remarks']);
                 const isDone    = complete && complete !== '---' && !isPortalNoActionValue(complete);
-                const isGavinP  = isPortalAdmin();
-                const canAssignPatchPic = isPortalAdmin() || currentUser === 'Viki';
+                const isGavinP  = isPortalAdmin() && portalEditingEnabled();
+                const canAssignPatchPic = portalEditingEnabled() && (isPortalAdmin() || currentUser === 'Viki');
                 const rowPic    = pic && pic !== '---' ? pic : null;
-                const canEdit   = !!currentUser && (isGavinP || !rowPic || rowPic === currentUser);
+                const canEdit   = portalEditingEnabled() && (isGavinP || !rowPic || rowPic === currentUser);
                 const canSavePatchRow = canEdit || canAssignPatchPic;
                 const picDisplay = (!pic||pic==='---') && canEdit ? currentUser : (pic||'---');
                 const patchDescValue = patchDesc !== '---' ? escapePatchAttr(patchDesc) : '';
@@ -9570,8 +9688,8 @@ function renderPendingTaskHub() {
                 const completeTime = convertExcelDate(getVal(row, ['Complete Time','CompleteTime','Complete Time m/d/yyyy']));
                 const remark = getVal(row, ['Remark','Remarks']);
                 const rid = String(id && id !== '---' ? id : row['__PowerAppsId__']).replace(/['"]/g,'');
-                const isAdminDown = isPortalAdmin();
-                const canEditDown = !!currentUser && (isAdminDown || !maPic || maPic === '---' || maPic === currentUser);
+                const isAdminDown = isPortalAdmin() && portalEditingEnabled();
+                const canEditDown = portalEditingEnabled() && (isAdminDown || !maPic || maPic === '---' || maPic === currentUser);
                 const isEditingDown = canEditDown && String(editingDownRowId) === String(rid);
                 const downActionCell = isEditingDown
                     ? `<div class="flex flex-col gap-1 min-w-[130px]"><input id="dw-remark-${rid}" class="manual-input admin-input" value="${remark==='---'?'':remark}" placeholder="Remark"><div class="flex gap-1"><button onclick="saveDownRow('${rid}',event)" class="down-save-btn bg-blue-600 text-white text-[9px] font-bold px-3 py-1 rounded hover:bg-blue-700 whitespace-nowrap">SAVE</button><button onclick="cancelDownEdit(event)" class="text-[9px] font-bold px-3 py-1 rounded border border-slate-200 text-slate-500 hover:bg-slate-50 whitespace-nowrap">CANCEL</button></div></div>`
@@ -9666,6 +9784,7 @@ function renderPendingTaskHub() {
 
         async function addDownRow() {
             if (!currentUser) return alert('Please login first.');
+            if (!portalEditingEnabled()) return alert('Switch to Edit Mode to add a row.');
             const readDownInput = (id) => document.getElementById(id)?.value.trim() || '';
             const dateUpdate = readDownInput('d_dateUpdate') || nowAsLaserDate();
             const downDesc = readDownInput('d_downDesc');
@@ -9739,7 +9858,7 @@ function renderPendingTaskHub() {
                 return;
             }
             const rowPic = getMAPic(existingRow || {});
-            const canEditDown = !!currentUser && (isPortalAdmin() || !rowPic || rowPic === '---' || rowPic === currentUser);
+            const canEditDown = portalEditingEnabled() && (isPortalAdmin() || !rowPic || rowPic === '---' || rowPic === currentUser);
             if (!canEditDown) return alert(`Only ${rowPic || 'the assigned PIC'}, Gavin or Joe can edit this down filling row.`);
             const btn = event.target; btn.innerText = 'SAVING...'; btn.disabled = true;
             const g = (field) => document.getElementById(`dw-${field}-${rid}`)?.value.trim() || '';
@@ -10365,7 +10484,7 @@ function renderPendingTaskHub() {
             const consumptionMonthEl = document.getElementById('consumptionMonthFilter');
             if (consumptionMonthEl) consumptionMonthQuery = consumptionMonthEl.value || '';
             const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
-            const isAdmin = isPortalAdmin();
+            const isAdmin = isPortalAdmin() && portalEditingEnabled();
 
             const rows = allConsumptionRows.filter(r => {
                 // Month filter by Received Time
@@ -10438,7 +10557,7 @@ function renderPendingTaskHub() {
                 </select>`;
                 // PIC edit: own row or Gavin; unassigned Quilting Details waits for Gavin assignment.
                 const rowPic   = pic && pic !== '---' ? pic : null;
-                const canEdit  = !!currentUser && (isAdmin || rowPic === currentUser || (!rowPic && !isQuiltingDetails));
+                const canEdit  = portalEditingEnabled() && (isAdmin || rowPic === currentUser || (!rowPic && !isQuiltingDetails));
 
                 return `<tr class="border-b hover:bg-slate-50 ${isDone ? 'bg-emerald-50/20' : isNoAction ? 'bg-slate-50/60' : ''}">
                     <td class="p-3 font-mono text-slate-400 text-[10px]">${rowId}</td>
@@ -10476,6 +10595,7 @@ function renderPendingTaskHub() {
 
         async function addConsumptionRow() {
             if (!currentUser) return alert('Please login first.');
+            if (!portalEditingEnabled()) return alert('Switch to Edit Mode to add a row.');
             const receivedTime = document.getElementById('c_receivedTime').value.trim() || nowAsLaserDate();
             const requiredInput = document.getElementById('c_requiredDate').value.trim();
             const startInput = document.getElementById('c_startDate').value.trim();
@@ -10740,7 +10860,6 @@ function renderPendingTaskHub() {
                     }, 1000);
                 }
             } catch(e) {}
-            updateMachineImage();
             loadAttData(); // load localStorage attendance so utilization works on first render
             switchTab('dashboard'); // always start on dashboard
             hydrateDashboardFromSnapshot();
