@@ -1,6 +1,6 @@
 /**
  * Vector Length Calculator Application
- * Batch processing for DXF, PDF, SVG files — outputs only cm
+ * Batch processing for DXF files — outputs only cm
  */
 
 // Global state
@@ -77,7 +77,7 @@ function handleFileSelect(e) {
  * Add files to the queue
  */
 function addFiles(files) {
-    const allowedExtensions = ['.dxf', '.pdf', '.svg'];
+    const allowedExtensions = ['.dxf'];
 
     files.forEach(file => {
         const ext = '.' + file.name.split('.').pop().toLowerCase();
@@ -166,46 +166,21 @@ async function calculateAll() {
  */
 async function processFile(file) {
     const ext = file.name.split('.').pop().toLowerCase();
-    const content = await readFileAsTextOrArrayBuffer(file, ext);
-
-    let entities = [];
-    let units = 'mm';
-
-    if (ext === 'dxf') {
-        const parser = new DXFParser();
-        const dxfData = parser.parse(content);
-        // Filter out TEXT, MTEXT, and other non-vector entities
-        entities = dxfData.entities.filter(e => !isTextEntity(e.type));
-        units = parser.units;
-        // Inject layer colors into entities for ByLayer color resolution
-        const layerColors = parser.layerColors || {};
-        entities.forEach(e => {
-            if (e.layer && layerColors[e.layer] && (e.color === 0 || e.color === 256 || e.color === undefined)) {
-                e.color = layerColors[e.layer].color;
-                if (layerColors[e.layer].trueColor && !e.trueColor) {
-                    e.trueColor = layerColors[e.layer].trueColor;
-                }
-            }
-        });
-    } else if (ext === 'pdf') {
-        const parser = new PDFVectorParser();
-        entities = await parser.parse(content);
-        units = 'pt'; // PDF uses points
-        if (entities.length === 0 && parser._opsCount > 0) {
-            // Diagnostic: PDF had operators but no vectors extracted
-            // This means vectors are encoded as outlined text or form XObjects
-            // Fallback: try raw content stream parsing
-            entities = await parser.parseRawContent(content);
-            if (entities.length === 0 && parser._opsCount > 0) {
-                // Still no vectors — the PDF has operators but they're not path-based
-                // Suggest SVG export from CorelDRAW
+    if (ext !== 'dxf') throw new Error('Only DXF files are supported.');
+    const content = await readFileAsText(file);
+    const parser = new DXFParser();
+    const dxfData = parser.parse(content);
+    const entities = dxfData.entities.filter(e => !isTextEntity(e.type));
+    const units = parser.units;
+    const layerColors = parser.layerColors || {};
+    entities.forEach(e => {
+        if (e.layer && layerColors[e.layer] && (e.color === 0 || e.color === 256 || e.color === undefined)) {
+            e.color = layerColors[e.layer].color;
+            if (layerColors[e.layer].trueColor && !e.trueColor) {
+                e.trueColor = layerColors[e.layer].trueColor;
             }
         }
-    } else if (ext === 'svg') {
-        const parser = new SVGParser();
-        entities = parser.parse(content);
-        units = parser.units || 'px';
-    }
+    });
 
     const lengths = calculateEntityLengths(entities, units);
 
@@ -1132,18 +1107,13 @@ function clearAll() {
 }
 
 /**
- * Read file — text for DXF/SVG, ArrayBuffer for PDF
+ * Read a DXF file as text
  */
-function readFileAsTextOrArrayBuffer(file, ext) {
+function readFileAsText(file) {
     return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        if (ext === 'pdf') {
-            reader.onload = (e) => resolve(e.target.result);
-            reader.readAsArrayBuffer(file);
-        } else {
-            reader.onload = (e) => resolve(e.target.result);
-            reader.readAsText(file);
-        }
+        reader.onload = (e) => resolve(e.target.result);
+        reader.readAsText(file);
         reader.onerror = (e) => reject(e);
     });
 }

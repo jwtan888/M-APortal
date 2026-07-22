@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Auto Vector Measure</title>
   <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 68 48'%3E%3Cg fill='%230514ff'%3E%3Cpath d='M9 4h7L7 44H0z'/%3E%3Cpath d='M21 4h12L24 44H12z'/%3E%3Cpath d='M44 4h21c2 0 3 2 3 4l-7 28c-1 5-5 8-10 8H34c-4 0-7-3-6-7l7-26c1-4 5-7 9-7z'/%3E%3C/g%3E%3C/svg%3E">
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
   <style>
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -128,8 +127,6 @@
       padding: 3px 10px; border-radius: 100px; border: 1px solid;
     }
     .tag-dxf { background: #e8f4fd; color: #0071e3; border-color: #b8dbf5; }
-    .tag-pdf { background: #fce8e8; color: #d93025; border-color: #f5b8b8; }
-    .tag-svg { background: #e8f5e9; color: #188038; border-color: #b8e0bb; }
 
     /* ─── FILE LIST ─── */
     .file-list { margin-top: 20px; display: flex; flex-direction: column; gap: 8px; }
@@ -145,8 +142,6 @@
       padding: 2px 8px; border-radius: 6px; flex-shrink: 0;
     }
     .ext-dxf { background: #e8f4fd; color: #0071e3; }
-    .ext-pdf { background: #fce8e8; color: #d93025; }
-    .ext-svg { background: #e8f5e9; color: #188038; }
     .file-name { font-size: 0.9rem; font-weight: 500; color: #1d1d1f; truncate: ellipsis; white-space: nowrap; overflow: hidden; max-width: 340px; }
     .file-size { font-size: 0.78rem; color: #6e6e73; flex-shrink: 0; }
     .file-remove {
@@ -233,8 +228,6 @@
       display: flex; align-items: center; justify-content: center; flex-shrink: 0;
     }
     .fh-icon-dxf { background: #e8f4fd; }
-    .fh-icon-pdf { background: #fce8e8; }
-    .fh-icon-svg { background: #e8f5e9; }
     .fh-icon svg { width: 18px; height: 18px; }
     .fh-name { font-size: 0.92rem; font-weight: 600; color: #1d1d1f; }
     .fh-sub { font-size: 0.78rem; color: #6e6e73; margin-top: 1px; }
@@ -421,6 +414,12 @@
       padding: 7px 8px; font: inherit; font-size: 0.82rem; background: #fff;
     }
     .quilting-file-row td { background: #f8fafc; font-weight: 700; }
+    .quilting-measure-source { display: grid; gap: 4px; min-width: 260px; }
+    .quilting-measure-source > span {
+      color: #64748b; font-size: 0.68rem; font-weight: 700;
+      text-transform: uppercase;
+    }
+    .quilting-measure-source select { font-weight: 500; }
     .template-switch { white-space: nowrap; }
     @media (max-width: 860px) {
       .form-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -721,10 +720,8 @@
         <p>or click to browse your files</p>
         <div class="format-tags">
           <span class="format-tag tag-dxf">DXF</span>
-          <span class="format-tag tag-pdf">PDF</span>
-          <span class="format-tag tag-svg">SVG</span>
         </div>
-        <input type="file" id="fileInput" accept=".dxf,.pdf,.svg" multiple style="display:none" />
+        <input type="file" id="fileInput" accept=".dxf" multiple style="display:none" />
       </div>
 
       <div id="fileList" class="file-list hidden"></div>
@@ -764,7 +761,7 @@
             <h2>Consumption Calculator</h2>
             <p>Map measured artwork length to the Excel costing template.</p>
           </div>
-          <span class="section-divider">Template XLSX export</span>
+          <button type="button" class="btn-secondary template-switch" onclick="showConsumptionTemplateChoice()">Change template</button>
         </div>
         <div class="consumption-body">
           <div class="form-grid">
@@ -851,6 +848,8 @@
           </div>
 
           <div class="calculator-actions">
+            <button type="button" class="btn-secondary" onclick="document.getElementById('consumptionExcelImport').click()">Import Consumption Excel</button>
+            <input id="consumptionExcelImport" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden onchange="handleConsumptionExcelImport(event)">
             <button type="button" class="btn-secondary" onclick="fillArtworkLengthFromVector()">Copy measured length</button>
             <button type="button" class="btn-secondary" onclick="clearCalculatorData()">Clear calculator data</button>
             <button type="button" class="btn-primary" onclick="addConsumptionRow()">Add Row</button>
@@ -889,7 +888,11 @@
               <input id="quiltingStyle" placeholder="Auto from filename" autocomplete="off">
             </div>
             <div class="form-field">
-              <label for="quiltingStage">Sample stage</label>
+              <label for="quiltingSeason">Season</label>
+              <input id="quiltingSeason" placeholder="SP27" autocomplete="off">
+            </div>
+            <div class="form-field">
+              <label for="quiltingStage">Proto stage</label>
               <input id="quiltingStage" value="P2" autocomplete="off">
             </div>
             <div class="form-field">
@@ -920,7 +923,8 @@
             </table>
           </div>
           <div class="calculator-actions">
-            <button type="button" class="btn-secondary" onclick="showConsumptionTemplateChoice()">Change template</button>
+            <button type="button" class="btn-secondary" onclick="document.getElementById('quiltingExcelImport').click()">Import Consumption Excel</button>
+            <input id="quiltingExcelImport" type="file" accept=".xlsx,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" hidden onchange="handleQuiltingExcelImport(event)">
             <button type="button" class="btn-secondary" onclick="addQuiltingPart()">Add Part</button>
             <button type="button" id="generateQuiltingExcelBtn" class="btn-primary" onclick="generateQuiltingExcel()">Generate Quilting Excel</button>
           </div>
@@ -1015,9 +1019,7 @@
 </div>
 
 <script src="dxf-parser.js"></script>
-<script src="pdf-parser.js"></script>
-<script src="svg-parser.js"></script>
-<script src="app.js?v=pf2"></script>
+<script src="app.js?v=dxf-only-1"></script>
 <script src="template-embedded.js?v=summary-breakdown-v10"></script>
 <script src="excel-export-pivot-free.js?v=summary-breakdown-v10"></script>
 <script src="quilting-template-embedded.js?v=1"></script>
@@ -1157,11 +1159,9 @@
           </div>`;
       });
 
-      const iconColors = { dxf: '#0071e3', pdf: '#d93025', svg: '#188038' };
+      const iconColors = { dxf: '#0071e3' };
       const iconSvgs = {
-        dxf: `<svg viewBox="0 0 24 24" fill="none" stroke="${iconColors.dxf}" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>`,
-        pdf: `<svg viewBox="0 0 24 24" fill="none" stroke="${iconColors.pdf}" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`,
-        svg: `<svg viewBox="0 0 24 24" fill="none" stroke="${iconColors.svg}" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="10"/><path d="M8.56 2.75c4.37 6.03 6.02 9.42 8.03 17.72m2.54-15.38c-3.72 4.35-8.94 5.66-16.88 5.85m19.5 1.9c-3.5-.93-6.63-.82-8.94 0-2.58.92-5.01 2.86-7.44 6.32"/></svg>`
+        dxf: `<svg viewBox="0 0 24 24" fill="none" stroke="${iconColors.dxf}" stroke-width="2" stroke-linecap="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>`
       };
 
       const card = document.createElement('div');
@@ -1169,7 +1169,7 @@
       card.innerHTML = `
         <div class="file-detail-header" onclick="toggleCard(this)">
           <div class="fh-left">
-            <div class="fh-icon fh-icon-${ext}">${iconSvgs[ext] || iconSvgs.svg}</div>
+            <div class="fh-icon fh-icon-${ext}">${iconSvgs.dxf}</div>
             <div>
               <div class="fh-name">${escHtml(result.fileName)}</div>
               <div class="fh-sub">${result.entityCount} vectors</div>
@@ -1212,7 +1212,13 @@
 
     document.getElementById('results').classList.remove('hidden');
     applyDetectedLaserColour();
-    if (validResults.length > 0) showConsumptionTemplateChoice();
+    if (validResults.length > 0) {
+      if (selectedConsumptionTemplate) {
+        resumeSelectedConsumptionTemplate();
+      } else {
+        showConsumptionTemplateChoice();
+      }
+    }
   }
 
   /* Toggle accordion card */
@@ -1249,6 +1255,22 @@
     const modal = document.getElementById('templateChoiceModal');
     modal.style.display = 'flex';
     setTimeout(() => document.getElementById('chooseLaserTemplate').focus(), 0);
+  }
+
+  function resumeSelectedConsumptionTemplate() {
+    document.getElementById('templateChoiceModal').style.display = 'none';
+    const laser = document.getElementById('consumptionCalculator');
+    const quilting = document.getElementById('quiltingCalculator');
+    laser.classList.toggle('hidden', selectedConsumptionTemplate !== 'laser');
+    quilting.classList.toggle('hidden', selectedConsumptionTemplate !== 'quilting');
+    if (selectedConsumptionTemplate === 'quilting') {
+      if (!quiltingRows.length) initializeQuiltingRows();
+      else renderQuiltingRows();
+      setQuiltingStatus('New vector measurement ready. Use measured on the part that changed.', 'success');
+    } else {
+      updateConsumptionPreviewTable();
+      setCalculatorStatus('New vector measurement ready. Use measured on the row that changed.', 'success');
+    }
   }
 
   function selectConsumptionTemplate(template) {
@@ -1399,12 +1421,15 @@
       }));
       quiltingRows.resultKey = resultKey;
       document.getElementById('quiltingStyle').value = getFieldValue('styleName') || fileNameWithoutExtension(calculationResults[0]?.fileName || '');
+      document.getElementById('quiltingSeason').value = getFieldValue('seasonName');
       document.getElementById('quiltingStage').value = getFieldValue('protoStage') || 'P2';
     }
 
     const style = document.getElementById('quiltingStyle');
+    const season = document.getElementById('quiltingSeason');
     const stage = document.getElementById('quiltingStage');
     if (!style.value) style.value = getFieldValue('styleName') || fileNameWithoutExtension(calculationResults[0]?.fileName || '');
+    if (!season.value) season.value = getFieldValue('seasonName');
     if (!stage.value) stage.value = getFieldValue('protoStage') || 'P2';
     const date = document.getElementById('quiltingDate');
     if (!date.value) {
@@ -1416,12 +1441,32 @@
 
   function renderQuiltingRows() {
     const tbody = document.getElementById('quiltingRows');
+    const measuredResults = (calculationResults || [])
+      .map((result, index) => ({ result, index }))
+      .filter(item => !item.result.error);
     tbody.innerHTML = quiltingRows.map((part, partIndex) => {
+      const matchingResult = measuredResults.find(item => normalizeText(fileNameWithoutExtension(item.result.fileName)) === normalizeText(part.partName));
+      const selectedResultIndex = matchingResult?.index ?? measuredResults[measuredResults.length - 1]?.index;
+      const measuredOptions = measuredResults.map(item => {
+        const lineCount = quiltingLinesFromEntities(item.result.entities, item.result.rawEntities).length;
+        const measuredLength = Number(item.result.totalLengthCm)
+          || (item.result.entities || []).reduce((sum, entity) => sum + Number(entity.lengthCm || 0), 0);
+        const details = `${item.result.fileName} - ${measuredLength.toFixed(4)} cm - ${lineCount} stitch line${lineCount === 1 ? '' : 's'}`;
+        return `<option value="${item.index}"${item.index === selectedResultIndex ? ' selected' : ''}>${escHtml(details)}</option>`;
+      }).join('');
       const header = `<tr class="quilting-file-row">
         <td><input aria-label="Part name" value="${escHtml(part.partName)}" onchange="updateQuiltingPart(${partIndex}, 'partName', this.value)"></td>
         <td><input aria-label="Part quantity" type="number" min="1" step="1" value="${part.quantity}" onchange="updateQuiltingPart(${partIndex}, 'quantity', this.value)"></td>
-        <td colspan="4">${part.lines.length} line${part.lines.length === 1 ? '' : 's'}</td>
-        <td><button type="button" class="row-action" onclick="addQuiltingRow(${partIndex})">Add Row</button></td>
+        <td colspan="4">
+          <label class="quilting-measure-source" for="quiltingMeasuredSource-${partIndex}">
+            <span>Measurement source DXF</span>
+            <select id="quiltingMeasuredSource-${partIndex}" aria-label="Measured DXF for ${escHtml(part.partName)}" ${measuredOptions ? '' : 'disabled'}>${measuredOptions}</select>
+          </label>
+        </td>
+        <td>
+          <button type="button" class="row-action" onclick="updateQuiltingPartFromMeasured(${partIndex}, Number(document.getElementById('quiltingMeasuredSource-${partIndex}').value))" ${measuredOptions ? '' : 'disabled'}>Copy measurement</button>
+          <button type="button" class="row-action" onclick="addQuiltingRow(${partIndex})">Add Row</button>
+        </td>
       </tr>`;
       const lines = part.lines.map((line, lineIndex) => `<tr class="quilting-line-row" ondragover="dragOverQuiltingRow(event)" ondragleave="clearQuiltingDropTarget(event)" ondrop="dropQuiltingRow(event, ${partIndex}, ${lineIndex})">
         <td><span class="quilting-drag-handle" draggable="true" title="Drag to reorder" aria-label="Drag line ${line.lineNumber} to reorder" ondragstart="startQuiltingRowDrag(event, ${partIndex}, ${lineIndex})" ondragend="finishQuiltingRowDrag()">::</span>Line ${line.lineNumber}</td>
@@ -1564,6 +1609,108 @@
     document.querySelectorAll('.quilting-line-row').forEach(row => row.classList.remove('dragging', 'drop-before', 'drop-after'));
   }
 
+  function updateQuiltingPartFromMeasured(partIndex, resultIndex) {
+    const part = quiltingRows[partIndex];
+    if (!part) return;
+    const validResults = (calculationResults || []).filter(result => !result.error);
+    const normalizedPartName = normalizeText(part.partName);
+    const selectedResult = Number.isInteger(resultIndex) && calculationResults?.[resultIndex] && !calculationResults[resultIndex].error
+      ? calculationResults[resultIndex]
+      : null;
+    const result = selectedResult
+      || validResults.find(item => normalizeText(fileNameWithoutExtension(item.fileName)) === normalizedPartName)
+      || validResults[validResults.length - 1]
+      || null;
+    if (!result) {
+      setQuiltingStatus('No measured vector is available for this part.', 'error');
+      return;
+    }
+    const lines = quiltingLinesFromEntities(result.entities, result.rawEntities);
+    if (!lines.length) {
+      setQuiltingStatus('The measured vector has no quilting or stay-stitch lines.', 'error');
+      return;
+    }
+    part.lines = lines;
+    renderQuiltingRows();
+    setQuiltingStatus(`${lines.length} measured line${lines.length === 1 ? '' : 's'} copied from ${result.fileName} to ${part.partName}.`, 'success');
+  }
+
+  function quiltingImportDate(value) {
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      return `${value.getUTCFullYear()}-${String(value.getUTCMonth() + 1).padStart(2, '0')}-${String(value.getUTCDate()).padStart(2, '0')}`;
+    }
+    const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    return match ? match[0] : '';
+  }
+
+  async function importQuiltingWorkbookBuffer(buffer, fileName = '') {
+    if (typeof ExcelJS === 'undefined') throw new Error('ExcelJS is not loaded.');
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer);
+    const cover = workbook.getWorksheet('Pg1-Cover Page');
+    if (!cover) throw new Error('The workbook does not contain a quilting cover sheet.');
+
+    const importedParts = [];
+    const partsByName = new Map();
+    workbook.worksheets.forEach(worksheet => {
+      if (worksheet === cover || worksheet.name === '_MA Portal Data') return;
+      const label = String(importedCellValue(worksheet.getCell('C3')) || '').trim();
+      const labelMatch = label.match(/^(.*?)\s+x(\d+)\s*$/i);
+      const partName = (labelMatch?.[1] || label || worksheet.name).trim();
+      const quantity = Math.max(1, Number(labelMatch?.[2]) || 1);
+      const key = normalizeText(partName);
+      let part = partsByName.get(key);
+      if (!part) {
+        part = { partName, quantity, lines: [] };
+        partsByName.set(key, part);
+        importedParts.push(part);
+      }
+      for (let row = 11; row <= 31; row++) {
+        const lengthValue = importedCellValue(worksheet.getCell(`C${row}`));
+        const transitionValue = importedCellValue(worksheet.getCell(`D${row}`));
+        const stitchValue = String(importedCellValue(worksheet.getCell(`F${row}`)) || '').trim();
+        if ((lengthValue === null || lengthValue === '') && (transitionValue === null || transitionValue === '') && !stitchValue) continue;
+        part.lines.push({
+          lineNumber: part.lines.length + 1,
+          layer: 'Imported',
+          stitchType: stitchValue === 'QUILTING STITCH' ? 'QUILTING STITCH' : 'STAY STITCH',
+          lengthCm: Math.max(0, importedNumber(lengthValue) || 0),
+          transitionCm: Math.max(0, importedNumber(transitionValue) || 0)
+        });
+      }
+    });
+    const usableParts = importedParts.filter(part => part.lines.length);
+    if (!usableParts.length) throw new Error('No quilting part rows were found in the workbook.');
+
+    quiltingRows = usableParts;
+    quiltingRows.resultKey = quiltingResultKey();
+    const metadata = workbook.getWorksheet('_MA Portal Data');
+    const fileMetadata = inferConsumptionMetadataFromFileName(fileName);
+    document.getElementById('quiltingSeason').value = String(importedCellValue(metadata?.getCell('B2')) || fileMetadata.season || '');
+    const firstPartSheet = workbook.worksheets.find(sheet => sheet !== cover && sheet.name !== '_MA Portal Data');
+    document.getElementById('quiltingStyle').value = String(importedCellValue(metadata?.getCell('B3')) || importedCellValue(firstPartSheet?.getCell('C1')) || fileMetadata.style || '');
+    document.getElementById('quiltingStage').value = String(importedCellValue(metadata?.getCell('B4')) || importedCellValue(cover.getCell('D1')) || fileMetadata.protoStage || '');
+    document.getElementById('quiltingTechnician').value = String(importedCellValue(metadata?.getCell('B6')) || importedCellValue(cover.getCell('D3')) || '');
+    document.getElementById('quiltingDate').value = quiltingImportDate(importedCellValue(metadata?.getCell('B7')) || importedCellValue(cover.getCell('G3')));
+    renderQuiltingRows();
+    return usableParts.length;
+  }
+
+  async function handleQuiltingExcelImport(event) {
+    const input = event.target;
+    const file = input.files?.[0];
+    if (!file) return;
+    setQuiltingStatus('Importing quilting consumption workbook...', '');
+    try {
+      const count = await importQuiltingWorkbookBuffer(await file.arrayBuffer(), file.name);
+      setQuiltingStatus(`${count} quilting part${count === 1 ? '' : 's'} imported. Use measured on a part to apply its revised vector lines.`, 'success');
+    } catch (error) {
+      setQuiltingStatus(error.message || String(error), 'error');
+    } finally {
+      input.value = '';
+    }
+  }
+
   function setQuiltingStatus(message, state) {
     const status = document.getElementById('quiltingStatus');
     status.textContent = message || '';
@@ -1611,6 +1758,7 @@
     try {
       const parts = buildQuiltingExportParts();
       await window.generateQuiltingExcelBrowser({
+        season: getFieldValue('quiltingSeason'),
         style: getFieldValue('quiltingStyle'),
         stage: getFieldValue('quiltingStage'),
         technician: getFieldValue('quiltingTechnician'),
@@ -1632,15 +1780,15 @@
   let editingConsumptionRowIndex = null;
 
   function inferStyleFromFileName(name) {
-    // Recognize style/project code only when filename contains clear pattern like IU3284 / IR3811.
-    const match = String(name || '').match(/\b[A-Z]{2}\d{4}\b/i);
+    // Recognize standard style/project codes such as AU666, IU3284, or ABC-1234.
+    const match = String(name || '').match(/\b[A-Z]{2,3}-?\d{3,6}\b/i);
     return match ? match[0].toUpperCase() : '';
   }
 
   function inferSeasonFromFileName(name) {
     // Recognize season only when filename contains clear pattern like SP'27, SP27, FA27, HO27.
-    const match = String(name || '').match(/\b(?:SP|SU|FA|HO|FW|SS|AW)\s*'?(\d{2})\b/i);
-    return match ? `${match[0].replace(/[\s']/g, '').toUpperCase()}` : '';
+    const match = String(name || '').match(/\b(?:SP|SU|FA|HO|FW|SS|AW)\s*[\u2019']?(\d{2})\b/i);
+    return match ? `${match[0].replace(/[\s\u2019']/g, '').toUpperCase()}` : '';
   }
 
   function inferProtoStageFromFileName(name) {
@@ -1649,12 +1797,37 @@
       { regex: /\bSIZE\s*SET\b|\bSIZESET\b/, value: 'Size Set' },
       { regex: /\bFADP\b/, value: 'FADP' },
       { regex: /\bSMS\b/, value: 'SMS' },
+      { regex: /\bBUY\s*REF(?:ERENCE)?\s*SAMPLE\b/, value: 'Buy Ref Sample' },
       { regex: /\bPROTO\b|\bPROTOTYPE\b/, value: 'Proto' },
       { regex: /\bPP\b|\bPRE\s*PRODUCTION\b/, value: 'PP' },
       { regex: /\bTOP\b/, value: 'TOP' }
     ];
     const matched = stagePatterns.find(item => item.regex.test(text));
-    return matched ? matched.value : '';
+    if (matched) return matched.value;
+    const numberedStage = text.match(/\bP\s*(\d{1,2})\b/);
+    return numberedStage ? `P${numberedStage[1]}` : '';
+  }
+
+  function inferConsumptionMetadataFromFileName(name) {
+    const stem = String(name || '')
+      .replace(/\.xlsx$/i, '')
+      .replace(/\s+\d{1,2}\s+[A-Z]+\s+\d{2,4}\s*$/i, '')
+      .trim();
+    const styleMatch = stem.match(/\b[A-Z]{2,3}-?\d{3,6}\b/i);
+    if (!styleMatch || styleMatch.index === undefined) {
+      return {
+        season: inferSeasonFromFileName(stem),
+        style: inferStyleFromFileName(stem),
+        protoStage: inferProtoStageFromFileName(stem)
+      };
+    }
+    const seasonText = stem.slice(0, styleMatch.index).trim();
+    const protoText = stem.slice(styleMatch.index + styleMatch[0].length).trim();
+    return {
+      season: inferSeasonFromFileName(seasonText),
+      style: styleMatch[0].toUpperCase(),
+      protoStage: protoText || inferProtoStageFromFileName(stem)
+    };
   }
 
   function updateStyleFromUploadedFiles() {
@@ -1665,11 +1838,11 @@
     const firstSeason = files.map(file => inferSeasonFromFileName(file.name)).find(Boolean) || '';
     const firstProtoStage = files.map(file => inferProtoStageFromFileName(file.name)).find(Boolean) || '';
 
-    // Important: overwrite stale values from previous uploads.
-    // If filename has no recognizable style/season/proto data, leave field blank for PIC.
-    document.getElementById('styleName').value = firstStyle;
-    document.getElementById('seasonName').value = firstSeason;
-    document.getElementById('protoStage').value = firstProtoStage;
+    // Revised artwork names often contain no project metadata. Keep values restored
+    // from an imported consumption workbook unless the new filename provides replacements.
+    if (firstStyle) document.getElementById('styleName').value = firstStyle;
+    if (firstSeason) document.getElementById('seasonName').value = firstSeason;
+    if (firstProtoStage) document.getElementById('protoStage').value = firstProtoStage;
   }
 
   const _consumptionOriginalAddFiles = addFiles;
@@ -1737,7 +1910,7 @@
   }
 
   function fileNameWithoutExtension(name) {
-    return String(name || '').replace(/\.(dxf|pdf|svg)$/i, '');
+    return String(name || '').replace(/\.dxf$/i, '');
   }
 
   function applyMaterialDefaults() {
@@ -2075,6 +2248,7 @@
         <td style="white-space:nowrap">
           <button type="button" class="row-action" onclick="moveConsumptionRow(${index}, -1)" ${index === 0 ? 'disabled' : ''}>Up</button>
           <button type="button" class="row-action" onclick="moveConsumptionRow(${index}, 1)" ${index === consumptionRows.length - 1 ? 'disabled' : ''}>Down</button>
+          <button type="button" class="row-action" onclick="updateConsumptionRowLengthFromVector(${index})">Use measured</button>
           <button type="button" class="row-action" onclick="editConsumptionRow(${index})">Edit</button>
           <button type="button" class="row-action danger" onclick="removeConsumptionRow(${index})">Delete</button>
         </td>
@@ -2102,6 +2276,102 @@
       setCalculatorStatus(err.message || String(err), 'error');
     } finally {
       button.disabled = false;
+    }
+  }
+
+  function importedCellValue(cell) {
+    const value = cell?.value;
+    if (value && typeof value === 'object') {
+      if (value.result !== undefined && value.result !== null) return value.result;
+      if (value.text !== undefined) return value.text;
+      if (Array.isArray(value.richText)) return value.richText.map(part => part.text || '').join('');
+    }
+    return value;
+  }
+
+  function importedNumber(value) {
+    if (value === null || value === undefined || value === '' || String(value).toUpperCase() === 'NA') return null;
+    const number = Number(value);
+    return Number.isFinite(number) ? number : null;
+  }
+
+  async function importConsumptionWorkbookBuffer(buffer, fileName = '') {
+    if (typeof ExcelJS === 'undefined') throw new Error('ExcelJS is not loaded.');
+    const workbook = new ExcelJS.Workbook();
+    await workbook.xlsx.load(buffer);
+    const worksheet = workbook.getWorksheet('DATA SHEET');
+    if (!worksheet) throw new Error('The workbook does not contain a DATA SHEET tab.');
+
+    const importedRows = [];
+    for (let rowNumber = 2; rowNumber <= worksheet.rowCount; rowNumber++) {
+      const value = column => importedCellValue(worksheet.getCell(`${column}${rowNumber}`));
+      const partName = String(value('A') || '').trim();
+      const im = String(value('C') || '').trim();
+      const process = String(value('J') || '').trim();
+      if (!partName && !im && !process) continue;
+      const material = findMaterialByIm(im) || {};
+      const action = findActionByName(process) || {};
+      const colorName = String(value('O') || '').trim();
+      const color = findColorByName(colorName) || {};
+      importedRows.push({
+        sourceFileName: '',
+        laserBondingPart: partName,
+        units: importedNumber(value('B')) || 1,
+        im,
+        yards: String(value('D') || 'Y').trim(),
+        slitReadyRollFabricPanel: String(value('E') || material.slit || 'N').trim(),
+        type: String(value('F') || material.type || 'NA').trim(),
+        supplier: String(value('G') || material.supplier || 'NA').trim(),
+        supplierItem: String(value('H') || material.supplierItem || 'NA').trim(),
+        materialWidthMm: importedNumber(value('I')) ?? importedNumber(material.widthMm),
+        process,
+        productionCat: String(value('K') || action.productionCat || 'sub-con').trim(),
+        consumptionMGmt: importedNumber(value('L')),
+        laserColourCode: colorName === 'NA' ? '' : colorName,
+        machineSpeed: importedNumber(value('P')) ?? importedNumber(color.machineSpeed) ?? importedNumber(action.machineSpeed),
+        artworkLengthCm: importedNumber(value('Q')),
+        costMargin: importedNumber(value('V')) ?? 60,
+        handlingSam: importedNumber(action.sam)
+      });
+    }
+    if (!importedRows.length) throw new Error('No consumption rows were found in DATA SHEET.');
+
+    consumptionRows.length = 0;
+    consumptionRows.push(...importedRows);
+    editingConsumptionRowIndex = null;
+    const metadata = workbook.getWorksheet('_MA Portal Data');
+    const fileMetadata = inferConsumptionMetadataFromFileName(fileName);
+    document.getElementById('seasonName').value = String(importedCellValue(metadata?.getCell('B2')) || fileMetadata.season || '');
+    document.getElementById('styleName').value = String(importedCellValue(metadata?.getCell('B3')) || fileMetadata.style || '');
+    document.getElementById('protoStage').value = String(importedCellValue(metadata?.getCell('B4')) || fileMetadata.protoStage || '');
+    updateConsumptionPreviewTable();
+    return importedRows.length;
+  }
+
+  async function handleConsumptionExcelImport(event) {
+    const input = event.target;
+    const file = input.files?.[0];
+    if (!file) return;
+    setCalculatorStatus('Importing consumption workbook...', '');
+    try {
+      const count = await importConsumptionWorkbookBuffer(await file.arrayBuffer(), file.name);
+      setCalculatorStatus(`${count} existing consumption row${count === 1 ? '' : 's'} imported. Upload the revised vector, then use the matching row's Use measured button.`, 'success');
+    } catch (error) {
+      setCalculatorStatus(error.message || String(error), 'error');
+    } finally {
+      input.value = '';
+    }
+  }
+
+  function updateConsumptionRowLengthFromVector(index) {
+    const row = consumptionRows[index];
+    if (!row) return;
+    try {
+      row.artworkLengthCm = Number(getMeasuredLengthCm().toFixed(4));
+      updateConsumptionPreviewTable();
+      setCalculatorStatus(`Measured vector length updated for ${row.laserBondingPart || `row ${index + 1}`}.`, 'success');
+    } catch (error) {
+      setCalculatorStatus(error.message || String(error), 'error');
     }
   }
 
@@ -2228,7 +2498,7 @@
 
     if (!hasFiles) {
       partList.innerHTML = '<p style="color:#6e6e73">No parsed vector files available. Upload and calculate first.</p>';
-      document.getElementById('markerStatus').textContent = 'Upload DXF/PDF/SVG files and run calculation first.';
+      document.getElementById('markerStatus').textContent = 'Upload DXF files and run calculation first.';
     } else {
       document.getElementById('markerStatus').textContent = `${markerParts.length} parts from ${markerSourceResults.length} file(s). Click Auto Nest 3 Rows to arrange.`;
       document.querySelectorAll('#markerPartList input[type="checkbox"]').forEach(function(cb) {

@@ -25,6 +25,28 @@
     return clean(value).replace(/[^A-Za-z0-9 _-]+/g, ' ').replace(/\s+/g, ' ').trim();
   }
 
+  function exportDate(value) {
+    const match = String(value || '').match(/^(\d{4})-(\d{2})-(\d{2})$/);
+    if (!match) return '';
+    const date = new Date(Date.UTC(Number(match[1]), Number(match[2]) - 1, Number(match[3])));
+    return `${Number(match[3])} ${date.toLocaleString('en-US', { month: 'long', timeZone: 'UTC' }).toUpperCase()} ${match[1]}`;
+  }
+
+  function writePortalMetadata(workbook, payload) {
+    const worksheet = workbook.addWorksheet('_MA Portal Data', { state: 'veryHidden' });
+    worksheet.getCell('A1').value = 'M&A Portal Quilting Consumption';
+    worksheet.getCell('A2').value = 'Season';
+    worksheet.getCell('B2').value = clean(payload.season);
+    worksheet.getCell('A3').value = 'Style';
+    worksheet.getCell('B3').value = clean(payload.style);
+    worksheet.getCell('A4').value = 'Proto Stage';
+    worksheet.getCell('B4').value = clean(payload.stage);
+    worksheet.getCell('A6').value = 'Technician';
+    worksheet.getCell('B6').value = clean(payload.technician);
+    worksheet.getCell('A7').value = 'Completed Date';
+    worksheet.getCell('B7').value = clean(payload.completedDate);
+  }
+
   async function loadTemplateWorkbook() {
     if (typeof ExcelJS === 'undefined') throw new Error('ExcelJS is not loaded.');
     if (!window.QUILTING_TEMPLATE_XLSX_BASE64) throw new Error('The quilting template is not loaded.');
@@ -176,6 +198,7 @@
     });
 
     workbook.worksheets.slice().filter(sheet => sheet !== cover && !outputSheets.includes(sheet)).forEach(sheet => workbook.removeWorksheet(sheet.id));
+    writePortalMetadata(workbook, payload);
     workbook.creator = 'Auto Vector Measure';
     workbook.modified = new Date();
     workbook.calcProperties = workbook.calcProperties || {};
@@ -183,8 +206,8 @@
     workbook.calcProperties.forceFullCalc = true;
 
     const buffer = await workbook.xlsx.writeBuffer();
-    const date = payload.completedDate ? payload.completedDate.replace(/-/g, '') : '';
-    const name = [safeFileName(payload.style), safeFileName(payload.stage), date].filter(Boolean).join('-') || 'Quilting-Consumption';
+    const name = [payload.season, payload.style, payload.stage, exportDate(payload.completedDate)]
+      .map(safeFileName).filter(Boolean).join(' ') || 'Quilting Consumption';
     helpers.downloadBlob(new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), `${name}.xlsx`);
     return buffer;
   };
