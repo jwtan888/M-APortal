@@ -3521,6 +3521,7 @@
             renderUtilization();
             // Render down filling dashboard
             renderDownDashboard();
+            renderPendingTaskHub();
         }
 
         // Store laser rows in memory
@@ -3617,6 +3618,36 @@
             return pendingProtoStages.includes(p) || /^p\d+$/.test(p);
         }
 
+        function getLaserPendingConsumptionRows(rows) {
+            const sourceRows = Array.isArray(rows) ? rows : [];
+            const doneJobKeys = new Set();
+            sourceRows.forEach(row => {
+                const complete = getVal(row, ['Consumption Complete Date','ConsumptionCompleteDate','Cons End','ConsEnd','Consumption End']);
+                if (complete && complete !== '---' && String(complete).trim() !== '') doneJobKeys.add(jobKey(row));
+            });
+            return sourceRows.filter(row => {
+                if (isPortalNoActionValue(getLaserCompleteDateRaw(row))) return false;
+                const laserComplete = convertExcelDate(getLaserCompleteDateRaw(row));
+                const consumptionStart = convertExcelDate(getVal(row, ['Consumption Start Date','ConsumptionStartDate','Cons Start']));
+                const proto = getVal(row, ['Proto Stage','ProtoStage','Stage']);
+                const rowId = String(getVal(row, ['Id','ID','id']));
+                const styleProto = `${getVal(row,['Style Number','StyleNumber','Style'])}|${proto}`;
+                const consumptionPic = String(getVal(row, ['Consumption PIC','ConsumptionPIC','Cons PIC'])).trim();
+                const completeStatus = String(getVal(row, ['Consumption Complete Status','ConsumptionCompleteStatus','Cons Complete Status'])).trim().toLowerCase();
+                return laserComplete && laserComplete !== '---'
+                    && (!consumptionStart || consumptionStart === '---')
+                    && consumptionPic !== 'N/A'
+                    && completeStatus !== 'yes'
+                    && completeStatus !== 'no'
+                    && isTrackedProtoStage(proto)
+                    && !doneJobKeys.has(jobKey(row))
+                    && !naHiddenIds.has(rowId)
+                    && !naHiddenIds.has(jobKey(row))
+                    && !naHiddenIds.has(styleProto)
+                    && !naHiddenIds.has(String(row['__PowerAppsId__'] || ''));
+            });
+        }
+
         function renderLaserDashboard() {
             if (!allLaserRows.length) {
                 ['ld-total','ld-laser-pending','ld-pending','ld-done'].forEach(id => {
@@ -3647,15 +3678,6 @@
             // Used to detect split jobs (2 rows for same job)
             // jobKey is defined at module scope below — used here and in markLaserNA
 
-            // Build set of keys where ANY row in the group has Consumption Complete filled
-            const doneJobKeys = new Set();
-            allLaserRows.forEach(r => {
-                const ce = convertExcelDate(getVal(r, ['Consumption Complete Date','ConsumptionCompleteDate','Cons End']));
-                // Check multiple possible field names for Consumption End/Complete date
-                const ceVal = getVal(r, ['Consumption Complete Date','ConsumptionCompleteDate','Cons End','ConsEnd','Consumption End']);
-                if (ceVal && ceVal !== '---' && String(ceVal).trim() !== '') doneJobKeys.add(jobKey(r));
-            });
-
             // Laser cut pending = request has a required date but operator has not completed laser cut.
             const laserCutPending = allLaserRows.filter(r => {
                 if (isPortalNoActionValue(getLaserCompleteDateRaw(r))) return false;
@@ -3666,30 +3688,8 @@
                 return !completeDate || completeDate === '---';
             });
 
-            // Pending = Complete Date filled + tracked proto stage + not done + not hidden this session
-            const pending = allLaserRows.filter(r => {
-                if (isPortalNoActionValue(getLaserCompleteDateRaw(r))) return false;
-                const cd    = convertExcelDate(getLaserCompleteDateRaw(r));
-                const cs    = convertExcelDate(getVal(r, ['Consumption Start Date','ConsumptionStartDate','Cons Start']));
-                const proto = getVal(r, ['Proto Stage','ProtoStage','Stage']);
-                const rid   = String(getVal(r, ['Id','ID','id']));
-                const stylePro = `${getVal(r,['Style Number','StyleNumber','Style'])}|${proto}`;
-                // Also exclude if consPic was set to 'N/A' in Excel (cross-device N/A)
-                const consPicVal = String(getVal(r, ['Consumption PIC','ConsumptionPIC','Cons PIC'])).trim();
-                // Exclude if Consumption Complete Status = 'Yes' (manually marked complete by Gavin)
-                const consCompleteStatusVal = String(getVal(r, ['Consumption Complete Status','ConsumptionCompleteStatus','Cons Complete Status'])).trim().toLowerCase();
-                return cd && cd !== '---'
-                    && (!cs || cs === '---')
-                    && consPicVal !== 'N/A'
-                    && consCompleteStatusVal !== 'yes'
-                    && consCompleteStatusVal !== 'no'
-                    && isTrackedProtoStage(proto)
-                    && !doneJobKeys.has(jobKey(r))
-                    && !naHiddenIds.has(rid)
-                    && !naHiddenIds.has(jobKey(r))
-                    && !naHiddenIds.has(stylePro)   // style|proto composite check
-                    && !naHiddenIds.has(String(r['__PowerAppsId__'] || ''));
-            });
+            // Pending = Complete Date filled + tracked proto stage + consumption not started or completed.
+            const pending = getLaserPendingConsumptionRows(allLaserRows);
 
             // Done = Consumption Complete Status = 'Yes' OR Consumption End Date is filled
             const done = allLaserRows.filter(r => {
@@ -5089,6 +5089,26 @@ function taskHubNoAction(value) {
             return `${day}/${month}/${date.getFullYear()}`;
         }
 
+        function taskHubWeekendHasAttendance(date) {
+            const monthKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+            const day = date.getDate();
+            return Object.values(attData?.[monthKey] || {}).some(memberData =>
+                memberData && typeof memberData === 'object' && (parseFloat(memberData[day]) || 0) > 0
+            );
+        }
+
+        function taskHubDatePlusWorkingDays(value, days) {
+            const date = taskHubDate(value);
+            if (!date) return null;
+            let added = 0;
+            while (added < days) {
+                date.setDate(date.getDate() + 1);
+                const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+                if (!isWeekend || taskHubWeekendHasAttendance(date)) added++;
+            }
+            return date;
+        }
+
         function taskHubCalendarParts(value) {
             const date = taskHubDate(value);
             if (!date) return { day: '--', month: '---' };
@@ -5382,9 +5402,9 @@ function taskHubNoAction(value) {
             });
 
             const laserRows = (Array.isArray(allLaserRows) && allLaserRows.length) ? allLaserRows : (Array.isArray(allRecords) ? allRecords : []);
-  laserRows.forEach(row => {
-    const complete = getLaserCompleteDateRaw(row);
-    if (taskHubNoAction(complete) || hasLaserCompleteDate(row)) return;
+            laserRows.forEach(row => {
+                const complete = getLaserCompleteDateRaw(row);
+                if (taskHubNoAction(complete) || hasLaserCompleteDate(row)) return;
                 const style = taskHubFirst(getVal(row, ['Style Number', 'StyleNumber', 'Style']), row.styleNumber, row.style);
                 if (!style) return;
                 const required = getLaserRequiredDateRaw(row);
@@ -5399,6 +5419,28 @@ function taskHubNoAction(value) {
                     detail: taskHubSubtitle([getVal(row, ['Proto Stage', 'Stage']), getVal(row, ['Season']), getVal(row, ['Section'])]),
                     priority: taskStatus.priority,
                     status: taskStatus.status,
+                    dateLabel: taskHubShortDate(required),
+                    sortDate: required,
+                    query: style
+                });
+            });
+
+            getLaserPendingConsumptionRows(laserRows).forEach(row => {
+                const style = taskHubFirst(getVal(row, ['Style Number', 'StyleNumber', 'Style']), row.styleNumber, row.style);
+                if (!style) return;
+                const complete = getLaserCompleteDateRaw(row);
+                const required = taskHubDatePlusWorkingDays(complete, 2);
+                const overdue = taskHubOverdue(required);
+                const consumptionPic = taskHubFirst(getVal(row, ['Consumption PIC', 'ConsumptionPIC', 'Cons PIC']));
+                addPendingTask(items, {
+                    source: 'Laser Consumption',
+                    tab: 'laser',
+                    row,
+                    pic: taskHubPic(consumptionPic || getMAPic(row)),
+                    title: style,
+                    detail: taskHubSubtitle(['Pending Consumption', getVal(row, ['Proto Stage', 'Stage']), getVal(row, ['Season']), getVal(row, ['Section'])]),
+                    priority: overdue ? 0 : 3,
+                    status: overdue ? 'Delay' : 'Pending Consumption',
                     dateLabel: taskHubShortDate(required),
                     sortDate: required,
                     query: style
