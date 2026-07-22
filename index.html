@@ -815,13 +815,19 @@
 
         <div id="content-dashboard" class="tab-content hidden">
             <section class="mb-6">
-                <div class="mb-3 flex items-center gap-3">
+                <div class="mb-3 flex flex-wrap items-center gap-3">
                     <div class="flex-1 border-t border-slate-200"></div>
                     <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-2">Task Overview</span>
+                    <select id="taskHubSearchScope" onchange="taskHubScopeChanged()" aria-label="Search scope" class="hidden px-2 py-1 text-[10px] font-bold text-blue-600">
+                        <option value="ALL_RECORDS">All Records</option>
+                        <option value="TASKS">Tasks Only</option>
+                    </select>
+                    <input type="search" id="taskHubSearch" oninput="scheduleTaskHubSearch()" placeholder="Search tasks..." aria-label="Search tasks by style or job" class="px-3 py-2 border rounded-lg bg-white text-xs outline-none focus:ring-2 focus:ring-blue-500" style="width:min(18rem,42vw)">
                     <select id="taskHubTypeFilter" onchange="schedulePendingTaskHubRender()" aria-label="Filter tasks by type" class="px-2 py-1 text-[10px] font-bold text-slate-600">
                         <option value="ALL">All Task Types</option>
                         <option value="Template">Template</option>
                         <option value="Patch">Patch</option>
+                        <option value="Settings">Settings</option>
                         <option value="Consumption">Consumption</option>
                         <option value="Laser">Laser</option>
                         <option value="Laser Consumption">Laser Consumption</option>
@@ -5060,11 +5066,29 @@
             drillDownToPortalSearch('downfilling', 'downSearch', query, applyDownFilter, '#downTable', event);
         }
 
+        function drillDownSettingSearch(query, event) {
+            drillDownToPortalSearch('setting', 'fileSearch', query, applyFilters, '#logTable', event);
+        }
+
         let pendingTaskHubItems = [];
         let taskHubLastRenderKey = '';
         let taskHubRenderFrame = 0;
         let taskHubRenderTimer = 0;
+        let taskHubSearchTimer = 0;
         let taskHubScrollIdleUntil = 0;
+
+        function scheduleTaskHubSearch() {
+            clearTimeout(taskHubSearchTimer);
+            taskHubSearchTimer = setTimeout(schedulePendingTaskHubRender, 180);
+        }
+
+        function taskHubScopeChanged() {
+            const searchEl = document.getElementById('taskHubSearch');
+            const allRecords = isPortalAdmin() && document.getElementById('taskHubSearchScope')?.value === 'ALL_RECORDS';
+            if (searchEl) searchEl.placeholder = allRecords ? 'Search style or job across all records...' : 'Search tasks...';
+            taskHubLastRenderKey = '';
+            schedulePendingTaskHubRender();
+        }
 
         function schedulePendingTaskHubRender() {
             const boardEl = document.getElementById('taskHubBoard');
@@ -5633,6 +5657,96 @@ function taskHubNoAction(value) {
             if (task.tab === 'downfilling') return drillDownDownSearch(query, event);
         }
 
+        let adminMasterSearchItems = [];
+
+        function collectAdminMasterSearchItems(search, typeFilter, pendingItems) {
+            const pendingByRow = new Map();
+            pendingItems.forEach(task => {
+                const list = pendingByRow.get(task.row) || [];
+                list.push(task);
+                pendingByRow.set(task.row, list);
+            });
+            const configs = [
+                { source: 'Template', tab: 'template', rows: allTemplates, raw: row => row.portalRow || row, complete: row => row.completeDateDisplay },
+                { source: 'Patch', tab: 'patch', rows: allPatchRows, complete: row => getVal(row, ['Complete Date\nm/d/yyyy', 'Complete Date m/d/yyyy', 'Complete Date', 'CompleteDate']) },
+                { source: 'Settings', tab: 'setting', rows: allRecords, raw: row => row.source || row, style: (row, raw) => taskHubFirst(row.file, getVal(raw, ['File Name', 'FileName'])), complete: row => row.completeRaw || row.completeDate },
+                { source: 'Laser', tab: 'laser', rows: allLaserRows, complete: row => getLaserCompleteDateRaw(row) },
+                { source: 'Consumption', tab: 'consumption', rows: allConsumptionRows, complete: row => getVal(row, ['Complete Date\nm/d/yyyy', 'Complete Date m/d/yyyy', 'Complete Date', 'CompleteDate']) },
+                { source: 'Support', tab: 'support', rows: allSupportRows, complete: row => getVal(row, ['Complete Time\nm/d/yyyy', 'Complete Time m/d/yyyy', 'Complete Time', 'CompleteDate']) },
+                { source: 'Down Filling', tab: 'downfilling', rows: allDownRows, complete: row => getVal(row, ['Complete Time\nm/d/yyyy', 'Complete Time m/d/yyyy', 'Complete Time', 'CompleteDate']) }
+            ];
+            const matches = [];
+            configs.forEach((config, order) => (Array.isArray(config.rows) ? config.rows : []).forEach(row => {
+                const raw = config.raw ? config.raw(row) : row;
+                const style = config.style ? config.style(row, raw) : taskHubFirst(row.style, row.styleNumber, getVal(raw, ['Style Number', 'StyleNumber', 'Style', 'Style No.']));
+                const job = taskHubFirst(row.job, row.jobNo, row.jobNumber, getVal(raw, ['Job Number', 'JobNo', 'Job No.', 'Job No', 'Job']));
+                if (!style && !job) return;
+                if (!`${style} ${job}`.toLowerCase().includes(search)) return;
+                const tasks = pendingByRow.get(row) || [];
+                if (typeFilter !== 'ALL' && config.source !== typeFilter && !tasks.some(task => task.source === typeFilter)) return;
+                const complete = config.complete(row);
+                matches.push({
+                    source: config.source,
+                    order,
+                    tab: config.tab,
+                    row,
+                    style,
+                    job,
+                    query: style || job,
+                    season: taskHubFirst(row.season, getVal(raw, ['Season'])),
+                    pic: taskHubPic(taskHubFirst(row.pic, row.maPic, getMAPic(raw))),
+                    status: tasks.length ? tasks.map(task => `${task.source}: ${task.status}`).join(' · ') : (taskHubClosed(complete) ? 'Completed record' : 'Open record')
+                });
+            }));
+            return matches.sort((a, b) => a.order - b.order || a.style.localeCompare(b.style) || a.job.localeCompare(b.job));
+        }
+
+        function openAdminMasterSearchResult(resultId, event) {
+            event?.stopPropagation();
+            const item = adminMasterSearchItems.find(result => result.id === resultId);
+            if (!item) return;
+            if (item.tab === 'template') return drillDownTemplateSearch(item.query, event);
+            if (item.tab === 'patch') { patchPendingOnly = false; return drillDownPatchSearch(item.query, event); }
+            if (item.tab === 'setting') return drillDownSettingSearch(item.query, event);
+            if (item.tab === 'laser') return drillDownLaserSearch(item.query, event);
+            if (item.tab === 'consumption') { consumptionPendingOnly = false; return drillDownConsumption(item.query); }
+            if (item.tab === 'support') { supportPendingOnly = false; return drillDownSupport(item.query); }
+            if (item.tab === 'downfilling') { downPendingOnly = false; return drillDownDownSearch(item.query, event); }
+        }
+
+        function renderAdminMasterSearch(boardEl, search, typeFilter, pendingItems) {
+            if (search.length < 2) {
+                adminMasterSearchItems = [];
+                taskHubLastRenderKey = `master-help:${search}:${typeFilter}`;
+                boardEl.innerHTML = '<div class="bg-white border border-slate-200 rounded-xl px-4 py-8 text-center text-xs font-bold text-slate-400" style="grid-column:1/-1">Enter at least 2 characters to search all records by style or job.</div>';
+                return;
+            }
+            const allMatches = collectAdminMasterSearchItems(search, typeFilter, pendingItems);
+            adminMasterSearchItems = allMatches.slice(0, 50).map((item, index) => ({ ...item, id: `master-result-${index}` }));
+            taskHubLastRenderKey = `master:${search}:${typeFilter}:${allMatches.length}:${adminMasterSearchItems.map(item => `${item.source}|${item.style}|${item.job}|${item.status}`).join(';')}`;
+            if (!adminMasterSearchItems.length) {
+                boardEl.innerHTML = '<div class="bg-white border border-slate-200 rounded-xl px-4 py-8 text-center text-xs font-bold text-slate-400" style="grid-column:1/-1">No matching style or job found.</div>';
+                return;
+            }
+            const sources = [...new Set(adminMasterSearchItems.map(item => item.source))];
+            boardEl.innerHTML = sources.map(source => {
+                const items = adminMasterSearchItems.filter(item => item.source === source);
+                return `<section class="bg-white border border-slate-200 rounded-xl shadow-sm overflow-hidden">
+                    <div class="px-4 py-3 border-b border-slate-100 flex items-center justify-between">
+                        <h3 class="text-xs font-black uppercase tracking-wider text-slate-700">${escapeHtml(source)}</h3>
+                        <span class="text-[10px] font-bold text-slate-400">${items.length}</span>
+                    </div>
+                    <div class="max-h-[390px] overflow-y-auto">
+                        ${items.map(item => `<button type="button" onclick="openAdminMasterSearchResult('${item.id}', event)" class="w-full p-3 text-left border-b border-slate-100 hover:bg-blue-50 transition-colors">
+                            <span class="block text-sm font-black text-blue-700">${escapeHtml(item.style || item.job)}</span>
+                            <span class="block mt-1 text-[11px] font-bold text-slate-500">${escapeHtml(taskHubSubtitle([item.style && item.job && item.style !== item.job ? `Job ${item.job}` : '', item.season, item.pic]))}</span>
+                            <span class="block mt-1 text-[10px] font-semibold text-slate-400">${escapeHtml(item.status)}</span>
+                        </button>`).join('')}
+                    </div>
+                </section>`;
+            }).join('') + (allMatches.length > 50 ? `<div class="text-center text-[10px] font-bold text-slate-400" style="grid-column:1/-1">Showing first 50 of ${allMatches.length} matches. Refine the style or job search.</div>` : '');
+        }
+
 function renderPendingTaskHub() {
   const boardEl = document.getElementById('taskHubBoard');
   const searchEl = document.getElementById('taskHubSearch');
@@ -5653,6 +5767,11 @@ function renderPendingTaskHub() {
 
   const search = (searchEl ? searchEl.value : '').trim().toLowerCase();
   const typeFilter = typeFilterEl ? typeFilterEl.value : 'ALL';
+  const masterSearch = isPortalAdmin() && document.getElementById('taskHubSearchScope')?.value === 'ALL_RECORDS' && !!search;
+  if (masterSearch) {
+    renderAdminMasterSearch(boardEl, search, typeFilter, items);
+    return;
+  }
 
             const filteredItems = items.filter(item => {
                 if (typeFilter !== 'ALL' && item.source !== typeFilter) return false;
@@ -7699,7 +7818,7 @@ function renderPendingTaskHub() {
             const dashboard = document.getElementById('content-dashboard');
             if (!dashboard) return [];
             const groups = [];
-            let current = { title: 'Template', nodes: [] };
+            let current = { title: 'Task Overview', nodes: [] };
             Array.from(dashboard.children).forEach(node => {
                 if (node.id === 'slaModal') return;
                 if (node.querySelector && (node.querySelector('#monthFilter') || node.querySelector('#dailyReportPdfBtn'))) return;
@@ -8594,6 +8713,93 @@ function renderPendingTaskHub() {
             pdf.text(truncateReportPdfText(String(pctText), 10), barX + barW - 1.8, barY + 2.9, { align: 'right' });
         }
 
+        function addPdfTaskOverview(pdf) {
+            const items = collectPendingTaskHubItems();
+            const urgent = items.filter(item => item.urgent).length;
+            const delayed = items.filter(item => item.statusPriority === 0 || /delay|late/i.test(item.status || '')).length;
+            const pendingMaterial = items.filter(item => item.statusPriority === 1 || /pending material/i.test(item.status || '')).length;
+            const assignedPics = new Set(items.map(item => item.pic).filter(pic => pic && pic !== 'Unassigned')).size;
+            const margin = DASHBOARD_PDF_LAYOUT.margin;
+            const pageW = DASHBOARD_PDF_LAYOUT.pageW;
+            const gap = DASHBOARD_PDF_LAYOUT.gap;
+            const cards = [
+                { label: 'Total Pending Tasks', value: items.length, color: DASHBOARD_PDF_THEME.ink },
+                { label: 'Urgent', value: urgent, color: DASHBOARD_PDF_THEME.red },
+                { label: 'Delayed', value: delayed, color: DASHBOARD_PDF_THEME.red },
+                { label: 'Assigned PICs', value: assignedPics, color: DASHBOARD_PDF_THEME.blue }
+            ];
+            const cardW = (pageW - margin * 2 - gap * (cards.length - 1)) / cards.length;
+            cards.forEach((card, index) => addPdfKpiCard(pdf, margin + index * (cardW + gap), DASHBOARD_PDF_LAYOUT.kpiY, cardW, card.label, card.value, card.color));
+
+            addPdfSectionLabel(pdf, `Priority Task Summary · ${pendingMaterial} Pending Material`, margin, 58, pageW - margin * 2);
+            const x = margin;
+            const y = 63;
+            const w = pageW - margin * 2;
+            const h = 135;
+            setPdfRgb(pdf, 'setDrawColor', DASHBOARD_PDF_THEME.border);
+            setPdfRgb(pdf, 'setFillColor', DASHBOARD_PDF_THEME.card);
+            pdf.roundedRect(x, y, w, h, 4, 4, 'FD');
+            setPdfRgb(pdf, 'setFillColor', DASHBOARD_PDF_THEME.tableHead);
+            pdf.rect(x, y + 10, w, 7, 'F');
+
+            const columns = [
+                { title: 'Task Type', width: 34 },
+                { title: 'M&A PIC', width: 30 },
+                { title: 'Style / Job', width: 43 },
+                { title: 'Detail', width: 91 },
+                { title: 'Status', width: 42 },
+                { title: 'Required', width: 29 }
+            ];
+            let headerX = x + 4;
+            pdf.setFont('helvetica', 'bold');
+            pdf.setFontSize(5.2);
+            setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.muted);
+            columns.forEach(column => {
+                pdf.text(column.title, headerX, y + 14.7);
+                headerX += column.width;
+            });
+
+            const maxRows = 17;
+            let cursorY = y + 22;
+            items.slice(0, maxRows).forEach((item, rowIndex) => {
+                if (rowIndex % 2 === 0) {
+                    setPdfRgb(pdf, 'setFillColor', [252, 253, 255]);
+                    pdf.rect(x + 0.6, cursorY - 4.3, w - 1.2, 6.4, 'F');
+                }
+                setPdfRgb(pdf, 'setDrawColor', DASHBOARD_PDF_THEME.line);
+                pdf.line(x, cursorY - 4.8, x + w, cursorY - 4.8);
+                const status = item.urgent ? `URGENT · ${item.status}` : item.status;
+                const cells = [item.source, item.pic, item.title, item.detail || '-', status || 'Pending', item.dateLabel || '---'];
+                let cellX = x + 4;
+                cells.forEach((cell, index) => {
+                    pdf.setFont('helvetica', index === 2 ? 'bold' : 'normal');
+                    pdf.setFontSize(index === 3 ? 4.7 : 5.1);
+                    const color = index === 2
+                        ? DASHBOARD_PDF_THEME.blue
+                        : index === 4 && item.urgent
+                            ? DASHBOARD_PDF_THEME.red
+                            : DASHBOARD_PDF_THEME.ink;
+                    setPdfRgb(pdf, 'setTextColor', color);
+                    const text = pdf.splitTextToSize(truncateReportPdfText(cell, index === 3 ? 90 : 34), columns[index].width - 3).slice(0, 2);
+                    pdf.text(text, cellX, cursorY);
+                    cellX += columns[index].width;
+                });
+                cursorY += 6.4;
+            });
+
+            if (!items.length) {
+                pdf.setFont('helvetica', 'normal');
+                pdf.setFontSize(7);
+                setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.faint);
+                pdf.text('No pending tasks.', x + 4, y + 27);
+            } else if (items.length > maxRows) {
+                pdf.setFont('helvetica', 'bold');
+                pdf.setFontSize(5.2);
+                setPdfRgb(pdf, 'setTextColor', DASHBOARD_PDF_THEME.faint);
+                pdf.text(`Showing highest priority ${maxRows} of ${items.length} pending tasks.`, x + w - 4, y + h - 4, { align: 'right' });
+            }
+        }
+
         function addDashboardSectionPdfPages(pdf, title, reportDate, startPageNumber, isFirstPdfPage) {
             const config = getDashboardReportConfig(title);
             const pageW = DASHBOARD_PDF_LAYOUT.pageW;
@@ -8606,6 +8812,11 @@ function renderPendingTaskHub() {
             }
             addPdfPageBase(pdf);
             addPdfReportHeader(pdf, title, reportDate, pageNumber);
+
+            if (title === 'Task Overview') {
+                addPdfTaskOverview(pdf);
+                return 1;
+            }
 
             if (!config) {
                 pdf.setFont('helvetica', 'normal');
@@ -8852,12 +9063,18 @@ function renderPendingTaskHub() {
                 if (naBtn) naBtn.classList.toggle('hidden', !isPortalAdmin() || isViewMode);
                 const quiltingSyncBtn = document.getElementById('manualQuiltingSyncBtn');
                 if (quiltingSyncBtn) quiltingSyncBtn.classList.toggle('hidden', !canManualSyncQuiltingDetails() || isViewMode);
+                const taskScope = document.getElementById('taskHubSearchScope');
+                if (taskScope) taskScope.classList.toggle('hidden', !isPortalAdmin());
+                const taskSearch = document.getElementById('taskHubSearch');
+                if (taskSearch) taskSearch.placeholder = isPortalAdmin() && taskScope?.value === 'ALL_RECORDS' ? 'Search style or job across all records...' : 'Search tasks...';
             } else {
                 lv.classList.remove('hidden'); av.classList.add('hidden');
                 const naBtn = document.getElementById('clearNA-btn');
                 if (naBtn) naBtn.classList.add('hidden');
                 const quiltingSyncBtn = document.getElementById('manualQuiltingSyncBtn');
                 if (quiltingSyncBtn) quiltingSyncBtn.classList.add('hidden');
+                const taskScope = document.getElementById('taskHubSearchScope');
+                if (taskScope) taskScope.classList.add('hidden');
                 clearConsumptionSyncMessages();
             }
             document.body.classList.toggle('portal-view-mode', isViewMode);
