@@ -902,7 +902,7 @@
           <div style="font-family:'DM Mono',monospace;font-size:.62rem;color:#4ade80;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.45rem;">Capability Index</div>
           <div style="font-size:.75rem;color:var(--text);line-height:1.6;"><strong>In simple terms:</strong> how strong is this PIC's job mix after rare levels receive more influence?</div>
           <div style="font-size:.7rem;color:var(--muted);line-height:1.55;margin-top:.45rem;">Count the PIC's jobs at each level, give rare levels a larger weight, then calculate the weighted average level.</div>
-          <div id="capabilityFormulaExample" style="font-size:.7rem;color:var(--text);line-height:1.55;margin-top:.45rem;padding:.5rem .65rem;background:rgba(74,222,128,.08);border-radius:8px;">Live example loading...</div>
+          <details id="capabilityFormulaExample" style="font-size:.7rem;color:var(--text);line-height:1.55;margin-top:.45rem;padding:.5rem .65rem;background:rgba(74,222,128,.08);border-radius:8px;"><summary style="cursor:pointer;color:#4ade80;font-weight:700;">Show full James calculation</summary><div style="margin-top:.5rem;">Live example loading...</div></details>
         </div>
         <div style="padding:1rem 1.5rem;min-width:0;">
           <div style="font-family:'DM Mono',monospace;font-size:.62rem;color:#6366f1;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.45rem;">Work Mix Index</div>
@@ -1218,10 +1218,20 @@ function updateFormulaReference(map) {
   if (!example || !total) return;
   const pic = map.James ? 'James' : Object.keys(map)[0];
   const levels = map[pic] || {};
-  const levelFourShare = counts[3] / total;
-  const levelFourWeight = counts[3] ? total / counts[3] : 0;
   const capability = calcCapability(levels, map);
-  example.textContent = `${pic} example: ${levels[4] || 0} Level 4 jobs. Weight = ${total} total team jobs ÷ ${counts[3]} Level 4 jobs = ${levelFourWeight.toFixed(1)}× because Level 4 is ${(levelFourShare * 100).toFixed(1)}% of team work. All levels together give Capability ${capability.avg === null ? '—' : capability.avg.toFixed(2)} / 5.`;
+  let weightedJobsTotal = 0, weightedPointsTotal = 0;
+  const rows = [1,2,3,4,5].map(level => {
+    const jobs = levels[level] || 0;
+    const teamJobs = counts[level - 1];
+    const share = total ? teamJobs / total : 0;
+    const weight = teamJobs ? total / teamJobs : 0;
+    const weightedJobs = jobs * weight;
+    const weightedPoints = weightedJobs * level;
+    weightedJobsTotal += weightedJobs;
+    weightedPointsTotal += weightedPoints;
+    return `<tr><td style="padding:.25rem .35rem;color:${LEVEL_COLORS[level]};">Level ${level}</td><td style="padding:.25rem .35rem;text-align:right;">${jobs}</td><td style="padding:.25rem .35rem;text-align:right;">${teamJobs}</td><td style="padding:.25rem .35rem;text-align:right;">${(share * 100).toFixed(2)}%</td><td style="padding:.25rem .35rem;text-align:right;">×${weight.toFixed(4)}</td><td style="padding:.25rem .35rem;text-align:right;">${weightedJobs.toFixed(4)}</td><td style="padding:.25rem .35rem;text-align:right;">${weightedPoints.toFixed(4)}</td></tr>`;
+  }).join('');
+  example.innerHTML = `<summary style="cursor:pointer;color:#4ade80;font-weight:700;">Show full ${pic} calculation</summary><div style="margin-top:.5rem;overflow-x:auto;"><table style="width:100%;min-width:500px;border-collapse:collapse;font-family:'DM Mono',monospace;font-size:.62rem;"><thead><tr style="color:var(--muted);"><th style="padding:.25rem .35rem;text-align:left;">Level</th><th style="padding:.25rem .35rem;text-align:right;">${pic} jobs</th><th style="padding:.25rem .35rem;text-align:right;">Team jobs</th><th style="padding:.25rem .35rem;text-align:right;">Share</th><th style="padding:.25rem .35rem;text-align:right;">Weight</th><th style="padding:.25rem .35rem;text-align:right;">Weighted jobs</th><th style="padding:.25rem .35rem;text-align:right;">Weighted pts</th></tr></thead><tbody>${rows}</tbody><tfoot><tr style="border-top:1px solid var(--border);font-weight:700;"><td colspan="5" style="padding:.35rem;">Totals</td><td style="padding:.35rem;text-align:right;">${weightedJobsTotal.toFixed(4)}</td><td style="padding:.35rem;text-align:right;">${weightedPointsTotal.toFixed(4)}</td></tr></tfoot></table><div style="margin-top:.45rem;">Capability Index = ${weightedPointsTotal.toFixed(4)} weighted points ÷ ${weightedJobsTotal.toFixed(4)} weighted jobs = <strong>${capability.avg === null ? '—' : capability.avg.toFixed(2)} / 5</strong></div></div>`;
 }
 
 function getTier(avg) {
