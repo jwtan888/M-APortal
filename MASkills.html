@@ -224,6 +224,7 @@
     font-size: .65rem; font-weight: 700; padding: .25rem .6rem;
     border-radius: 99px; text-transform: uppercase; letter-spacing: .05em;
   }
+  .tier-master   { background: rgba(244,63,94,.12);   color: #f43f5e;  border: 1px solid rgba(244,63,94,.3); }    /* Expert+     → red    */
   .tier-expert   { background: rgba(245,166,35,.12);  color: #f5a623;  border: 1px solid rgba(245,166,35,.3); }   /* Expert      → gold   */
   .tier-advanced { background: rgba(74,222,128,.12);  color: #4ade80;  border: 1px solid rgba(74,222,128,.3); }   /* Advanced    → green  */
   .tier-mid      { background: rgba(34,211,238,.12);  color: #22d3ee;  border: 1px solid rgba(34,211,238,.3); }   /* Intermediate→ cyan   */
@@ -283,6 +284,41 @@
   .data-table tr:hover td { background: rgba(74,125,255,.08); }
   .subtle-note { color: var(--muted); font-size: .78rem; font-weight: 700; }
 
+  /* ── Skill evidence matrix ── */
+  .skill-matrix-card {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 22px; overflow: hidden;
+    box-shadow: var(--shadow-sm); backdrop-filter: blur(16px);
+    margin-bottom: 2.5rem;
+  }
+  .skill-matrix-head {
+    display: flex; align-items: flex-end; justify-content: space-between; gap: 1rem;
+    padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border);
+  }
+  .skill-matrix-title { font-family: 'Syne', sans-serif; font-size: 1.02rem; font-weight: 800; }
+  .skill-matrix-note { color: var(--muted); font-size: .75rem; line-height: 1.45; text-align: right; }
+  .skill-matrix-wrap { overflow-x: auto; }
+  .skill-matrix { width: 100%; min-width: 980px; border-collapse: collapse; }
+  .skill-matrix th {
+    padding: .75rem .8rem; text-align: left; border-bottom: 1px solid var(--border);
+    color: var(--muted); font-family: 'DM Mono', monospace; font-size: .62rem;
+    font-weight: 600; letter-spacing: .08em; text-transform: uppercase;
+  }
+  .skill-matrix td { padding: .75rem .8rem; border-top: 1px solid var(--border); vertical-align: middle; }
+  .skill-matrix tbody tr:first-child td { border-top: none; }
+  .skill-matrix tbody tr:hover td { background: rgba(74,125,255,.05); }
+  .skill-matrix-pic { min-width: 110px; font-family: 'Syne', sans-serif; font-weight: 800; }
+  .skill-matrix-index { font-family: 'DM Mono', monospace; font-weight: 700; white-space: nowrap; }
+  .skill-evidence-link {
+    display: block; min-width: 118px; padding: .55rem .65rem; border: 1px solid var(--border);
+    border-radius: 10px; color: var(--text); text-decoration: none;
+    background: rgba(255,255,255,.025); transition: background .2s, border-color .2s;
+  }
+  .skill-evidence-link:hover { background: rgba(74,125,255,.1); border-color: rgba(74,125,255,.35); }
+  .skill-evidence-link.empty { color: var(--muted); opacity: .58; pointer-events: none; }
+  .skill-evidence-count { display: block; font-family: 'Syne', sans-serif; font-size: .95rem; font-weight: 800; }
+  .skill-evidence-date { display: block; color: var(--muted); font-size: .64rem; margin-top: .15rem; white-space: nowrap; }
+
   /* Loading */
   .loading-state {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
@@ -301,9 +337,43 @@
 
   /* Responsive */
   @media (max-width: 600px) {
+    body { overflow-x: hidden; }
+    .wrapper { padding: 0 .75rem 3rem; }
+    .wrapper, #mainContent, .kpi-strip, .pic-grid, .charts-grid, .skill-matrix-card { min-width: 0; max-width: 100%; }
+    header { align-items: stretch; flex-direction: column; gap: 1rem; padding: 1.1rem; border-radius: 18px; }
+    .logo-area { min-width: 0; }
+    .logo-text h1 { font-size: 1.35rem; }
+    .logo-text p { font-size: .62rem; letter-spacing: .16em; }
+    .header-right { align-items: stretch; flex-direction: column; gap: .65rem; }
+    .sync-badge { align-self: stretch; width: 100%; max-width: 100%; box-sizing: border-box; white-space: normal; overflow-wrap: anywhere; line-height: 1.4; }
+    .report-actions { display: grid; grid-template-columns: minmax(0, 1fr); gap: .55rem; }
+    .report-btn, .back-link { min-height: 44px; justify-content: center; text-align: center; padding: .55rem .65rem; }
     .charts-grid { grid-template-columns: 1fr; }
-    .pic-grid    { grid-template-columns: 1fr; }
-    .kpi-strip   { grid-template-columns: repeat(2, 1fr); }
+    .pic-grid { grid-template-columns: minmax(0, 1fr); }
+    .pic-card { min-width: 0; }
+    .kpi-strip { grid-template-columns: minmax(0, 1fr); }
+    .kpi-card { min-width: 0; padding: 1.1rem; border-radius: 18px; }
+    .kpi-label { font-size: .68rem; }
+    .kpi-value { font-size: 2.15rem; }
+    .kpi-sub { font-size: .75rem; }
+    .pic-card-header { min-width: 0; padding: 1rem; }
+    .pic-avatar { width: 46px; height: 46px; margin-right: .65rem; border-radius: 14px; }
+    .pic-name-block { min-width: 0; }
+    .pic-title { overflow-wrap: anywhere; }
+    .skill-ring-wrap, .skill-ring-wrap svg { width: 64px; height: 64px; }
+    .pic-card-body { padding: .9rem 1rem 1rem; }
+    .level-row { gap: .45rem; }
+    .level-tag { width: 48px; font-size: .68rem; }
+    .level-bar-track { min-width: 0; }
+    .level-count { width: 26px; }
+    .pic-card-footer { display: grid; grid-template-columns: 1fr 1fr; gap: .8rem; padding: .85rem 1rem; }
+    .metric-mini { min-width: 0; }
+    .skill-matrix-head { align-items: flex-start; flex-direction: column; }
+    .skill-matrix-note { text-align: left; }
+    .chart-card { padding: 1rem; }
+    .chart-wrap { height: 260px; }
+    .skill-index-grid { grid-template-columns: repeat(2, minmax(0, 1fr)) !important; }
+    .skill-formula-grid { grid-template-columns: minmax(0, 1fr) !important; }
   }
 
   /* Animations */
@@ -359,6 +429,7 @@
     .kpi-card,
     .pic-card,
     .chart-card,
+    .skill-matrix-card,
     section > div[style*="background:var(--surface2)"] {
       background: #ffffff !important;
       border: 1px solid #d8dee8 !important;
@@ -559,6 +630,52 @@
     .metric-mini .ml {
       font-size: 7px !important;
     }
+    .skill-matrix-card {
+      margin-bottom: 8px;
+      border-radius: 8px;
+      break-inside: avoid;
+      page-break-inside: avoid;
+    }
+    .skill-matrix-head {
+      padding: 5px 7px;
+    }
+    .skill-matrix-title {
+      font-size: 10px;
+      color: #111827;
+    }
+    .skill-matrix-note {
+      display: none;
+    }
+    .skill-matrix {
+      min-width: 0;
+      table-layout: fixed;
+    }
+    .skill-matrix th,
+    .skill-matrix td {
+      padding: 3px 4px;
+      font-size: 6px;
+    }
+    .skill-matrix th:nth-child(1),
+    .skill-matrix td:nth-child(1) { width: 9%; }
+    .skill-matrix th:nth-child(2),
+    .skill-matrix td:nth-child(2) { width: 10%; }
+    .skill-matrix th:nth-child(3),
+    .skill-matrix td:nth-child(3) { width: 8%; }
+    .skill-matrix th:nth-child(4),
+    .skill-matrix td:nth-child(4) { width: 8%; }
+    .skill-evidence-link {
+      min-width: 0;
+      padding: 2px;
+      border: none;
+      background: transparent;
+    }
+    .skill-evidence-count {
+      font-size: 7px;
+    }
+    .skill-evidence-date {
+      font-size: 5.5px;
+      white-space: normal;
+    }
     .charts-grid,
     .chart-card {
       display: none !important;
@@ -715,28 +832,33 @@
     <div class="skill-reference-card" style="background:var(--surface2);border:1px solid var(--border);border-radius:18px;overflow:hidden;backdrop-filter:blur(16px);box-shadow:var(--shadow-sm);">
       <div class="skill-reference-intro" style="padding:1.5rem 2rem 1rem;border-bottom:1px solid var(--border);">
         <h2 style="font-family:'Syne',sans-serif;font-size:1rem;font-weight:700;letter-spacing:-.3px;margin-bottom:.3rem;">How We Classify Skill Level</h2>
-        <p style="font-size:.75rem;color:var(--muted);line-height:1.5;">Each completed template job is tagged with a complexity level. A PIC's <strong style="color:var(--text)">Skill Index</strong> is the weighted average of all their completed jobs — higher levels carry more weight. Use the table below to understand what each tier means.</p>
+        <p style="font-size:.75rem;color:var(--muted);line-height:1.5;">Each completed template job is tagged with a complexity level. A PIC's <strong style="color:var(--text)">Capability Index</strong> uses all completed jobs and gives rarer complexity levels more influence, while Work Mix is the normal all-job average. Use the table below to understand what each capability tier means.</p>
       </div>
-      <div class="skill-index-grid" style="display:grid;grid-template-columns:repeat(4,1fr);border-bottom:1px solid var(--border);background:rgba(255,255,255,.02);">
+      <div class="skill-index-grid" style="display:grid;grid-template-columns:repeat(5,1fr);border-bottom:1px solid var(--border);background:rgba(255,255,255,.02);">
         <div style="padding:1rem 1.25rem;border-right:1px solid var(--border);">
-          <div style="font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem;">Skill Index</div>
+          <div style="font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem;">Capability Index</div>
           <div style="font-size:1.05rem;font-weight:700;color:#94a3b8;font-family:'Syne',sans-serif;white-space:nowrap;">1.0 – 1.9</div>
           <div style="font-size:.75rem;color:var(--muted);margin-top:.25rem;">Junior / Basic</div>
         </div>
         <div style="padding:1rem 1.25rem;border-right:1px solid var(--border);">
-          <div style="font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem;">Skill Index</div>
+          <div style="font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem;">Capability Index</div>
           <div style="font-size:1.05rem;font-weight:700;color:#22d3ee;font-family:'Syne',sans-serif;white-space:nowrap;">2.0 – 2.5</div>
           <div style="font-size:.75rem;color:var(--muted);margin-top:.25rem;">Intermediate</div>
         </div>
         <div style="padding:1rem 1.25rem;border-right:1px solid var(--border);">
-          <div style="font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem;">Skill Index</div>
+          <div style="font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem;">Capability Index</div>
           <div style="font-size:1.05rem;font-weight:700;color:#4ade80;font-family:'Syne',sans-serif;white-space:nowrap;">2.6 – 3.5</div>
           <div style="font-size:.75rem;color:var(--muted);margin-top:.25rem;">Advanced</div>
         </div>
-        <div style="padding:1rem 1.25rem;">
-          <div style="font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem;">Skill Index</div>
-          <div style="font-size:1.05rem;font-weight:700;color:#f5a623;font-family:'Syne',sans-serif;white-space:nowrap;">3.6 – 5.0</div>
+        <div style="padding:1rem 1.25rem;border-right:1px solid var(--border);">
+          <div style="font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem;">Capability Index</div>
+          <div style="font-size:1.05rem;font-weight:700;color:#f5a623;font-family:'Syne',sans-serif;white-space:nowrap;">3.6 – 4.4</div>
           <div style="font-size:.75rem;color:var(--muted);margin-top:.25rem;">Expert</div>
+        </div>
+        <div style="padding:1rem 1.25rem;">
+          <div style="font-family:'DM Mono',monospace;font-size:.62rem;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-bottom:.4rem;">Capability Index</div>
+          <div style="font-size:1.05rem;font-weight:700;color:#f43f5e;font-family:'Syne',sans-serif;white-space:nowrap;">4.5 – 5.0</div>
+          <div style="font-size:.75rem;color:var(--muted);margin-top:.25rem;">Expert+</div>
         </div>
       </div>
       <table class="skill-reference-table" style="width:100%;border-collapse:collapse;font-size:.78rem;">
@@ -775,13 +897,31 @@
           </tr>
         </tbody>
       </table>
+      <div class="skill-formula-grid" style="display:grid;grid-template-columns:repeat(2,minmax(0,1fr));border-top:1px solid var(--border);background:rgba(255,255,255,.02);">
+        <div style="padding:1rem 1.5rem;border-right:1px solid var(--border);min-width:0;">
+          <div style="font-family:'DM Mono',monospace;font-size:.62rem;color:#4ade80;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.45rem;">Capability Index</div>
+          <div style="font-size:.75rem;color:var(--text);line-height:1.6;"><strong>In simple terms:</strong> how strong is this PIC's job mix after rare levels receive more influence?</div>
+          <div style="font-size:.7rem;color:var(--muted);line-height:1.55;margin-top:.45rem;">Count the PIC's jobs at each level, give rare levels a larger weight, then calculate the weighted average level.</div>
+          <div id="capabilityFormulaExample" style="font-size:.7rem;color:var(--text);line-height:1.55;margin-top:.45rem;padding:.5rem .65rem;background:rgba(74,222,128,.08);border-radius:8px;">Live example loading...</div>
+        </div>
+        <div style="padding:1rem 1.5rem;min-width:0;">
+          <div style="font-family:'DM Mono',monospace;font-size:.62rem;color:#6366f1;letter-spacing:.1em;text-transform:uppercase;margin-bottom:.45rem;">Work Mix Index</div>
+          <div style="font-size:.75rem;color:var(--text);line-height:1.65;">
+            <strong>1.</strong> Add each job's level points: <span style="font-family:'DM Mono',monospace;">L1×1 + L2×2 + ... + L5×5</span><br>
+            <strong>2.</strong> Work Mix = <span style="font-family:'DM Mono',monospace;">total level points ÷ all completed jobs</span>
+          </div>
+          <div style="font-size:.7rem;color:var(--muted);line-height:1.55;margin-top:.45rem;">Current team share → weight: <span id="teamComplexityRatios">Loading live data...</span></div>
+          <div style="font-size:.7rem;color:var(--muted);line-height:1.55;margin-top:.2rem;">Minimum evidence: 10 completed jobs.</div>
+        </div>
+      </div>
       <div class="skill-reference-note" style="padding:1rem 1.5rem;border-top:1px solid var(--border);background:rgba(92,141,255,.08);display:flex;align-items:flex-start;gap:.75rem;">
         <span style="font-size:1rem;flex-shrink:0;margin-top:.05rem;">💡</span>
         <p style="font-size:.72rem;color:var(--muted);line-height:1.6;">
-          <strong style="color:var(--text);">Skill Index</strong> is calculated as a weighted average of completed job complexity levels.
-          A PIC is considered <strong style="color:#4ade80;">Advanced</strong> when their Skill Index reaches <strong style="color:#4ade80;">2.6 or above</strong>,
-          meaning they regularly handle Level 3+ jobs such as pocket openings or combined quilting operations.
-          Reaching <strong style="color:#f5a623;">Expert</strong> (3.6+) requires consistent delivery of multi-operation and machine-level work.
+          <strong style="color:var(--text);">Capability Index</strong> weights each completed job by the inverse of that level's share of team jobs; fewer than 10 jobs is shown as insufficient evidence.
+          A PIC is considered <strong style="color:#4ade80;">Advanced</strong> when their Capability Index reaches <strong style="color:#4ade80;">2.6 or above</strong>,
+          meaning their completed evidence includes meaningful Level 3+ work after adjusting for the scarcity of Level 4–5 opportunities.
+          Reaching <strong style="color:#f5a623;">Expert</strong> (3.6+) requires consistent delivery of multi-operation work.
+          <strong style="color:#f43f5e;">Expert+</strong> (4.5+) requires sustained Level 5 machine-modification and programming evidence.
         </p>
       </div>
     </div>
@@ -811,12 +951,18 @@
 // ── Config ─────────────────────────────────────────────────────────────────
 const TEMPLATE_FETCH_URL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/81581050d13a4df09275905e9e05e2df/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=yWugYHV-OyqB2yVi3eSd94XXEA2CgOngdaCVf83xBtA";
 
-// Skill scoring: each Level contributes weighted points
-// Level 1 = basic (1pt), Level 2 = standard (2pt), Level 3 = complex (4pt),
-// Level 4 = expert (7pt), Level 5 = master (11pt) — Fibonacci-ish progression
+// Skill scoring: each completed job contributes its Level (1–5) to the average.
 const LEVEL_WEIGHTS  = { 1:1, 2:2, 3:3, 4:4, 5:5 };
 const LEVEL_COLORS   = { 1:'#64748b', 2:'#22d3ee', 3:'#4ade80', 4:'#f59e0b', 5:'#f43f5e' };
 const LEVEL_LABELS   = { 1:'Level 1', 2:'Level 2', 3:'Level 3', 4:'Level 4', 5:'Level 5' };
+const LEVEL_SKILLS   = {
+  1: 'Basic Marking',
+  2: 'Quilting / Tacking',
+  3: 'Pocket Opening',
+  4: 'Multi-operation',
+  5: 'Machine / Programming'
+};
+const MIN_RANKED_JOBS = 10;
 
 // Known PICs from the portal
 const ALL_PICS = ['James','Keat','Mark','Ram','Viki','Phone','Joe'];
@@ -835,6 +981,7 @@ const SEED_DATA = {
 // ── State ───────────────────────────────────────────────────────────────────
 let allTemplates = [];
 let picLevelMap  = {}; // { PIC: { 1:n, 2:n, 3:n, 4:n, 5:n } }
+let picEvidenceMap = {}; // { PIC: { level: latest completed timestamp } }
 let chartRefs    = {};
 let currentView  = 'cards';
 let showMark     = false; // Mark is hidden by default (not full-time on template)
@@ -861,6 +1008,24 @@ function openInPortal(e, pic) {
   // Falls back to just navigating to index.html if localStorage isn't shared
   try { localStorage.setItem('ma_skill_filter_pic', pic); } catch(err) {}
   // Let the anchor href navigate normally
+}
+
+function parseEvidenceDate(value) {
+  const raw = String(value || '').trim();
+  if (!isUsableValue(raw)) return 0;
+  if (/^\d{4,5}(?:\.\d+)?$/.test(raw)) {
+    return Date.UTC(1899, 11, 30) + Number(raw) * 86400000;
+  }
+  const parsed = new Date(raw);
+  if (!Number.isNaN(parsed.getTime())) return parsed.getTime();
+  const dayFirst = raw.match(/^(\d{1,2})[/-](\d{1,2})[/-](\d{4})/);
+  if (!dayFirst) return 0;
+  return new Date(Number(dayFirst[3]), Number(dayFirst[2]) - 1, Number(dayFirst[1])).getTime();
+}
+
+function formatEvidenceDate(timestamp) {
+  if (!timestamp) return 'No dated evidence';
+  return new Date(timestamp).toLocaleDateString('en-GB');
 }
 
 async function fetchAllPages(baseUrl, signal) {
@@ -891,7 +1056,7 @@ async function fetchAllPages(baseUrl, signal) {
   return rows;
 }
 
-function fetchLiveInBackground() {
+function fetchLiveInBackground(attempt = 0) {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 45000);
 
@@ -911,7 +1076,13 @@ function fetchLiveInBackground() {
       render();
     })
     .catch(e => {
+      clearTimeout(timeoutId);
       console.warn('Live fetch failed, staying on seed data:', e.message);
+      if (attempt === 0) {
+        document.getElementById('syncStatus').textContent = '↻ Live fetch interrupted · retrying...';
+        setTimeout(() => fetchLiveInBackground(1), 1500);
+        return;
+      }
       document.getElementById('syncStatus').textContent = '⚠ Seed data (live fetch failed)';
       document.getElementById('syncStatus').style.color = '#f59e0b';
     });
@@ -962,10 +1133,12 @@ function buildPicMap() {
   if (!allTemplates.length) {
     // No live data — use seed data as placeholder
     picLevelMap = JSON.parse(JSON.stringify(SEED_DATA));
+    picEvidenceMap = {};
     return;
   }
   // Live data available — always compute from real rows, never fall back to seed
   picLevelMap = {};
+  picEvidenceMap = {};
   allTemplates.forEach(row => {
     const pic   = getMAPic(row);
     const cxRaw = getComplexity(row);
@@ -977,6 +1150,8 @@ function buildPicMap() {
     if (!level || level < 1 || level > 5) return;
     if (!picLevelMap[pic]) picLevelMap[pic] = {1:0,2:0,3:0,4:0,5:0};
     picLevelMap[pic][level]++;
+    if (!picEvidenceMap[pic]) picEvidenceMap[pic] = {1:0,2:0,3:0,4:0,5:0};
+    picEvidenceMap[pic][level] = Math.max(picEvidenceMap[pic][level] || 0, parseEvidenceDate(cd));
     liveSkillRows++;
   });
 }
@@ -998,8 +1173,7 @@ function getFilteredMap() {
 
 // ── Skill calculation ────────────────────────────────────────────────────────
 function calcScore(levelMap) {
-  // Simple weighted average: sum(level × count) / totalCount
-  // Matches Excel formula: SUMPRODUCT(level, count) / SUM(count)
+  // Work Mix Index: average complexity across every completed job.
   let wsum = 0, total = 0;
   for (let l = 1; l <= 5; l++) {
     const cnt = levelMap[l] || 0;
@@ -1009,9 +1183,50 @@ function calcScore(levelMap) {
   return { score: wsum, total, avg: total ? wsum / total : 0 };
 }
 
+function calcCapability(levelMap, teamMap = picLevelMap) {
+  // Capability Index: all jobs weighted by how rare their complexity level is across the team.
+  const total = Object.values(levelMap).reduce((sum, count) => sum + (Number(count) || 0), 0);
+  if (total < MIN_RANKED_JOBS) return { avg: null, used: total, eligible: false };
+  const teamCounts = {1:0, 2:0, 3:0, 4:0, 5:0};
+  Object.values(teamMap).forEach(levels => {
+    for (let level = 1; level <= 5; level++) teamCounts[level] += levels[level] || 0;
+  });
+  const teamTotal = Object.values(teamCounts).reduce((sum, count) => sum + count, 0);
+  let weightedLevels = 0, weightedEvidence = 0;
+  for (let level = 1; level <= 5; level++) {
+    const teamRatio = teamTotal ? teamCounts[level] / teamTotal : 0;
+    if (!teamRatio) continue;
+    const rarityWeight = 1 / teamRatio;
+    weightedLevels += (levelMap[level] || 0) * rarityWeight * level;
+    weightedEvidence += (levelMap[level] || 0) * rarityWeight;
+  }
+  return { avg: weightedEvidence ? weightedLevels / weightedEvidence : null, used: total, eligible: weightedEvidence > 0 };
+}
+
+function updateFormulaReference(map) {
+  const el = document.getElementById('teamComplexityRatios');
+  const counts = [1,2,3,4,5].map(level =>
+    Object.values(map).reduce((sum, levels) => sum + (levels[level] || 0), 0)
+  );
+  const total = counts.reduce((sum, count) => sum + count, 0);
+  if (el) {
+    el.innerHTML = counts.map((count, index) =>
+      `<span style="color:${LEVEL_COLORS[index + 1]}">L${index + 1} ${total ? (count / total * 100).toFixed(1) : '0.0'}% → ×${count ? (total / count).toFixed(1) : '0.0'}</span>`
+    ).join(' · ');
+  }
+  const example = document.getElementById('capabilityFormulaExample');
+  if (!example || !total) return;
+  const pic = map.James ? 'James' : Object.keys(map)[0];
+  const levels = map[pic] || {};
+  const levelFourShare = counts[3] / total;
+  const levelFourWeight = counts[3] ? total / counts[3] : 0;
+  const capability = calcCapability(levels, map);
+  example.textContent = `${pic} example: ${levels[4] || 0} Level 4 jobs. Weight = ${total} total team jobs ÷ ${counts[3]} Level 4 jobs = ${levelFourWeight.toFixed(1)}× because Level 4 is ${(levelFourShare * 100).toFixed(1)}% of team work. All levels together give Capability ${capability.avg === null ? '—' : capability.avg.toFixed(2)} / 5.`;
+}
+
 function getTier(avg) {
-  // Skill Index ranges from Excel pivot image:
-  // 1.0–1.9 = Junior/Basic, 2.0–2.5 = Intermediate, 2.6–3.5 = Advanced, 3.6–5.0 = Expert
+  // Five stages aligned with the five job complexity levels.
+  if (avg >= 4.5) return { label: 'Expert+',       cls: 'tier-master',   color: '#f43f5e' };
   if (avg >= 3.6) return { label: 'Expert',        cls: 'tier-expert',   color: '#f5a623' };
   if (avg >= 2.6) return { label: 'Advanced',      cls: 'tier-advanced', color: '#4ade80' };
   if (avg >= 2.0) return { label: 'Intermediate',  cls: 'tier-mid',      color: '#22d3ee' };
@@ -1025,8 +1240,10 @@ function getAvatarColor(pic) {
 }
 
 // ── Ring component helper ────────────────────────────────────────────────────
-function buildRing(id, pct, color) {
+function buildRing(id, value, color) {
   const r = 25, circ = 2 * Math.PI * r;
+  const hasValue = Number.isFinite(value);
+  const pct = hasValue ? Math.min(value / 5, 1) : 0;
   const offset = circ * (1 - Math.min(pct, 1));
   return `
     <div class="skill-ring-wrap">
@@ -1039,8 +1256,8 @@ function buildRing(id, pct, color) {
           style="--target-offset:${offset};"/>
       </svg>
       <div class="ring-label">
-        <span class="rl-val" style="color:${color}">${Math.round(pct*100)}%</span>
-        <span class="rl-sub">skill</span>
+        <span class="rl-val" style="color:${color}">${hasValue ? value.toFixed(2) : '—'}</span>
+        <span class="rl-sub">of 5</span>
       </div>
     </div>`;
 }
@@ -1051,63 +1268,68 @@ function buildRing(id, pct, color) {
 function render() {
   const map = getFilteredMap();
   const pics = Object.keys(map).sort((a,b) => {
-    const sa = calcScore(map[a]).avg, sb = calcScore(map[b]).avg;
-    return sb - sa;
+    const ca = calcCapability(map[a], map), cb = calcCapability(map[b], map);
+    if (ca.eligible !== cb.eligible) return cb.eligible - ca.eligible;
+    return (cb.avg || 0) - (ca.avg || 0) || calcScore(map[b]).avg - calcScore(map[a]).avg;
   });
 
   // KPI strip
   const allScores  = pics.map(p => calcScore(map[p]));
   const totalJobs  = allScores.reduce((s,x) => s + x.total, 0);
-  const avgScore   = allScores.length ? (allScores.reduce((s,x) => s + x.avg, 0) / allScores.length) : 0;
-  const topPIC     = pics[0] || '—';
+  const totalPoints = allScores.reduce((s,x) => s + x.score, 0);
+  const teamWorkMix = totalJobs ? totalPoints / totalJobs : 0;
+  const topPIC     = pics.find(p => calcCapability(map[p], map).eligible) || '—';
+  const topCapability = topPIC !== '—' ? calcCapability(map[topPIC], map) : { avg: null };
   const highLvl    = pics.reduce((best, p) => { const c = (map[p][5]||0)+(map[p][4]||0); return c > best.c ? {p,c} : best; }, {p:'—',c:0});
-
-  const maxAvg = 11; // max possible avg (all Level 5)
 
   let html = `
     <div class="kpi-strip animate-in">
       <div class="kpi-card" style="--accent-c:${getAvatarColor(topPIC)}">
-        <div class="kpi-label">Top Performer</div>
+        <div class="kpi-label">Highest Capability Index</div>
         <div class="kpi-value" style="font-size:1.5rem;color:${getAvatarColor(topPIC)}">${topPIC}</div>
-        <div class="kpi-sub">${topPIC !== '—' ? getTier(calcScore(map[topPIC]).avg).label : ''}</div>
+        <div class="kpi-sub">${topPIC !== '—' ? `${topCapability.avg.toFixed(2)} / 5 · complexity-ratio adjusted` : `minimum ${MIN_RANKED_JOBS} jobs required`}</div>
       </div>
       <div class="kpi-card" style="--accent-c:#10b981">
-        <div class="kpi-label">Completed Jobs</div>
+        <div class="kpi-label">Scored Jobs</div>
         <div class="kpi-value" style="color:#10b981">${totalJobs.toLocaleString()}</div>
         <div class="kpi-sub">across ${pics.length} PICs</div>
       </div>
       <div class="kpi-card" style="--accent-c:#6366f1">
-        <div class="kpi-label">Team Avg Score</div>
-        <div class="kpi-value" style="color:#6366f1">${avgScore.toFixed(2)}</div>
-        <div class="kpi-sub">weighted skill pts / job</div>
+        <div class="kpi-label">Team Work Mix Index</div>
+        <div class="kpi-value" style="color:#6366f1">${teamWorkMix.toFixed(2)}</div>
+        <div class="kpi-sub">all completed jobs · out of 5</div>
       </div>
       <div class="kpi-card" style="--accent-c:#f59e0b">
-        <div class="kpi-label">High Complexity</div>
+        <div class="kpi-label">Most Level 4–5 Jobs</div>
         <div class="kpi-value" style="color:#f59e0b">${highLvl.c}</div>
-        <div class="kpi-sub">Level 4–5 jobs · ${highLvl.p}</div>
+        <div class="kpi-sub">${highLvl.p} · completed evidence</div>
       </div>
     </div>`;
 
   if (currentView === 'cards') {
-    html += buildCardsView(pics, map, maxAvg);
+    html += buildCardsView(pics, map);
   } else {
     html += buildTableView(pics, map);
   }
 
+  html += buildSkillMatrix(pics, map);
   html += buildChartsSection(pics, map);
   document.getElementById('mainContent').innerHTML = html;
-  animateRings(pics, map, maxAvg);
+  updateFormulaReference(map);
+  animateRings(pics, map);
   buildCharts(pics, map);
 }
 
-function buildCardsView(pics, map, maxAvg) {
+function buildCardsView(pics, map) {
   if (!pics.length) return '<div class="loading-state"><p>No data for selected filters.</p></div>';
   let html = '<div class="pic-grid animate-in delay-2">';
   pics.forEach((pic, i) => {
     const lm = map[pic];
-    const { score, total, avg } = calcScore(lm);
-    const tier  = getTier(avg);
-    const pct   = avg / maxAvg;
+    const { total, avg } = calcScore(lm);
+    const capability = calcCapability(lm, map);
+    const tier  = capability.eligible
+      ? getTier(capability.avg)
+      : { label: `Need ${MIN_RANKED_JOBS} jobs`, cls: 'tier-junior', color: '#64748b' };
     const color = tier.color;
     const max   = Math.max(...Object.values(lm).map(Number), 1);
     const av    = getAvatarColor(pic);
@@ -1118,11 +1340,11 @@ function buildCardsView(pics, map, maxAvg) {
         <div class="pic-avatar" style="background:${av}22;color:${av}">${pic[0]}</div>
         <div class="pic-name-block">
           <div class="pic-name">${pic}</div>
-          <div class="pic-title">${total} jobs completed</div>
+          <div class="pic-title">${total} completed jobs with skill evidence</div>
 
           <span class="tier-badge ${tier.cls}" style="margin-top:.4rem;display:inline-block">${tier.label}</span>
         </div>
-        ${buildRing(`ring-${i}`, pct, color)}
+        ${buildRing(`ring-${i}`, capability.avg, color)}
       </div>
       <div class="pic-card-body">
         ${[1,2,3,4,5].map(l => `
@@ -1137,12 +1359,12 @@ function buildCardsView(pics, map, maxAvg) {
       </div>
       <div class="pic-card-footer">
         <div class="metric-mini">
-          <div class="mv" style="color:${color}">${score}</div>
-          <div class="ml">Skill pts</div>
+          <div class="mv">${avg.toFixed(2)}</div>
+          <div class="ml">Work mix</div>
         </div>
         <div class="metric-mini">
-          <div class="mv">${avg.toFixed(2)}</div>
-          <div class="ml">Avg weight</div>
+          <div class="mv">${total}</div>
+          <div class="ml">Evidence</div>
         </div>
         <div class="metric-mini">
           <div class="mv">${lm[4]+lm[5]||0}</div>
@@ -1159,6 +1381,56 @@ function buildCardsView(pics, map, maxAvg) {
   return html;
 }
 
+function buildSkillMatrix(pics, map) {
+  if (!pics.length) return '';
+  const levelHeaders = [1,2,3,4,5].map(level => `
+    <th>
+      <span style="color:${LEVEL_COLORS[level]}">${LEVEL_LABELS[level]}</span><br>
+      ${LEVEL_SKILLS[level]}
+    </th>`).join('');
+  const rows = pics.map(pic => {
+    const score = calcScore(map[pic]);
+    const capability = calcCapability(map[pic], map);
+    const evidence = picEvidenceMap[pic] || {};
+    const cells = [1,2,3,4,5].map(level => {
+      const count = map[pic][level] || 0;
+      if (!count) {
+        return `<td><span class="skill-evidence-link empty"><span class="skill-evidence-count">—</span><span class="skill-evidence-date">No evidence</span></span></td>`;
+      }
+      return `
+        <td>
+          <a class="skill-evidence-link" href="./index.html" onclick="openInPortal(event, '${pic}')"
+             title="Open ${pic}'s completed template records">
+            <span class="skill-evidence-count" style="color:${LEVEL_COLORS[level]}">${count} jobs</span>
+            <span class="skill-evidence-date">Latest: ${formatEvidenceDate(evidence[level])}</span>
+          </a>
+        </td>`;
+    }).join('');
+    return `
+      <tr>
+        <td class="skill-matrix-pic">${pic}</td>
+        <td class="skill-matrix-index">${capability.eligible ? `${capability.avg.toFixed(2)} / 5` : '—'}</td>
+        <td>${score.avg.toFixed(2)} / 5</td>
+        <td>${score.total}</td>
+        ${cells}
+      </tr>`;
+  }).join('');
+  return `
+    <div class="section-label animate-in delay-3">Template Skill Evidence Matrix</div>
+    <div class="skill-matrix-card animate-in delay-3">
+      <div class="skill-matrix-head">
+        <div class="skill-matrix-title">Completed-job evidence by PIC</div>
+        <div class="skill-matrix-note">Counts are completed template jobs with an assigned complexity level.<br>Open an evidence cell to review that PIC's source records.</div>
+      </div>
+      <div class="skill-matrix-wrap">
+        <table class="skill-matrix">
+          <thead><tr><th>PIC</th><th>Capability</th><th>Work Mix</th><th>Evidence</th>${levelHeaders}</tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>
+    </div>`;
+}
+
 
 
 function buildChartsSection(pics, map) {
@@ -1167,20 +1439,12 @@ function buildChartsSection(pics, map) {
     <div class="print-analytics">${buildPrintAnalytics(pics, map)}</div>
     <div class="charts-grid animate-in delay-3">
       <div class="chart-card">
-        <div class="chart-title">Skill Score by PIC <span>weighted points</span></div>
-        <div class="chart-wrap"><canvas id="chartScore"></canvas></div>
+        <div class="chart-title">Capability Index by PIC <span>complexity-ratio adjusted · out of 5</span></div>
+        <div class="chart-wrap"><canvas id="chartIndex"></canvas></div>
       </div>
       <div class="chart-card">
-        <div class="chart-title">Complexity Distribution <span>all PICs</span></div>
+        <div class="chart-title">Team Complexity Mix <span>completed evidence</span></div>
         <div class="chart-wrap"><canvas id="chartDist"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">Skill Level Breakdown <span>stacked by PIC</span></div>
-        <div class="chart-wrap"><canvas id="chartStack"></canvas></div>
-      </div>
-      <div class="chart-card">
-        <div class="chart-title">Expert Rate vs Volume <span>bubble chart</span></div>
-        <div class="chart-wrap"><canvas id="chartBubble"></canvas></div>
       </div>
     </div>`;
 }
@@ -1188,23 +1452,24 @@ function buildChartsSection(pics, map) {
 function buildPrintAnalytics(pics, map) {
   const ranked = pics.map(pic => {
     const score = calcScore(map[pic]);
+    const capability = calcCapability(map[pic], map);
     const expertJobs = (map[pic][4] || 0) + (map[pic][5] || 0);
     const expertRate = score.total ? Math.round(expertJobs / score.total * 100) : 0;
-    return { pic, ...score, expertJobs, expertRate };
-  }).sort((a, b) => b.avg - a.avg);
+    return { pic, ...score, capability: capability.avg, eligible: capability.eligible, expertJobs, expertRate };
+  }).sort((a, b) => Number(b.eligible) - Number(a.eligible) || (b.capability || 0) - (a.capability || 0));
   return `
     <div class="print-analytics-grid">
       <div class="print-analytics-card">
         <div class="print-analytics-title">Analytics Summary</div>
         <table class="print-analytics-table">
-          <thead><tr><th>Rank</th><th>PIC</th><th>Jobs</th><th>Avg Weight</th><th>Skill Pts</th><th>Lv 4-5</th><th>Expert Rate</th></tr></thead>
+          <thead><tr><th>Rank</th><th>PIC</th><th>Evidence</th><th>Capability</th><th>Work Mix</th><th>Lv 4-5</th><th>Expert Rate</th></tr></thead>
           <tbody>
             ${ranked.map((row, index) => `<tr>
               <td>${index + 1}</td>
               <td><strong>${row.pic}</strong></td>
               <td>${row.total}</td>
+              <td>${row.eligible ? row.capability.toFixed(2) : '—'}</td>
               <td>${row.avg.toFixed(2)}</td>
-              <td>${row.score}</td>
               <td>${row.expertJobs}</td>
               <td>${row.expertRate}%</td>
             </tr>`).join('')}
@@ -1212,10 +1477,10 @@ function buildPrintAnalytics(pics, map) {
         </table>
         <div class="print-formula-note">
           <strong>Formula:</strong>
-          Skill Pts = sum of completed job complexity levels.
-          Avg Weight = Skill Pts / completed jobs.
+          Capability Index = all completed jobs weighted by each level's rarity across the team.
+          Work Mix Index = average complexity across all completed jobs.
           Lv 4-5 = count of Level 4 plus Level 5 jobs.
-          Expert Rate = Lv 4-5 jobs / completed jobs.
+          Expert Rate = Lv 4-5 jobs / scored jobs.
         </div>
       </div>
     </div>`;
@@ -1254,27 +1519,44 @@ function buildCharts(pics, map) {
   Object.values(chartRefs).forEach(c => { try { c.destroy(); } catch(e){} });
   chartRefs = {};
 
-  const scores = pics.map(p => calcScore(map[p]).score);
   const totals = pics.map(p => calcScore(map[p]).total);
-  const avgs   = pics.map(p => calcScore(map[p]).avg);
+  const capabilities = pics.map(p => calcCapability(map[p], map).avg);
   const picColors = pics.map(p => getAvatarColor(p));
 
-  // Chart 1: Skill Score bar
-  const c1 = document.getElementById('chartScore');
-  if (c1) chartRefs.score = new Chart(c1, {
+  // Chart 1: Capability Index bar
+  const c1 = document.getElementById('chartIndex');
+  if (c1) chartRefs.index = new Chart(c1, {
     type: 'bar',
     data: {
       labels: pics,
       datasets: [{
-        label: 'Skill Score',
-        data: scores,
+        label: 'Capability Index',
+        data: capabilities.map(value => Number.isFinite(value) ? Number(value.toFixed(2)) : null),
         backgroundColor: picColors.map(c => c + '33'),
         borderColor: picColors,
         borderWidth: 2,
         borderRadius: 6,
       }]
     },
-    options: { ...CHART_DEFAULTS, plugins: { ...CHART_DEFAULTS.plugins, legend: { display: false } } }
+    options: {
+      ...CHART_DEFAULTS,
+      plugins: {
+        ...CHART_DEFAULTS.plugins,
+        legend: { display: false },
+        tooltip: {
+          ...CHART_DEFAULTS.plugins.tooltip,
+          callbacks: {
+            label: ctx => ctx.parsed.y === null
+              ? ` Not enough evidence · ${totals[ctx.dataIndex]} scored jobs`
+              : ` ${ctx.parsed.y.toFixed(2)} / 5 · ratio-adjusted from ${totals[ctx.dataIndex]} jobs`
+          }
+        }
+      },
+      scales: {
+        ...CHART_DEFAULTS.scales,
+        y: { ...CHART_DEFAULTS.scales.y, beginAtZero: true, max: 5, ticks: { ...CHART_DEFAULTS.scales.y.ticks, stepSize: 1 } }
+      }
+    }
   });
 
   // Chart 2: Complexity distribution donut
@@ -1305,67 +1587,15 @@ function buildCharts(pics, map) {
     }
   });
 
-  // Chart 3: Stacked bar
-  const datasets = [1,2,3,4,5].map(l => ({
-    label: `Level ${l}`,
-    data: pics.map(p => map[p][l]||0),
-    backgroundColor: LEVEL_COLORS[l] + '99',
-    borderColor: LEVEL_COLORS[l],
-    borderWidth: 1,
-    borderRadius: l === 5 ? 4 : 0,
-  }));
-  const c3 = document.getElementById('chartStack');
-  if (c3) chartRefs.stack = new Chart(c3, {
-    type: 'bar',
-    data: { labels: pics, datasets },
-    options: { ...CHART_DEFAULTS, scales: { ...CHART_DEFAULTS.scales, x: { ...CHART_DEFAULTS.scales.x, stacked: true }, y: { ...CHART_DEFAULTS.scales.y, stacked: true } } }
-  });
-
-  // Chart 4: Bubble — x=total volume, y=avg score, r=expert count
-  const bubbleData = pics.map((p, i) => {
-    const { total, avg } = calcScore(map[p]);
-    const expertCnt = (map[p][4]||0) + (map[p][5]||0);
-    return { x: total, y: parseFloat(avg.toFixed(2)), r: Math.max(expertCnt * 1.5, 4), label: p, color: picColors[i] };
-  });
-  const c4 = document.getElementById('chartBubble');
-  if (c4) chartRefs.bubble = new Chart(c4, {
-    type: 'bubble',
-    data: {
-      datasets: bubbleData.map(d => ({
-        label: d.label,
-        data: [{ x: d.x, y: d.y, r: d.r }],
-        backgroundColor: d.color + '44',
-        borderColor: d.color,
-        borderWidth: 2,
-      }))
-    },
-    options: {
-      ...CHART_DEFAULTS,
-      plugins: {
-        ...CHART_DEFAULTS.plugins,
-        legend: { display: false },
-        tooltip: {
-          ...CHART_DEFAULTS.plugins.tooltip,
-          callbacks: {
-            label: ctx => {
-              const d = ctx.raw;
-              return `${ctx.dataset.label}: ${d.x} jobs, avg ${d.y} pts`;
-            }
-          }
-        }
-      }
-    }
-  });
 }
 
 // ── Animate SVG rings ────────────────────────────────────────────────────────
-function animateRings(pics, map, maxAvg) {
-  const months = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
+function animateRings(pics, map) {
   requestAnimationFrame(() => {
     pics.forEach((pic, i) => {
       const lm  = map[pic];
-      const avg = calcScore(lm).avg;
-      const pct = Math.min(avg / maxAvg, 1);
+      const capability = calcCapability(lm, map);
+      const pct = capability.eligible ? Math.min(capability.avg / 5, 1) : 0;
       const el  = document.getElementById(`ring-${i}-ring`);
       if (!el) return;
       const r = 25, circ = 2 * Math.PI * r;
