@@ -308,7 +308,7 @@
             <button class="primary-btn requires-edit" id="addCostRowBtn2" type="button">Add</button>
           </div>
         </div>
-        <div class="table-wrap" style="margin-top:1rem"><table class="costing-table"><thead><tr><th>Date</th><th>Section</th><th>Style / Job</th><th>PVC Type</th><th>PVC Size Per Job (L x W cm)</th><th>PVC Qty Per Job</th><th>Final Cost</th><th>Remark</th><th>Action</th></tr></thead><tbody id="costingRows"></tbody></table></div>
+        <div class="table-wrap" style="margin-top:1rem"><table class="costing-table"><thead><tr><th>Date</th><th>Section</th><th>Style / Job</th><th>PIC</th><th>PVC Type</th><th>PVC Size Per Job (L x W cm)</th><th>PVC Qty Per Job</th><th>Final Cost</th><th>Remark</th><th>Action</th></tr></thead><tbody id="costingRows"></tbody></table></div>
         <p class="muted" id="costingStatus" style="margin-top:.85rem">No Costing Rows Entered.</p>
       </article>
 
@@ -341,6 +341,7 @@
     const PRICE_KEY = 'ma-stock-list-prices-v1';
     const COSTING_KEY = 'ma-template-costing-rows-v1';
     const REMOTE_CACHE_KEY = 'ma-template-costing-remote-cache-v1';
+    const REMOTE_REQUEST_TIMEOUT_MS = 60000;
     const TEMPLATE_MATERIALS = [
       { id: 'blue-mix-white-pvc-08', sku: 'A007', name: 'BLUE MIX WHITE PVC 0.8MM', size: '80 x 240', cost: 39.00, aliases: ['BLUE MIX WHITE PVC 0.8MM', 'BLUE MIX WHITE PVC 1.2MM'] },
       { id: 'blue-pvc-14', sku: 'A008', name: 'BLUE PVC 1.4MM', size: '80 x 240', cost: 56.00, aliases: ['BLUE PVC 1.4MM'] },
@@ -464,6 +465,23 @@
       };
     }
 
+    function costingRowKey(row) {
+      const id = String(row?.id || '').trim();
+      if (id) return `id:${id}`;
+      return [row?.date, row?.section, row?.styleJob, row?.materialId, row?.length, row?.width, row?.qty, row?.remark, row?.pic]
+        .map((value) => String(value || '').trim().toLowerCase())
+        .join('|');
+    }
+
+    function mergeCostingRows(...groups) {
+      const merged = new Map();
+      groups.flat().filter(Boolean).forEach((row) => {
+        const key = costingRowKey(row);
+        if (key) merged.set(key, row);
+      });
+      return [...merged.values()];
+    }
+
     function applyRemoteStockPayload(payload) {
       const products = Array.isArray(payload?.productList) ? payload.productList : [];
       const remoteCostingRows = Array.isArray(payload?.templateCosting) ? payload.templateCosting : [];
@@ -478,7 +496,10 @@
         rebuildProductIndex();
         materialFactorCache = new Map();
       }
-      if (remoteCostingRows.length) costingRows = remoteCostingRows.map(normalizeCostingRow).filter((row) => row.styleJob || row.section || row.date);
+      if (remoteCostingRows.length) {
+        const normalizedRows = remoteCostingRows.map(normalizeCostingRow).filter((row) => row.styleJob || row.section || row.date);
+        costingRows = mergeCostingRows(normalizedRows, costingRows);
+      }
       STOCK_DATA.sourceFile = 'OneDrive MA_Stock_Costing_Sync.xlsx';
     }
 
@@ -504,11 +525,21 @@
       }
     }
 
+    async function fetchRemote(url, options = {}) {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), REMOTE_REQUEST_TIMEOUT_MS);
+      try {
+        return await fetch(url, { ...options, signal: controller.signal });
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+    }
+
     async function fetchRemoteStockData() {
       if (!STOCK_FETCH_URL) return false;
       $('dataStatus').textContent = 'Loading OneDrive Inventory Data...';
       try {
-        const response = await fetch(STOCK_FETCH_URL, { method: 'POST' });
+        const response = await fetchRemote(STOCK_FETCH_URL, { method: 'POST' });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const payload = await response.json();
         if (!payload?.ok) throw new Error('Power Automate returned no ok flag');
@@ -517,7 +548,8 @@
         $('dataStatus').textContent = 'Loaded Latest Inventory Data From OneDrive.';
         return true;
       } catch (error) {
-        $('dataStatus').textContent = `Showing Existing Template Costing Data. OneDrive Sync Failed: ${error.message}`;
+        const message = error?.name === 'AbortError' ? `request timed out after ${REMOTE_REQUEST_TIMEOUT_MS / 1000}s` : error.message;
+        $('dataStatus').textContent = `Showing Existing Template Costing Data. OneDrive Sync Failed: ${message}`;
         return false;
       }
     }
@@ -550,7 +582,7 @@
 
     async function saveCostingRemote(row) {
       if (!TEMPLATE_COSTING_UPDATE_URL) return true;
-      const response = await fetch(TEMPLATE_COSTING_UPDATE_URL, {
+      const response = await fetchRemote(TEMPLATE_COSTING_UPDATE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(costingPayload(row, 'add')),
@@ -563,7 +595,7 @@
 
     async function deleteCostingRemote(row) {
       if (!TEMPLATE_COSTING_UPDATE_URL) return true;
-      const response = await fetch(TEMPLATE_COSTING_UPDATE_URL, {
+      const response = await fetchRemote(TEMPLATE_COSTING_UPDATE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(costingPayload(row, 'delete')),
@@ -859,6 +891,7 @@
           <td>${escapeHtml(formatDisplayDate(row.date) || '-')}</td>
           <td>${escapeHtml(row.section || '-')}</td>
           <td class="code-link">${escapeHtml(row.styleJob || '-')}</td>
+          <td>${escapeHtml(row.pic || '-')}</td>
           <td>${escapeHtml(stockText(line.material.name))}</td>
           <td>${line.length || '-'} x ${line.width || '-'} <span class="muted">(${line.usedArea ? line.usedArea.toLocaleString(undefined, { maximumFractionDigits: 1 }) : 0} cm2)</span></td>
           <td>${line.qty || '-'}</td>
@@ -866,7 +899,7 @@
           <td>${escapeHtml(row.remark || '-')}</td>
           <td><button class="ghost-btn requires-edit" type="button" data-delete-costing="${escapeHtml(row.id || '')}" ${isAuthenticated() ? '' : 'disabled'}>Delete</button></td>
         </tr>`;
-      }).join('') || tableEmpty(9, 'Add A Costing Row To Calculate Template Cost.');
+      }).join('') || tableEmpty(10, 'Add A Costing Row To Calculate Template Cost.');
       $('costKpi').textContent = rm(total);
       const currentDashboard = dashboardData();
       const totalSaving = currentDashboard.months.reduce((sum, month) => sum + bucketSaving(currentDashboard.buckets.get(month)).costSaving, 0);
@@ -894,6 +927,13 @@
         qty: $('entryQty').value || '1',
         remark: $('entryRemark').value.trim(),
       };
+      costingRows.push(row);
+      saveCostingRows();
+      $('entryLength').value = '';
+      $('entryWidth').value = '';
+      $('entryQty').value = '1';
+      $('entryRemark').value = '';
+      renderCosting();
       let saveMessage = '';
       $('costingStatus').textContent = 'Saving Template Costing Row To OneDrive...';
       try {
@@ -902,13 +942,6 @@
       } catch (error) {
         saveMessage = `OneDrive save failed. Row kept locally. ${error.message}`;
       }
-      costingRows.push(row);
-      saveCostingRows();
-      $('entryLength').value = '';
-      $('entryWidth').value = '';
-      $('entryQty').value = '1';
-      $('entryRemark').value = '';
-      renderCosting();
       $('costingStatus').textContent = saveMessage;
     }
 

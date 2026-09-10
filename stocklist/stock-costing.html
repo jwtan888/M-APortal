@@ -380,7 +380,7 @@
         <div class="toolbar">
           <div class="field"><label for="movementMonth">Filter Month</label><select id="movementMonth"><option value="">All Available Months</option></select></div>
         </div>
-        <div class="table-wrap" style="margin-top:1rem"><table><thead><tr><th>Date</th><th>SKU</th><th>Description</th><th>Type</th><th>Qty</th><th>Unit</th><th>Remark</th><th>Action</th></tr></thead><tbody id="movementRows"></tbody></table></div>
+        <div class="table-wrap" style="margin-top:1rem"><table><thead><tr><th>Date</th><th>SKU</th><th>Description</th><th>Type</th><th>Qty</th><th>Unit</th><th>PIC</th><th>Remark</th><th>Action</th></tr></thead><tbody id="movementRows"></tbody></table></div>
         <p class="muted" id="movementStatus" style="margin-top:.85rem">No Inventory Movement Rows Entered.</p>
       </article>
 
@@ -428,6 +428,7 @@
     const MOVEMENT_KEY = 'ma-stock-monthly-movements-v1';
     const OPENING_KEY = 'ma-stock-opening-balance-v1';
     const REMOTE_CACHE_KEY = 'ma-stock-remote-cache-v1';
+    const REMOTE_REQUEST_TIMEOUT_MS = 60000;
     const CUSTOM_PRODUCTS_KEY = 'ma-stock-custom-products-v1';
     let priceOverrides = loadPrices();
     let priceHistory = loadPriceHistory();
@@ -576,6 +577,7 @@
         qty: excelNumber(row.Quantity) || 0,
         unitCost: excelNumber(row['Unit Cost']),
         amount: excelNumber(row.Amount),
+        pic: String(row.PIC || row.Pic || row.pic || '').trim(),
         remark: String(row.Remark || '').trim(),
       };
     }
@@ -690,13 +692,21 @@
       }
     }
 
+    async function fetchRemote(url, options = {}) {
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), REMOTE_REQUEST_TIMEOUT_MS);
+      try {
+        return await fetch(url, { ...options, signal: controller.signal });
+      } finally {
+        window.clearTimeout(timeoutId);
+      }
+    }
+
     async function fetchRemoteStockData() {
       if (!STOCK_FETCH_URL) return false;
       $('dataStatus').textContent = 'Loading OneDrive Inventory Data...';
-      const controller = new AbortController();
-      const timeoutId = window.setTimeout(() => controller.abort(), 10000);
       try {
-        const response = await fetch(STOCK_FETCH_URL, { method: 'POST', signal: controller.signal });
+        const response = await fetchRemote(STOCK_FETCH_URL, { method: 'POST' });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const payload = await response.json();
         if (!payload?.ok) throw new Error('Power Automate returned no ok flag');
@@ -705,17 +715,15 @@
         $('dataStatus').textContent = 'Loaded Latest Inventory Data From OneDrive.';
         return true;
       } catch (error) {
-        const message = error?.name === 'AbortError' ? 'request timed out' : error.message;
+        const message = error?.name === 'AbortError' ? `request timed out after ${REMOTE_REQUEST_TIMEOUT_MS / 1000}s` : error.message;
         $('dataStatus').textContent = `Showing Existing Inventory Data. OneDrive Sync Failed: ${message}`;
         return false;
-      } finally {
-        window.clearTimeout(timeoutId);
       }
     }
 
     async function saveMovementRemote(row) {
       if (!STOCK_MOVEMENT_UPDATE_URL) return true;
-      const response = await fetch(STOCK_MOVEMENT_UPDATE_URL, {
+      const response = await fetchRemote(STOCK_MOVEMENT_UPDATE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(movementPayload(row, 'add')),
@@ -728,7 +736,7 @@
 
     async function deleteMovementRemote(row) {
       if (!STOCK_MOVEMENT_UPDATE_URL) return true;
-      const response = await fetch(STOCK_MOVEMENT_UPDATE_URL, {
+      const response = await fetchRemote(STOCK_MOVEMENT_UPDATE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(movementPayload(row, 'delete')),
@@ -793,7 +801,7 @@
       if (!PRODUCT_UPDATE_URL) return true;
       const payloadBody = productUpdatePayload(product, audit);
       if (action) payloadBody.action = action;
-      const response = await fetch(PRODUCT_UPDATE_URL, {
+      const response = await fetchRemote(PRODUCT_UPDATE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payloadBody),
@@ -903,15 +911,19 @@
       document.querySelectorAll('[data-price-sku]').forEach((input) => {
         const sku = input.dataset.priceSku;
         const product = STOCK_DATA.products.find((item) => item.sku === sku);
-        const oldPrice = productCurrentPrice(product);
-        touchedSkus.add(sku);
+        const oldPriceValue = Object.prototype.hasOwnProperty.call(priceOverrides, sku)
+          ? num(priceOverrides[sku])
+          : (product?.cost == null ? null : num(product.cost));
+        const oldPrice = oldPriceValue == null ? 0 : oldPriceValue;
         const value = input.value.trim();
         let newPrice = productBasePrice(product);
         if (!value) {
           delete priceOverrides[sku];
+          if (oldPriceValue != null) touchedSkus.add(sku);
         } else {
           newPrice = Number(value);
           priceOverrides[sku] = newPrice;
+          if (oldPriceValue == null || Math.abs(newPrice - oldPriceValue) > 0.0001) touchedSkus.add(sku);
         }
         if (product && Number.isFinite(newPrice) && Math.abs(newPrice - oldPrice) > 0.0001) {
           const entry = `${formatAuditDate(updatedAt)} ${currentUser}: ${rm(oldPrice)} -> ${rm(newPrice)}`;
@@ -929,10 +941,12 @@
       });
       document.querySelectorAll('[data-opening-sku]').forEach((input) => {
         const sku = input.dataset.openingSku;
-        touchedSkus.add(sku);
+        const oldOpening = Object.prototype.hasOwnProperty.call(openingBalances, sku) ? num(openingBalances[sku]) : null;
         const value = input.value.trim();
+        const newOpening = value ? Number(value) : null;
+        if ((oldOpening == null) !== (newOpening == null) || (oldOpening != null && Math.abs(oldOpening - newOpening) > 0.0001)) touchedSkus.add(sku);
         if (!value) delete openingBalances[sku];
-        else openingBalances[sku] = Number(value);
+        else openingBalances[sku] = newOpening;
       });
       localStorage.setItem(PRICE_KEY, JSON.stringify(priceOverrides));
       localStorage.setItem(PRICE_HISTORY_KEY, JSON.stringify(priceHistory));
@@ -1139,10 +1153,11 @@
           <td><span class="tag ${row.type === 'out' ? 'is-out' : 'is-in'}">${row.type === 'out' ? 'Inventory Out' : 'Inventory In'}</span></td>
           <td>${qtyText(qty)}</td>
           <td>${escapeHtml(product?._display?.unit || '-')}</td>
+          <td>${escapeHtml(row.pic || '-')}</td>
           <td>${escapeHtml(row.remark || '-')}</td>
           <td><button class="ghost-btn ${hasSyncedId ? 'requires-edit' : ''}" type="button" data-delete-movement="${escapeHtml(row.id || '')}" title="${escapeHtml(deleteTitle)}" ${canDelete ? '' : 'disabled'}>${hasSyncedId ? 'Delete' : 'No ID'}</button></td>
         </tr>`;
-      }).join('') || tableEmpty(8, 'No Inventory Movement Rows For This Month.');
+      }).join('') || tableEmpty(9, 'No Inventory Movement Rows For This Month.');
       $('stockInQty').textContent = qtyText(stockIn);
       $('stockOutQty').textContent = qtyText(stockOut);
       $('netMovementQty').textContent = qtyText(stockIn - stockOut);
@@ -1249,20 +1264,25 @@
         sku: $('movementSku').value,
         type: $('movementType').value,
         qty,
+        pic: currentUser || '',
         remark: $('movementRemark').value.trim(),
       };
+      movements.unshift(row);
+      saveMovements();
+      renderMovementMonthOptions();
+      $('movementMonth').value = row.month || monthKeyFromDate(row.date) || $('movementMonth').value;
+      renderMovements();
       $('movementStatus').textContent = 'Saving Inventory Movement To OneDrive...';
       try {
         const payload = await saveMovementRemote(row);
         row.id = String(payload.movementId || payload.id || payload.ID || row.id);
-        movements.unshift(row);
+        saveMovements();
         $('movementStatus').textContent = 'Inventory Movement Saved To OneDrive.';
       } catch (error) {
         row.id = `local-${Date.now()}-${Math.random().toString(16).slice(2)}`;
-        movements.unshift(row);
+        saveMovements();
         $('movementStatus').textContent = `OneDrive Save Failed. Row Kept Locally. ${error.message}`;
       }
-      saveMovements();
       $('movementQty').value = '';
       $('movementRemark').value = '';
       renderMovementMonthOptions();
