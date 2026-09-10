@@ -30,6 +30,9 @@
     .password-dialog h3 { margin: .25rem 0 1rem; color: #111827; font-size: 1.125rem; line-height: 1.75rem; font-weight: 700; letter-spacing: -.025em; }
     .password-dialog input { width: 100%; border: 1px solid var(--line); border-radius: .75rem; padding: .625rem .75rem; background: var(--surface-soft); color: var(--text); font-size: .875rem; font-weight: 700; outline: none; }
     .password-dialog input:focus { border-color: rgba(49,95,214,.55); box-shadow: 0 0 0 3px rgba(49,95,214,.16); }
+    .material-dialog { width: min(42rem, 100%); }
+    .material-form { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: .75rem; }
+    .material-form .field input { padding: .7rem .8rem; }
     .confirm-body { display: grid; gap: .35rem; margin: -.25rem 0 .25rem; color: #475569; font-size: .9rem; font-weight: 650; }
     .confirm-body strong { color: #111827; font-weight: 850; }
     .password-actions { display: flex; justify-content: flex-end; gap: .5rem; margin-top: 1rem; }
@@ -59,6 +62,7 @@
     .stock-layout > * { width: 100%; min-width: 0; }
     .view-stack { display: grid; gap: 1rem; }
     .page-tabs { display: flex; flex-wrap: wrap; gap: .5rem; }
+    .tab-panel-actions { display: flex; flex-wrap: wrap; gap: .5rem; justify-content: flex-end; }
     .page-tab { border: 1px solid var(--line); border-radius: 999px; background: rgba(255,255,255,.72); color: #687286; padding: .75rem 1rem; font-weight: 900; cursor: pointer; }
     .page-tab.is-active { background: var(--accent); color: #fff; border-color: transparent; }
     .view[hidden] { display: none; }
@@ -135,6 +139,8 @@
       .login-grid .field, .dashboard-tools .field { min-width: 0; width: 100%; }
       .login-grid input, .login-grid select, .field input, .field select { min-height: 2.9rem; font-size: 16px; }
       .password-dialog { width: min(22rem, calc(100vw - 1.5rem)); border-radius: 1rem; }
+      .material-dialog { width: min(22rem, calc(100vw - 1.5rem)); }
+      .material-form { grid-template-columns: 1fr; }
       .metric-value { font-size: 2rem; }
       .grid-5 .metric-value { font-size: 1.7rem; white-space: normal; }
       .table-wrap { border: 0; background: transparent; overflow: visible; }
@@ -153,7 +159,50 @@
     }
     @page { size: A4 portrait; margin: 8mm; }
     @media print {
-      html, body { width: 210mm; min-height: 297mm; background: #fff; }
+      html, body { width: auto; min-height: 100%; background: #fff; }
+      body:not(.printing-balance) .topbar,
+      body:not(.printing-balance) .hero,
+      body:not(.printing-balance) .login-shell,
+      body:not(.printing-balance) .page-tabs,
+      body:not(.printing-balance) main > section.panel,
+      body:not(.printing-balance) .grid-5,
+      body:not(.printing-balance) .view[data-view="movement"],
+      body:not(.printing-balance) .date-picker-popover,
+      body:not(.printing-balance) .no-print { display: none !important; }
+      body:not(.printing-balance) .app-shell { width: auto; max-width: none; padding: 0; margin: 0; }
+      body:not(.printing-balance) main > section.view[data-view="products"]:last-child { display: block !important; }
+      body:not(.printing-balance) main > section.view[data-view="products"]:last-child .panel { display: block; padding: 0; border: 0; box-shadow: none; }
+      body:not(.printing-balance) .product-table { min-width: 0; width: 100%; table-layout: fixed; border-collapse: collapse; border-spacing: 0; line-height: 1.08; }
+      body:not(.printing-balance) .product-table th,
+      body:not(.printing-balance) .product-table td { padding: 1.3px 2px !important; vertical-align: top !important; font-size: 6.2px !important; line-height: 1.08 !important; font-weight: 650 !important; letter-spacing: 0 !important; }
+      body:not(.printing-balance) .product-table th { font-size: 5.8px !important; letter-spacing: .08em !important; line-height: 1.15 !important; font-weight: 800 !important; }
+      body:not(.printing-balance) .product-table th:nth-child(1), body:not(.printing-balance) .product-table td:nth-child(1) { width: 7%; }
+      body:not(.printing-balance) .product-table th:nth-child(2), body:not(.printing-balance) .product-table td:nth-child(2) { width: 24%; }
+      body:not(.printing-balance) .product-table th:nth-child(3), body:not(.printing-balance) .product-table td:nth-child(3) { width: 7%; }
+      body:not(.printing-balance) .product-table th:nth-child(4), body:not(.printing-balance) .product-table td:nth-child(4) { width: 13%; }
+      body:not(.printing-balance) .product-table th:nth-child(5), body:not(.printing-balance) .product-table td:nth-child(5) { width: 7%; }
+      body:not(.printing-balance) .product-table th:nth-child(6), body:not(.printing-balance) .product-table td:nth-child(6) { width: 20%; }
+      body:not(.printing-balance) .product-table th:nth-child(7), body:not(.printing-balance) .product-table td:nth-child(7),
+      body:not(.printing-balance) .product-table th:nth-child(8), body:not(.printing-balance) .product-table td:nth-child(8),
+      body:not(.printing-balance) .product-table th:nth-child(9), body:not(.printing-balance) .product-table td:nth-child(9) { width: 7.33%; }
+      body:not(.printing-balance) .product-table .price-input,
+      body:not(.printing-balance) .product-table .balance-input { width: 100%; min-width: 0; border: 0; padding: 0; background: transparent; font-size: 6.2px !important; line-height: 1.08 !important; }
+      body:not(.printing-balance) .product-table .product-remark-cell .tag { padding: 0; background: transparent; border: 0; font-size: 6.2px; border-radius: 0; white-space: normal; }
+      body:not(.printing-balance) .product-table.mobile-card-table,
+      body.printing-balance .balance-print-panel table.mobile-card-table { display: table !important; }
+      body:not(.printing-balance) .product-table.mobile-card-table thead,
+      body.printing-balance .balance-print-panel table.mobile-card-table thead { display: table-header-group !important; }
+      body:not(.printing-balance) .product-table.mobile-card-table tbody,
+      body.printing-balance .balance-print-panel table.mobile-card-table tbody { display: table-row-group !important; }
+      body:not(.printing-balance) .product-table.mobile-card-table tr,
+      body.printing-balance .balance-print-panel table.mobile-card-table tr { display: table-row !important; }
+      body:not(.printing-balance) .product-table.mobile-card-table th,
+      body:not(.printing-balance) .product-table.mobile-card-table td,
+      body.printing-balance .balance-print-panel table.mobile-card-table th,
+      body.printing-balance .balance-print-panel table.mobile-card-table td { display: table-cell !important; }
+      body:not(.printing-balance) .product-table.mobile-card-table td::before,
+      body.printing-balance .balance-print-panel table.mobile-card-table td::before { display: none !important; content: none !important; }
+      body:not(.printing-balance) .table-wrap { overflow: visible; margin-top: 0 !important; }
       body.printing-balance .topbar,
       body.printing-balance .hero,
       body.printing-balance .login-shell,
@@ -170,12 +219,13 @@
       body.printing-balance #passwordModal,
       body.printing-balance .date-picker-popover,
       body.printing-balance .no-print { display: none !important; }
-      body.printing-balance .app-shell { width: 100%; padding: 0; margin: 0; }
+      body.printing-balance .app-shell { width: auto; max-width: none; padding: 0; margin: 0; }
+      body.printing-balance main { width: 100%; margin: 0; }
       body.printing-balance .view[data-view="movement"] { display: block !important; }
       body.printing-balance .balance-print-panel { display: block !important; padding: 0; border: 0; box-shadow: none; break-inside: avoid; }
       body.printing-balance .balance-print-panel .panel-head { display: none; }
       body.printing-balance .pdf-title { display: block; margin: 0 0 5mm; font-size: 13px; font-weight: 900; letter-spacing: .01em; }
-      body.printing-balance table { min-width: 0; width: 100%; table-layout: fixed; border-collapse: collapse; line-height: 1.05; }
+      body.printing-balance table { min-width: 0; width: 100%; table-layout: fixed; border-collapse: collapse; border-spacing: 0; line-height: 1.05; }
       body.printing-balance th,
       body.printing-balance td { padding: 1.3px 2px !important; vertical-align: top !important; font-size: 6.4px !important; line-height: 1.08 !important; font-weight: 650 !important; letter-spacing: 0 !important; }
       body.printing-balance th { font-size: 5.8px !important; letter-spacing: .08em !important; line-height: 1.15 !important; font-weight: 800 !important; }
@@ -261,13 +311,40 @@
       </div>
     </div>
 
+    <div id="materialModal" class="password-modal hidden" role="dialog" aria-modal="true" aria-labelledby="materialModalTitle">
+      <div class="password-backdrop" id="materialBackdrop"></div>
+      <div class="password-dialog material-dialog">
+        <p class="eyebrow">Inventory Admin</p>
+        <h3 id="materialModalTitle">Create New Material</h3>
+        <div class="material-form">
+          <div class="field"><label for="newMaterialSku">SKU *</label><input id="newMaterialSku" type="text" placeholder="A042" autocomplete="off" /></div>
+          <div class="field"><label for="newMaterialDescription">Description *</label><input id="newMaterialDescription" type="text" placeholder="Material description" autocomplete="off" /></div>
+          <div class="field"><label for="newMaterialUnit">Unit *</label><input id="newMaterialUnit" type="text" placeholder="Sheet, Roll, Pcs..." autocomplete="off" /></div>
+          <div class="field"><label for="newMaterialSize">Size</label><input id="newMaterialSize" type="text" placeholder="Optional" autocomplete="off" /></div>
+          <div class="field"><label for="newMaterialWeight">Weight</label><input id="newMaterialWeight" type="text" placeholder="Optional" autocomplete="off" /></div>
+          <div class="field"><label for="newMaterialRemark">Remark</label><input id="newMaterialRemark" type="text" placeholder="Optional" autocomplete="off" /></div>
+          <div class="field"><label for="newMaterialOpening">Opening Balance</label><input id="newMaterialOpening" type="number" min="0" step="0.01" placeholder="0" /></div>
+          <div class="field"><label for="newMaterialWorkbookCost">Workbook Cost</label><input id="newMaterialWorkbookCost" type="number" min="0" step="0.01" placeholder="RM0.00" /></div>
+          <div class="field"><label for="newMaterialCurrentPrice">Current Price</label><input id="newMaterialCurrentPrice" type="number" min="0" step="0.01" placeholder="RM0.00" /></div>
+        </div>
+        <p class="login-error" id="newMaterialError" hidden></p>
+        <div class="password-actions">
+          <button class="tiny-btn" id="materialCancelBtn" type="button">Cancel</button>
+          <button class="primary-btn requires-edit" id="materialSubmitBtn" type="button">Create Material</button>
+        </div>
+      </div>
+    </div>
+
     <section class="panel">
       <div class="tab-panel-head">
         <div class="page-tabs" role="tablist" aria-label="Inventory views">
           <button class="page-tab is-active" type="button" data-view-tab="products">Product List</button>
           <button class="page-tab" type="button" data-view-tab="movement">Inventory In / Out Monthly</button>
         </div>
-        <button class="primary-btn requires-edit" id="saveStockDataBtn" type="button">Save Inventory Data</button>
+        <div class="tab-panel-actions">
+          <button class="ghost-btn requires-edit" id="newMaterialBtn" type="button">Add New Material</button>
+          <button class="primary-btn requires-edit" id="saveStockDataBtn" type="button">Save Inventory Data</button>
+        </div>
       </div>
       <div class="live-status status-line" id="dataStatus" style="margin-top:.75rem"></div>
     </section>
@@ -351,14 +428,19 @@
     const MOVEMENT_KEY = 'ma-stock-monthly-movements-v1';
     const OPENING_KEY = 'ma-stock-opening-balance-v1';
     const REMOTE_CACHE_KEY = 'ma-stock-remote-cache-v1';
+    const CUSTOM_PRODUCTS_KEY = 'ma-stock-custom-products-v1';
     let priceOverrides = loadPrices();
     let priceHistory = loadPriceHistory();
     let movements = loadMovements();
     let openingBalances = loadOpeningBalances();
+    let customProducts = loadCustomProducts();
     let currentUser = sessionStorage.getItem(AUTH_KEY) || '';
     let appStarted = false;
     let remoteSyncStarted = false;
     let searchTimer = 0;
+    let currentView = 'products';
+    let productIndex = new Map();
+    let mobileTableLabelFrame = 0;
 
     const $ = (id) => document.getElementById(id);
     const norm = (value) => String(value || '').toLowerCase().replace(/[^a-z0-9]+/g, ' ').trim();
@@ -581,6 +663,8 @@
         const remoteRows = remoteMovements.map(normalizeMovementRow).filter((row) => row.sku && row.qty);
         movements = mergeMovementRows(seedMovementRows(), movements, remoteRows);
       }
+      mergeCustomProducts();
+      applyCustomProductValues();
       STOCK_DATA.sourceFile = 'OneDrive MA_Stock_Costing_Sync.xlsx';
     }
 
@@ -609,8 +693,10 @@
     async function fetchRemoteStockData() {
       if (!STOCK_FETCH_URL) return false;
       $('dataStatus').textContent = 'Loading OneDrive Inventory Data...';
+      const controller = new AbortController();
+      const timeoutId = window.setTimeout(() => controller.abort(), 10000);
       try {
-        const response = await fetch(STOCK_FETCH_URL, { method: 'POST' });
+        const response = await fetch(STOCK_FETCH_URL, { method: 'POST', signal: controller.signal });
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
         const payload = await response.json();
         if (!payload?.ok) throw new Error('Power Automate returned no ok flag');
@@ -619,8 +705,11 @@
         $('dataStatus').textContent = 'Loaded Latest Inventory Data From OneDrive.';
         return true;
       } catch (error) {
-        $('dataStatus').textContent = `Showing Existing Inventory Data. OneDrive Sync Failed: ${error.message}`;
+        const message = error?.name === 'AbortError' ? 'request timed out' : error.message;
+        $('dataStatus').textContent = `Showing Existing Inventory Data. OneDrive Sync Failed: ${message}`;
         return false;
+      } finally {
+        window.clearTimeout(timeoutId);
       }
     }
 
@@ -700,17 +789,23 @@
       };
     }
 
-    async function saveProductRemote(product, audit = null) {
+    async function saveProductRemote(product, audit = null, action = '') {
       if (!PRODUCT_UPDATE_URL) return true;
+      const payloadBody = productUpdatePayload(product, audit);
+      if (action) payloadBody.action = action;
       const response = await fetch(PRODUCT_UPDATE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(productUpdatePayload(product, audit)),
+        body: JSON.stringify(payloadBody),
       });
       if (!response.ok) throw new Error(`HTTP ${response.status}`);
       const payload = await response.json().catch(() => ({}));
       if (payload && payload.ok === false) throw new Error(payload.message || 'Power Automate update failed');
       return true;
+    }
+
+    async function createProductRemote(product) {
+      return saveProductRemote(product, null, 'create');
     }
 
     function prepareData() {
@@ -723,6 +818,7 @@
           remark: stockText(p.remark || 'Material'),
         };
       });
+      productIndex = new Map(STOCK_DATA.products.map((product) => [product.sku, product]));
     }
 
     function loadPrices() {
@@ -747,6 +843,53 @@
     function loadOpeningBalances() {
       try { return JSON.parse(localStorage.getItem(OPENING_KEY) || '{}') || {}; }
       catch { return {}; }
+    }
+
+    function loadCustomProducts() {
+      try {
+        const rows = JSON.parse(localStorage.getItem(CUSTOM_PRODUCTS_KEY) || '[]');
+        return Array.isArray(rows) ? rows.filter((row) => row && String(row.sku || '').trim()) : [];
+      } catch {
+        return [];
+      }
+    }
+
+    function saveCustomProducts() {
+      try {
+        const rows = customProducts.map((product) => {
+          const copy = { ...product };
+          delete copy._search;
+          delete copy._display;
+          return copy;
+        });
+        localStorage.setItem(CUSTOM_PRODUCTS_KEY, JSON.stringify(rows));
+      } catch {
+        // Local persistence is best effort; OneDrive remains the source of truth.
+      }
+    }
+
+    function mergeCustomProducts() {
+      const existingSkus = new Set(STOCK_DATA.products.map((product) => product.sku));
+      customProducts.forEach((product) => {
+        const sku = String(product?.sku || '').trim();
+        if (!sku || existingSkus.has(sku)) return;
+        STOCK_DATA.products.push({ ...product, sku });
+        existingSkus.add(sku);
+      });
+    }
+
+    function applyCustomProductValues() {
+      customProducts.forEach((product) => {
+        const sku = String(product?.sku || '').trim();
+        if (!sku) return;
+        if (product.openingStock != null) openingBalances[sku] = num(product.openingStock);
+        if (product.currentPrice != null) priceOverrides[sku] = num(product.currentPrice);
+      });
+    }
+
+    function rememberCustomProduct(product) {
+      customProducts = [...customProducts.filter((row) => row.sku !== product.sku), product];
+      saveCustomProducts();
     }
 
     async function saveStockData() {
@@ -794,6 +937,12 @@
       localStorage.setItem(PRICE_KEY, JSON.stringify(priceOverrides));
       localStorage.setItem(PRICE_HISTORY_KEY, JSON.stringify(priceHistory));
       localStorage.setItem(OPENING_KEY, JSON.stringify(openingBalances));
+      customProducts = customProducts.map((product) => ({
+        ...product,
+        currentPrice: Object.prototype.hasOwnProperty.call(priceOverrides, product.sku) ? priceOverrides[product.sku] : null,
+        openingStock: Object.prototype.hasOwnProperty.call(openingBalances, product.sku) ? openingBalances[product.sku] : null,
+      }));
+      saveCustomProducts();
       const productsToUpdate = [...touchedSkus].map((sku) => productBySku(sku)).filter(Boolean);
       let remoteSaved = 0;
       let remoteError = '';
@@ -815,6 +964,90 @@
         : `Saved ${Object.keys(priceOverrides).length} price override(s), ${Object.keys(openingBalances).length} opening/balance inventory value(s), and updated ${remoteSaved} OneDrive row(s).`;
     }
 
+    function materialNumberValue(id, label) {
+      const raw = $(id).value.trim();
+      if (!raw) return null;
+      const value = Number(raw);
+      if (!Number.isFinite(value) || value < 0) throw new Error(`${label} Must Be 0 Or More.`);
+      return value;
+    }
+
+    function openNewMaterialModal() {
+      if (!isAuthenticated()) {
+        $('dataStatus').textContent = 'View Only. Login As Gavin Or James To Create A Material.';
+        return;
+      }
+      ['newMaterialSku', 'newMaterialDescription', 'newMaterialUnit', 'newMaterialSize', 'newMaterialWeight', 'newMaterialRemark', 'newMaterialOpening', 'newMaterialWorkbookCost', 'newMaterialCurrentPrice'].forEach((id) => { $(id).value = ''; });
+      $('newMaterialError').hidden = true;
+      $('newMaterialError').textContent = '';
+      $('materialModal').classList.remove('hidden');
+      setTimeout(() => $('newMaterialSku').focus(), 0);
+    }
+
+    function closeNewMaterialModal() {
+      $('materialModal').classList.add('hidden');
+    }
+
+    async function submitNewMaterial() {
+      if (!isAuthenticated()) return;
+      const errorElement = $('newMaterialError');
+      const submitButton = $('materialSubmitBtn');
+      errorElement.hidden = true;
+      try {
+        const sku = $('newMaterialSku').value.trim().toUpperCase();
+        const description = $('newMaterialDescription').value.trim();
+        const unit = $('newMaterialUnit').value.trim();
+        if (!sku || !description || !unit) throw new Error('SKU, Description, And Unit Are Required.');
+        if (STOCK_DATA.products.some((product) => String(product.sku).toUpperCase() === sku)) throw new Error(`SKU ${sku} Already Exists.`);
+        const opening = materialNumberValue('newMaterialOpening', 'Opening Balance');
+        const workbookCost = materialNumberValue('newMaterialWorkbookCost', 'Workbook Cost');
+        const currentPrice = materialNumberValue('newMaterialCurrentPrice', 'Current Price');
+        const product = {
+          row: Math.max(...STOCK_DATA.products.map((item) => Number(item.row) || 0), 0) + 1,
+          sku,
+          description,
+          unit,
+          photo: '',
+          remark: $('newMaterialRemark').value.trim(),
+          size: $('newMaterialSize').value.trim(),
+          weight: $('newMaterialWeight').value.trim(),
+          cost: workbookCost,
+          rawCost: workbookCost == null ? '' : String(workbookCost),
+          openingStock: opening,
+          currentPrice,
+          previousPrice: '',
+          priceUpdatedAt: '',
+          priceUpdatedBy: '',
+          priceHistory: '',
+        };
+        STOCK_DATA.products.push(product);
+        rememberCustomProduct(product);
+        if (currentPrice == null) delete priceOverrides[sku];
+        else priceOverrides[sku] = currentPrice;
+        if (opening == null) delete openingBalances[sku];
+        else openingBalances[sku] = opening;
+        localStorage.setItem(PRICE_KEY, JSON.stringify(priceOverrides));
+        localStorage.setItem(OPENING_KEY, JSON.stringify(openingBalances));
+        prepareData();
+        populateMovementProducts();
+        renderProducts();
+        if (currentView === 'movement') renderMovements();
+        closeNewMaterialModal();
+        $('dataStatus').textContent = `Saving New Material ${sku} To OneDrive...`;
+        try {
+          await createProductRemote(product);
+          $('dataStatus').textContent = `New Material ${sku} Saved To OneDrive.`;
+        } catch (remoteError) {
+          $('dataStatus').textContent = `New Material ${sku} Saved Locally. OneDrive Save Failed: ${remoteError.message}`;
+        }
+      } catch (error) {
+        errorElement.textContent = error.message;
+        errorElement.hidden = false;
+      } finally {
+        submitButton.disabled = !isAuthenticated();
+      }
+    }
+
     function filteredProducts() {
       const q = norm($('searchInput').value);
       if (!q) return STOCK_DATA.products;
@@ -822,7 +1055,7 @@
     }
 
     function productBySku(sku) {
-      return STOCK_DATA.products.find((p) => p.sku === sku) || STOCK_DATA.products[0];
+      return productIndex.get(String(sku || '')) || STOCK_DATA.products[0];
     }
 
     function renderKpis() {
@@ -837,6 +1070,7 @@
         const locked = isAuthenticated() ? '' : ' disabled aria-label="Login to edit"';
         return `<tr><td class="code-link">${escapeHtml(p.sku)}</td><td>${escapeHtml(p._display.description)}</td><td>${escapeHtml(p._display.unit)}</td><td class="product-size-cell">${escapeHtml(p._display.size)}</td><td>${escapeHtml(p.weight)}</td><td class="product-remark-cell"><span class="tag">${escapeHtml(p._display.remark)}</span></td><td><input class="balance-input" data-opening-sku="${escapeHtml(p.sku)}" type="number" step="0.01" value="${opening}" placeholder="0"${locked} /></td><td class="money">${p.cost == null ? '-' : rm(p.cost)}</td><td><input class="price-input" data-price-sku="${escapeHtml(p.sku)}" type="number" step="0.01" value="${current == null ? '' : current}" placeholder="RM"${locked} /></td></tr>`;
       }).join('') || tableEmpty(9, 'No Product Rows Found.');
+      scheduleMobileTableLabels();
     }
 
     function populateMovementProducts() {
@@ -916,6 +1150,7 @@
       $('stockOutCost').textContent = rm(stockOutCost);
       const selectedMonth = $('movementMonth').value;
       $('movementStatus').textContent = rows.length ? `${rows.length} Movement Row(s) Shown For ${selectedMonth ? movementMonthLabel(selectedMonth) : 'All Available Months'}.` : 'No Inventory Movement Rows Entered.';
+      scheduleMobileTableLabels();
       renderBalance();
     }
 
@@ -977,12 +1212,13 @@
         <td>${row.stockLevelMonths == null ? '<span class="muted">No Usage</span>' : `<span class="tag ${row.stockLevelMonths < 3 ? 'is-low' : 'is-ok'}">${qtyText(row.stockLevelMonths)} Months</span>`}</td>
         <td>${escapeHtml(row.product._display.unit)}</td>
       </tr>`).join('') || tableEmpty(9, 'No Opening/Balance Inventory Or Movement Rows Yet.');
+      scheduleMobileTableLabels();
     }
 
     function downloadBalancePdf() {
       document.title = balanceReportName();
       document.body.classList.add('printing-balance');
-      window.print();
+      requestAnimationFrame(() => window.print());
     }
 
     function compactMonthLabel(monthKey) {
@@ -1032,7 +1268,6 @@
       renderMovementMonthOptions();
       $('movementMonth').value = row.month || monthKeyFromDate(row.date) || $('movementMonth').value;
       renderMovements();
-      renderBalance();
     }
 
     async function deleteMovement(id) {
@@ -1068,7 +1303,6 @@
         saveMovements();
         renderMovementMonthOptions();
         renderMovements();
-        renderBalance();
         $('movementStatus').textContent = 'Inventory Movement Deleted From OneDrive.';
       } catch (error) {
         $('movementStatus').textContent = `Delete Failed. ${error.message}`;
@@ -1076,6 +1310,7 @@
     }
 
     function showView(name) {
+      currentView = name;
       document.querySelectorAll('[data-view]').forEach((section) => { section.hidden = section.dataset.view !== name; });
       document.querySelectorAll('[data-view-tab]').forEach((button) => button.classList.toggle('is-active', button.dataset.viewTab === name));
       if (name === 'movement') renderMovements();
@@ -1150,6 +1385,11 @@
 
     function bind() {
       $('searchInput').addEventListener('input', scheduleRender);
+      $('newMaterialBtn').addEventListener('click', openNewMaterialModal);
+      $('materialCancelBtn').addEventListener('click', closeNewMaterialModal);
+      $('materialBackdrop').addEventListener('click', closeNewMaterialModal);
+      $('materialSubmitBtn').addEventListener('click', submitNewMaterial);
+      $('materialModal').addEventListener('keydown', (event) => { if (event.key === 'Escape') closeNewMaterialModal(); });
       $('saveStockDataBtn').addEventListener('click', saveStockData);
       $('addMovementBtn').addEventListener('click', addMovement);
       $('movementMonth').addEventListener('change', renderMovements);
@@ -1261,8 +1501,13 @@
     }
 
     function syncMobileTableLabels() {
+      const isCompact = window.matchMedia('(max-width: 760px)').matches;
       document.querySelectorAll('.table-wrap table').forEach((table) => {
-        table.classList.add('mobile-card-table');
+        table.classList.toggle('mobile-card-table', isCompact);
+        if (!isCompact) {
+          table.querySelectorAll('tbody td[data-label]').forEach((cell) => cell.removeAttribute('data-label'));
+          return;
+        }
         const headers = Array.from(table.querySelectorAll('thead tr:last-child th'))
           .map((th) => th.textContent.trim().replace(/\s+/g, ' '));
         table.querySelectorAll('tbody tr').forEach((row) => {
@@ -1274,12 +1519,17 @@
       });
     }
 
+    function scheduleMobileTableLabels() {
+      if (mobileTableLabelFrame) return;
+      mobileTableLabelFrame = window.requestAnimationFrame(() => {
+        mobileTableLabelFrame = 0;
+        syncMobileTableLabels();
+      });
+    }
+
     function installMobileTableLabels() {
-      syncMobileTableLabels();
-      const target = document.querySelector('main');
-      if (!target) return;
-      const observer = new MutationObserver(syncMobileTableLabels);
-      observer.observe(target, { childList: true, subtree: true });
+      scheduleMobileTableLabels();
+      window.addEventListener('resize', scheduleMobileTableLabels, { passive: true });
     }
 
     (function rewriteGithubPagesLinks() {
@@ -1289,6 +1539,25 @@
       document.querySelectorAll('[data-site-href]').forEach((link) => link.setAttribute('href', `${repoPrefix}/${link.dataset.siteHref}`));
     })();
 
+    function scheduleRemoteSync() {
+      if (remoteSyncStarted) return;
+      remoteSyncStarted = true;
+      const run = () => {
+        fetchRemoteStockData().then((loaded) => {
+          if (!loaded) return;
+          movements = mergeMovementRows(seedMovementRows(), movements);
+          prepareData();
+          populateMovementProducts();
+          renderKpis();
+          updateAuthView();
+          requestAnimationFrame(renderProducts);
+          if (currentView === 'movement') renderMovements();
+        });
+      };
+      if ('requestIdleCallback' in window) window.requestIdleCallback(run, { timeout: 1500 });
+      else window.setTimeout(run, 0);
+    }
+
     async function startApp() {
       if (appStarted) return;
       appStarted = true;
@@ -1297,29 +1566,15 @@
       installMobileTableLabels();
       const cachedPayload = loadCachedRemoteStockPayload();
       if (cachedPayload) applyRemoteStockPayload(cachedPayload);
+      mergeCustomProducts();
+      applyCustomProductValues();
       movements = mergeMovementRows(seedMovementRows(), movements);
-      saveMovements();
       prepareData();
       populateMovementProducts();
       renderKpis();
-      renderMovements();
-      renderBalance();
       updateAuthView();
       requestAnimationFrame(renderProducts);
-      if (remoteSyncStarted) return;
-      remoteSyncStarted = true;
-      fetchRemoteStockData().then((loaded) => {
-        if (!loaded) return;
-        movements = mergeMovementRows(seedMovementRows(), movements);
-        saveMovements();
-        prepareData();
-        populateMovementProducts();
-        renderKpis();
-        renderMovements();
-        renderBalance();
-        updateAuthView();
-        requestAnimationFrame(renderProducts);
-      });
+      scheduleRemoteSync();
     }
 
     bindLogin();
