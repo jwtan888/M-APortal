@@ -324,7 +324,6 @@
           <div class="field"><label for="newMaterialWeight">Weight</label><input id="newMaterialWeight" type="text" placeholder="Optional" autocomplete="off" /></div>
           <div class="field"><label for="newMaterialRemark">Remark</label><input id="newMaterialRemark" type="text" placeholder="Optional" autocomplete="off" /></div>
           <div class="field"><label for="newMaterialOpening">Opening Balance</label><input id="newMaterialOpening" type="number" min="0" step="0.01" placeholder="0" /></div>
-          <div class="field"><label for="newMaterialWorkbookCost">Workbook Cost</label><input id="newMaterialWorkbookCost" type="number" min="0" step="0.01" placeholder="RM0.00" /></div>
           <div class="field"><label for="newMaterialCurrentPrice">Current Price</label><input id="newMaterialCurrentPrice" type="number" min="0" step="0.01" placeholder="RM0.00" /></div>
         </div>
         <p class="login-error" id="newMaterialError" hidden></p>
@@ -650,6 +649,15 @@
       const remoteMovements = Array.isArray(payload?.stockMovement) ? payload.stockMovement : [];
       if (products.length) {
         STOCK_DATA.products = products.map(normalizeProductRow).filter((row) => row.sku);
+        const remoteSkus = new Set(STOCK_DATA.products.map((row) => String(row.sku || '').trim().toUpperCase()));
+        const remainingCustomProducts = customProducts.filter((row) => {
+          const sku = String(row.sku || '').trim().toUpperCase();
+          return !remoteSkus.has(sku) && (row.pendingCreate === true || row.remoteSaved === false);
+        });
+        if (remainingCustomProducts.length !== customProducts.length) {
+          customProducts = remainingCustomProducts;
+          saveCustomProducts();
+        }
         openingBalances = {};
         priceOverrides = {};
         products.forEach((row) => {
@@ -801,13 +809,19 @@
       if (!PRODUCT_UPDATE_URL) return true;
       const payloadBody = productUpdatePayload(product, audit);
       if (action) payloadBody.action = action;
+      if (action === 'create') delete payloadBody.workbookCost;
       const response = await fetchRemote(PRODUCT_UPDATE_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payloadBody),
       });
-      if (!response.ok) throw new Error(`HTTP ${response.status}`);
-      const payload = await response.json().catch(() => ({}));
+      const responseText = await response.text().catch(() => '');
+      let payload = {};
+      try { payload = responseText ? JSON.parse(responseText) : {}; } catch { /* Response may be plain text. */ }
+      if (!response.ok) {
+        const detail = payload?.message || payload?.error?.message || responseText.replace(/\s+/g, ' ').trim().slice(0, 240);
+        throw new Error(detail ? `HTTP ${response.status}: ${detail}` : `HTTP ${response.status}`);
+      }
       if (payload && payload.ok === false) throw new Error(payload.message || 'Power Automate update failed');
       return true;
     }
@@ -991,7 +1005,7 @@
         $('dataStatus').textContent = 'View Only. Login As Gavin Or James To Create A Material.';
         return;
       }
-      ['newMaterialSku', 'newMaterialDescription', 'newMaterialUnit', 'newMaterialSize', 'newMaterialWeight', 'newMaterialRemark', 'newMaterialOpening', 'newMaterialWorkbookCost', 'newMaterialCurrentPrice'].forEach((id) => { $(id).value = ''; });
+      ['newMaterialSku', 'newMaterialDescription', 'newMaterialUnit', 'newMaterialSize', 'newMaterialWeight', 'newMaterialRemark', 'newMaterialOpening', 'newMaterialCurrentPrice'].forEach((id) => { $(id).value = ''; });
       $('newMaterialError').hidden = true;
       $('newMaterialError').textContent = '';
       $('materialModal').classList.remove('hidden');
@@ -1012,9 +1026,16 @@
         const description = $('newMaterialDescription').value.trim();
         const unit = $('newMaterialUnit').value.trim();
         if (!sku || !description || !unit) throw new Error('SKU, Description, And Unit Are Required.');
-        if (STOCK_DATA.products.some((product) => String(product.sku).toUpperCase() === sku)) throw new Error(`SKU ${sku} Already Exists.`);
+        const existingProduct = STOCK_DATA.products.find((product) => String(product.sku).toUpperCase() === sku);
+        const localCreate = customProducts.find((product) => String(product.sku).toUpperCase() === sku);
+        const canRetryLocalCreate = Boolean(localCreate && localCreate.remoteSaved !== true);
+        if (existingProduct && !canRetryLocalCreate) throw new Error(`SKU ${sku} Already Exists.`);
+        if (existingProduct && canRetryLocalCreate) {
+          STOCK_DATA.products = STOCK_DATA.products.filter((product) => product !== existingProduct);
+          customProducts = customProducts.filter((product) => String(product.sku).toUpperCase() !== sku);
+          saveCustomProducts();
+        }
         const opening = materialNumberValue('newMaterialOpening', 'Opening Balance');
-        const workbookCost = materialNumberValue('newMaterialWorkbookCost', 'Workbook Cost');
         const currentPrice = materialNumberValue('newMaterialCurrentPrice', 'Current Price');
         const product = {
           row: Math.max(...STOCK_DATA.products.map((item) => Number(item.row) || 0), 0) + 1,
@@ -1025,14 +1046,16 @@
           remark: $('newMaterialRemark').value.trim(),
           size: $('newMaterialSize').value.trim(),
           weight: $('newMaterialWeight').value.trim(),
-          cost: workbookCost,
-          rawCost: workbookCost == null ? '' : String(workbookCost),
+          cost: null,
+          rawCost: '',
           openingStock: opening,
           currentPrice,
           previousPrice: '',
           priceUpdatedAt: '',
           priceUpdatedBy: '',
           priceHistory: '',
+          pendingCreate: true,
+          remoteSaved: false,
         };
         STOCK_DATA.products.push(product);
         rememberCustomProduct(product);
@@ -1050,8 +1073,14 @@
         $('dataStatus').textContent = `Saving New Material ${sku} To OneDrive...`;
         try {
           await createProductRemote(product);
+          product.pendingCreate = false;
+          product.remoteSaved = true;
+          rememberCustomProduct(product);
           $('dataStatus').textContent = `New Material ${sku} Saved To OneDrive.`;
         } catch (remoteError) {
+          product.pendingCreate = true;
+          product.remoteSaved = false;
+          rememberCustomProduct(product);
           $('dataStatus').textContent = `New Material ${sku} Saved Locally. OneDrive Save Failed: ${remoteError.message}`;
         }
       } catch (error) {
