@@ -317,14 +317,14 @@
         <p class="eyebrow">Inventory Admin</p>
         <h3 id="materialModalTitle">Create New Material</h3>
         <div class="material-form">
-          <div class="field"><label for="newMaterialSku">SKU *</label><input id="newMaterialSku" type="text" placeholder="A042" autocomplete="off" /></div>
-          <div class="field"><label for="newMaterialDescription">Description *</label><input id="newMaterialDescription" type="text" placeholder="Material description" autocomplete="off" /></div>
-          <div class="field"><label for="newMaterialUnit">Unit *</label><input id="newMaterialUnit" type="text" placeholder="Sheet, Roll, Pcs..." autocomplete="off" /></div>
-          <div class="field"><label for="newMaterialSize">Size</label><input id="newMaterialSize" type="text" placeholder="Optional" autocomplete="off" /></div>
-          <div class="field"><label for="newMaterialWeight">Weight</label><input id="newMaterialWeight" type="text" placeholder="Optional" autocomplete="off" /></div>
-          <div class="field"><label for="newMaterialRemark">Remark</label><input id="newMaterialRemark" type="text" placeholder="Optional" autocomplete="off" /></div>
-          <div class="field"><label for="newMaterialOpening">Opening Balance</label><input id="newMaterialOpening" type="number" min="0" step="0.01" placeholder="0" /></div>
-          <div class="field"><label for="newMaterialCurrentPrice">Current Price</label><input id="newMaterialCurrentPrice" type="number" min="0" step="0.01" placeholder="RM0.00" /></div>
+          <div class="field"><label for="newMaterialSku">SKU (Auto)</label><input id="newMaterialSku" type="text" placeholder="A042" autocomplete="off" readonly aria-readonly="true" /></div>
+          <div class="field"><label for="newMaterialDescription">Description *</label><input id="newMaterialDescription" type="text" placeholder="Material description" autocomplete="off" required /></div>
+          <div class="field"><label for="newMaterialUnit">Unit *</label><input id="newMaterialUnit" type="text" placeholder="Sheet, Roll, Pcs..." autocomplete="off" required /></div>
+          <div class="field"><label for="newMaterialSize">Size *</label><input id="newMaterialSize" type="text" placeholder="Material size" autocomplete="off" required /></div>
+          <div class="field"><label for="newMaterialWeight">Weight *</label><input id="newMaterialWeight" type="text" placeholder="Material weight" autocomplete="off" required /></div>
+          <div class="field"><label for="newMaterialRemark">Remark *</label><input id="newMaterialRemark" type="text" placeholder="Material remark" autocomplete="off" required /></div>
+          <div class="field"><label for="newMaterialOpening">Opening Balance *</label><input id="newMaterialOpening" type="number" min="0" step="0.01" placeholder="0" required /></div>
+          <div class="field"><label for="newMaterialCurrentPrice">Current Price *</label><input id="newMaterialCurrentPrice" type="number" min="0" step="0.01" placeholder="RM0.00" required /></div>
         </div>
         <p class="login-error" id="newMaterialError" hidden></p>
         <div class="password-actions">
@@ -992,12 +992,23 @@
         : `Saved ${Object.keys(priceOverrides).length} price override(s), ${Object.keys(openingBalances).length} opening/balance inventory value(s), and updated ${remoteSaved} OneDrive row(s).`;
     }
 
-    function materialNumberValue(id, label) {
+    function materialNumberValue(id, label, required = false) {
       const raw = $(id).value.trim();
-      if (!raw) return null;
+      if (!raw) {
+        if (required) throw new Error(`${label} Is Required.`);
+        return null;
+      }
       const value = Number(raw);
       if (!Number.isFinite(value) || value < 0) throw new Error(`${label} Must Be 0 Or More.`);
       return value;
+    }
+
+    function nextMaterialSku() {
+      const highest = STOCK_DATA.products.reduce((max, product) => {
+        const match = /^A(\d+)$/i.exec(String(product?.sku || '').trim());
+        return match ? Math.max(max, Number(match[1])) : max;
+      }, 0);
+      return `A${String(highest + 1).padStart(3, '0')}`;
     }
 
     function openNewMaterialModal() {
@@ -1005,11 +1016,12 @@
         $('dataStatus').textContent = 'View Only. Login As Gavin Or James To Create A Material.';
         return;
       }
-      ['newMaterialSku', 'newMaterialDescription', 'newMaterialUnit', 'newMaterialSize', 'newMaterialWeight', 'newMaterialRemark', 'newMaterialOpening', 'newMaterialCurrentPrice'].forEach((id) => { $(id).value = ''; });
+      ['newMaterialDescription', 'newMaterialUnit', 'newMaterialSize', 'newMaterialWeight', 'newMaterialRemark', 'newMaterialOpening', 'newMaterialCurrentPrice'].forEach((id) => { $(id).value = ''; });
+      $('newMaterialSku').value = nextMaterialSku();
       $('newMaterialError').hidden = true;
       $('newMaterialError').textContent = '';
       $('materialModal').classList.remove('hidden');
-      setTimeout(() => $('newMaterialSku').focus(), 0);
+      setTimeout(() => $('newMaterialDescription').focus(), 0);
     }
 
     function closeNewMaterialModal() {
@@ -1022,10 +1034,14 @@
       const submitButton = $('materialSubmitBtn');
       errorElement.hidden = true;
       try {
-        const sku = $('newMaterialSku').value.trim().toUpperCase();
+        const sku = nextMaterialSku();
+        $('newMaterialSku').value = sku;
         const description = $('newMaterialDescription').value.trim();
         const unit = $('newMaterialUnit').value.trim();
-        if (!sku || !description || !unit) throw new Error('SKU, Description, And Unit Are Required.');
+        const size = $('newMaterialSize').value.trim();
+        const weight = $('newMaterialWeight').value.trim();
+        const remark = $('newMaterialRemark').value.trim();
+        if (!description || !unit || !size || !weight || !remark) throw new Error('Description, Unit, Size, Weight, And Remark Are Required.');
         const existingProduct = STOCK_DATA.products.find((product) => String(product.sku).toUpperCase() === sku);
         const localCreate = customProducts.find((product) => String(product.sku).toUpperCase() === sku);
         const canRetryLocalCreate = Boolean(localCreate && localCreate.remoteSaved !== true);
@@ -1035,17 +1051,17 @@
           customProducts = customProducts.filter((product) => String(product.sku).toUpperCase() !== sku);
           saveCustomProducts();
         }
-        const opening = materialNumberValue('newMaterialOpening', 'Opening Balance');
-        const currentPrice = materialNumberValue('newMaterialCurrentPrice', 'Current Price');
+        const opening = materialNumberValue('newMaterialOpening', 'Opening Balance', true);
+        const currentPrice = materialNumberValue('newMaterialCurrentPrice', 'Current Price', true);
         const product = {
           row: Math.max(...STOCK_DATA.products.map((item) => Number(item.row) || 0), 0) + 1,
           sku,
           description,
           unit,
           photo: '',
-          remark: $('newMaterialRemark').value.trim(),
-          size: $('newMaterialSize').value.trim(),
-          weight: $('newMaterialWeight').value.trim(),
+          remark,
+          size,
+          weight,
           cost: null,
           rawCost: '',
           openingStock: opening,
