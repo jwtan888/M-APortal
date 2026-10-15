@@ -8,7 +8,7 @@
 .portal-task-card span {font-size:10px;font-weight:900;text-transform:uppercase;letter-spacing:.18em}.portal-task-card strong {font-size:18px;line-height:28px;font-weight:900;color:#0f172a}.portal-task-card small {font-size:12px}
 @media(min-width:768px) {.portal-task-overview{grid-template-columns:repeat(2,minmax(0,1fr))}}
 @media(min-width:1280px) {.portal-task-overview{grid-template-columns:repeat(3,minmax(0,1fr))}}
-@media(min-width:1536px) {.portal-task-overview{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media(min-width:1536px) {.portal-task-overview{grid-template-columns:repeat(5,minmax(0,1fr))}}
 .portal-work {display:flex;gap:6px;flex-wrap:wrap;margin:16px 0 12px}.portal-work button {padding:6px 13px;border:1px solid transparent;border-radius:999px;background:#eaf0f6;color:#40506a;font-weight:600;font-size:10px;line-height:15px;transition:background .15s,color .15s,box-shadow .15s}
 .portal-work button:hover {background:#dce9f7;color:#175ca5}.portal-work button[aria-pressed="true"] {background:#0071e3;border-color:#0071e3;color:#fff;box-shadow:0 2px 6px #0071e326}
 .portal-pager {display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 4px;color:#526174;font-size:13px}.portal-pager>div {display:flex;align-items:center;gap:12px}
