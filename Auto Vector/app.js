@@ -635,8 +635,16 @@ function displayResults() {
                 </div>
             </div>
             <div class="flex flex-col md:flex-row gap-4 mb-4">
-                <div class="flex-shrink-0 bg-gray-100 rounded-lg p-1 flex items-center justify-center" style="min-width:200px;min-height:180px;">
-                    <canvas id="${canvasId}" class="w-full h-full" style="max-width:200px;max-height:180px;"></canvas>
+                <div class="preview-pane flex-shrink-0 rounded-lg" style="width:412px;">
+                    <div class="preview-toolbar" aria-label="Preview zoom controls">
+                        <span class="preview-zoom-label">Zoom</span>
+                        <button type="button" class="preview-zoom-button preview-zoom-out" aria-label="Zoom out" title="Zoom out" disabled>−</button>
+                        <span class="preview-zoom-level" aria-live="polite">100%</span>
+                        <button type="button" class="preview-zoom-button preview-zoom-in" aria-label="Zoom in" title="Zoom in">+</button>
+                    </div>
+                    <div class="preview-scroll" style="height:340px">
+                        <canvas id="${canvasId}" width="378" height="340"></canvas>
+                    </div>
                 </div>
                 <div class="flex-1 bg-gray-50 rounded-lg p-4 max-h-96 overflow-y-auto">
                     <h4 class="text-sm font-semibold text-gray-700 mb-2">Entity Breakdown</h4>
@@ -646,6 +654,13 @@ function displayResults() {
         `;
 
         fileResultsDiv.appendChild(card);
+
+        card.querySelector('.preview-zoom-in').addEventListener('click', function() {
+            adjustVectorPreviewZoom(canvasId, result.rawEntities, 1);
+        });
+        card.querySelector('.preview-zoom-out').addEventListener('click', function() {
+            adjustVectorPreviewZoom(canvasId, result.rawEntities, -1);
+        });
 
         setTimeout(() => {
             renderVectorPreview(canvasId, result.rawEntities);
@@ -752,11 +767,17 @@ function renderVectorPreview(canvasId, entities, highlightIdx) {
 
     const ctx = canvas.getContext('2d');
     const dpr = window.devicePixelRatio || 1;
-    const w = 200, h = 180;
-    canvas.width = w * dpr;
-    canvas.height = h * dpr;
+    const stage = canvas.closest('.preview-scroll');
+    const stageWidth = stage && stage.clientWidth > 0 ? stage.clientWidth : 378;
+    const baseWidth = Math.min(378, stageWidth);
+    const baseHeight = baseWidth * (340 / 378);
+    const zoom = Math.max(1, Math.min(3, Number(canvas.dataset.zoom) || 1));
+    const w = baseWidth * zoom, h = baseHeight * zoom;
+    canvas.width = Math.round(w * dpr);
+    canvas.height = Math.round(h * dpr);
     canvas.style.width = w + 'px';
     canvas.style.height = h + 'px';
+    if (stage) stage.style.height = baseHeight + 'px';
     ctx.scale(dpr, dpr);
 
     const bb = getEntityBounds(entities);
@@ -801,6 +822,24 @@ function renderVectorPreview(canvasId, entities, highlightIdx) {
         drawEntity(ctx, e, tx, ty);
         ctx.stroke();
     });
+}
+
+function adjustVectorPreviewZoom(canvasId, entities, direction) {
+    const canvas = document.getElementById(canvasId);
+    if (!canvas) return;
+
+    const currentZoom = Number(canvas.dataset.zoom) || 1;
+    const nextZoom = direction === 0
+        ? 1
+        : Math.max(1, Math.min(3, Math.round((currentZoom + direction * 0.05) * 100) / 100));
+    canvas.dataset.zoom = String(nextZoom);
+    renderVectorPreview(canvasId, entities);
+
+    const pane = canvas.closest('.preview-pane');
+    if (!pane) return;
+    pane.querySelector('.preview-zoom-level').textContent = Math.round(nextZoom * 100) + '%';
+    pane.querySelector('.preview-zoom-out').disabled = nextZoom <= 1;
+    pane.querySelector('.preview-zoom-in').disabled = nextZoom >= 3;
 }
 
 /**
