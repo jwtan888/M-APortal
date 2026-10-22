@@ -41,3 +41,12 @@ button.portal-link-status {text-decoration:underline;text-underline-offset:3px}.
 button:focus-visible,summary:focus-visible {outline:3px solid #0071e3;outline-offset:3px}
 @media(max-width:600px) {.portal-pager{align-items:flex-start;flex-direction:column}.portal-review-banner{padding:12px 16px}}
 @media(prefers-reduced-motion:reduce) {*{scroll-behavior:auto!important}.portal-refresh-icon.is-refreshing svg{animation:none}}
+
+.template-qr-cell {display:flex;align-items:center;gap:6px;min-width:135px}
+.template-qr-cell input {width:110px;min-width:90px}
+.template-qr-number-link {color:inherit;text-decoration:underline dotted #9aaabd;text-underline-offset:3px;cursor:pointer}
+.template-qr-number-link:hover {color:#005cb8;text-decoration-color:#0071e3}
+#templateQrPopover {position:fixed;z-index:10020;width:min(224px,calc(100vw - 24px));max-height:calc(100vh - 24px);overflow:auto;padding:8px;border:1px solid #d7e0ea;border-radius:9px;background:#fff;box-shadow:0 8px 24px #173c6428;color:#243b53}
+#templateQrPopover[hidden] {display:none}
+.template-qr-sticker-preview {display:flex;justify-content:center;margin:0 auto}
+.template-qr-sticker-preview svg {display:block;width:min(204px,100%);height:auto;background:#fff}
