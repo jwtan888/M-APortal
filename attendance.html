@@ -316,16 +316,16 @@
         const LASER_CACHE_KEY = 'ma_portal_laser_rows_v2';
         const ATT_EDITOR_PASSWORD = 'Modernization@888';
 
-        const attendanceUpdateURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/b0bdaebbf2104b669de00b09a78add75/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=5rXFrjS1WABIzdnSZrqhqsxfZqp0G1c7E-GzkSnkqBk";
-        const attendanceFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/9f7d2b43fe80443ea830ec0ef1631183/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=0geeH4paQU60TyHlrF0_6_CGqXBmke3BEmk5IiwTxZ0";
-        const settingFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/47006a48f8764a49ab01dbb665617acf/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=2eqeoBWF-80BETYDfV2HdHZeqJW7-fDYjd3GXri1wNo";
-        const laserFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/f7fd69d7c4114bd2af5d8fffe467982a/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=hAWB_aTnAgdah1KM8cUx2fbYcjNNLN67GGAMOT3jeLI";
-        const supportFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/cc862bcb25864cf3821934bb3954e426/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=sd0SSGGkna3TT74vR7V1jTT6E8qPxp-a4O1w0AlrqCY";
-        const consumptionFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/aee706c4629744f5b5aa3a756eec00f2/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=tU6CI-qPTZJIJgVViryVC6t9oxk4_gL8xvDgB4e_jwE";
-        const downFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/925d86d436044eda8ba9dc7b0d628f8d/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=WW4a2zXKZfD-IDWzdX_8XYcGa0Qgh1lGxnbz5WHcE3k";
-        const attendanceSplitJsonURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/893a170849f34a6092a1f2f57748e3f5/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=JkzXcmLThFEf9LJWakfp0mn_P0EQ3IWbT2g-KegNm5E";
-        const manualUtilFetchURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/d6fa694c31e94752b66fa1d6ae26af74/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=iwcuo1sQo_vgE1rywE98w5pPTUzu1jkWQUWcV0yh6mc";
-        const manualUtilSaveURL = "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/d65c6392288c47ff9ef408cb370b47d2/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=J7oajV0dr747d2FLF56T8oMzyg8x93OAkHQpHr4DzQM";
+        const attendanceUpdateURL = "/api/pa/b0bdaebbf2104b669de00b09a78add75";
+        const attendanceFetchURL = "/api/pa/9f7d2b43fe80443ea830ec0ef1631183";
+        const settingFetchURL = "/api/pa/47006a48f8764a49ab01dbb665617acf";
+        const laserFetchURL = "/api/pa/f7fd69d7c4114bd2af5d8fffe467982a";
+        const supportFetchURL = "/api/pa/cc862bcb25864cf3821934bb3954e426";
+        const consumptionFetchURL = "/api/pa/aee706c4629744f5b5aa3a756eec00f2";
+        const downFetchURL = "/api/pa/925d86d436044eda8ba9dc7b0d628f8d";
+        const attendanceSplitJsonURL = "/api/pa/893a170849f34a6092a1f2f57748e3f5";
+        const manualUtilFetchURL = "/api/pa/d6fa694c31e94752b66fa1d6ae26af74";
+        const manualUtilSaveURL = "/api/pa/d65c6392288c47ff9ef408cb370b47d2";
 
         let currentUser = ATT_EDITORS.includes(sessionStorage.getItem(SESSION_KEY) || '')
             ? (sessionStorage.getItem(SESSION_KEY) || '')

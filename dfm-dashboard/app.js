@@ -23,16 +23,16 @@
   const LEGACY_STORAGE_PREFIX = "dfm-dashboard-records-";
   const PENDING_SYNC_TTL_MS = 10 * 60 * 1000;
   const FLOW_ENDPOINTS = {
-    add: "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/d714eb96fab644dcbfd6c83f28d817b1/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=3MUeOaSxcE-uRBtPqIe2-_KlK8BZ96hU1e2tivu0HOQ",
+    add: "/api/pa/d714eb96fab644dcbfd6c83f28d817b1",
     update:
-      "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/bf99bd66b5064455a0fef384e50953e2/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=1TzaVpi7HoqovWJL1iKsVlkk2QoX0x6pYuwNWUtMKwA",
+      "/api/pa/bf99bd66b5064455a0fef384e50953e2",
     delete:
-      "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/52a76b61c7e84e09a8df6eee0ad2a029/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=QslAg0t1-QLN3UvBy_7jBzUaY7YxcfADrJIjm15i-rw",
+      "/api/pa/52a76b61c7e84e09a8df6eee0ad2a029",
   };
   const FETCH_DFM_SUMMARY_URL =
-    "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/ebef663b8a79414cb89579a4b4edf9d6/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=JSZZaLOTkfxWcoDSdb3J7w1rhRQ400g2exl7yrBdKbg";
+    "/api/pa/ebef663b8a79414cb89579a4b4edf9d6";
   const DFM_SUMMARY_UPDATE_URL =
-    "https://defaultb4f081a089004baaa6a8ff79312af2.61.environment.api.powerplatform.com:443/powerautomate/automations/direct/workflows/8a1ee6b32b44477ab947ff85d3c38881/triggers/manual/paths/invoke?api-version=1&sp=%2Ftriggers%2Fmanual%2Frun&sv=1.0&sig=-cqYV3Ac1tBeoECt_zje-s9Yk1B0RZYvDxqV-fP24N8";
+    "/api/pa/8a1ee6b32b44477ab947ff85d3c38881";
   const defectMap = new Map((seedData.defectCatalog || []).map((item) => [item.code, item]));
   const page = document.body.dataset.page || "dashboard";
   const AUTO_REFRESH_MS = page === "dashboard" || page === "data" ? 30000 : 0;
